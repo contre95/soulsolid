@@ -52,7 +52,7 @@ sync:
   devices:
     - uuid: 8722-177E
       name: iPod
-      sync_path: Musicarr
+      sync_path: Soulsolid
 jobs:
   log: true
   log_path: ./logs/jobs
