@@ -211,23 +211,23 @@ jobs:
           fi
 
           # Build and push specific version
-          podman image build --build-arg IMAGE_TAG=$version -t contre95/musicarr:$version .
-          podman push contre95/musicarr:$version
+          podman image build --build-arg IMAGE_TAG=$version -t contre95/soulsolid:$version .
+          podman push contre95/soulsolid:$version
 
           # Always update nightly
-          podman tag contre95/musicarr:$version contre95/musicarr:nightly
-          podman push contre95/musicarr:nightly
+          podman tag contre95/soulsolid:$version contre95/soulsolid:nightly
+          podman push contre95/soulsolid:nightly
 
           if [[ "$should_release" == "true" ]]; then
             if [[ "$is_beta" == "true" ]]; then
               # Tag and push the :beta tag
-              podman tag contre95/musicarr:$version contre95/musicarr:beta
-              podman push contre95/musicarr:beta
+              podman tag contre95/soulsolid:$version contre95/soulsolid:beta
+              podman push contre95/soulsolid:beta
             fi
 
             if [[ "$is_release" == "true" ]]; then
               # Tag and push the :latest tag
-              podman tag contre95/musicarr:$version contre95/musicarr:latest
-              podman push contre95/musicarr:latest
+              podman tag contre95/soulsolid:$version contre95/soulsolid:latest
+              podman push contre95/soulsolid:latest
             fi
           fi

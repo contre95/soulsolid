@@ -27,5 +27,5 @@ jobs:
           date_tag=$(date +%Y%m%d)
           commit_sha=$(git rev-parse --short HEAD)
 
-          podman image build --build-arg IMAGE_TAG=nightly-$date_tag-$commit_sha -t contre95/musicarr:nightly .
-          podman push contre95/musicarr:nightly
+          podman image build --build-arg IMAGE_TAG=nightly-$date_tag-$commit_sha -t contre95/soulsolid:nightly .
+          podman push contre95/soulsolid:nightly
