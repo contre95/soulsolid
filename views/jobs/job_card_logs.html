@@ -1,0 +1,38 @@
+ {{ $job := . }}
+{{if .LogPath}}
+<style>
+.log-error { color: #ef4444 !important; font-weight: 500; }
+.log-warning { color: #f59e0b !important; font-weight: 500; }
+.log-violet { color: #8b5cf6 !important; font-weight: 500; }
+.log-blue { color: #3b82f6 !important; font-weight: 500; }
+.log-orange { color: #f97316 !important; font-weight: 500; }
+.log-green { color: #48AB84 !important; font-weight: 500; }
+</style>
+<div class="mt-2">
+  <details>
+   <summary class="text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
+      <span>
+          View Logs
+          {{if .LogPath}}
+          <a href="/jobs/{{ $job.ID }}/logs" target="_blank" class="text-blue-500 underline ml-2">(raw)</a>
+          <a href="/jobs/{{ $job.ID }}/logs?color=true" target="_blank" class="text-blue-500 underline ml-2">(full screen)</a>
+          {{end}}
+      </span>
+    </summary>
+       <div class="mt-2 max-h-36 overflow-y-auto rounded border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-black">
+            <pre class="p-2 text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap"
+                 style="font-family: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace;"
+            {{ if or (eq .Status "completed") (eq .Status "cancelled") (eq .Status "failed") }}
+               hx-get="/jobs/{{ $job.ID }}/logs?color=true"
+               hx-trigger="load"
+            {{ else }}
+               hx-get="/jobs/{{ $job.ID }}/logs?color=true"
+               hx-trigger="every 2s"
+            {{ end }}
+            hx-target="this"
+            hx-swap="innerHTML"
+            _="on htmx:afterSwap go to the bottom of me"></pre>
+    </div>
+  </details>
+</div>
+{{end}}

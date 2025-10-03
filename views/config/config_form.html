@@ -1,0 +1,321 @@
+  <form hx-post="/settings/update" hx-target="#toast-container"  class="space-y-3">
+    <!-- All Configuration Sections in 3-column grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+        <!-- Database Section -->
+         <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 relative">
+           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <i class="fas fa-database text-blue-500 text-lg"></i>
+            Database
+           </h2>
+          <div class="space-y-3">
+            <div>
+               <label for="database.path" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Database Path</label>
+             <input type="text" id="database.path" name="database.path" value="{{.Config.Database.Path}}"
+                    class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                    placeholder="./library.db">
+           </div>
+             <a href="/config/database/download"
+                class="inline-flex items-center justify-center w-full px-5 py-2.5 backdrop-blur-sm hover:bg-blue-200/80 bg-blue-100/80 hover:dark:bg-blue-800/30 dark:bg-blue-900/30 border border-blue-200/50 dark:border-blue-700/50 text-sm text-blue-800 dark:text-blue-200 rounded-lg transition-colors font-medium">
+               <i class="fas fa-download mr-2"></i>
+               Backup Database
+             </a>
+              <div class="mt-1 text-sm text-blue-600 dark:text-blue-300 italic py-2 px-3 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg">Note: This backup only includes the Soulsolid database, not your music files.</div>
+          </div>
+       </div>
+
+        <!-- Library Section -->
+        <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <i class="fas fa-music text-purple-500 text-lg"></i>
+            Library
+          </h2>
+         <div class="space-y-3">
+           <div>
+             <label for="libraryPath" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Library Path</label>
+             <input type="text" id="libraryPath" name="libraryPath" value="{{.Config.LibraryPath}}"
+                    class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                    placeholder="/path/to/music/library">
+           </div>
+           <div>
+             <label for="downloadPath" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Download Path</label>
+             <input type="text" id="downloadPath" name="downloadPath" value="{{.Config.DownloadPath}}"
+                    class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                    placeholder="./downloads">
+             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Path where downloaded tracks will be saved</p>
+           </div>
+         </div>
+       </div>
+
+              <!-- Job Settings -->
+        <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+           <i class="fas fa-tasks text-cyan-500 text-lg"></i>
+           Job Settings
+          </h2>
+        <div class="space-y-3">
+          <div class="flex items-center p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+            <input type="checkbox" id="jobs.log" name="jobs.log" value="true" {{if .Config.Jobs.Log}}checked{{end}}
+                   class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+            <label for="jobs.log" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Enable Job Logging</label>
+          </div>
+          <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+            <label for="jobs.log_path" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Job Log Path</label>
+            <input type="text" id="jobs.log_path" name="jobs.log_path" value="{{.Config.Jobs.LogPath}}"
+                   class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                   placeholder="logs/jobs">
+          </div>
+          <div class="text-sm text-yellow-600 dark:text-yellow-300 italic p-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
+            Changes require application restart
+          </div>
+        </div>
+      </div>
+
+
+              <!-- Downloaders Settings -->
+        <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+           <i class="fas fa-download text-green-500 text-lg"></i>
+           Downloaders
+          </h2>
+        <div class="space-y-3">
+          <!-- Plugin Downloaders -->
+          <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+            <h4 class="text-sm font-medium text-gray-900 dark:text-gray-300 mb-3">Plugin Downloaders</h4>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Downloaders are now loaded as plugins. Configure plugin paths and settings in the config.yaml file.
+              See <a href="/docs/plugins" class="text-blue-600 hover:text-blue-500">plugin documentation</a> for details.
+            </p>
+          </div>
+           <div class="text-sm text-yellow-600 dark:text-yellow-300 italic py-2 px-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
+             Changes require application restart
+           </div>
+        </div>
+       </div>
+
+         <!-- Logger Settings -->
+        <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+           <i class="fas fa-clipboard-list text-yellow-500 text-lg"></i>
+           Logger
+          </h2>
+        <div class="space-y-3">
+           <div class="flex items-center p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+             <input type="checkbox" id="logger.enabled" name="logger.enabled" value="true" {{if .Config.Logger.Enabled}}checked{{end}}
+                    class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+             <label for="logger.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Enable Logging</label>
+           </div>
+
+           <div class="flex items-center p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+             <input type="checkbox" id="logger.htmx_debug" name="logger.htmx_debug" value="true" {{if .Config.Logger.HTMXDebug}}checked{{end}}
+                    class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+             <label for="logger.htmx_debug" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Enable HTMX Debugging</label>
+           </div>
+
+          <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+            <label for="logger.level" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Level</label>
+            <select id="logger.level" name="logger.level"
+                    class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm">
+              <option value="debug" {{if eq .Config.Logger.Level "debug"}}selected{{end}}>Debug</option>
+              <option value="info" {{if eq .Config.Logger.Level "info"}}selected{{end}}>Info</option>
+              <option value="warn" {{if eq .Config.Logger.Level "warn"}}selected{{end}}>Warn</option>
+              <option value="error" {{if eq .Config.Logger.Level "error"}}selected{{end}}>Error</option>
+            </select>
+          </div>
+
+          <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+            <label for="logger.format" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Format</label>
+            <select id="logger.format" name="logger.format"
+                    class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm">
+              <option value="text" {{if eq .Config.Logger.Format "text"}}selected{{end}}>Text</option>
+              <option value="json" {{if eq .Config.Logger.Format "json"}}selected{{end}}>JSON</option>
+            </select>
+           </div>
+
+           <div class="text-sm text-yellow-600 dark:text-yellow-300 italic py-2 px-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
+             Changes require application restart
+           </div>
+        </div>
+      </div>
+
+        <!-- Telegram Settings -->
+        <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+           <img class="h-6" src="/img/telegram.png" alt="Telegram">
+           Telegram
+          </h2>
+        <div class="space-y-3">
+           <div class="flex items-center p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+             <input type="checkbox" id="telegram.enabled" name="telegram.enabled" value="true" {{if .Config.Telegram.Enabled}}checked{{end}}
+                    class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+             <label for="telegram.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Enable Telegram</label>
+           </div>
+
+           <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+             <label for="telegram.token" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Telegram Bot Token</label>
+             <input type="password" id="telegram.token" name="telegram.token" value="{{.Config.Telegram.Token}}"
+                    class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                    placeholder="Bot token">
+           </div>
+
+           <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+             <label for="telegram.allowedUsers" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Allowed Users</label>
+             <input type="text" id="telegram.allowedUsers" name="telegram.allowedUsers" value="{{range $index, $user := .Config.Telegram.AllowedUsers}}{{if $index}}, {{end}}{{$user}}{{end}}"
+                    class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                    placeholder="username1, username2, ...">
+             <div class="mt-2">
+               <a href="https://api.telegram.org/bot7686456512:AAEB9tCEt44Ox-_JwFxn3T1f_-GH6Kq2pf4/getUpdates"
+                  target="_blank"
+                  class="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                 <i class="fas fa-external-link-alt mr-1"></i>
+                 Get Bot Updates (for Chat ID)
+                </a>
+              </div>
+            </div>
+           <div class="text-sm text-yellow-600 dark:text-yellow-300 italic py-2 px-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
+             Changes require application restart
+           </div>
+            <div class="text-sm text-yellow-600 dark:text-yellow-300 italic py-2 px-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
+              Changes require application restart
+            </div>
+        </div>
+      </div>
+
+      <!-- Import Section -->
+         <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <i class="fas fa-file-import text-green-500 text-lg"></i>
+            Import
+           </h2>
+          <div class="space-y-3">
+            <div class="flex flex-col md:flex-row md:items-center p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+              <input type="checkbox" id="import.move" name="import.move" value="true" {{if .Config.Import.Move}}checked{{end}}
+                     class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+              <label for="import.move" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Move files instead of copying</label>
+            </div>
+           <div class="flex flex-col md:flex-row md:items-center p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+               <input type="checkbox" id="import.always_queue" name="import.always_queue" value="true" {{if .Config.Import.AlwaysQueue}}checked{{end}}
+                      class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+               <label for="import.always_queue" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Always queue tracks for review.</label>
+             </div>
+             <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+               <label for="import.duplicates" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Duplicate Handling</label>
+                 <select id="import.duplicates" name="import.duplicates"
+                         class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm">
+                   <option value="replace" {{if eq .Config.Import.Duplicates "replace"}}selected{{end}}>DUP. REPLACE - Overwrite existing files</option>
+                   <option value="skip" {{if eq .Config.Import.Duplicates "skip"}}selected{{end}}>DUP. SKIP - Keep both files</option>
+                   <option value="queue" {{if eq .Config.Import.Duplicates "queue"}}selected{{end}}>DUP. QUEUE - Add to review queue</option>
+                 </select>
+             </div>
+         </div>
+       </div>
+
+
+        <!-- Tagging Settings -->
+         <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 opacity-50">
+           <h2 class="text-lg font-semibold text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+            <i class="fas fa-tags text-gray-500 text-lg"></i>
+            Tagging (soon)
+           </h2>
+        <div class="space-y-3">
+          <div class="flex items-center p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+             <input type="checkbox" id="tag.enabled" name="tag.enabled" value="true" disabled="disabled" {{if .Config.Tag.Enabled}}checked{{end}}
+                   class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+            <label for="tag.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Enable Tagging</label>
+          </div>
+
+           <!-- MusicBrainz Provider -->
+           <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+             <div class="flex items-center mb-3">
+                <input type="checkbox" id="tag.providers.musicbrainz.enabled" name="tag.providers.musicbrainz.enabled" value="true" disabled="disabled" {{if .Config.Tag.Providers.musicbrainz.Enabled}}checked{{end}}
+                      class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+               <label for="tag.providers.musicbrainz.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">MusicBrainz</label>
+             </div>
+             <div>
+               <label for="tag.providers.musicbrainz.api_key" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
+                <input type="password" id="tag.providers.musicbrainz.api_key" name="tag.providers.musicbrainz.api_key" disabled="disabled" value="{{.Config.Tag.Providers.musicbrainz.APIKey}}"
+                      class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                      placeholder="API key (optional)">
+             </div>
+           </div>
+
+           <!-- Discogs Provider -->
+           <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+             <div class="flex items-center mb-3">
+                <input type="checkbox" id="tag.providers.discogs.enabled" name="tag.providers.discogs.enabled" value="true" disabled="disabled" {{if .Config.Tag.Providers.discogs.Enabled}}checked{{end}}
+                      class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+               <label for="tag.providers.discogs.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Discogs</label>
+             </div>
+             <div>
+               <label for="tag.providers.discogs.api_key" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
+                <input type="password" id="tag.providers.discogs.api_key" name="tag.providers.discogs.api_key" disabled="disabled" value="{{.Config.Tag.Providers.discogs.APIKey}}"
+                      class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                      placeholder="API key">
+             </div>
+           </div>
+
+           <!-- AcoustID Provider -->
+           <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+             <div class="flex items-center mb-3">
+                <input type="checkbox" id="tag.providers.acoustid.enabled" name="tag.providers.acoustid.enabled" value="true" disabled="disabled" {{if .Config.Tag.Providers.acoustid.Enabled}}checked{{end}}
+                      class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+               <label for="tag.providers.acoustid.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">AcoustID</label>
+             </div>
+             <div>
+               <label for="tag.providers.acoustid.api_key" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
+                <input type="password" id="tag.providers.acoustid.api_key" name="tag.providers.acoustid.api_key" disabled="disabled" value="{{.Config.Tag.Providers.acoustid.APIKey}}"
+                      class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                      placeholder="API key">
+             </div>
+           </div>
+        </div>
+      </div>
+
+    <!-- Path Templates (Full Width) -->
+      <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+          <i class="fas fa-folder-tree text-indigo-500 text-lg"></i>
+          Path Templates
+        </h2>
+        <div class="grid grid-cols-1 gap-3">
+         <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+           <label for="import.paths.default_path" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Default Path</label>
+           <input type="text" id="import.paths.default_path" name="import.paths.default_path" value="{{.Config.Import.PathOptions.DefaultPath}}"
+                  class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm">
+         </div>
+         <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+           <label for="import.paths.compilations" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Compilations Path</label>
+           <input type="text" id="import.paths.compilations" name="import.paths.compilations" value="{{.Config.Import.PathOptions.Compilations}}"
+                  class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm">
+         </div>
+         <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+           <label for="import.paths.album:soundtrack" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Soundtrack Path</label>
+           <input type="text" id="import.paths.album:soundtrack" name="import.paths.album:soundtrack" value="{{.Config.Import.PathOptions.AlbumSoundtrack}}"
+                  class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm">
+         </div>
+         <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+           <label for="import.paths.album:single" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Single Path</label>
+           <input type="text" id="import.paths.album:single" name="import.paths.album:single" value="{{.Config.Import.PathOptions.AlbumSingle}}"
+                  class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm">
+         </div>
+         <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+           <label for="import.paths.album:ep" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">EP Path</label>
+           <input type="text" id="import.paths.album:ep" name="import.paths.album:ep" value="{{.Config.Import.PathOptions.AlbumEP}}"
+                  class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm">
+         </div>
+       </div>
+      </div>
+    </div>
+
+   <!-- Submit Button with Success Message -->
+     <div class="flex justify-end items-center gap-4 mt-0.5">
+      {{if .Toast}}
+      <div class="text-sm text-green-600 dark:text-green-400 font-medium">
+        {{.Toast}}
+      </div>
+      {{end}}
+       <button type="submit"
+               class="px-5 py-2.5 backdrop-blur-sm hover:bg-blue-200/80 bg-blue-100/80 hover:dark:bg-blue-800/30 dark:bg-blue-900/30 border border-blue-200/50 dark:border-blue-700/50 text-sm text-blue-800 dark:text-blue-200 rounded-lg transition-colors font-medium text-center">
+         Save Settings
+       </button>
+    </div>
+  </form>

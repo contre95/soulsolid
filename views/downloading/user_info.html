@@ -1,0 +1,201 @@
+<div class="relative bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg p-6 mb-8">
+ {{if not .HasDownloaders}}
+    <!-- Show message when no downloaders are configured -->
+    <div class="flex flex-col md:flex-row md:items-start gap-6 md:gap-8">
+      <div class="w-full md:w-1/3">
+        <div class="flex items-center gap-4">
+          <div class="w-16 h-16 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-8 text-gray-500">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 0 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+            </svg>
+          </div>
+          <div class="flex-1">
+             <h2 class="text-xl font-semibold text-slate-800 dark:text-white mb-1">No Downloaders Configured</h2>
+            <div class="flex items-center gap-2 mb-3">
+              <p class="text-slate-600 dark:text-slate-400">Music Download Service</p>
+            </div>
+              <div class="flex items-center gap-3 flex-wrap">
+                <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-yellow-500/10 backdrop-blur-md border border-yellow-400/30 text-yellow-600 dark:text-yellow-300 shadow-lg shadow-yellow-500/10 hover:shadow-yellow-500/20">
+                  <span class="flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2 opacity-80"></i>
+                    <span class="font-semibold">NO DOWNLOADERS</span>
+                  </span>
+                </span>
+             </div>
+          </div>
+        </div>
+      </div>
+      <div class="w-full md:w-3/4 flex flex-col">
+        <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-slate-600 dark:text-slate-300">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 10.607 10.607Z" />
+          </svg>
+          Search Music
+        </h3>
+         <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 text-center">
+           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mx-auto mb-4 text-gray-400">
+             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+           </svg>
+            <p class="text-gray-600 dark:text-gray-400 mb-2">No music downloaders are configured</p>
+            <p class="text-sm text-gray-500 dark:text-gray-500 mb-4">To start downloading music, you need to configure at least one downloader plugin.</p>
+            <a href="/docs/plugins" class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors duration-200">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 1 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+              </svg>
+              View Plugin Documentation
+            </a>
+         </div>
+      </div>
+    </div>
+ {{else if .UserInfo}}
+  <div class="flex flex-col md:flex-row md:items-start gap-6 md:gap-8">
+    <!-- User Info Section -->
+    <div class="w-full md:w-1/3">
+      <div class="flex items-center gap-4">
+        {{if .UserInfo.PictureSmall}}
+          <img src="{{.UserInfo.PictureSmall}}" alt="Profile Picture" class="w-16 h-16 rounded-full">
+        {{else}}
+          <div class="w-16 h-16 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-8 text-gray-500">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 0 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+            </svg>
+          </div>
+        {{end}}
+
+        <div class="flex-1">
+          <h2 class="text-xl font-semibold text-slate-800 dark:text-white mb-1">{{.UserInfo.Name}}</h2>
+          <div class="flex items-center gap-2 mb-3">
+            <img class="mb-1" src="https://flagsapi.com/{{.UserInfo.Country}}/flat/32.png">
+            <p class="text-slate-600 dark:text-slate-400">{{.DownloaderName}} User</p>
+          </div>
+
+          <div class="flex items-center gap-3 flex-wrap">
+            <!-- Downloader Status -->
+            {{range $name, $status := .Statuses}}
+            <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5
+              {{if eq $status.Status "valid"}}bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-lg shadow-green-500/10 hover:shadow-green-500/20
+              {{else if eq $status.Status "invalid"}}bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-lg shadow-red-500/10 hover:shadow-red-500/20
+              {{else}}bg-yellow-500/10 backdrop-blur-md border border-yellow-400/30 text-yellow-600 dark:text-yellow-300 shadow-lg shadow-yellow-500/10 hover:shadow-yellow-500/20{{end}}">
+              <span class="flex items-center">
+                <i class="fas {{if eq $status.Status "valid"}}fa-check-circle{{else if eq $status.Status "invalid"}}fa-times-circle{{else}}fa-exclamation-triangle{{end}} mr-2 opacity-80"></i>
+                <span class="font-semibold uppercase">{{$name}}</span>
+              </span>
+            </span>
+            {{end}}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="w-full md:w-3/4 flex flex-col">
+      <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-slate-600 dark:text-slate-300">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 10.607 10.607Z" />
+        </svg>
+        Search Music
+        <div id="search-spinner" class="htmx-indicator opacity-0 transition-opacity duration-200">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 opacity-80 animate-pulse animate-spin">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </div>
+      </h3>
+
+      <!-- Search Form -->
+      <form class="flex flex-col h-full space-y-3" hx-post="/downloads/search" hx-target="#search-results" hx-swap="innerHTML" hx-indicator="#search-spinner" hx-on:htmx:before-request="document.getElementById('homepage-content').style.display = 'none'" hx-on:htmx:after-request="document.getElementById('search-results').style.display = 'block'">
+        <div class="flex flex-col lg:flex-row gap-2 flex-1">
+          <input
+            type="text"
+            name="query"
+            placeholder="Search for albums, tracks..."
+            class="flex-1 bg-white/60 dark:bg-gray-700/60 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-full focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 px-4 py-2.5 dark:placeholder-gray-400 backdrop-blur-sm"
+          required>
+          <select name="type" class="bg-white/60 dark:bg-gray-700/60 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 px-3 py-2.5 dark:placeholder-gray-400 backdrop-blur-sm sm:flex-shrink-0">
+            <option value="track">Tracks</option>
+            <option value="album">Albums</option>
+          </select>
+        </div>
+        <button
+          type="submit"
+          hx-indicator="#search-indicator"
+          class="text-white bg-purple-600 hover:bg-purple-700 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-lg text-sm px-4 py-2.5 text-center dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-800 flex items-center justify-center gap-2 relative">
+          <div id="search-indicator" class="absolute inset-0 flex items-center justify-center opacity-0">
+            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin opacity-90"></div>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4 relative z-10">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 10.607 10.607Z" />
+          </svg>
+          <span class="relative z-10">Search</span>
+        </button>
+      </form>
+    </div>
+  </div>
+{{else}}
+   <!-- Show error state when no user info available -->
+   <div class="flex flex-col md:flex-row md:items-start gap-6 md:gap-8">
+     <div class="w-full md:w-1/3">
+       <div class="flex items-center gap-4">
+         <div class="w-16 h-16 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-8 text-gray-500">
+             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 0 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+           </svg>
+         </div>
+         <div class="flex-1">
+            <h2 class="text-xl font-semibold text-slate-800 dark:text-white mb-1">{{.DownloaderName}}</h2>
+           <div class="flex items-center gap-2 mb-3">
+             <p class="text-slate-600 dark:text-slate-400">Download Service</p>
+           </div>
+             <div class="flex items-center gap-3 flex-wrap">
+               {{if eq .DownloaderStatus.Status "disabled"}}
+               <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-lg shadow-red-500/10 hover:shadow-red-500/20">
+                 <span class="flex items-center">
+                   <i class="fas fa-times-circle mr-2 opacity-80"></i>
+                   <span class="font-semibold">DISABLED</span>
+                 </span>
+               </span>
+               {{else if eq .DownloaderStatus.Status "invalid_credentials"}}
+               <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-orange-500/10 backdrop-blur-md border border-orange-400/30 text-orange-600 dark:text-orange-300 shadow-lg shadow-orange-500/10 hover:shadow-orange-500/20">
+                 <span class="flex items-center">
+                   <i class="fas fa-exclamation-triangle mr-2 opacity-80"></i>
+                   <span class="font-semibold">INVALID CREDENTIALS</span>
+                 </span>
+               </span>
+               {{else}}
+               <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-lg shadow-red-500/10 hover:shadow-red-500/20">
+                 <span class="flex items-center">
+                   <i class="fas fa-times-circle mr-2 opacity-80"></i>
+                   <span class="font-semibold">ERROR</span>
+                 </span>
+               </span>
+               {{end}}
+            </div>
+         </div>
+       </div>
+     </div>
+     <div class="w-full md:w-3/4 flex flex-col">
+       <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-slate-600 dark:text-slate-300">
+           <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 10.607 10.607Z" />
+         </svg>
+         Search Music
+       </h3>
+        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 text-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mx-auto mb-4 text-gray-400">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+           {{if eq .DownloaderStatus.Status "disabled"}}
+           <p class="text-gray-600 dark:text-gray-400 mb-2">{{.DownloaderName}} integration is disabled</p>
+           <p class="text-sm text-gray-500 dark:text-gray-500">Enable {{.DownloaderName}} in the configuration to search and download music</p>
+           {{else if eq .DownloaderStatus.Status "invalid_credentials"}}
+           <p class="text-gray-600 dark:text-gray-400 mb-2">Credentials are invalid or expired</p>
+           <p class="text-sm text-gray-500 dark:text-gray-500">Update your credentials in the configuration</p>
+           {{else}}
+           <p class="text-gray-600 dark:text-gray-400 mb-2">{{.DownloaderName}} connection error</p>
+           <p class="text-sm text-gray-500 dark:text-gray-500">Check your configuration and try again</p>
+           {{end}}
+        </div>
+     </div>
+   </div>
+ {{end}}
+</div>
+

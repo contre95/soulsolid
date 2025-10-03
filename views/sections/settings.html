@@ -1,0 +1,14 @@
+<div id="contenido" class="animate__animated animate__fadeIn">
+  <div id="app-status" hx-get="/ui/jobs/active" hx-trigger="load, every 5s" hx-swap="innerHTML" hx-swap-oob="true"></div>
+  <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">Settings</h1>
+  
+  <div class="bg-blue-50/80 dark:bg-blue-900/30 border border-blue-200/50 dark:border-blue-700/50 rounded-xl p-6 mb-8 backdrop-blur-sm">
+    <p class="text-sm text-blue-800 dark:text-blue-200">
+      Settings are written to <code class="font-mono bg-blue-100/50 dark:bg-blue-800/50 px-2 py-1 rounded">config.yaml</code> and updated at runtime. 
+      You can also get the config in raw format: 
+      <a href="/config?fmt=json" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">JSON</a> or 
+      <a href="/config?fmt=yaml" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">YAML</a>
+    </p>
+  </div>
+<div hx-get="/ui/config/form" hx-trigger="load"></div>
+</div>

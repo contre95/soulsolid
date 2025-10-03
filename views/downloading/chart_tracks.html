@@ -1,0 +1,97 @@
+{{ if .Tracks }}
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+    {{ range .Tracks }}
+     <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 hover:shadow-lg transition-all group">
+        <div class="flex items-center space-x-4">
+          {{ if .Album.ImageMedium }}
+          <a hx-get="/downloads/album/{{.Album.ID}}/tracks"
+             hx-target="#chart-tracks"
+             hx-swap="innerHTML"
+             class="cursor-pointer hover:opacity-80 transition-opacity">
+            <img src="{{ .Album.ImageMedium }}" alt="{{ .Title }}" class="w-16 h-16 rounded-md object-cover flex-shrink-0">
+          </a>
+          {{ else }}
+          <a hx-get="/downloads/album/{{.Album.ID}}/tracks"
+             hx-target="#chart-tracks"
+             hx-swap="innerHTML"
+             class="cursor-pointer hover:opacity-80 transition-opacity">
+            <div class="w-16 h-16 rounded-md bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-8 text-white">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m9 9 10.5-3m0 6.553v3.75c0 .714-.537 1.298-1.232 1.298h-9.3m-2.268-15.5h.72c.455 0 .908.154 1.26.441l2.511 2.008a1.5 1.5 0 0 0 1.26.441h6.546c.803 0 1.455.646 1.455 1.444v.964a.75.75 0 0 0 .75.75h1.5a.75.75 0 0 0 .75-.75v-.964c0-.797-.652-1.443-1.455-1.443h-6.546a2.25 2.25 0 0 1-1.89-.658l-2.511-2.008a2.25 2.25 0 0 0-1.89-.658h-.72A2.25 2.25 0 0 0 3 6.75v10.5A2.25 2.25 0 0 0 5.25 19.5h.72a2.25 2.25 0 0 0 1.89-.658l2.511-2.008a2.25 2.25 0 0 1 1.89-.658h6.546A2.25 2.25 0 0 0 21 13.5v-.964a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75v.964c0 .797-.652 1.443-1.455 1.443h-6.546a1.5 1.5 0 0 1-1.26-.441l-2.511-2.008a1.5 1.5 0 0 1-1.26-.441h-.72A1.5 1.5 0 0 1 3 13.5v-10.5A1.5 1.5 0 0 1 4.5 1.5h.72a1.5 1.5 0 0 1 1.26.441l2.511 2.008a1.5 1.5 0 0 1 1.26.441h6.546Z" />
+              </svg>
+            </div>
+          </a>
+          {{ end }}
+         <div class="flex-1 min-w-0">
+           <a hx-post="/downloads/track"
+              hx-vals='{"trackId": "{{.ID}}"}'
+              hx-target="#toast-container"
+              hx-swap="innerHTML"
+              class="text-sm font-medium text-gray-900 dark:text-white truncate hover:text-purple-600 dark:hover:text-purple-400 transition-colors block cursor-pointer">
+             {{ .Title }}
+           </a>
+           <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+             {{ range $index, $artist := .Artists }}{{ if $index }}, {{ end }}{{ $artist.Artist.Name }}{{ end }}
+           </p>
+            <a hx-get="/downloads/album/{{.Album.ID}}/tracks"
+               hx-target="#chart-tracks"
+               hx-swap="innerHTML"
+               class="text-xs text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors underline decoration-1 underline-offset-2 truncate block">
+              {{ .Album.Title }}
+            </a>
+         </div>
+         <div class="flex-shrink-0">
+           <button hx-post="/downloads/track"
+                   hx-vals='{"trackId": "{{.ID}}"}'
+                   hx-target="#toast-container"
+                   hx-swap="innerHTML"
+                   class="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white">
+            <svg class="size-4" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <title>Download-3</title> <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"> <g id="Download-3"> <rect id="Rectangle" fill-rule="nonzero" x="0" y="0" width="24" height="24"> </rect> <line x1="12" y1="5" x2="12" y2="15" id="Path" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"> </line> <path d="M17,11 L12.7071,15.2929 C12.3166,15.6834 11.6834,15.6834 11.2929,15.2929 L7,11" id="Path" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"> </path> <line x1="19" y1="20" x2="5" y2="20" id="Path" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"> </line> </g> </g> </g></svg>
+           </button>
+         </div>
+       </div>
+     </div>
+    {{ end }}
+  </div>
+{{ else }}
+  <div class="bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-lg p-6 border border-red-200 dark:border-red-800">
+    <div class="flex items-center space-x-4">
+      <div class="flex-shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-8 text-red-600 dark:text-red-400">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
+      </div>
+      <div class="flex-1">
+        <h3 class="text-lg font-semibold text-red-800 dark:text-red-200 mb-1">
+          {{ if eq .DownloaderStatus.Status "disabled" }}
+            {{ .DownloaderStatus.Name }} Integration Disabled
+          {{ else if eq .DownloaderStatus.Status "invalid_credentials" }}
+            Credentials Invalid or Expired
+          {{ else }}
+            Unable to Load Chart Tracks
+          {{ end }}
+        </h3>
+        <p class="text-red-700 dark:text-red-300 mb-3">
+          {{ if eq .DownloaderStatus.Status "disabled" }}
+            {{ .DownloaderStatus.Name }} is disabled in your configuration.
+          {{ else if eq .DownloaderStatus.Status "invalid_credentials" }}
+            Your {{ .DownloaderStatus.Name }} credentials are invalid or have expired.
+          {{ else if .Error }}
+            {{ .Error }}
+          {{ else }}
+            An error occurred while loading chart tracks.
+          {{ end }}
+        </p>
+        <p class="text-sm text-red-600 dark:text-red-400">
+          {{ if eq .DownloaderStatus.Status "disabled" }}
+            Enable {{ .DownloaderStatus.Name }} in configuration to search and download music.
+          {{ else if eq .DownloaderStatus.Status "invalid_credentials" }}
+            Update your credentials in the configuration to continue using {{ .DownloaderStatus.Name }}.
+          {{ else }}
+            Please check your configuration and try again.
+          {{ end }}
+        </p>
+      </div>
+    </div>
+  </div>
+{{ end }}

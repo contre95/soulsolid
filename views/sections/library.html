@@ -1,0 +1,112 @@
+<div id="contenido" class="animate__animated animate__fadeIn">
+  <div id="app-status" hx-get="/ui/jobs/active" hx-trigger="load, every 5s" hx-swap="innerHTML" hx-swap-oob="true"></div>
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+     <h1 class="text-3xl font-bold text-slate-800 dark:text-white">Music Library</h1>
+     <div class="flex items-center gap-3">
+        <button
+         hx-get="/ui/library"
+         hx-swap="outerHTML"
+         hx-target="#contenido"
+         title="Refresh Library View"
+         class="cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-lg shadow-green-500/10 hover:shadow-green-500/20">
+        <span class="flex items-center">
+          <i class="fas fa-refresh mr-2 opacity-80"></i>
+          <i class="fas fa-music opacity-80"></i>
+        </span>
+       </button>
+        <button
+         hx-post="/import/directory"
+         hx-vals='{"directoryPath": "{{.DefaultDownloadPath}}"}'
+         hx-target="#toast-container"
+         hx-swap="innerHTML"
+         title="Import from Downloads Folder"
+         class="cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-blue-500/10 backdrop-blur-md border border-blue-400/30 text-blue-600 dark:text-blue-300 shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20">
+         <span class="flex items-center">
+           <i class="fas fa-download mr-2 opacity-80"></i>
+           <i class="fas fa-arrow-right mr-2 opacity-60"></i>
+           <i class="fas fa-database opacity-80"></i>
+         </span>
+        </button>
+        <a
+         href="/library/tree?folder=downloads"
+         target="_blank"
+         title="Open Downloads Folder Tree"
+         class="cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-purple-500/10 backdrop-blur-md border border-purple-400/30 text-purple-600 dark:text-purple-300 shadow-lg shadow-purple-500/10 hover:shadow-purple-500/20">
+         <span class="flex items-center">
+           <i class="fas fa-folder-tree mr-2 opacity-80"></i>
+           <i class="fas fa-download opacity-80"></i>
+         </span>
+        </a>
+        <a
+         href="/library/tree"
+         target="_blank"
+         title="Open Library Folder Tree"
+         class="cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-orange-500/10 backdrop-blur-md border border-orange-400/30 text-orange-600 dark:text-orange-300 shadow-lg shadow-orange-500/10 hover:shadow-orange-500/20">
+         <span class="flex items-center">
+           <i class="fas fa-folder-tree mr-2 opacity-80"></i>
+           <i class="fas fa-music opacity-80"></i>
+         </span>
+        </a>
+      </div>
+   </div>
+
+  <!-- Statistics Cards - Using dashboard cards -->
+  <div hx-get="/ui/library/stats-cards" hx-trigger="load" hx-swap="outerHTML" class="mb-8">
+    <!-- Loading state -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
+      <div class="bg-white/80 dark:bg-gray-900/70 p-8 rounded-2xl shadow-lg animate-pulse">
+        <div class="flex items-center">
+          <div class="w-16 h-16 bg-gray-300 dark:bg-gray-700 rounded-2xl"></div>
+          <div class="ml-6 flex-1">
+            <div class="h-4 bg-gray-300 dark:bg-gray-700 rounded w-20 mb-2"></div>
+            <div class="h-12 bg-gray-300 dark:bg-gray-700 rounded w-24"></div>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white/80 dark:bg-gray-900/70 p-8 rounded-2xl shadow-lg animate-pulse">
+        <div class="flex items-center">
+          <div class="w-16 h-16 bg-gray-300 dark:bg-gray-700 rounded-2xl"></div>
+          <div class="ml-6 flex-1">
+            <div class="h-4 bg-gray-300 dark:bg-gray-700 rounded w-20 mb-2"></div>
+            <div class="h-12 bg-gray-300 dark:bg-gray-700 rounded w-24"></div>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white/80 dark:bg-gray-900/70 p-8 rounded-2xl shadow-lg animate-pulse">
+        <div class="flex items-center">
+          <div class="w-16 h-16 bg-gray-300 dark:bg-gray-700 rounded-2xl"></div>
+          <div class="ml-6 flex-1">
+            <div class="h-4 bg-gray-300 dark:bg-gray-700 rounded w-20 mb-2"></div>
+            <div class="h-12 bg-gray-300 dark:bg-gray-700 rounded w-24"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Library Table Section - Loaded from UI library feature -->
+  <div hx-get="/ui/library/table" hx-trigger="load" hx-swap="outerHTML">
+    <!-- Loading state -->
+    <div class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+      <div class="border-b border-slate-200 dark:border-slate-700">
+        <nav class="flex -mb-px">
+          <div class="py-4 px-6 text-sm font-medium border-b-2 border-transparent text-slate-500">
+            <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-16 animate-pulse"></div>
+          </div>
+          <div class="py-4 px-6 text-sm font-medium border-b-2 border-transparent text-slate-500">
+            <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-16 animate-pulse"></div>
+          </div>
+          <div class="py-4 px-6 text-sm font-medium border-b-2 border-transparent text-slate-500">
+            <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-16 animate-pulse"></div>
+          </div>
+        </nav>
+      </div>
+      <div class="p-6">
+        <div class="animate-pulse">
+          <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
+          <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
+          <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+        </div>
+      </div>
+    </div>
+  </div>

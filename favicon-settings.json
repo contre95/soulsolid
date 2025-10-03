@@ -1,0 +1,32 @@
+{
+  "icon": {
+    "desktop": {
+      "regularIconTransformation": {
+        "type": "none"
+      },
+      "darkIconType": "none"
+    },
+    "touch": {
+      "transformation": {
+        "type": "background",
+        "backgroundColor": "#ffffff",
+        "backgroundRadius": 0,
+        "imageScale": 0.7
+      },
+      "appTitle": "Soulsolid"
+    },
+    "webAppManifest": {
+      "transformation": {
+        "type": "background",
+        "backgroundColor": "#ffffff",
+        "backgroundRadius": 0,
+        "imageScale": 0.6
+      },
+      "backgroundColor": "#5893CA",
+      "name": "Soulsolid",
+      "shortName": "Soulsolid",
+      "themeColor": "#5893CA"
+    }
+  },
+  "path": "/img/favicon/"
+}

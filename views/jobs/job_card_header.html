@@ -1,0 +1,57 @@
+{{ $job := . }}
+<div class="flex justify-between items-start mb-2">
+  <div>
+    <h4 class="text-sm mb-2 font-semibold text-gray-900 dark:text-white">{{ $job.Name }}</h4>
+       <div class="flex items-center ">
+           {{ if or (eq $job.Type "download_track") (eq $job.Type "download_album") }}
+            <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-purple-500/10 backdrop-blur-md border border-purple-400/30 text-purple-600 dark:text-purple-300 shadow-md shadow-purple-500/10 hover:shadow-purple-500/20">{{ $job.Type }}</span>
+           {{ else if eq $job.Type "directory_import" }}
+            <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-md shadow-green-500/10 hover:shadow-green-500/20">{{ $job.Type }}</span>
+          {{ else if eq $job.Type "dap_sync" }}
+            <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-yellow-500/10 backdrop-blur-md border border-yellow-400/30 text-yellow-600 dark:text-yellow-300 shadow-md shadow-yellow-500/10 hover:shadow-yellow-500/20">{{ $job.Type }}</span>
+          {{ else }}
+            <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-gray-500/10 backdrop-blur-md border border-gray-400/30 text-gray-600 dark:text-gray-300 shadow-md shadow-gray-500/10 hover:shadow-gray-500/20">{{ $job.Type }}</span>
+          {{ end }}
+        <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">{{ $job.CreatedAt.Format "Jan 2, 15:04" }}</span>
+      </div>
+
+  </div>
+  <div class="flex items-center space-x-2">
+     {{ if eq $job.Status "running" }}
+        <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-blue-500/10 backdrop-blur-md border border-blue-400/30 text-blue-600 dark:text-blue-300 shadow-md shadow-blue-500/10 hover:shadow-blue-500/20">
+          <div class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1 animate-pulse"></div>
+          Running
+        </span>
+        <button class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-md shadow-red-500/10 hover:shadow-red-500/20 hover:bg-red-500/20 dark:hover:bg-red-500/30"
+               hx-post="/jobs/{{ $job.ID }}/cancel"
+               hx-target="closest .w-full"
+               hx-swap="outerHTML"
+               _="on click add @disabled then add .opacity-50">
+         Cancel
+       </button>
+     {{ else if eq $job.Status "completed" }}
+        <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-md shadow-green-500/10 hover:shadow-green-500/20 whitespace-nowrap">
+         ✓ Completed
+       </span>
+     {{ else if eq $job.Status "failed" }}
+        <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-md shadow-red-500/10 hover:shadow-red-500/20">
+         ✗ Failed
+       </span>
+     {{ else if eq $job.Status "pending" }}
+        <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-yellow-500/10 backdrop-blur-md border border-yellow-400/30 text-yellow-600 dark:text-yellow-300 shadow-md shadow-yellow-500/10 hover:shadow-yellow-500/20">
+          ⏳ Pending
+        </span>
+        <button class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-md shadow-red-500/10 hover:shadow-red-500/20 hover:bg-red-500/20 dark:hover:bg-red-500/30"
+               hx-post="/jobs/{{ $job.ID }}/cancel"
+               hx-target="closest .w-full"
+               hx-swap="outerHTML"
+               _="on click add @disabled then add .opacity-50">
+         Cancel
+       </button>
+     {{ else if eq $job.Status "cancelled" }}
+        <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-gray-500/10 backdrop-blur-md border border-gray-400/30 text-gray-600 dark:text-gray-300 shadow-md shadow-gray-500/10 hover:shadow-gray-500/20">
+         ⊘ Cancelled
+       </span>
+    {{ end }}
+  </div>
+</div>

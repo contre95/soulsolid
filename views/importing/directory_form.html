@@ -1,0 +1,55 @@
+<div class="bg-white/80 dark:bg-gray-900/70 p-8 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+    <div class="mb-4">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-3">
+        <i class="fas fa-folder-open text-blue-500 text-2xl"></i>
+        Import Directory
+      </h2>
+    </div>
+
+    <!-- All Badges Below Title -->
+    <div class="flex flex-col md:flex-row md:items-center gap-2 mb-4">
+      <!-- Move/Copy Badge -->
+      <span class="group inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 {{if .Config.Import.Move}}bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-lg shadow-red-500/10 hover:shadow-red-500/20{{else}}bg-blue-500/10 backdrop-blur-md border border-blue-400/30 text-blue-600 dark:text-blue-300 shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20{{end}}">
+        <span class="flex items-center">
+          <span class="font-semibold">{{if .Config.Import.Move}}MOVE{{else}}COPY{{end}}</span>
+        </span>
+      </span>
+
+      <!-- Always Queue Badge -->
+      {{if .Config.Import.AlwaysQueue}}
+      <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-yellow-500/10 backdrop-blur-md border border-yellow-400/30 text-yellow-600 dark:text-yellow-300 shadow-lg shadow-yellow-500/10 hover:shadow-yellow-500/20">
+        <span class="flex items-center">
+          <span class="font-semibold">ALWAYS QUEUE</span>
+        </span>
+      </span>
+      {{end}}
+
+      <!-- Duplicates Badge -->
+      <span class="group inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 {{if eq .Config.Import.Duplicates "skip"}}bg-sky-400/10 backdrop-blur-md border border-sky-300/30 text-sky-600 dark:text-sky-300 shadow-lg shadow-sky-400/10 hover:shadow-sky-400/20{{else if eq .Config.Import.Duplicates "replace"}}bg-orange-500/10 backdrop-blur-md border border-orange-400/30 text-orange-600 dark:text-orange-300 shadow-lg shadow-orange-500/10 hover:shadow-orange-500/20{{else if eq .Config.Import.Duplicates "queue"}}bg-violet-500/10 backdrop-blur-md border border-violet-400/30 text-violet-600 dark:text-violet-300 shadow-lg shadow-violet-500/10 hover:shadow-violet-500/20{{else}}bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-lg shadow-green-500/10 hover:shadow-green-500/20{{end}}">
+        <span class="flex items-center">
+          <span class="uppercase tracking-tight font-normal opacity-90 group-hover:opacity-100 transition-opacity">DUP. {{.Config.Import.Duplicates}}</span>
+        </span>
+      </span>
+    </div>
+  <p class="text-sm text-gray-600 dark:text-gray-300 mb-6">
+    Import music files from a directory on your system.
+  </p>
+   <form hx-post="/import/directory" hx-swap="innerHTML" hx-target="#toast-container" class="space-y-6">
+    <div>
+      <label for="directoryPath" class="block mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+        Directory Path
+      </label>
+       <input type="text" id="directoryPath" name="directoryPath" required
+         value="{{.DefaultDownloadPath}}"
+         class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-4 py-3 dark:placeholder-gray-400 backdrop-blur-sm"
+         placeholder="/path/to/music/library">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+         This is your download folder with either tagged or untagged songs that you wish to import.
+       </p>
+    </div>
+      <button type="submit"
+        class="w-full bg-blue-500 hover:bg-blue-400 text-white font-bold py-2 px-4 border-b-4 border-blue-700 hover:border-blue-500 rounded">
+        Import Directory
+      </button>
+  </form>
+</div>

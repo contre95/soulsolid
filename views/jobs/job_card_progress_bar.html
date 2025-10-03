@@ -1,0 +1,13 @@
+{{ $job := . }}
+<div class="space-y-2">
+  <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+    <div class="h-2 rounded-full {{ if or (eq $job.Status "failed") (eq $job.Status "cancelled") }}bg-red-500/10{{ else }}bg-blue-500{{ end }} transition-all duration-300" 
+         style="width: {{ $job.Progress }}%">
+    </div>
+  </div>
+
+  <div class="flex justify-between items-center">
+    <p class="text-xs text-gray-600 dark:text-gray-300">{{ $job.Message }}</p>
+    <p class="text-xs text-gray-500 dark:text-gray-400">{{ $job.Progress }}%</p>
+  </div>
+</div>

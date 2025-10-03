@@ -1,0 +1,27 @@
+{{define "scripts"}}
+  <script>
+  function toggleDarkMode() {
+    console.log("toggleDarkMode called");
+    document.documentElement.classList.toggle("dark");
+    // Optional: Persist the theme preference
+    if (document.documentElement.classList.contains("dark")) {
+      localStorage.theme = "dark";
+      console.log("Switched to dark mode");
+    } else {
+      localStorage.theme = "light";
+      console.log("Switched to light mode");
+    }
+  }
+  if (
+    localStorage.theme === "dark" ||
+    (!("theme" in localStorage) &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches)
+  ) {
+    document.documentElement.classList.add("dark");
+    console.log("Initial dark mode applied");
+  } else {
+    document.documentElement.classList.remove("dark");
+    console.log("Initial light mode applied");
+  }
+</script>
+{{end}}

@@ -1,0 +1,105 @@
+{{if .Pagination}}
+  <div class="mt-4 flex items-center justify-between px-2 mb-2">
+    <div class="flex space-x-1">
+       <button class="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded text-sm {{if not .Pagination.HasPrev}}text-gray-400 dark:text-gray-500 cursor-not-allowed{{else}}text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700{{end}}"
+               {{if not .Pagination.HasPrev}}disabled{{end}}
+               hx-get="/library/albums?page={{.Pagination.PrevPage}}&limit={{.Pagination.Limit}}"
+               hx-target="#albums-content"
+               hx-swap="innerHTML">
+         Previous
+       </button>
+       <button class="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded text-sm {{if not .Pagination.HasNext}}text-gray-400 dark:text-gray-500 cursor-not-allowed{{else}}text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700{{end}}"
+               {{if not .Pagination.HasNext}}disabled{{end}}
+               hx-get="/library/albums?page={{.Pagination.NextPage}}&limit={{.Pagination.Limit}}"
+               hx-target="#albums-content"
+               hx-swap="innerHTML">
+         Next
+       </button>
+    </div>
+     <div class="text-sm text-gray-500 dark:text-gray-400">
+       <span class="hidden md:inline">Showing </span>{{.Pagination.Page}}/{{.Pagination.TotalPages}} <span class="hidden md:inline">pages </span>({{.Pagination.TotalCount}} total albums)
+     </div>
+  </div>
+{{end}}
+
+{{if .Albums}}
+   <div class="table-container overflow-x-auto shadow-md sm:rounded-lg max-w-full">
+    <table class="min-w-full divide-y divide-gray-200/50 dark:divide-gray-700/50 text-xs">
+       <thead class="bg-gray-50/80 dark:bg-gray-800/90 backdrop-blur-sm">
+         <tr>
+           <th class="px-1.5 py-1 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Album</th>
+           <th class="px-1.5 py-1 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Artist</th>
+             <th class="px-1.5 py-1 text-center font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Year</th>
+            <th class="px-1.5 py-1 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Actions</th>
+         </tr>
+       </thead>
+       <tbody class="bg-white/50 dark:bg-gray-800/70 divide-y divide-gray-200/30 dark:divide-gray-700/40 backdrop-blur-sm">
+         {{range .Albums}}
+           <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/60 transition-colors">
+              <td class="px-1.5 py-1 whitespace-nowrap">
+                <div class="flex items-center">
+                  <div class="w-7 h-7 rounded flex items-center justify-center mr-2 overflow-hidden">
+                    {{if .ImageSmall}}
+                    <img src="{{.ImageSmall}}" alt="{{.Title}}" class="w-full h-full object-cover">
+                    {{else if .ImageMedium}}
+                    <img src="{{.ImageMedium}}" alt="{{.Title}}" class="w-full h-full object-cover">
+                    {{else if .ImageLarge}}
+                    <img src="{{.ImageLarge}}" alt="{{.Title}}" class="w-full h-full object-cover">
+                    {{else if .ImageXL}}
+                    <img src="{{.ImageXL}}" alt="{{.Title}}" class="w-full h-full object-cover">
+                    {{else}}
+                    <div class="w-full h-full bg-purple-600 rounded-full flex items-center justify-center">
+                      <span class="text-white font-medium text-xs">{{if .Title}}{{slice .Title 0 1}}{{else}}?{{end}}</span>
+                    </div>
+                    {{end}}
+                  </div>
+                  <div class="text-xs font-medium text-gray-900 dark:text-white truncate max-w-xs">{{.Title}}</div>
+                </div>
+              </td>
+             <td class="px-1.5 py-1 text-gray-600 dark:text-gray-300 truncate max-w-xs text-xs">
+               {{if .Artists}}
+                 {{range $index, $artist := .Artists}}{{if $index}}, {{end}}{{.Artist.Name}}{{if not (eq .Role "main")}} ({{.Role}}){{end}}{{end}}
+               {{end}}
+             </td>
+              <td class="px-1.5 py-1 text-center text-gray-600 dark:text-gray-300 text-xs">
+                {{if .ReleaseDate}}{{.ReleaseDate.Year}}{{else}}-{{end}}
+              </td>
+              <td class="px-1.5 py-1 whitespace-nowrap">
+                <button class="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 px-2 py-1 bg-purple-50/50 dark:bg-purple-900/40 rounded backdrop-blur-sm border border-purple-200/50 dark:border-purple-700/50 text-xs"
+                        hx-get="/library/albums/{{.ID}}"
+                        hx-target="#album-detail"
+                        hx-swap="innerHTML">
+                  View
+                </button>
+              </td>
+           </tr>
+         {{end}}
+      </tbody>
+    </table>
+  </div>
+  
+  {{if .Pagination}}
+    <div class="mt-4 flex items-center justify-between px-2 mb-2">
+      <div class="flex space-x-1">
+         <button class="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded text-sm {{if not .Pagination.HasPrev}}text-gray-400 dark:text-gray-500 cursor-not-allowed{{else}}text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700{{end}}"
+                {{if not .Pagination.HasPrev}}disabled{{end}}
+                hx-get="/library/albums?page={{.Pagination.PrevPage}}&limit={{.Pagination.Limit}}"
+                hx-target="#albums-content"
+                hx-swap="innerHTML">
+          Previous
+        </button>
+        <button class="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded text-sm {{if not .Pagination.HasNext}}text-gray-400 dark:text-gray-500 cursor-not-allowed{{else}}text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700{{end}}"
+                {{if not .Pagination.HasNext}}disabled{{end}}
+                hx-get="/library/albums?page={{.Pagination.NextPage}}&limit={{.Pagination.Limit}}"
+                hx-target="#albums-content"
+                hx-swap="innerHTML">
+          Next
+        </button>
+      </div>
+       <div class="text-sm text-gray-500 dark:text-gray-400">
+         <span class="hidden md:inline">Showing </span>{{.Pagination.Page}}/{{.Pagination.TotalPages}} <span class="hidden md:inline">pages </span>({{.Pagination.TotalCount}} total albums)
+       </div>
+    </div>
+  {{end}}
+
+{{end}}

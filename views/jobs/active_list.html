@@ -1,0 +1,6 @@
+{{ if .Jobs }}
+  {{ range .Jobs }}
+    {{ template "jobs/job_card" . }}
+  {{ end }}
+{{ else }}
+{{ end }}

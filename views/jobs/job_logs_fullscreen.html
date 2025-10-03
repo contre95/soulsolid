@@ -1,0 +1,52 @@
+{{ $job := .Job }}
+{{if $job.LogPath}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logs for Job {{ $job.ID }}</title>
+    <script src="/js/htmx.min.js"></script>
+    <script src="/js/_hyperscript.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000000;
+            color: #e5e7eb;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace;
+            font-size: 12px;
+            overflow: hidden;
+        }
+        .log-error { color: #ef4444 !important; font-weight: 500; }
+        .log-warning { color: #f59e0b !important; font-weight: 500; }
+        .log-violet { color: #8b5cf6 !important; font-weight: 500; }
+        .log-blue { color: #3b82f6 !important; font-weight: 500; }
+        .log-orange { color: #f97316 !important; font-weight: 500; }
+        .log-green { color: #48AB84 !important; font-weight: 500; }
+        .fullscreen-pre {
+            width: 100vw;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #000000;
+            color: #e5e7eb;
+            padding: 20px;
+            box-sizing: border-box;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <pre class="fullscreen-pre"
+         hx-get="/jobs/{{ $job.ID }}/logs?color=true"
+         {{ if or (eq $job.Status "completed") (eq $job.Status "cancelled") (eq $job.Status "failed") }}
+         hx-trigger="load"
+         {{ else }}
+         hx-trigger="load, every 600ms"
+         {{ end }}
+         hx-target="this"
+         hx-swap="innerHTML"
+         _="on htmx:afterSwap go to the bottom of me"></pre>
+</body>
+</html>
+{{end}}

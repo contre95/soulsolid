@@ -1,0 +1,21 @@
+<div class="w-full bg-white/90 dark:bg-gray-900/90 shadow-sm rounded-xl p-3 mb-3 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50">
+{{ $job := . }}
+  <!-- Static job header -->
+  {{ template "jobs/job_card_header" . }}
+  
+  <!-- Progress section that polls every 600ms until job is completed/cancelled -->
+  {{ if or (eq .Status "completed") (eq .Status "cancelled") (eq .Status "failed") }}
+    {{ template "jobs/job_card_progress_bar" . }}
+  {{ else }}
+    <div hx-get="/jobs/{{ $job.ID }}/progress"
+         hx-trigger="load, every 600ms"
+         hx-target="this"
+         hx-swap="innerHTML"
+         hx-on::after-request="if(event.detail.xhr.status === 200 && event.detail.xhr.getResponseHeader('HX-Trigger') === 'done') { htmx.trigger('body', 'refreshJobList') }">
+      {{ template "jobs/job_card_progress_bar" . }}
+    </div>
+  {{ end }}
+  
+  <!-- Static job footer -->
+  {{ template "jobs/job_card_footer" . }}
+</div>

@@ -1,0 +1,50 @@
+<h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">Albums</h3>
+<div id="navigation-content" class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg md:px-2 px-6 py-6 mb-2">
+  <!-- Content will be loaded here -->
+</div>
+
+<div id="results-container" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
+  {{if not .Albums}}
+    <p class="text-slate-500 dark:text-slate-400 col-span-full text-center">No albums found</p>
+  {{else}}
+    {{range .Albums}}
+    <div class="group bg-white dark:bg-slate-800 rounded-lg md:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+      <!-- Album Cover -->
+      <div class="aspect-square">
+         <button hx-get="/downloads/album/{{.ID}}/tracks"
+                 hx-target="#navigation-content"
+                 hx-swap="innerHTML"
+                 hx-indicator="#album-loading-{{.ID}}"
+                 class="relative">
+             <div id="album-loading-{{.ID}}" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded opacity-0 transition-opacity">
+               <div class="w-10 h-10 border-2 border-white border-t-transparent rounded-full animate-spin opacity-90"></div>
+             </div>
+           {{if .ImageXL}}
+           <img src="{{.ImageXL}}" alt="{{.Title}}" class="w-full h-full object-cover rounded-lg shadow-lg ring-2 ring-white/20">
+           {{else if .ImageLarge}}
+           <img src="{{.ImageLarge}}" alt="{{.Title}}" class="w-full h-full object-cover rounded-lg shadow-lg ring-2 ring-white/20">
+           {{else if .ImageMedium}}
+           <img src="{{.ImageMedium}}" alt="{{.Title}}" class="w-full h-full object-cover rounded-lg shadow-lg ring-2 ring-white/20">
+           {{else if .ImageSmall}}
+           <img src="{{.ImageSmall}}" alt="{{.Title}}" class="w-full h-full object-cover rounded-lg shadow-lg ring-2 ring-white/20">
+           {{else}}
+            <div class="w-full h-full bg-purple-600 rounded-lg flex items-center justify-center shadow-lg ring-2 ring-white/20">
+                <img src="/img/album.svg" alt="Album" class="w-8 h-8 opacity-50 mb-2">
+                <span class="text-white font-medium text-lg">{{if .Title}}{{slice .Title 0 1}}{{else}}?{{end}}</span>
+            </div>
+           {{end}}
+        </button>
+      </div>
+
+       <!-- Album Info -->
+       <div class="p-2 md:p-4">
+         <h3 class="font-semibold text-slate-900 dark:text-white truncate text-xs md:text-sm">{{.Title}}</h3>
+         <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5 md:mt-1">
+           {{if .Artists}}{{(index .Artists 0).Artist.Name}}{{else}}Various Artists{{end}}
+         </p>
+       </div>
+    </div>
+    {{end}}
+  {{end}}
+</div>
+

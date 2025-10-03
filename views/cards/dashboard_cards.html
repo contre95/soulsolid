@@ -1,0 +1,56 @@
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8" id="dashboard-cards">
+  <div class="bg-white/80 dark:bg-gray-900/70 p-8 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 transition-all hover:scale-105 hover:shadow-xl">
+    <div class="flex items-center">
+      <div class="flex-shrink-0">
+         <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:from-indigo-400 group-hover:to-purple-500 transition-colors">
+          <i class="fa-solid fa-guitar text-2xl text-white drop-shadow-md group-hover:scale-110 transition-transform"></i>
+        </div>
+      </div>
+      <div class="ml-6 flex-1">
+        <dl>
+          <dt class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Artists</dt>
+          <dd class="text-5xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+            {{.ArtistsCount}}
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white/80 dark:bg-gray-900/70 p-8 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 transition-all hover:scale-105 hover:shadow-xl">
+    <div class="flex items-center">
+      <div class="flex-shrink-0">
+         <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:from-purple-400 group-hover:to-violet-500 transition-colors">
+          <i class="fa-solid fa-compact-disc text-2xl text-white drop-shadow-md group-hover:scale-110 transition-transform"></i>
+        </div>
+      </div>
+      <div class="ml-6 flex-1">
+        <dl>
+          <dt class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Albums</dt>
+          <dd class="text-5xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+            {{.AlbumsCount}}
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white/80 dark:bg-gray-900/70 p-8 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 transition-all hover:scale-105 hover:shadow-xl">
+    <div class="flex items-center">
+      <div class="flex-shrink-0">
+         <div class="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:from-cyan-400 group-hover:to-blue-500 transition-colors">
+          <i class="fa-solid fa-music text-2xl text-white drop-shadow-md group-hover:scale-110 transition-transform"></i>
+        </div>
+      </div>
+      <div class="ml-6 flex-1">
+        <dl>
+          <dt class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Tracks</dt>
+          <dd class="text-5xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+            {{.TracksCount}}
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+</div>

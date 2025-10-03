@@ -1,0 +1,40 @@
+{{define "head"}}
+
+<head>
+  <!-- Favicon-->
+  <link rel="icon" type="image/png" href="/img/favicon/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="/img/favicon/favicon.svg" />
+  <link rel="shortcut icon" href="/img/favicon/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="Soulsolid" />
+  <link rel="manifest" href="/img/favicon/site.webmanifest" />
+  <title>Soulsolid</title>
+
+  <!-- Phones -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- JS -->
+  <script src="/js/jquery.min.js"></script>
+  <script src="https://unpkg.com/slim-select@latest/dist/slimselect.min.js"></script>
+  <script src="/js/htmx.min.js"></script>
+  <script src="/js/class-tools.js"></script>
+  <script src="/js/iconify.min.js" defer></script>
+  <!-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> -->
+  <script src="/js/_hyperscript.min.js"></script>
+
+  {{if isDebug}}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      htmx.logAll();
+      console.log("HTMX debugging enabled");
+    });
+  </script>
+  {{end}}
+
+  <!-- CSS -->
+  <link href="/css/style.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/animate.min.css" />
+  <link href="https://unpkg.com/slim-select@latest/dist/slimselect.css" rel="stylesheet">
+  </link>
+  <link rel="stylesheet" href="/fontawesome/css/all.min.css" />
+</head>
+{{end}}

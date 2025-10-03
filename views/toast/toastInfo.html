@@ -1,0 +1,20 @@
+<div id="toastInfo" class="p-4 rounded-lg shadow-lg border backdrop-blur-sm max-w-sm bg-blue-50/90 dark:bg-blue-900/80 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 animate__animated animate__bounceInRight">
+  <div class="flex items-center">
+    <div class="flex-shrink-0">
+      <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+      </svg>
+    </div>
+    <div class="ml-3">
+      <p class="text-sm font-medium">{{.Msg}}</p>
+    </div>
+    <div class="ml-auto pl-3">
+      <button _="on click toggle .animate__bounceOutRight on #toastInfo then toggle .animate__bounceInRight on #toastInfo then wait 1s then remove #toastInfo" class="inline-flex rounded-md p-1.5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+        <span class="sr-only">Dismiss</span>
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>

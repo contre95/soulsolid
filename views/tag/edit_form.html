@@ -1,0 +1,457 @@
+{{define "tag/edit_form"}}
+
+      <form id="tag-edit-form"
+           hx-post="/tag/{{.Track.ID}}"
+           hx-target="#toast-container"
+           hx-swap="beforeend"
+           class="space-y-4">
+
+        <!-- Title and Title Version -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-1">
+            <label for="title" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+              <i class="fas fa-music mr-2 text-blue-500"></i>
+              Title
+            </label>
+             <input type="text"
+                    id="title"
+                    name="title"
+                    value="{{.Track.Title}}"
+                    class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
+                    placeholder="Track title">
+          </div>
+
+          <div class="space-y-1">
+             <label for="title_version" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+              <i class="fas fa-random mr-2 text-orange-500"></i>
+              Title Version
+            </label>
+             <input type="text"
+                    id="title_version"
+                    name="title_version"
+                    value="{{.Track.TitleVersion}}"
+                    class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
+                    placeholder="Remix, live version, etc.">
+          </div>
+        </div>
+
+        <!-- Album Information -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+           <div class="space-y-4">
+             <div class="space-y-1">
+               <label for="album" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+                 <i class="fas fa-compact-disc mr-2 text-purple-500"></i>
+                 Album
+               </label>
+               <select id="album"
+                       name="album_id"
+                       class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} focus:outline-none focus:ring-1 transition-all duration-200">
+                 <option value="">-- Select Album --</option>
+                 {{range .Albums}}
+                 <option value="{{.ID}}"
+                         {{if $.Track.Album}}{{if eq .ID $.Track.Album.ID}}selected{{end}}{{end}}>
+                   {{.Title}}
+                 </option>
+                 {{end}}
+               </select>
+             </div>
+
+             <div class="space-y-1">
+               <label for="album_artist" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+                 <i class="fas fa-user mr-2 text-indigo-500"></i>
+                 Album Artist
+               </label>
+               <select id="album_artist"
+                       name="album_artist_id"
+                       class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} focus:outline-none focus:ring-1 transition-all duration-200">
+                 <option value="">-- Select Album Artist --</option>
+                  {{range .Artists}}
+                  <option value="{{.ID}}"
+                          {{if eq .ID $.SelectedAlbumArtistID}}selected{{end}}>
+                    {{.Name}}
+                  </option>
+                  {{end}}
+               </select>
+             </div>
+           </div>
+
+           <div class="space-y-1">
+             <label for="artist" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+               <i class="fas fa-microphone mr-2 text-red-500"></i>
+               Artist
+             </label>
+             <select id="artist"
+                     name="artist_ids"
+                     multiple
+                     class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} focus:outline-none focus:ring-1 transition-all duration-200"
+                     style="min-height: 2.5rem;">
+               {{range .Artists}}
+                <option value="{{.ID}}" {{if index $.SelectedArtistIDs .ID}}selected{{end}}>
+                  {{.Name}}
+                </option>
+               {{end}}
+             </select>
+           </div>
+        </div>
+
+       <!-- Metadata -->
+       <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+         <div class="space-y-1">
+           <label for="year" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+             <i class="fas fa-calendar mr-2 text-green-500"></i>
+             Year
+           </label>
+           <input type="number"
+                  id="year"
+                  name="year"
+                  value="{{.Track.Metadata.Year}}"
+                  class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
+                  placeholder="Year">
+         </div>
+
+         <div class="space-y-1">
+           <label for="genre" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+             <i class="fas fa-tag mr-2 text-yellow-500"></i>
+             Genre
+           </label>
+           <input type="text"
+                  id="genre"
+                  name="genre"
+                  value="{{.Track.Metadata.Genre}}"
+                  class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
+                  placeholder="Genre">
+         </div>
+
+         <div class="space-y-1">
+           <label for="track_number" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+             <i class="fas fa-list-ol mr-2 text-cyan-500"></i>
+             Track #
+           </label>
+           <input type="number"
+                  id="track_number"
+                  name="track_number"
+                  value="{{.Track.Metadata.TrackNumber}}"
+                  class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
+                  placeholder="Track #">
+         </div>
+
+         <div class="space-y-1">
+           <label for="disc_number" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+             <i class="fas fa-compact-disc mr-2 text-orange-500"></i>
+             Disc #
+           </label>
+           <input type="number"
+                  id="disc_number"
+                  name="disc_number"
+                  value="{{.Track.Metadata.DiscNumber}}"
+                  class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
+                  placeholder="Disc #">
+         </div>
+
+         <div class="space-y-1">
+           <label for="isrc" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+             <i class="fas fa-barcode mr-2 text-pink-500"></i>
+             ISRC
+           </label>
+           <input type="text"
+                  id="isrc"
+                  name="isrc"
+                  value="{{.Track.ISRC}}"
+                  class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
+                  placeholder="ISRC">
+         </div>
+
+         <div class="space-y-1">
+           <label for="bpm" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+             <i class="fas fa-tachometer-alt mr-2 text-red-500"></i>
+             BPM
+           </label>
+           <input type="number"
+                  id="bpm"
+                  name="bpm"
+                  value="{{.Track.Metadata.BPM}}"
+                  class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
+                  placeholder="BPM">
+         </div>
+       </div>
+
+       <!-- Advanced Metadata -->
+       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+         <div class="space-y-1">
+           <label for="composer" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+             <i class="fas fa-feather-alt mr-2 text-teal-500"></i>
+             Composer
+           </label>
+           <input type="text"
+                  id="composer"
+                  name="composer"
+                  value="{{.Track.Metadata.Composer}}"
+                  class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
+                  placeholder="Composer">
+         </div>
+
+         <div class="space-y-1">
+           <label for="gain" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+             <i class="fas fa-volume-up mr-2 text-purple-500"></i>
+             Replay Gain (dB)
+           </label>
+           <input type="number"
+                  id="gain"
+                  name="gain"
+                  step="0.01"
+                  value="{{.Track.Metadata.Gain}}"
+                  class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
+                  placeholder="Replay Gain">
+         </div>
+       </div>
+
+       <!-- Lyrics -->
+       <div class="space-y-1">
+         <label for="lyrics" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+           <i class="fas fa-file-alt mr-2 text-indigo-500"></i>
+           Lyrics
+         </label>
+         <textarea id="lyrics"
+                   name="lyrics"
+                   rows="3"
+                   class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200 resize-vertical"
+                   placeholder="Song lyrics">{{.Track.Metadata.Lyrics}}</textarea>
+       </div>
+
+
+
+       <!-- File Information (Read-only) -->
+       <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+           <div class="space-y-1">
+             <label class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+               <i class="fas fa-folder mr-2 text-gray-500"></i>
+               File Path
+             </label>
+             <input type="text"
+                    value="{{.Track.Path}}"
+                    readonly
+                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 dark:text-gray-400 cursor-not-allowed">
+           </div>
+
+           <div class="space-y-1">
+             <label class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+               <i class="fas fa-file-audio mr-2 text-gray-500"></i>
+               Format
+             </label>
+             <input type="text"
+                    value="{{.Track.Format}}"
+                    readonly
+                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 dark:text-gray-400 cursor-not-allowed">
+           </div>
+         </div>
+        </div>
+
+        <!-- Additional Metadata (Read-only) -->
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <div class="space-y-1">
+            <label class="flex items-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+              <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+              Additional Metadata
+            </label>
+
+            <!-- Metadata Display Container -->
+            <div class="bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md p-3 max-h-48 overflow-y-auto">
+              <div class="text-xs font-mono text-gray-700 dark:text-gray-300 space-y-1"
+                   style="font-family: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace;">
+                {{if .Track.SampleRate}}
+                <div>Sample Rate: {{.Track.SampleRate}} Hz</div>
+                {{end}}
+                {{if .Track.BitDepth}}
+                <div>Bit Depth: {{.Track.BitDepth}} bits</div>
+                {{end}}
+                {{if .Track.Channels}}
+                <div>Channels: {{.Track.Channels}}</div>
+                {{end}}
+                {{if .Track.Bitrate}}
+                <div>Bitrate: {{.Track.Bitrate}} kbps</div>
+                {{end}}
+                {{if .Track.Metadata.Duration}}
+                <div>Duration: {{duration .Track.Metadata.Duration}}</div>
+                {{end}}
+                {{if .Track.Metadata.OriginalYear}}
+                <div>Original Year: {{.Track.Metadata.OriginalYear}}</div>
+                {{end}}
+                {{if .Track.Metadata.ExplicitLyrics}}
+                <div>Explicit Lyrics: {{.Track.Metadata.ExplicitLyrics}}</div>
+                {{end}}
+                {{if .Track.ExplicitContent}}
+                <div>Explicit Content: {{.Track.ExplicitContent}}</div>
+                {{end}}
+                {{if .Track.PreviewURL}}
+                <div>Preview URL: {{.Track.PreviewURL}}</div>
+                {{end}}
+                {{if .Track.Data}}
+                <div>Data: {{.Track.Data}}</div>
+                {{end}}
+                {{if .Track.AddedDate}}
+                <div>Added Date: {{.Track.AddedDate.Format "2006-01-02 15:04:05"}}</div>
+                {{end}}
+                {{if .Track.ModifiedDate}}
+                <div>Modified Date: {{.Track.ModifiedDate.Format "2006-01-02 15:04:05"}}</div>
+                {{end}}
+
+                <!-- Display Attributes map if it exists -->
+                {{if .Track.Attributes}}
+                  {{range $key, $value := .Track.Attributes}}
+                  <div>{{$key}}: {{$value}}</div>
+                  {{end}}
+                {{end}}
+
+                <!-- Show message if no additional metadata -->
+                {{if and (not (or .Track.SampleRate .Track.BitDepth .Track.Channels .Track.Bitrate .Track.Metadata.Duration .Track.Metadata.OriginalYear .Track.Metadata.ExplicitLyrics .Track.ExplicitContent .Track.PreviewURL .Track.Data .Track.AddedDate .Track.ModifiedDate)) (not .Track.Attributes)}}
+                <div class="text-gray-500 dark:text-gray-400 italic">No additional metadata available</div>
+                {{end}}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Buttons -->
+       <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+         <button type="button"
+                 hx-get="/ui/library"
+                 hx-swap="outerHTML"
+                 hx-target="#contenido"
+                 class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 transition-all duration-200">
+           <i class="fas fa-arrow-left mr-2"></i>
+           Cancel
+         </button>
+         <button type="submit"
+                 class="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
+           <i class="fas fa-save mr-2"></i>
+           Save Changes
+         </button>
+       </div>
+      </form>
+
+        <style>
+          /* SlimSelect dark mode styles */
+          .dark .ss-main {
+            background-color: #374151 !important;
+            border-color: #4b5563 !important;
+            color: #f9fafb !important;
+          }
+          .dark .ss-main .ss-values .ss-value {
+            color: #f9fafb !important;
+          }
+          .dark .ss-main .ss-placeholder {
+            color: #9ca3af !important;
+          }
+          .dark .ss-content {
+            background-color: #374151 !important;
+            border-color: #4b5563 !important;
+          }
+          .dark .ss-list {
+            background-color: #374151 !important;
+            color: #f9fafb !important;
+          }
+          .dark .ss-option {
+            color: #f9fafb !important;
+          }
+          .dark .ss-option:hover {
+            background-color: #4b5563 !important;
+          }
+          .dark .ss-option.ss-selected {
+            background-color: #1f2937 !important;
+            color: #f9fafb !important;
+          }
+          .dark .ss-search input {
+            background-color: #374151 !important;
+            border-color: #4b5563 !important;
+            color: #f9fafb !important;
+          }
+          .dark .ss-search input::placeholder {
+            color: #9ca3af !important;
+          }
+        </style>
+
+        <script>
+         // Initialize SlimSelect for both initial load and HTMX swaps
+         let artistSelect = null;
+
+         function initArtistSelect() {
+           const artistElement = document.getElementById('artist');
+           if (!artistElement) {
+             console.log('Artist select element not found');
+             return;
+           }
+
+           // Check if SlimSelect has already been initialized on this element
+           if (artistElement.closest('.ss-main')) {
+             console.log('SlimSelect already initialized on artist element');
+             return;
+           }
+
+           // Check if SlimSelect is available
+           if (typeof SlimSelect === 'undefined') {
+             console.error('SlimSelect library not loaded');
+             return;
+           }
+
+           try {
+             // Destroy existing instance if it exists
+             if (artistSelect) {
+               artistSelect.destroy();
+               artistSelect = null;
+             }
+
+             console.log('Initializing SlimSelect on artist element');
+             artistSelect = new SlimSelect({
+               select: '#artist',
+               placeholder: 'Select artists...',
+               allowDeselect: true,
+               closeOnSelect: false,
+               showSearch: true,
+               searchPlaceholder: 'Search artists...',
+               searchText: 'No results found',
+               searchingText: 'Searching...'
+             });
+             console.log('SlimSelect initialized successfully');
+           } catch (error) {
+             console.error('Error initializing SlimSelect:', error);
+           }
+         }
+
+         // Initialize on DOMContentLoaded for initial page load
+         document.addEventListener('DOMContentLoaded', function() {
+           console.log('DOMContentLoaded - initializing SlimSelect');
+           // Small delay to ensure all scripts are loaded
+           setTimeout(initArtistSelect, 100);
+         });
+
+         // Initialize on HTMX afterSwap for dynamic content loading
+         document.addEventListener('htmx:afterSwap', function(evt) {
+           console.log('htmx:afterSwap triggered', evt.detail.target.id);
+           // Check if the swapped content contains our form
+           if (evt.detail.target.id === 'contenido' || evt.detail.target.querySelector('#artist')) {
+             console.log('Artist form detected in swap, initializing SlimSelect');
+             setTimeout(initArtistSelect, 100);
+           }
+         });
+
+         // Also listen for htmx:afterRequest in case the form is loaded via other HTMX requests
+         document.addEventListener('htmx:afterRequest', function(evt) {
+           console.log('htmx:afterRequest triggered');
+           if (evt.detail.target && (evt.detail.target.id === 'contenido' || evt.detail.target.querySelector('#artist'))) {
+             console.log('Artist form detected in request, initializing SlimSelect');
+             setTimeout(initArtistSelect, 100);
+           }
+         });
+
+         // Fallback: try to initialize after a longer delay in case of timing issues
+         setTimeout(function() {
+           if (!document.getElementById('artist')?.closest('.ss-main')) {
+             console.log('Fallback initialization attempt');
+             initArtistSelect();
+           }
+         }, 500);
+       </script>
+   </div>
+ </div>
+ {{end}}

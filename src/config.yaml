@@ -1,0 +1,62 @@
+libraryPath: ./music
+downloadPath: ./downloads
+demo: false
+telegram:
+  enabled: false
+  token: ""
+  allowedUsers: []
+logger:
+  enabled: true
+  level: info
+  format: text
+  htmx_debug: false
+downloaders:
+  plugins: []
+  artwork:
+    embedded:
+      enabled: true
+      size: 1000
+      format: jpeg
+      quality: 85
+    local:
+      enabled: false
+      size: 1200
+      format: jpeg
+      template: cover.jpg
+server:
+  show_routes: false
+  port: 3535
+database:
+  path: ./library.db
+import:
+  move: false
+  always_queue: false
+  duplicates: queue
+  paths:
+    compilations: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    album:soundtrack: '%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    album:single: '%asciify{$albumartist}/%asciify{$album} [Single] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    album:ep: '%asciify{$albumartist}/%asciify{$album} [EP] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    default_path: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+tag:
+  enabled: false
+  providers:
+    acoustid:
+      enabled: false
+      api_key: ""
+    discogs:
+      enabled: false
+      api_key: ""
+    musicbrainz:
+      enabled: false
+      api_key: ""
+sync:
+  enabled: false
+  devices: []
+jobs:
+  log: true
+  log_path: ./logs/jobs
+  webhooks:
+    enabled: false
+    job_types: []
+    command: ""

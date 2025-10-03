@@ -1,0 +1,88 @@
+<div id="contenido" class="animate__animated animate__fadeIn">
+   <div id="contenido">
+        <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-4">
+            Digital Audio Player Sync
+            {{if .SyncEnabled}}
+            <span class="ml-3 group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-lg shadow-green-500/10 hover:shadow-green-500/20">
+                <span class="flex items-center">
+                    <i class="fas fa-check-circle mr-2 opacity-80"></i>
+                    <span class="font-semibold">ENABLED</span>
+                </span>
+            </span>
+            {{else}}
+            <span class="ml-3 group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-lg shadow-red-500/10 hover:shadow-red-500/20">
+                <span class="flex items-center">
+                    <i class="fas fa-times-circle mr-2 opacity-80"></i>
+                    <span class="font-semibold">DISABLED</span>
+                </span>
+            </span>
+            {{end}}
+        </h1>
+       <div class="mb-6">
+           <button 
+               hx-get="/ui/sync/status"
+               hx-target="#sync-status"
+               hx-swap="outerHTML"
+               class="px-4 py-2 backdrop-blur-sm hover:bg-blue-200/80 bg-blue-100/80 hover:dark:bg-blue-800/30 dark:bg-blue-900/30 border border-blue-200/50 dark:border-blue-700/50 text-sm text-blue-800 dark:text-blue-200 rounded-lg transition-colors"
+           >
+               Refresh All Devices
+           </button>
+       </div>
+           
+       <div id="sync-status" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+               {{range .Status}}
+               <div class="bg-white/80 dark:bg-gray-900/70 p-6 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+                   <div class="flex items-center justify-between mb-4">
+                       <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{.Name}}</h3>
+                       <span class="px-3 py-1 text-sm rounded-full {{if .Mounted}}bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300{{else}}bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300{{end}}">
+                           {{if .Mounted}}Mounted{{else}}Not Mounted{{end}}
+                       </span>
+                   </div>
+                   
+                   <div class="text-sm text-gray-600 dark:text-gray-300 mb-4 space-y-2">
+                       <div class="flex items-center">
+                           <span class="font-medium text-gray-700 dark:text-gray-400 mr-2">UUID:</span>
+                           <span class="font-mono text-gray-900 dark:text-gray-200">{{.UUID}}</span>
+                       </div>
+                       {{if .Mounted}}
+                       <div class="flex items-center">
+                           <span class="font-medium text-gray-700 dark:text-gray-400 mr-2">Path:</span>
+                           <span class="font-mono text-gray-900 dark:text-gray-200">{{.MountPath}}</span>
+                       </div>
+                       {{end}}
+                       {{if .Error}}
+                       <div class="text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-900/30 px-3 py-2 rounded-lg">
+                           <span class="font-medium">Error:</span> {{.Error}}
+                       </div>
+                       {{end}}
+                       <div class="flex items-center text-gray-500 dark:text-gray-400">
+                           <span class="font-medium mr-2">Last checked:</span>
+                           <span>{{.LastSeen.Format "15:04:05"}}</span>
+                       </div>
+                   </div>
+                   
+                    <div class="flex space-x-3">
+                        {{if .Mounted}}
+                        <button 
+                            hx-post="/sync/device/{{.UUID}}/trigger"
+                            hx-target="closest div"
+                            hx-swap="outerHTML"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                        >
+                            Sync Now
+                        </button>
+                        {{end}}
+                    </div>
+               </div>
+               {{else}}
+               <div class="col-span-full text-center text-gray-500 dark:text-gray-400 py-12">
+                   <svg class="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                   </svg>
+                   <p class="text-lg font-medium mb-2">No sync devices configured</p>
+                   <p class="text-sm">Add devices in the configuration file</p>
+               </div>
+               {{end}}
+          </div>
+    </div>
+</div>
