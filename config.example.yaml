@@ -49,7 +49,10 @@ tag:
       api_key: ""
 sync:
   enabled: true
-  devices: []
+  devices:
+    - uuid: 8722-177E
+      name: iPod
+      sync_path: Musicarr
 jobs:
   log: true
   log_path: ./logs/jobs
