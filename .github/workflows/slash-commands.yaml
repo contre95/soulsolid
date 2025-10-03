@@ -2,6 +2,8 @@ name: Slash Commands
 on:
   issue_comment:
     types: [created]
+permissions:
+  pull-requests: write
 jobs:
   slash-command:
     runs-on: ubuntu-latest
