@@ -9,14 +9,13 @@ A feature rich music organization app built for the music hoarder. Heavily under
 ## Features
 
 - **Music Library Management**: Organize and browse albums, artists, and tracks
-- **Downloading**: Download tracks and albums from Spotify and other sources
+- **Downloading**: Download tracks and albums. 
 - **Importing**: Import music from directories with automatic fingerprinting
 - **Metadata Tagging**: Auto-tag using MusicBrainz and Discogs APIs
 - **Sync with DAP**: Sync library with digital audio players
 - **Telegram Integration**: Control via Telegram bot
-- **Web UI**: User-friendly interface for all operations
+- **Web UI**: Mobile-friendly interface for all operations 
 - **Job Management**: Background processing for downloads, imports, and syncs
-- **Hosting Server**: Built-in web server for access
 
 Documentation: https://soulsolid.contre.io
 
