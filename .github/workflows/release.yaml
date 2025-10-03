@@ -4,16 +4,16 @@ on:
     branches:
       - main
     paths:
-      - 'public/**'
-      - 'src/**'
-      - 'views/**'
-      - 'go.mod'
-      - 'go.sum'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'Containerfile'
-      - 'Dockerfile'
-      - '.github/workflows/**'
+      - "public/**"
+      - "src/**"
+      - "views/**"
+      - "go.mod"
+      - "go.sum"
+      - "package.json"
+      - "package-lock.json"
+      - "Containerfile"
+      - "Dockerfile"
+      - ".github/workflows/**"
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -50,11 +50,7 @@ jobs:
           IFS='.' read -r major minor patch <<< "$version"
 
           # Get commits since last tag
-          if [[ "$latest_tag" == "v0.0.0" ]]; then
-            commits=$(git log --oneline --pretty=format:"%s")
-          else
-            commits=$(git log --oneline --pretty=format:"%s" $latest_tag..HEAD)
-          fi
+          commits=$(git log --pretty=format:"%s" $latest_tag..HEAD 2>/dev/null || git log --pretty=format:"%s")
 
           bump_type="none"
           is_release=false
@@ -62,7 +58,7 @@ jobs:
           should_release=false
 
           # Check for merged PR labels
-          merged_pr=$(gh pr list --state merged --head main --json number,labels --jq '.[] | select(.labels[].name == "enhancement" or .labels[].name == "bug" or .labels[].name == "release") | .number' | head -1)
+          merged_pr=$(gh pr list --state merged --base main --json number,labels --jq '.[] | select(.labels[].name == "enhancement" or .labels[].name == "bug" or .labels[].name == "release") | .number' | head -1)
           if [[ -n "$merged_pr" ]]; then
             labels=$(gh pr view $merged_pr --json labels --jq '.labels[].name')
             if echo "$labels" | grep -q "release"; then
