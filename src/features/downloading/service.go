@@ -143,6 +143,11 @@ type DownloaderStatus struct {
 	Message string `json:"message"`
 }
 
+// GetAllDownloaders returns all loaded downloaders
+func (s *Service) GetAllDownloaders() map[string]Downloader {
+	return s.pluginManager.GetAllDownloaders()
+}
+
 // GetDownloaderStatuses returns the current status of all configured downloaders
 func (s *Service) GetDownloaderStatuses() map[string]DownloaderStatus {
 	statuses := make(map[string]DownloaderStatus)

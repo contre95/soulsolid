@@ -90,18 +90,38 @@
              </a>
            </button>
          </li>
-         <li>
-           <button type="button" class="w-full">
-             <a hx-get="/ui/download" hx-trigger="click,reloadDownload from:body{{ .DownloadTrigger }}"
-               hx-push-url="true" hx-swap="outerHTML" hx-target="#contenido"
-               class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-green-300 dark:hover:text-green-400 dark:focus:shadow-[inset_0_0_10px_rgba(34,197,94,0.2)] focus:outline-none cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                </svg>
-               <span class="mx-4">Download</span>
-             </a>
-           </button>
-         </li>
+          <li>
+            <div class="flex items-center px-4 py-2 mt-5 text-gray-600 dark:text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+              <span class="mx-4 font-semibold">Downloaders</span>
+            </div>
+            <!-- Sub-buttons for each downloader -->
+            <ul class="ml-6 mt-2 space-y-1">
+              {{range $name, $downloader := .Downloaders}}
+              <li>
+                <button type="button" class="w-full">
+                  <a hx-get="/ui/download?downloader={{$name}}" hx-trigger="click" hx-push-url="true" hx-swap="outerHTML" hx-target="#contenido"
+                    class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-3 py-1.5 text-base text-gray-500 transition-colors duration-200 transform rounded-md dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-300 hover:text-gray-600 dark:focus:bg-neutral-700 dark:focus:text-green-400 dark:hover:text-green-400 focus:outline-none cursor-pointer">
+                    {{if eq $downloader.Icon "/img/generic-downloader.png"}}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 48 48" class="size-4">
+                      <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="4">
+                        <path fill="currentColor" fill-rule="evenodd" stroke-linejoin="round" d="M23.9999 29.0001L12 17.0001L19.9999 17.0001L19.9999 6.00011L27.9999 6.00011L27.9999 17.0001L35.9999 17.0001L23.9999 29.0001Z" clip-rule="evenodd"></path>
+                        <path d="M42 37L6 37"></path>
+                        <path d="M34 44H14"></path>
+                      </g>
+                    </svg>
+                    {{else}}
+                    <img src="{{$downloader.Icon}}" class="size-4" alt="Downloader icon">
+                    {{end}}
+                    <span class="mx-2 font-medium">{{capitalize $name}}</span>
+                  </a>
+                </button>
+              </li>
+              {{end}}
+            </ul>
+          </li>
 
         <li>
           <button type="button" class="w-full">
