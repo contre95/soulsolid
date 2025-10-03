@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"soulsolid/src/features/importing"
+	"github.com/contre95/soulsolid/src/features/importing"
 )
 
 // InMemoryQueue is an in-memory implementation of the Queue interface

@@ -1,6 +1,6 @@
 package downloading
 
-import "soulsolid/src/music"
+import "github.com/contre95/soulsolid/src/music"
 
 // Downloader defines the interface for music downloaders
 type Downloader interface {

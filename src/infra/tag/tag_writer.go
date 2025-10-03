@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/bogem/id3v2/v2"
-	"soulsolid/src/features/downloading"
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/features/downloading"
+	"github.com/contre95/soulsolid/src/music"
 	"github.com/go-flac/flacvorbis"
 	goflac "github.com/go-flac/go-flac"
 )

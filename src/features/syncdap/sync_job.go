@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/features/jobs"
 )
 
 // SyncDapTask implements jobs.Task for syncdap.

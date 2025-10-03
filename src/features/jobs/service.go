@@ -15,7 +15,7 @@ import (
 	"text/template"
 	"time"
 
-	"soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/google/uuid"
 )
 

@@ -3,7 +3,7 @@ package tag
 import (
 	"context"
 
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // MusicBrainzProvider implements MetadataProvider for MusicBrainz

@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"os/exec"
 
-	"soulsolid/src/features/config"
-	library "soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/features/config"
+	library "github.com/contre95/soulsolid/src/music"
 	"github.com/google/uuid"
 )
 

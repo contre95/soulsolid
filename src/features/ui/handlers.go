@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"os"
 
-	"soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/gofiber/fiber/v2"
 )
 

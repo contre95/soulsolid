@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"soulsolid/src/features/importing"
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/features/importing"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // FileOrganizer is the infrastructure implementation of the importing.FileOrganizer interface.

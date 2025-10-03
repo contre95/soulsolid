@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"soulsolid/src/features/config"
-	"soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/features/jobs"
 )
 
 // DeviceStatus represents the current status of a sync device

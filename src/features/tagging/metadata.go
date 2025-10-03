@@ -3,7 +3,7 @@ package tagging
 import (
 	"context"
 
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // MetadataProvider defines the interface for fetching metadata from external services

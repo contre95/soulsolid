@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/music"
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 )

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // QueueItemType represents the type of item in the queue

@@ -1,4 +1,4 @@
-module soulsolid
+module github.com/contre95/soulsolid
 
 go 1.25.0
 

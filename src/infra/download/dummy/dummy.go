@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"soulsolid/src/features/downloading"
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/features/downloading"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // DummyDownloader implements the Downloader interface with hardcoded data

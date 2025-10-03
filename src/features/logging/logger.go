@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/features/config"
 )
 
 func SetupLogger(cfg *config.Manager) *slog.Logger {

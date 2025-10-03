@@ -1,6 +1,6 @@
 package importing
 
-import "soulsolid/src/music"
+import "github.com/contre95/soulsolid/src/music"
 
 // PathParser is the interface for rendering a track's destination path based on its metadata.
 type PathParser interface {

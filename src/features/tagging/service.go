@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"soulsolid/src/features/config"
-	"soulsolid/src/features/downloading"
-	"soulsolid/src/features/importing"
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/features/downloading"
+	"github.com/contre95/soulsolid/src/features/importing"
+	"github.com/contre95/soulsolid/src/music"
 	"github.com/google/uuid"
 )
 

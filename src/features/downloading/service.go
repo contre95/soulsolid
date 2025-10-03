@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"strings"
 
-	"soulsolid/src/features/config"
-	"soulsolid/src/features/jobs"
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // Service handles downloading operations

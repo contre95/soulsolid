@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"soulsolid/src/features/jobs"
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
 

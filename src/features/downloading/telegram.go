@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/features/jobs"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/features/config"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 

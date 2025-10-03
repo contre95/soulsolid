@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"soulsolid/src/features/importing"
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/features/importing"
+	"github.com/contre95/soulsolid/src/music"
 	"github.com/dhowden/tag"
 )
 

@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"plugin"
 
-	"soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/features/config"
 )
 
 // PluginNewDownloaderFunc is the function signature that plugins must export

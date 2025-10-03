@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"soulsolid/src/features/config"
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/music"
 	"github.com/gosimple/unidecode"
 )
 

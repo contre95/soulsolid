@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"soulsolid/src/features/config"
-	"soulsolid/src/features/jobs"
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // ImportAction represents the action to take for a track during import

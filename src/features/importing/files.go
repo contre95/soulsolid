@@ -3,7 +3,7 @@ package importing
 import (
 	"context"
 
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 type FileOrganizer interface {

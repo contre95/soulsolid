@@ -3,7 +3,7 @@ package tag
 import (
 	"context"
 
-	"soulsolid/src/music"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // DiscogsProvider implements MetadataProvider for Discogs

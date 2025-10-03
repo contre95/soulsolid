@@ -6,12 +6,12 @@ import (
 	"slices"
 	"strings"
 
-	"soulsolid/src/features/config"
-	"soulsolid/src/features/downloading"
-	"soulsolid/src/features/importing"
-	"soulsolid/src/features/jobs"
-	"soulsolid/src/features/library"
-	"soulsolid/src/features/syncdap"
+	"github.com/contre95/soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/features/downloading"
+	"github.com/contre95/soulsolid/src/features/importing"
+	"github.com/contre95/soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/features/library"
+	"github.com/contre95/soulsolid/src/features/syncdap"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 

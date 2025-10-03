@@ -1,7 +1,7 @@
 package downloading
 
 import (
-	"soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/gofiber/fiber/v2"
 )
 

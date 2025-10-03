@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"soulsolid/src/features/importing"
+	"github.com/contre95/soulsolid/src/features/importing"
 )
 
 // Service implements FingerprintReader for audio fingerprinting
