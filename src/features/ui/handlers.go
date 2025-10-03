@@ -25,9 +25,19 @@ func (h *Handler) getBaseRenderData() fiber.Map {
 	if version == "" {
 		version = "dev"
 	}
+	cfg := h.configManager.Get()
+	downloaders := make(map[string]interface{})
+	for _, plugin := range cfg.Downloaders.Plugins {
+		icon := "/img/generic-downloader.png"
+		if plugin.Icon != "" {
+			icon = plugin.Icon
+		}
+		downloaders[plugin.Name] = struct{ Name, Icon string }{Name: plugin.Name, Icon: icon}
+	}
 	return fiber.Map{
-		"Version": version,
-		"Demo":    h.configManager.Get().Demo,
+		"Version":     version,
+		"Demo":        cfg.Demo,
+		"Downloaders": downloaders,
 	}
 }
 
@@ -126,8 +136,16 @@ func (h *Handler) RenderJobsSection(c *fiber.Ctx) error {
 // RenderDownloadSection renders the download page.
 func (h *Handler) RenderDownloadSection(c *fiber.Ctx) error {
 	slog.Debug("RenderDownloadSection handler called")
+	downloader := c.Query("downloader", "")
+	if downloader == "" {
+		cfg := h.configManager.Get()
+		if len(cfg.Downloaders.Plugins) > 0 {
+			downloader = cfg.Downloaders.Plugins[0].Name
+		}
+	}
 	return h.renderMain(c, "download", fiber.Map{
-		"Title":           "Download",
-		"DownloadTrigger": ",revealed",
+		"Title":             "Download",
+		"DownloadTrigger":   ",revealed",
+		"CurrentDownloader": downloader,
 	})
 }

@@ -124,5 +124,6 @@ type LocalArtwork struct {
 type PluginConfig struct {
 	Name   string                 `yaml:"name"`
 	Path   string                 `yaml:"path"`
+	Icon   string                 `yaml:"icon,omitempty"`
 	Config map[string]interface{} `yaml:"config"`
 }

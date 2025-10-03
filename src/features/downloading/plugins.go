@@ -27,9 +27,6 @@ func NewPluginManager() *PluginManager {
 func (pm *PluginManager) LoadPlugins(cfg *config.Config) error {
 	slog.Info("Loading downloader plugins")
 
-	// Load built-in downloaders
-	// Demo downloader is loaded in main.go
-
 	// Load plugin downloaders
 	for _, pluginCfg := range cfg.Downloaders.Plugins {
 		if err := pm.loadPlugin(pluginCfg); err != nil {
