@@ -138,8 +138,6 @@ downloaders:
         api_key: "your_api_key_here"
         base_url: "https://api.example.com"
         timeout: 30
-  builtin:
-    dummy: true
 ```
 
 ## Distribution
