@@ -1,6 +1,6 @@
 <table>
   <tr>
-    <td><img src="public/img/galaxy.png" width="50" alt="soulsolidlos"></td>
+    <td><img src="public/img/galaxy.png" width="50" alt="souldsolid"></td>
     <td><h1>Soulsolid</h1></td>
   </tr>
 </table>
