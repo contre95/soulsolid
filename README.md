@@ -8,16 +8,6 @@ A feature rich music organization app built for the music hoarder. Heavily under
 
 Documentation: https://soulsolid.contre.io
 
-## Features
-
-- Music library management and organization
-- Telegram bot for remote control and notifications
-- Automatic music importing from directories
-- Device synchronization (iPod, USB drives, etc.)
-- Metadata tagging with multiple providers (AcoustID, Discogs, MusicBrainz)
-- Web interface for library browsing and management
-- Job queue system for background processing
-
 ## Quick Start
 
 ### 🦭 Container Usage
