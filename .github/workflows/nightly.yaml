@@ -1,0 +1,31 @@
+name: Nightly Build
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+jobs:
+  nightly-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+      - name: Login to DockerHub
+        run: |
+          podman login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} docker.io
+      - name: Build and push nightly image
+        run: |
+          # Get current date for tag
+          date_tag=$(date +%Y%m%d)
+          commit_sha=$(git rev-parse --short HEAD)
+
+          podman image build --build-arg IMAGE_TAG=nightly-$date_tag-$commit_sha -t contre95/musicarr:nightly .
+          podman push contre95/musicarr:nightly
