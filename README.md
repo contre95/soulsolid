@@ -1,5 +1,9 @@
-# <img src="public/img/galaxy.png" width="50" alt="Galaxy"> Soulsolid
-
+<table>
+  <tr>
+    <td><img src="public/img/galaxy.png" width="50" alt="soulsolidlos"></td>
+    <td><h1>Soulsolid</h1></td>
+  </tr>
+</table>
 A feature rich music organization app built for the music hoarder. Heavily under development, focused on ease of usage.
 
 Documentation: https://soulsolid.contre.io
