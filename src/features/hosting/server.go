@@ -3,6 +3,7 @@ package hosting
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
@@ -68,6 +69,10 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 			return fmt.Sprintf("%d hr %d min", hours, minutes)
 		}
 		return fmt.Sprintf("%d min", minutes)
+	})
+
+	engine.AddFunc("capitalize", func(s string) string {
+		return strings.Title(strings.ToLower(s))
 	})
 
 	app := fiber.New(fiber.Config{
