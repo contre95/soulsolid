@@ -1,0 +1,30 @@
+name: Slash Commands
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  slash-command:
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request && (contains(github.event.comment.body, '/feat') || contains(github.event.comment.body, '/fix') || contains(github.event.comment.body, '/release') || contains(github.event.comment.body, '/hotfix') || contains(github.event.comment.body, '/update'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Get PR details
+        id: pr
+        run: |
+          PR_NUMBER=${{ github.event.issue.number }}
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+      - name: Add labels based on slash command
+        run: |
+          COMMENT="${{ github.event.comment.body }}"
+          PR_NUMBER=${{ steps.pr.outputs.pr_number }}
+
+          if [[ "$COMMENT" == *"/feat"* ]] || [[ "$COMMENT" == *"/hotfix"* ]] || [[ "$COMMENT" == *"/update"* ]]; then
+            gh pr edit $PR_NUMBER --add-label "enhancement"
+          elif [[ "$COMMENT" == *"/fix"* ]]; then
+            gh pr edit $PR_NUMBER --add-label "bug"
+          elif [[ "$COMMENT" == *"/release"* ]]; then
+            gh pr edit $PR_NUMBER --add-label "release"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
