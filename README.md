@@ -1,8 +1,4 @@
-<div align="center">
-
-# Soulsolid <img src="public/img/galaxy.png" width="50" alt="Galaxy">
-
-</div>
+# <img src="public/img/galaxy.png" width="50" alt="Galaxy" style="vertical-align: middle;"> Soulsolid
 
 A feature rich music organization app built for the music hoarder. Heavily under development, focused on ease of usage.
 
