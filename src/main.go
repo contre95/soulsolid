@@ -72,7 +72,6 @@ func main() {
 	discogsProvider := tag.NewDiscogsProvider(cfgManager.Get().Tag.Providers["discogs"].Enabled)
 
 	tagService := tagging.NewService(tagWriter, tagReader, db, []tagging.MetadataProvider{musicbrainzProvider, discogsProvider}, fingerprintReader, cfgManager)
-
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
 
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)
