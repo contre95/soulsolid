@@ -39,7 +39,6 @@ func main() {
 		log.Fatalf("failed to create library: %v", err)
 	}
 	libraryService := library.NewService(db, cfgManager)
-
 	jobService := jobs.NewService(&cfgManager.Get().Jobs)
 
 	tagReader := tag.NewTagReader()
