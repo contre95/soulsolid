@@ -17,7 +17,6 @@ import (
 	"github.com/contre95/soulsolid/src/features/tagging"
 	"github.com/contre95/soulsolid/src/infra/chroma"
 	"github.com/contre95/soulsolid/src/infra/database"
-	"github.com/contre95/soulsolid/src/infra/download/dummy"
 	"github.com/contre95/soulsolid/src/infra/files"
 	"github.com/contre95/soulsolid/src/infra/queue"
 	"github.com/contre95/soulsolid/src/infra/tag"
@@ -70,11 +69,6 @@ func main() {
 
 	// Create the plugin manager and load plugins
 	pluginManager := downloading.NewPluginManager()
-	if cfgManager.Get().Demo {
-		dummyDownloader := dummy.NewDummyDownloader()
-		pluginManager.AddDownloader("dummy", dummyDownloader)
-		slog.Info("Loaded built-in dummy downloader (demo mode)", "name", dummyDownloader.Name())
-	}
 	err = pluginManager.LoadPlugins(cfgManager.Get())
 	if err != nil {
 		slog.Error("Failed to load plugins", "error", err)
