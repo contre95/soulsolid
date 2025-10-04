@@ -1,6 +1,6 @@
 {
   "name": "Soulsolid",
-  "short_name": "Solid",
+  "short_name": "Soulsolid",
   "icons": [
     {
       "src": "/img/favicon/web-app-manifest-192x192.png",
@@ -15,7 +15,7 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#5D99C0",
-  "background_color": "#5D99C0",
+  "theme_color": "#fffcee",
+  "background_color": "#fffcee",
   "display": "standalone"
 }
