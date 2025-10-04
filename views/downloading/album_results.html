@@ -11,11 +11,11 @@
     <div class="group bg-white dark:bg-slate-800 rounded-lg md:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
       <!-- Album Cover -->
       <div class="aspect-square">
-         <button hx-get="/downloads/album/{{.ID}}/tracks"
-                 hx-target="#navigation-content"
-                 hx-swap="innerHTML"
-                 hx-indicator="#album-loading-{{.ID}}"
-                 class="relative">
+          <button hx-get="/downloads/album/{{.ID}}/tracks?downloader={{$.Downloader}}"
+                  hx-target="#navigation-content"
+                  hx-swap="innerHTML"
+                  hx-indicator="#album-loading-{{.ID}}"
+                  class="relative">
              <div id="album-loading-{{.ID}}" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded opacity-0 transition-opacity">
                <div class="w-10 h-10 border-2 border-white border-t-transparent rounded-full animate-spin opacity-90"></div>
              </div>
