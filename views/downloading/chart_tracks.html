@@ -23,8 +23,8 @@
           </a>
           {{ end }}
          <div class="flex-1 min-w-0">
-            <a hx-post="/downloads/track"
-               hx-vals='{"trackId": "{{.ID}}", "downloader": "{{$.Downloader}}"}'
+            <a hx-post="/downloads/track?downloader={{$.Downloader}}"
+               hx-vals='{"trackId": "{{.ID}}"}'
                hx-target="#toast-container"
                hx-swap="innerHTML"
                class="text-sm font-medium text-gray-900 dark:text-white truncate hover:text-purple-600 dark:hover:text-purple-400 transition-colors block cursor-pointer">
@@ -33,16 +33,16 @@
            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
              {{ range $index, $artist := .Artists }}{{ if $index }}, {{ end }}{{ $artist.Artist.Name }}{{ end }}
            </p>
-            <a hx-get="/downloads/album/{{.Album.ID}}/tracks"
-               hx-target="#chart-tracks"
-               hx-swap="innerHTML"
-               class="text-xs text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors underline decoration-1 underline-offset-2 truncate block">
+             <a hx-get="/downloads/album/{{.Album.ID}}/tracks?downloader={{$.Downloader}}"
+                hx-target="#chart-tracks"
+                hx-swap="innerHTML"
+                class="text-xs text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors underline decoration-1 underline-offset-2 truncate block">
               {{ .Album.Title }}
             </a>
          </div>
          <div class="flex-shrink-0">
-            <button hx-post="/downloads/track"
-                    hx-vals='{"trackId": "{{.ID}}", "downloader": "{{$.Downloader}}"}'
+            <button hx-post="/downloads/track?downloader={{$.Downloader}}"
+                    hx-vals='{"trackId": "{{.ID}}"}'
                     hx-target="#toast-container"
                     hx-swap="innerHTML"
                     class="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white">

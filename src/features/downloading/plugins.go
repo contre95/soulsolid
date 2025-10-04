@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"plugin"
-	"strings"
 
 	"github.com/contre95/soulsolid/src/features/config"
 )
@@ -69,8 +68,8 @@ func (pm *PluginManager) loadPlugin(pluginCfg config.PluginConfig) error {
 		return fmt.Errorf("failed to create downloader from plugin %s: %w", pluginCfg.Name, err)
 	}
 
-	// Store the downloader with lowercase key for case-insensitive lookup
-	pm.downloaders[strings.ToLower(pluginCfg.Name)] = downloader
+	// Store the downloader
+	pm.downloaders[pluginCfg.Name] = downloader
 	slog.Info("Successfully loaded plugin", "name", pluginCfg.Name, "downloader_name", downloader.Name())
 
 	return nil
