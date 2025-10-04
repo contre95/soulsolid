@@ -1,0 +1,77 @@
+<h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">Tracks</h3>
+<div id="results-container" class="space-y-3">
+  {{if not .Tracks}}
+    <p class="text-slate-500 dark:text-slate-400 text-center">No tracks found</p>
+  {{else}}
+     <div class="space-y-2">
+       <div class="flex items-center justify-between mb-4">
+         <p class="text-sm text-slate-600 dark:text-slate-400">{{len .Tracks}} tracks found</p>
+       </div>
+
+       {{range .Tracks}}
+        <div class="group flex items-center gap-2 md:gap-4 p-2 md:p-3 bg-white dark:bg-slate-800 rounded-lg md:rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200 border border-transparent hover:border-slate-200 dark:hover:border-slate-600">
+        
+        <!-- Album Art -->
+        <div class="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg overflow-hidden flex-shrink-0">
+          {{if .Album.ImageSmall}}
+          <img src="{{.Album.ImageSmall}}" alt="{{.Album.Title}}" class="w-full h-full object-cover">
+          {{else}}
+          <div class="w-full h-full flex items-center justify-center">
+            <span class="text-white font-bold text-sm md:text-lg">{{slice .Title 0 1}}</span>
+          </div>
+          {{end}}
+        </div>
+        
+         <!-- Track Info -->
+         <div class="flex-1 min-w-0">
+           <h4 class="font-medium text-slate-900 dark:text-white overflow-hidden text-xs md:text-sm">
+             <div class="marquee-container">
+               <div class="marquee-content animate-marquee whitespace-nowrap">{{.Title}}</div>
+             </div>
+           </h4>
+           <p class="text-slate-600 dark:text-slate-400 text-xs overflow-hidden">
+             <div class="marquee-container">
+               <div class="marquee-content animate-marquee whitespace-nowrap">
+                 {{if .Artists}}{{(index .Artists 0).Artist.Name}}{{else}}Unknown Artist{{end}}
+                 {{if .Album}}• {{.Album.Title}}{{end}}
+               </div>
+             </div>
+           </p>
+           <style>
+             .marquee-container {
+               position: relative;
+               width: 100%;
+               overflow: hidden;
+             }
+             .marquee-content {
+               animation: marquee 15s linear infinite;
+             }
+             .marquee-content:hover {
+               animation-play-state: paused;
+             }
+             @keyframes marquee {
+               0% { transform: translateX(100%); }
+               100% { transform: translateX(-100%); }
+             }
+           </style>
+         </div>
+        
+        <!-- Duration -->
+        <div class="text-sm text-slate-500 dark:text-slate-400 flex-shrink-0 hidden md:block">
+          {{if .Metadata.Duration}}{{duration .Metadata.Duration}}{{end}}
+        </div>
+
+        <!-- Download Button -->
+        <button hx-post="/downloads/track"
+                hx-vals='{"trackId": "{{.ID}}"}'
+                hx-target="#toast-container"
+                class="opacity-0 group-hover:opacity-100 bg-purple-500 hover:bg-purple-600 text-white p-1.5 md:p-2 rounded-full transition-all duration-200 flex-shrink-0">
+          <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+        </button>
+      </div>
+       {{end}}
+     </div>
+  {{end}}
+</div>
