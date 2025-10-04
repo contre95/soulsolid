@@ -95,11 +95,11 @@
 
   <!-- Action Buttons -->
   <div class="flex items-center gap-4">
-      <button hx-post="/downloads/album"
-              hx-vals='{"albumId": "{{.Album.ID}}"}'
-              hx-target="#toast-container"
-              hx-indicator="#album-download-indicator"
-              class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 md:px-2 px-8 rounded-full transition-colors relative mr-4">
+       <button hx-post="/downloads/album"
+               hx-vals='{"albumId": "{{.Album.ID}}", "downloader": "{{.Downloader}}"}'
+               hx-target="#toast-container"
+               hx-indicator="#album-download-indicator"
+               class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 md:px-2 px-8 rounded-full transition-colors relative mr-4">
          <span id="album-download-indicator" class="absolute inset-0 flex items-center justify-center opacity-0">
            <div class="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin opacity-90"></div>
          </span>
@@ -154,11 +154,11 @@
         <div class="p-2 md:p-1 flex-1 hidden md:block text-sm text-slate-600 dark:text-slate-400 truncate">{{$track.Album.Title}}</div>
       <div class="p-2 w-24 text-right text-sm text-slate-600 dark:text-slate-400">{{duration $track.Metadata.Duration}}</div>
       <div class="p-2 w-16 text-center">
-          <button hx-post="/downloads/track"
-                  hx-vals='{"trackId": "{{$track.ID}}"}'
-                  hx-target="#toast-container"
-                  hx-indicator="#track-download-indicator-{{$index}}"
-                  class="bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-full transition-colors relative">
+           <button hx-post="/downloads/track"
+                   hx-vals='{"trackId": "{{$track.ID}}", "downloader": "{{$.Downloader}}"}'
+                   hx-target="#toast-container"
+                   hx-indicator="#track-download-indicator-{{$index}}"
+                   class="bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-full transition-colors relative">
              <div id="track-download-indicator-{{$index}}" class="absolute inset-0 flex items-center justify-center opacity-0">
                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin opacity-90"></div>
              </div>
