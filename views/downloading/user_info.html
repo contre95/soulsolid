@@ -101,20 +101,21 @@
         </div>
       </h3>
 
-      <!-- Search Form -->
-      <form class="flex flex-col h-full space-y-3" hx-post="/downloads/search" hx-target="#search-results" hx-swap="innerHTML" hx-indicator="#search-spinner" hx-on:htmx:before-request="document.getElementById('homepage-content').style.display = 'none'" hx-on:htmx:after-request="document.getElementById('search-results').style.display = 'block'">
-        <div class="flex flex-col lg:flex-row gap-2 flex-1">
-          <input
-            type="text"
-            name="query"
-            placeholder="Search for albums, tracks..."
-            class="flex-1 bg-white/60 dark:bg-gray-700/60 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-full focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 px-4 py-2.5 dark:placeholder-gray-400 backdrop-blur-sm"
-          required>
-          <select name="type" class="bg-white/60 dark:bg-gray-700/60 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 px-3 py-2.5 dark:placeholder-gray-400 backdrop-blur-sm sm:flex-shrink-0">
-            <option value="track">Tracks</option>
-            <option value="album">Albums</option>
-          </select>
-        </div>
+       <!-- Search Form -->
+       <form class="flex flex-col h-full space-y-3" hx-post="/downloads/search" hx-target="#search-results" hx-swap="innerHTML" hx-indicator="#search-spinner" hx-on:htmx:before-request="document.getElementById('homepage-content').style.display = 'none'" hx-on:htmx:after-request="document.getElementById('search-results').style.display = 'block'">
+         <input type="hidden" name="downloader" value="{{.DownloaderName}}">
+         <div class="flex flex-col lg:flex-row gap-2 flex-1">
+           <input
+             type="text"
+             name="query"
+             placeholder="Search for albums, tracks..."
+             class="flex-1 bg-white/60 dark:bg-gray-700/60 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-full focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 px-4 py-2.5 dark:placeholder-gray-400 backdrop-blur-sm"
+           required>
+           <select name="type" class="bg-white/60 dark:bg-gray-700/60 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 px-3 py-2.5 dark:placeholder-gray-400 backdrop-blur-sm sm:flex-shrink-0">
+             <option value="track">Tracks</option>
+             <option value="album">Albums</option>
+           </select>
+         </div>
         <button
           type="submit"
           hx-indicator="#search-indicator"

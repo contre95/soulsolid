@@ -60,6 +60,9 @@ func (h *Handler) SearchAlbums(c *fiber.Ctx) error {
 		})
 	}
 
+	// Convert downloader name to lowercase for case-insensitive lookup
+	req.Downloader = strings.ToLower(req.Downloader)
+
 	albums, err := h.service.SearchAlbums(req.Downloader, req.Query, req.Limit)
 	if err != nil {
 		slog.Error("Failed to search albums", "error", err)
@@ -108,6 +111,9 @@ func (h *Handler) SearchTracks(c *fiber.Ctx) error {
 		})
 	}
 
+	// Convert downloader name to lowercase for case-insensitive lookup
+	req.Downloader = strings.ToLower(req.Downloader)
+
 	tracks, err := h.service.SearchTracks(req.Downloader, req.Query, req.Limit)
 	if err != nil {
 		slog.Error("Failed to search tracks", "error", err)
@@ -149,6 +155,9 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 	if req.Limit == 0 {
 		req.Limit = 20
 	}
+
+	// Convert downloader name to lowercase for case-insensitive lookup
+	req.Downloader = strings.ToLower(req.Downloader)
 
 	// Check if it's an HTMX request
 	if c.Get("HX-Request") == "true" {
@@ -258,7 +267,8 @@ func (h *Handler) DownloadTrack(c *fiber.Ctx) error {
 		})
 	}
 
-	jobID, err := h.service.DownloadTrack(c.Query("downloader", "dummy"), req.TrackID)
+	downloader := strings.ToLower(c.Query("downloader", "dummy"))
+	jobID, err := h.service.DownloadTrack(downloader, req.TrackID)
 	if err != nil {
 		slog.Error("Failed to start track download", "error", err)
 		if c.Get("HX-Request") == "true" {
@@ -314,7 +324,8 @@ func (h *Handler) DownloadAlbum(c *fiber.Ctx) error {
 		})
 	}
 
-	jobID, err := h.service.DownloadAlbum(c.Query("downloader", "dummy"), req.AlbumID)
+	downloader := strings.ToLower(c.Query("downloader", "dummy"))
+	jobID, err := h.service.DownloadAlbum(downloader, req.AlbumID)
 	if err != nil {
 		slog.Error("Failed to start album download", "error", err)
 		if c.Get("HX-Request") == "true" {
@@ -379,7 +390,8 @@ func (h *Handler) GetAlbumTracks(c *fiber.Ctx) error {
 		})
 	}
 
-	tracks, err := h.service.GetAlbumTracks(c.Query("downloader", "dummy"), albumID)
+	downloader := strings.ToLower(c.Query("downloader", "dummy"))
+	tracks, err := h.service.GetAlbumTracks(downloader, albumID)
 	if err != nil {
 		slog.Error("Failed to get album tracks", "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -415,7 +427,7 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 		}
 	}
 
-	downloader := c.Query("downloader", "dummy")
+	downloader := strings.ToLower(c.Query("downloader", "dummy"))
 
 	// Always try to fetch tracks, even if the downloader is disabled
 	tracks, err := h.service.GetChartTracks(downloader, limit)
@@ -447,7 +459,7 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 
 // GetUserInfo handles requests for user information
 func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
-	downloader := c.Query("downloader", "dummy")
+	downloader := strings.ToLower(c.Query("downloader", "dummy"))
 	userInfo := h.service.GetUserInfo(downloader)
 	config := h.service.configManager.Get()
 	statuses := h.service.GetDownloaderStatuses()
