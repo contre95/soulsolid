@@ -59,15 +59,14 @@ jobs:
           git tag ${{ env.new_version }}
           git push origin ${{ env.new_version }}
       - name: Create GitHub Release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ env.new_version }}
-          release_name: Release ${{ env.new_version }}
+          name: Release ${{ env.new_version }}
           draft: false
           prerelease: false
-          body_path: CHANGELOG.md
       - name: Output tag name
         id: set_tag
         run: |
