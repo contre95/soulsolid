@@ -3,34 +3,25 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "public/**"
-      - "src/**"
-      - "views/**"
-      - "go.mod"
-      - "go.sum"
-      - "package.json"
-      - "package-lock.json"
-      - "Containerfile"
-      - "Dockerfile"
-      - ".github/workflows/**"
-  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
 permissions:
   contents: write
   actions: write
-  pull-requests: write
+
 jobs:
   tag-and-release:
+    if: github.event.pull_request.merged == true && (startsWith(github.event.pull_request.head.ref, 'fix/') || startsWith(github.event.pull_request.head.ref, 'feat/') || startsWith(github.event.pull_request.head.ref, 'release/'))
     runs-on: ubuntu-latest
     outputs:
       tag_name: ${{ steps.set_tag.outputs.tag_name }}
-      is_release: ${{ steps.determine_version.outputs.is_release }}
-      is_beta: ${{ steps.determine_version.outputs.is_beta }}
-      should_release: ${{ steps.determine_version.outputs.should_release }}
-      new_version: ${{ steps.determine_version.outputs.new_version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -49,115 +40,25 @@ jobs:
           version=${tag#v}
           IFS='.' read -r major minor patch <<< "$version"
 
-          # Get commits since last tag
-          commits=$(git log --pretty=format:"%s" $latest_tag..HEAD 2>/dev/null || git log --pretty=format:"%s")
-
-          bump_type="none"
-          is_release=false
-          is_beta=false
-          should_release=false
-
-          # Check for merged PR labels
-          merged_pr=$(gh pr list --state merged --base main --json number,labels --jq '.[] | select(.labels[].name == "enhancement" or .labels[].name == "bug" or .labels[].name == "release") | .number' | head -1)
-          if [[ -n "$merged_pr" ]]; then
-            labels=$(gh pr view $merged_pr --json labels --jq '.labels[].name')
-            if echo "$labels" | grep -q "release"; then
-              bump_type="major"
-              is_release=true
-              should_release=true
-            elif echo "$labels" | grep -q "enhancement"; then
-              bump_type="minor"
-              is_beta=true
-              should_release=true
-            elif echo "$labels" | grep -q "bug"; then
-              bump_type="patch"
-              is_beta=true
-              should_release=true
-            fi
+          if [[ "${{ github.event.pull_request.head.ref }}" == fix/* ]]; then
+            patch=$((patch + 1))
+          elif [[ "${{ github.event.pull_request.head.ref }}" == feat/* ]]; then
+            minor=$((minor + 1))
+            patch=0
+          elif [[ "${{ github.event.pull_request.head.ref }}" == release/* ]]; then
+            major=$((major + 1))
+            minor=0
+            patch=0
           fi
 
-          # Fallback to commit messages if no labeled PR
-          if [[ "$bump_type" == "none" ]]; then
-            # Check for breaking changes
-            if echo "$commits" | grep -q "BREAKING CHANGE"; then
-              bump_type="major"
-              is_release=true
-              should_release=true
-            # Check for hotfix or update commits (minor bump)
-            elif echo "$commits" | grep -q "^hotfix:\|^update:"; then
-              bump_type="minor"
-              is_beta=true
-              should_release=true
-            # Check for feat commits
-            elif echo "$commits" | grep -q "^feat:"; then
-              bump_type="minor"
-              is_beta=true
-              should_release=true
-            # Check for fix commits
-            elif echo "$commits" | grep -q "^fix:"; then
-              bump_type="patch"
-              is_beta=true
-              should_release=true
-            fi
-          fi
-
-          if [[ "$bump_type" == "none" ]]; then
-            echo "No version bump needed, using latest tag"
-            new_version="$latest_tag"
-          else
-            case $bump_type in
-              major)
-                major=$((major + 1))
-                minor=0
-                patch=0
-                ;;
-              minor)
-                minor=$((minor + 1))
-                patch=0
-                ;;
-              patch)
-                patch=$((patch + 1))
-                ;;
-            esac
-
-            new_version="v${major}.${minor}.${patch}"
-
-            # If tag already exists, bump patch until unique
-            while git rev-parse "$new_version" >/dev/null 2>&1; do
-              patch=$((patch + 1))
-              new_version="v${major}.${minor}.${patch}"
-            done
-          fi
-
+          new_version="v${major}.${minor}.${patch}"
           echo "New version: $new_version"
           echo "new_version=$new_version" >> $GITHUB_ENV
-          echo "is_release=$is_release" >> $GITHUB_OUTPUT
-          echo "is_beta=$is_beta" >> $GITHUB_OUTPUT
-          echo "should_release=$should_release" >> $GITHUB_OUTPUT
-          echo "new_version=$new_version" >> $GITHUB_OUTPUT
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Generate CHANGELOG
-        if: steps.determine_version.outputs.should_release == 'true'
-        run: |
-          # Simple changelog generation
-          if [[ "$latest_tag" == "v0.0.0" ]]; then
-            commits=$(git log --oneline --pretty=format:"- %s" | head -20)
-          else
-            commits=$(git log --oneline --pretty=format:"- %s" $latest_tag..HEAD)
-          fi
-          echo "# Changelog" > CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "## ${{ env.new_version }}" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "$commits" >> CHANGELOG.md
       - name: Create Git tag
-        if: steps.determine_version.outputs.should_release == 'true'
         run: |
           git tag ${{ env.new_version }}
           git push origin ${{ env.new_version }}
       - name: Create GitHub Release
-        if: steps.determine_version.outputs.should_release == 'true'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -165,23 +66,20 @@ jobs:
           tag_name: ${{ env.new_version }}
           release_name: Release ${{ env.new_version }}
           draft: false
-          prerelease: ${{ steps.determine_version.outputs.is_beta }}
+          prerelease: false
           body_path: CHANGELOG.md
       - name: Output tag name
         id: set_tag
         run: |
-          if [[ "${{ steps.determine_version.outputs.should_release }}" == "true" ]]; then
-            echo "tag_name=${{ env.new_version }}" >> $GITHUB_OUTPUT
-          else
-            echo "tag_name=${{ env.tag }}" >> $GITHUB_OUTPUT
-          fi
+          echo "tag_name=${{ env.new_version }}" >> $GITHUB_OUTPUT
   build-and-push:
     needs: tag-and-release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout code at tag
         uses: actions/checkout@v4
         with:
+          ref: ${{ needs.tag-and-release.outputs.tag_name }}
           fetch-depth: 0
       - name: Set up Podman
         run: |
@@ -194,36 +92,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          should_release=${{ needs.tag-and-release.outputs.should_release }}
-          is_release=${{ needs.tag-and-release.outputs.is_release }}
-          is_beta=${{ needs.tag-and-release.outputs.is_beta }}
-          new_version=${{ needs.tag-and-release.outputs.new_version }}
-
-          if [[ "$should_release" == "true" ]]; then
-            version=$new_version
-          else
-            # For nightly builds, use commit sha
-            version="nightly-$(git rev-parse --short HEAD)"
-          fi
-
-          # Build and push specific version
+          version=${{ needs.tag-and-release.outputs.tag_name }}
           podman image build --build-arg IMAGE_TAG=$version -t contre95/soulsolid:$version .
           podman push contre95/soulsolid:$version
 
-          # Always update nightly
-          podman tag contre95/soulsolid:$version contre95/soulsolid:nightly
-          podman push contre95/soulsolid:nightly
+          # Tag and push the :beta tag
+          podman image build --no-cache --build-arg IMAGE_TAG=beta-$version -t contre95/soulsolid:beta .
+          podman push contre95/soulsolid:beta
 
-          if [[ "$should_release" == "true" ]]; then
-            if [[ "$is_beta" == "true" ]]; then
-              # Tag and push the :beta tag
-              podman tag contre95/soulsolid:$version contre95/soulsolid:beta
-              podman push contre95/soulsolid:beta
-            fi
-
-            if [[ "$is_release" == "true" ]]; then
-              # Tag and push the :latest tag
-              podman tag contre95/soulsolid:$version contre95/soulsolid:latest
-              podman push contre95/soulsolid:latest
-            fi
+          if [[ "${{ github.event.pull_request.head.ref }}" == release/* ]]; then
+            # Tag and push the :latest tag
+            podman tag contre95/soulsolid:$version contre95/soulsolid:latest
+            podman push contre95/soulsolid:latest
           fi
