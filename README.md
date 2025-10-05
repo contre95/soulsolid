@@ -43,3 +43,29 @@ podman run -d \
 ```
 
 The web interface will be available at `http://localhost:3535`.
+
+## Development
+
+To set up the development environment:
+
+### Option 1: Manual Setup
+
+```shell
+cp config.example.yaml config.yaml
+npm run dev
+go run ./src/main.go
+```
+
+### Option 2: Using Nix (recommended if you have Nix)
+
+If you have Nix installed, use the provided dev.nix shell:
+
+```shell
+# This will set up all dependencies (Node.js, Go, etc.) and run the necessary commands
+nix-shell dev.nix
+# Then, simply run:
+go run ./src/main.go
+```
+
+The web interface will be available at `http://localhost:3535`.
+

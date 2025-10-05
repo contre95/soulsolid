@@ -4,6 +4,7 @@ pkgs.mkShell {
   buildInputs = [
     pkgs.nodejs_24
     pkgs.tailwindcss
+    pkgs.go
     pkgs.tree
   ];
   
