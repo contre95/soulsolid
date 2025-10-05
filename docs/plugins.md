@@ -159,7 +159,7 @@ downloaders:
 
 ## Example Plugin
 
-See the built-in dummy downloader in `src/features/downloading/dummy.go` for a complete example implementation.
+There's a dummy plugin I have created to serve as an example. You can find it [here](https://github.com/contre95/soulsolid-dummy-plugin).
 
 ## Testing
 
