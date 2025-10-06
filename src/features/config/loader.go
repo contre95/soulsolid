@@ -56,9 +56,7 @@ func Load(path string) (*Manager, error) {
 		cfg.Telegram.Token = token
 	}
 
-	setProviderAPIKey(&cfg, "acoustid", "ACCOUSTID_API_KEY")
-	setProviderAPIKey(&cfg, "discogs", "DISCOGS_API_KEY")
-	setProviderAPIKey(&cfg, "musicbrainz", "MUSICBRAINZ_API_KEY")
+	setProviderAPIKey(&cfg, "deezer", "DEEZER_API_KEY")
 
 	return NewManager(&cfg), nil
 }
@@ -115,17 +113,14 @@ func createDefaultConfig() *Config {
 			},
 		},
 		Tag: Tag{
-			Enabled: false,
 			Providers: map[string]Provider{
-				"acoustid": {
-					Enabled: false,
-					APIKey:  "",
-				},
 				"discogs": {
 					Enabled: false,
-					APIKey:  "",
 				},
 				"musicbrainz": {
+					Enabled: false,
+				},
+				"deezer": {
 					Enabled: false,
 					APIKey:  "",
 				},

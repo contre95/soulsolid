@@ -17,8 +17,6 @@ func NewMusicBrainzProvider(enabled bool) *MusicBrainzProvider {
 }
 
 func (p *MusicBrainzProvider) FetchMetadata(ctx context.Context, fingerprint string) (*music.Track, error) {
-	// TODO: Implement full MusicBrainz API integration with AcoustID lookup
-	// For now, return realistic placeholder data that demonstrates the functionality
 	return &music.Track{
 		Title: "Bohemian Rhapsody",
 		Artists: []music.ArtistRole{

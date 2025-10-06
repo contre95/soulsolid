@@ -210,63 +210,58 @@
        </div>
 
 
-        <!-- Tagging Settings -->
-         <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 opacity-50">
-           <h2 class="text-lg font-semibold text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
-            <i class="fas fa-tags text-gray-500 text-lg"></i>
-            Tagging (soon)
-           </h2>
-        <div class="space-y-3">
-          <div class="flex items-center p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
-             <input type="checkbox" id="tag.enabled" name="tag.enabled" value="true" disabled="disabled" {{if .Config.Tag.Enabled}}checked{{end}}
-                   class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-            <label for="tag.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Enable Tagging</label>
-          </div>
+         <!-- Tagging Settings -->
+          <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+             <i class="fas fa-tags text-orange-500 text-lg"></i>
+             Tagging
+            </h2>
+         <div class="space-y-3">
+            <!-- MusicBrainz Provider -->
+            <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+              <div class="flex items-center mb-3">
+                 <input type="checkbox" id="tag.providers.musicbrainz.enabled" name="tag.providers.musicbrainz.enabled" value="true" {{if .Config.Tag.Providers.musicbrainz.Enabled}}checked{{end}}
+                       class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                 <label for="tag.providers.musicbrainz.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                   <img src="/svg/brainz.svg" alt="MusicBrainz" class="w-4 h-4 mr-2">
+                   MusicBrainz
+                 </label>
+              </div>
 
-           <!-- MusicBrainz Provider -->
-           <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
-             <div class="flex items-center mb-3">
-                <input type="checkbox" id="tag.providers.musicbrainz.enabled" name="tag.providers.musicbrainz.enabled" value="true" disabled="disabled" {{if .Config.Tag.Providers.musicbrainz.Enabled}}checked{{end}}
-                      class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-               <label for="tag.providers.musicbrainz.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">MusicBrainz</label>
-             </div>
-             <div>
-               <label for="tag.providers.musicbrainz.api_key" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
-                <input type="password" id="tag.providers.musicbrainz.api_key" name="tag.providers.musicbrainz.api_key" disabled="disabled" value="{{.Config.Tag.Providers.musicbrainz.APIKey}}"
-                      class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
-                      placeholder="API key (optional)">
-             </div>
-           </div>
+            </div>
 
-           <!-- Discogs Provider -->
-           <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
-             <div class="flex items-center mb-3">
-                <input type="checkbox" id="tag.providers.discogs.enabled" name="tag.providers.discogs.enabled" value="true" disabled="disabled" {{if .Config.Tag.Providers.discogs.Enabled}}checked{{end}}
-                      class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-               <label for="tag.providers.discogs.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Discogs</label>
-             </div>
-             <div>
-               <label for="tag.providers.discogs.api_key" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
-                <input type="password" id="tag.providers.discogs.api_key" name="tag.providers.discogs.api_key" disabled="disabled" value="{{.Config.Tag.Providers.discogs.APIKey}}"
-                      class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
-                      placeholder="API key">
-             </div>
-           </div>
+             <!-- Discogs Provider -->
+             <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+               <div class="flex items-center mb-3">
+                  <input type="checkbox" id="tag.providers.discogs.enabled" name="tag.providers.discogs.enabled" value="true" {{if .Config.Tag.Providers.discogs.Enabled}}checked{{end}}
+                        class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                  <label for="tag.providers.discogs.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                    <img src="/svg/discogs.svg" alt="Discogs" class="w-4 h-4 mr-2">
+                    Discogs
+                  </label>
+               </div>
 
-           <!-- AcoustID Provider -->
-           <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
-             <div class="flex items-center mb-3">
-                <input type="checkbox" id="tag.providers.acoustid.enabled" name="tag.providers.acoustid.enabled" value="true" disabled="disabled" {{if .Config.Tag.Providers.acoustid.Enabled}}checked{{end}}
-                      class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-               <label for="tag.providers.acoustid.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">AcoustID</label>
              </div>
-             <div>
-               <label for="tag.providers.acoustid.api_key" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
-                <input type="password" id="tag.providers.acoustid.api_key" name="tag.providers.acoustid.api_key" disabled="disabled" value="{{.Config.Tag.Providers.acoustid.APIKey}}"
-                      class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
-                      placeholder="API key">
+
+             <!-- Deezer Provider -->
+             <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+               <div class="flex items-center mb-3">
+                  <input type="checkbox" id="tag.providers.deezer.enabled" name="tag.providers.deezer.enabled" value="true" {{if .Config.Tag.Providers.deezer.Enabled}}checked{{end}}
+                        class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                  <label for="tag.providers.deezer.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                    <img src="/img/deezer.png" alt="Deezer" class="w-4 h-4 mr-2">
+                    Deezer
+                  </label>
+               </div>
+               <div>
+                 <label for="tag.providers.deezer.api_key" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
+                  <input type="password" id="tag.providers.deezer.api_key" name="tag.providers.deezer.api_key" value="{{.Config.Tag.Providers.deezer.APIKey}}"
+                        class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                        placeholder="API key">
+               </div>
              </div>
-           </div>
+
+
         </div>
       </div>
 

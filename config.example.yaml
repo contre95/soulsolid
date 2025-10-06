@@ -11,7 +11,10 @@ logger:
   format: text
   htmx_debug: false
 downloaders:
-  plugins: []
+  plugins:
+    - name: "dummy"
+      path: "/path/to/plugin.so"
+      icon: https://demo2.contre.io/img/galaxy.png
   artwork:
     embedded:
       enabled: true
@@ -39,14 +42,14 @@ import:
     album:ep: '%asciify{$albumartist}/%asciify{$album} [EP] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
     default_path: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
 tag:
-  enabled: false
-  providers:
+   providers:
+    deezer:
+      enabled: true
+      api_key: ""
     discogs:
       enabled: true
-      api_key: ""
     musicbrainz:
       enabled: true
-      api_key: ""
 sync:
   enabled: true
   devices:
