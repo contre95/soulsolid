@@ -160,6 +160,13 @@ func (h *Handler) getProviderColors(providerName string) map[string]string {
 			"focusRing": "focus:ring-black focus:border-black",
 			"text":      "text-black dark:text-white",
 		}
+	case "deezer":
+		return map[string]string{
+			"label":     "text-purple-600 dark:text-purple-300",
+			"border":    "border-purple-400 dark:border-purple-300",
+			"focusRing": "focus:ring-purple-500 focus:border-purple-500",
+			"text":      "text-purple-700 dark:text-purple-300",
+		}
 	default:
 		// Default to orange for unknown providers
 		return map[string]string{
@@ -310,7 +317,11 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 		albumFound := false
 		for _, album := range albums {
 			if album.Title == fetchedTrack.Album.Title {
-				fetchedTrack.Album = album // Replace with album from DB (contains ID)
+				// Keep the fetched album but use the database album's ID
+				fetchedAlbum := fetchedTrack.Album
+				fetchedAlbum.ID = album.ID
+				// Preserve any additional data from database album if needed
+				fetchedTrack.Album = fetchedAlbum
 				albumFound = true
 				break
 			}
@@ -423,8 +434,9 @@ func (h *Handler) mergeFetchedData(existing, fetched *music.Track) *music.Track 
 	result.Channels = existing.Channels
 	result.Bitrate = existing.Bitrate
 
-	// Use existing album artists if available, otherwise fetched
-	if existing.Album != nil && len(existing.Album.Artists) > 0 {
+	// Use fetched album artists (since we're fetching new metadata)
+	// Only preserve existing album artists if fetched album has no artists
+	if result.Album != nil && len(result.Album.Artists) == 0 && existing.Album != nil && len(existing.Album.Artists) > 0 {
 		result.Album.Artists = existing.Album.Artists
 	}
 

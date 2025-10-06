@@ -56,19 +56,16 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 			AllowedUsers: parseStringSlice(c.FormValue("telegram.allowedUsers")),
 		},
 		Tag: Tag{
-			Enabled: c.FormValue("tag.enabled") == "true",
 			Providers: map[string]Provider{
 				"musicbrainz": {
 					Enabled: c.FormValue("tag.providers.musicbrainz.enabled") == "true",
-					APIKey:  c.FormValue("tag.providers.musicbrainz.api_key"),
 				},
 				"discogs": {
 					Enabled: c.FormValue("tag.providers.discogs.enabled") == "true",
-					APIKey:  c.FormValue("tag.providers.discogs.api_key"),
 				},
-				"acoustid": {
-					Enabled: c.FormValue("tag.providers.acoustid.enabled") == "true",
-					APIKey:  c.FormValue("tag.providers.acoustid.api_key"),
+				"deezer": {
+					Enabled: c.FormValue("tag.providers.deezer.enabled") == "true",
+					APIKey:  c.FormValue("tag.providers.deezer.api_key"),
 				},
 			},
 		},

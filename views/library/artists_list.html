@@ -28,8 +28,7 @@
        <thead class="bg-gray-50/80 dark:bg-gray-800/90 backdrop-blur-sm">
           <tr>
             <th class="px-1.5 py-1 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Artist</th>
-            <th class="px-1.5 py-1 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">ID</th>
-            <th class="px-1.5 py-1 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Actions</th>
+             <th class="px-1.5 py-1 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">ID</th>
           </tr>
        </thead>
        <tbody class="bg-white/50 dark:bg-gray-800/70 divide-y divide-gray-200/30 dark:divide-gray-700/40 backdrop-blur-sm">
@@ -43,17 +42,9 @@
                   <div class="text-xs font-medium text-gray-900 dark:text-white truncate max-w-xs">{{.Name}}</div>
                 </div>
               </td>
-              <td class="px-1.5 py-1 text-gray-600 dark:text-gray-300 truncate max-w-xs text-xs font-mono">
-                {{.ID}}
-              </td>
-              <td class="px-1.5 py-1 whitespace-nowrap">
-               <button class="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 px-2 py-1 bg-cyan-50/50 dark:bg-cyan-900/40 rounded backdrop-blur-sm border border-cyan-200/50 dark:border-cyan-700/50 text-xs"
-                       hx-get="/library/artists/{{.ID}}"
-                       hx-target="#artist-detail"
-                       hx-swap="innerHTML">
-                 View
-               </button>
-             </td>
+               <td class="px-1.5 py-1 text-gray-600 dark:text-gray-300 truncate max-w-xs text-xs font-mono">
+                 {{.ID}}
+               </td>
            </tr>
          {{end}}
       </tbody>
