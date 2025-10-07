@@ -43,7 +43,8 @@ tmp
 # JS 
 node_modules/
 
-# Soulsolid generated files
+# Soulsolid
+pocs
 **/*.db
 **/*.db-journal
 downloads
