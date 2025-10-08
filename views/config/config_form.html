@@ -230,18 +230,23 @@
 
             </div>
 
-             <!-- Discogs Provider -->
-             <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
-               <div class="flex items-center mb-3">
-                  <input type="checkbox" id="tag.providers.discogs.enabled" name="tag.providers.discogs.enabled" value="true" {{if .Config.Tag.Providers.discogs.Enabled}}checked{{end}}
-                        class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                  <label for="tag.providers.discogs.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                    <img src="/svg/discogs.svg" alt="Discogs" class="w-4 h-4 mr-2">
-                    Discogs
-                  </label>
-               </div>
-
-             </div>
+              <!-- Discogs Provider -->
+              <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+                <div class="flex items-center mb-3">
+                   <input type="checkbox" id="tag.providers.discogs.enabled" name="tag.providers.discogs.enabled" value="true" {{if .Config.Tag.Providers.discogs.Enabled}}checked{{end}}
+                         class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                   <label for="tag.providers.discogs.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                     <img src="/svg/discogs.svg" alt="Discogs" class="w-4 h-4 mr-2">
+                     Discogs
+                   </label>
+                </div>
+                <div>
+                  <label for="tag.providers.discogs.api_key" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
+                   <input type="password" id="tag.providers.discogs.api_key" name="tag.providers.discogs.api_key" value="{{.Config.Tag.Providers.discogs.APIKey}}"
+                         class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                         placeholder="API key">
+                </div>
+              </div>
 
              <!-- Deezer Provider -->
              <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">

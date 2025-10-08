@@ -43,13 +43,14 @@ import:
     default_path: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
 tag:
    providers:
-    deezer:
-      enabled: true
-      api_key: ""
-    discogs:
-      enabled: true
-    musicbrainz:
-      enabled: true
+     deezer:
+       enabled: true
+       api_key: ""
+     discogs:
+       enabled: true
+       api_key: ""
+     musicbrainz:
+       enabled: true
 sync:
   enabled: true
   devices:
