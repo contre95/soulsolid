@@ -62,6 +62,7 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 				},
 				"discogs": {
 					Enabled: c.FormValue("tag.providers.discogs.enabled") == "true",
+					APIKey:  c.FormValue("tag.providers.discogs.api_key"),
 				},
 				"deezer": {
 					Enabled: c.FormValue("tag.providers.deezer.enabled") == "true",

@@ -57,6 +57,7 @@ func Load(path string) (*Manager, error) {
 	}
 
 	setProviderAPIKey(&cfg, "deezer", "DEEZER_API_KEY")
+	setProviderAPIKey(&cfg, "discogs", "DISCOGS_API_KEY")
 
 	return NewManager(&cfg), nil
 }
@@ -116,6 +117,7 @@ func createDefaultConfig() *Config {
 			Providers: map[string]Provider{
 				"discogs": {
 					Enabled: false,
+					APIKey:  "",
 				},
 				"musicbrainz": {
 					Enabled: false,
