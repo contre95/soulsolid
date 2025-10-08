@@ -1,0 +1,182 @@
+{{define "tag/search_results_modal"}}
+<!-- Modal Background -->
+<div id="search-modal" class="fixed inset-0 z-50">
+  <!-- Blurry Background Overlay -->
+  <div class="modal-overlay"></div>
+  <!-- Modal Content Container -->
+  <div class="flex items-center justify-center h-full">
+    <!-- Modal Content -->
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700">
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-700">
+      <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-2">
+          {{if eq .ProviderName "musicbrainz"}}
+          <img src="/svg/brainz.svg" alt="MusicBrainz" class="w-8 h-8">
+          {{else if eq .ProviderName "discogs"}}
+          <img src="/svg/discogs.svg" alt="Discogs" class="w-8 h-8">
+          {{else if eq .ProviderName "deezer"}}
+          <img src="/img/deezer.png" alt="Deezer" class="w-8 h-8">
+          {{end}}
+        </div>
+        <div>
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Search Results from {{.ProviderName}}</h2>
+          {{if eq (len .Tracks) 1}}
+          <p class="text-sm text-gray-600 dark:text-gray-400">Found 1 track</p>
+          {{else}}
+          <p class="text-sm text-gray-600 dark:text-gray-400">Found {{len .Tracks}} tracks</p>
+          {{end}}
+        </div>
+      </div>
+      <button id="close-modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-2 transition-colors duration-200">
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="p-6 max-h-96 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+      {{if .Tracks}}
+      <div class="space-y-4">
+        {{range $index, $track := .Tracks}}
+        <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all duration-200 bg-white dark:bg-gray-800 shadow-sm">
+          <div class="flex flex-col md:flex-row md:items-start md:justify-between">
+            <div class="flex-1">
+              <div class="flex items-center space-x-2 mb-2">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{.Title}}</h3>
+                {{if .TitleVersion}}
+                <span class="text-sm text-gray-500 dark:text-gray-400">({{.TitleVersion}})</span>
+                {{end}}
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p class="text-gray-600 dark:text-gray-400">
+                    <i class="fas fa-microphone mr-1"></i>
+                    <strong>Artist:</strong>
+                    {{range $i, $artist := .Artists}}
+                      {{if $i}}, {{end}}{{.Artist.Name}}
+                    {{end}}
+                  </p>
+                  {{if .Album}}
+                  <p class="text-gray-600 dark:text-gray-400">
+                    <i class="fas fa-compact-disc mr-1"></i>
+                    <strong>Album:</strong> {{.Album.Title}}
+                  </p>
+                  {{end}}
+                </div>
+
+                <div>
+                  {{if .Metadata.Year}}
+                  <p class="text-gray-600 dark:text-gray-400">
+                    <i class="fas fa-calendar mr-1"></i>
+                    <strong>Year:</strong> {{.Metadata.Year}}
+                  </p>
+                  {{end}}
+                  {{if .Metadata.Genre}}
+                  <p class="text-gray-600 dark:text-gray-400">
+                    <i class="fas fa-tag mr-1"></i>
+                    <strong>Genre:</strong> {{.Metadata.Genre}}
+                  </p>
+                  {{end}}
+                  {{if .ISRC}}
+                  <p class="text-gray-600 dark:text-gray-400">
+                    <i class="fas fa-barcode mr-1"></i>
+                    <strong>ISRC:</strong> {{.ISRC}}
+                  </p>
+                  {{end}}
+                </div>
+              </div>
+            </div>
+
+             <button
+               hx-get="/ui/tag/edit/{{$.TrackID}}/select/{{$.ProviderName}}?index={{$index}}"
+               hx-target="#contenido"
+               hx-swap="outerHTML"
+               class="ml-4 mt-2 px-4 py-2 border-2 border-gray-300 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
+               <i class="fas fa-check mr-1"></i>
+               Select
+             </button>
+          </div>
+        </div>
+        {{end}}
+      </div>
+      {{else}}
+      <div class="text-center py-8">
+        <i class="fas fa-search text-4xl text-gray-400 mb-4"></i>
+        <p class="text-gray-600 dark:text-gray-400">No tracks found matching your search criteria.</p>
+      </div>
+      {{end}}
+    </div>
+
+
+    </div>
+  </div>
+</div>
+
+<style>
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: -1;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .modal-overlay {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Tailwind dark mode support */
+.dark .modal-overlay {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+</style>
+
+<script>
+function closeModal() {
+  const modal = document.getElementById('search-modal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+// Initialize modal event listeners
+function initModalListeners() {
+  const modal = document.getElementById('search-modal');
+  const closeBtn = document.getElementById('close-modal');
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeModal);
+  }
+
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+  }
+
+  // Close on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  });
+}
+
+// Initialize immediately for HTMX-loaded content
+initModalListeners();
+
+// Also initialize on HTMX afterSwap for dynamic content
+document.addEventListener('htmx:afterSwap', function(evt) {
+  if (evt.detail.target && evt.detail.target.querySelector('#search-modal')) {
+    initModalListeners();
+  }
+});
+</script>
+{{end}}

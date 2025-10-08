@@ -372,8 +372,8 @@
         </style>
 
         <script>
-         // Initialize SlimSelect for both initial load and HTMX swaps
-         let artistSelect = null;
+          // Initialize SlimSelect for both initial load and HTMX swaps
+          var artistSelect = artistSelect || null;
 
          function initArtistSelect() {
            const artistElement = document.getElementById('artist');
