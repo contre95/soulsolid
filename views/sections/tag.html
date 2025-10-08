@@ -58,9 +58,17 @@
      </div>
      {{end}}
 
-     <!-- Tag Editing Form Container -->
-     <div>
-       {{template "tag/edit_form" .}}
-     </div>
+      <!-- Tag Editing Form Container -->
+      <div>
+        {{template "tag/edit_form" .}}
+      </div>
 
-</div>
+      <script>
+        // Close the search modal after selecting a track
+        var modal = document.getElementById('search-modal');
+        if (modal) {
+          modal.remove();
+        }
+      </script>
+
+ </div>
