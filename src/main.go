@@ -70,7 +70,7 @@ func main() {
 	tagWriter := tag.NewTagWriter()
 
 	musicbrainzProvider := metadata.NewMusicBrainzProvider(cfgManager.Get().Tag.Providers["musicbrainz"].Enabled)
-	discogsProvider := metadata.NewDiscogsProvider(cfgManager.Get().Tag.Providers["discogs"].Enabled)
+	discogsProvider := metadata.NewDiscogsProvider(cfgManager.Get().Tag.Providers["discogs"].Enabled, cfgManager.Get().Tag.Providers["discogs"].APIKey)
 	deezerProvider := metadata.NewDeezerProvider(cfgManager.Get().Tag.Providers["deezer"].Enabled)
 
 	tagService := tagging.NewService(tagWriter, tagReader, db, []tagging.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, fingerprintReader, cfgManager)
