@@ -56,7 +56,6 @@ func Load(path string) (*Manager, error) {
 		cfg.Telegram.Token = token
 	}
 
-	setProviderAPIKey(&cfg, "deezer", "DEEZER_API_KEY")
 	setProviderAPIKey(&cfg, "discogs", "DISCOGS_API_KEY")
 
 	return NewManager(&cfg), nil
@@ -124,7 +123,6 @@ func createDefaultConfig() *Config {
 				},
 				"deezer": {
 					Enabled: false,
-					APIKey:  "",
 				},
 			},
 		},

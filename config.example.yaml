@@ -42,16 +42,15 @@ import:
     album:ep: '%asciify{$albumartist}/%asciify{$album} [EP] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
     default_path: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
 tag:
-   providers:
-     deezer:
-       enabled: true
-       api_key: ""
-     discogs:
-       enabled: true
-       api_key: ""
-     musicbrainz:
-       enabled: true
-sync:
+  providers:
+    deezer:
+      enabled: true
+      api_key: ""
+    discogs:
+      enabled: true
+      api_key: ""
+    musicbrainz:
+      enabled: true
   enabled: true
   devices:
     - uuid: 8722-177E

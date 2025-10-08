@@ -9,11 +9,12 @@ import (
 // DiscogsProvider implements MetadataProvider for Discogs
 type DiscogsProvider struct {
 	enabled bool
+	apiKey  string
 }
 
 // NewDiscogsProvider creates a new Discogs provider
-func NewDiscogsProvider(enabled bool) *DiscogsProvider {
-	return &DiscogsProvider{enabled: enabled}
+func NewDiscogsProvider(enabled bool, apiKey string) *DiscogsProvider {
+	return &DiscogsProvider{enabled: enabled, apiKey: apiKey}
 }
 
 func (p *DiscogsProvider) FetchMetadata(ctx context.Context, fingerprint string) (*music.Track, error) {
