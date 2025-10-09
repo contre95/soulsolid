@@ -357,40 +357,67 @@ func (s *Service) GetEnabledProviders() map[string]bool {
 	return enabled
 }
 
-// FetchMetadataForTrack fetches metadata for a track using its fingerprint
-func (s *Service) FetchMetadataForTrack(ctx context.Context, trackID string) (*music.Track, error) {
+// SearchTracksForTrack searches for tracks using current track metadata as search parameters
+func (s *Service) SearchTracksForTrack(ctx context.Context, trackID string, providerName string) ([]*music.Track, error) {
 	track, err := s.libraryRepo.GetTrack(ctx, trackID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get track: %w", err)
 	}
-	// Generate fingerprint
-	fingerprint, err := s.fingerprintProvider.GenerateFingerprint(ctx, track.Path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate fingerprint: %w", err)
+	if track == nil {
+		return nil, fmt.Errorf("track not found: %s", trackID)
 	}
 
-	// Fetch metadata from enabled providers
-	var fetchedTrack *music.Track
+	// Build search parameters from current track data
+	searchParams := SearchParams{
+		TrackID: track.ID,
+		Title:   track.Title,
+		Year:    track.Metadata.Year,
+	}
+
+	// Add album and album artist if available
+	if track.Album != nil {
+		searchParams.Album = track.Album.Title
+		if len(track.Album.Artists) > 0 && track.Album.Artists[0].Artist != nil {
+			searchParams.AlbumArtist = track.Album.Artists[0].Artist.Name
+		}
+	}
+
+	// Find the specific provider
+	var targetProvider MetadataProvider
+	for _, provider := range s.metadataProviders {
+		if provider.Name() == providerName && provider.IsEnabled() {
+			targetProvider = provider
+			break
+		}
+	}
+	if targetProvider == nil {
+		return nil, fmt.Errorf("provider '%s' not found or not enabled", providerName)
+	}
+
+	// Search for tracks
+	tracks, err := targetProvider.SearchTracks(ctx, searchParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search tracks: %w", err)
+	}
+
+	// Try to match artists with database artists by name for each result
+	for i, resultTrack := range tracks {
+		tracks[i] = s.matchArtistsWithDatabase(ctx, resultTrack)
+	}
+
+	return tracks, nil
+}
+
+// FetchMetadataForTrack fetches metadata for a track using its fingerprint (legacy method for backward compatibility)
+func (s *Service) FetchMetadataForTrack(ctx context.Context, trackID string) (*music.Track, error) {
+	// For legacy compatibility, use the first enabled provider with search
 	for _, provider := range s.metadataProviders {
 		if provider.IsEnabled() {
-			track, err := provider.FetchMetadata(ctx, fingerprint)
-			if err == nil && track != nil {
-				fetchedTrack = track
-				break
+			tracks, err := s.SearchTracksForTrack(ctx, trackID, provider.Name())
+			if err == nil && len(tracks) > 0 {
+				return tracks[0], nil
 			}
 		}
 	}
-	if fetchedTrack == nil {
-		return nil, fmt.Errorf("no metadata found from enabled providers")
-	}
-
-	// Validate fetched data
-	if fetchedTrack.Title == "" {
-		return nil, fmt.Errorf("fetched metadata is incomplete")
-	}
-
-	// Try to match fetched artists with database artists by name
-	fetchedTrack = s.matchArtistsWithDatabase(ctx, fetchedTrack)
-
-	return fetchedTrack, nil
+	return nil, fmt.Errorf("no metadata found from enabled providers")
 }

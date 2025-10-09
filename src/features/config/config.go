@@ -75,7 +75,6 @@ type Downloaders struct {
 
 // Tag holds the configuration for metadata tagging providers
 type Tag struct {
-	Enabled   bool                `yaml:"enabled"`
 	Providers map[string]Provider `yaml:"providers"`
 }
 

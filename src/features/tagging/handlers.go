@@ -160,6 +160,13 @@ func (h *Handler) getProviderColors(providerName string) map[string]string {
 			"focusRing": "focus:ring-black focus:border-black",
 			"text":      "text-black dark:text-white",
 		}
+	case "deezer":
+		return map[string]string{
+			"label":     "text-purple-600 dark:text-purple-300",
+			"border":    "border-purple-400 dark:border-purple-300",
+			"focusRing": "focus:ring-purple-500 focus:border-purple-500",
+			"text":      "text-purple-700 dark:text-purple-300",
+		}
 	default:
 		// Default to orange for unknown providers
 		return map[string]string{
@@ -310,7 +317,11 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 		albumFound := false
 		for _, album := range albums {
 			if album.Title == fetchedTrack.Album.Title {
-				fetchedTrack.Album = album // Replace with album from DB (contains ID)
+				// Keep the fetched album but use the database album's ID
+				fetchedAlbum := fetchedTrack.Album
+				fetchedAlbum.ID = album.ID
+				// Preserve any additional data from database album if needed
+				fetchedTrack.Album = fetchedAlbum
 				albumFound = true
 				break
 			}
@@ -414,8 +425,11 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 
 // mergeFetchedData merges fetched metadata with existing track data
 func (h *Handler) mergeFetchedData(existing, fetched *music.Track) *music.Track {
-	// Preserve file-specific data
+	// Preserve database-specific data
 	result := *fetched
+	result.ID = existing.ID // Preserve the database track ID
+
+	// Preserve file-specific data
 	result.Path = existing.Path
 	result.Format = existing.Format
 	result.SampleRate = existing.SampleRate
@@ -423,8 +437,9 @@ func (h *Handler) mergeFetchedData(existing, fetched *music.Track) *music.Track 
 	result.Channels = existing.Channels
 	result.Bitrate = existing.Bitrate
 
-	// Use existing album artists if available, otherwise fetched
-	if existing.Album != nil && len(existing.Album.Artists) > 0 {
+	// Use fetched album artists (since we're fetching new metadata)
+	// Only preserve existing album artists if fetched album has no artists
+	if result.Album != nil && len(result.Album.Artists) == 0 && existing.Album != nil && len(existing.Album.Artists) > 0 {
 		result.Album.Artists = existing.Album.Artists
 	}
 
@@ -434,6 +449,150 @@ func (h *Handler) mergeFetchedData(existing, fetched *music.Track) *music.Track 
 	}
 
 	return &result
+}
+
+// ModalData holds data for the search results modal
+type ModalData struct {
+	Tracks         []*music.Track
+	ProviderName   string
+	ProviderColors map[string]string
+	TrackID        string
+}
+
+// SearchTracksFromProvider handles searching for tracks from a specific provider
+func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
+	trackID := c.Params("trackId")
+	providerName := c.Params("provider")
+
+	if trackID == "" || providerName == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Track ID and provider name are required")
+	}
+
+	// Search for tracks
+	tracks, err := h.service.SearchTracksForTrack(c.Context(), trackID, providerName)
+	if err != nil {
+		slog.Error("Failed to search tracks", "error", err, "trackId", trackID, "provider", providerName)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to search tracks")
+	}
+
+	// Get provider colors for styling
+	providerColors := h.getProviderColors(providerName)
+
+	// Render modal with search results
+	return c.Render("tag/search_results_modal", ModalData{
+		Tracks:         tracks,
+		ProviderName:   providerName,
+		ProviderColors: providerColors,
+		TrackID:        trackID,
+	})
+}
+
+// SelectTrackFromResults handles selecting a track from search results and applying its metadata
+func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
+	trackID := c.Params("trackId")
+	selectedTrackIndex := c.QueryInt("index", -1)
+	providerName := c.Params("provider")
+
+	if trackID == "" || selectedTrackIndex == -1 || providerName == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Track ID, provider name, and track index are required")
+	}
+
+	// Get search results again (could be optimized with caching)
+	tracks, err := h.service.SearchTracksForTrack(c.Context(), trackID, providerName)
+	if err != nil {
+		slog.Error("Failed to get search results", "error", err, "trackId", trackID, "provider", providerName)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get search results")
+	}
+
+	if selectedTrackIndex < 0 || selectedTrackIndex >= len(tracks) {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid track index")
+	}
+
+	selectedTrack := tracks[selectedTrackIndex]
+
+	// Get current track data
+	currentTrack, err := h.service.GetTrackForEditing(c.Context(), trackID)
+	if err != nil {
+		slog.Error("Failed to get current track", "error", err, "trackId", trackID)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get current track")
+	}
+
+	// Merge selected track data with current track (preserve file-specific data)
+	mergedTrack := h.mergeFetchedData(currentTrack, selectedTrack)
+
+	// Get all artists and albums for dropdowns
+	artists, err := h.service.libraryRepo.GetArtists(c.Context())
+	if err != nil {
+		artists = []*music.Artist{} // Continue with empty list
+	}
+
+	albums, err := h.service.libraryRepo.GetAlbums(c.Context())
+	if err != nil {
+		albums = []*music.Album{} // Continue with empty list
+	}
+
+	// Ensure track's artists are included in the dropdown
+	artistMap := make(map[string]bool)
+	for _, artist := range artists {
+		artistMap[artist.ID] = true
+	}
+	for _, artistRole := range mergedTrack.Artists {
+		if artistRole.Artist != nil {
+			artistID := artistRole.Artist.ID
+			if artistID == "" {
+				artistID = "temp_" + artistRole.Artist.Name
+				artistRole.Artist.ID = artistID
+			}
+			if !artistMap[artistID] {
+				artists = append(artists, artistRole.Artist)
+				artistMap[artistID] = true
+			}
+		}
+	}
+	if mergedTrack.Album != nil {
+		for _, artistRole := range mergedTrack.Album.Artists {
+			if artistRole.Artist != nil {
+				artistID := artistRole.Artist.ID
+				if artistID == "" {
+					artistID = "temp_" + artistRole.Artist.Name
+					artistRole.Artist.ID = artistID
+				}
+				if !artistMap[artistID] {
+					artists = append(artists, artistRole.Artist)
+					artistMap[artistID] = true
+				}
+			}
+		}
+	}
+
+	// Create selected artist IDs map
+	selectedArtistIDs := make(map[string]bool)
+	for _, artistRole := range mergedTrack.Artists {
+		if artistRole.Artist != nil && artistRole.Artist.ID != "" {
+			selectedArtistIDs[artistRole.Artist.ID] = true
+		}
+	}
+
+	// Determine selected album artist ID
+	selectedAlbumArtistID := ""
+	if mergedTrack.Album != nil && len(mergedTrack.Album.Artists) > 0 {
+		selectedAlbumArtistID = mergedTrack.Album.Artists[0].Artist.ID
+	}
+
+	// Get provider colors
+	providerColors := h.getProviderColors(providerName)
+
+	// Render the updated form
+	return c.Render("sections/tag", fiber.Map{
+		"Track":                 mergedTrack,
+		"Artists":               artists,
+		"Albums":                albums,
+		"SelectedAlbumArtistID": selectedAlbumArtistID,
+		"SelectedArtistIDs":     selectedArtistIDs,
+		"FromProvider":          providerName,
+		"ProviderColors":        providerColors,
+		"EnabledProviders":      h.service.GetEnabledProviders(),
+	})
 }
 
 // UpdateTags handles the form submission to update track tags
