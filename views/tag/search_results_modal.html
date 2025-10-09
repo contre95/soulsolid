@@ -36,63 +36,63 @@
     <!-- Modal Body -->
     <div class="p-6 max-h-96 overflow-y-auto bg-gray-50 dark:bg-gray-900">
       {{if .Tracks}}
-      <div class="space-y-4">
+      <div class="space-y-2">
         {{range $index, $track := .Tracks}}
-        <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all duration-200 bg-white dark:bg-gray-800 shadow-sm">
+        <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-3 hover:bg-white dark:hover:bg-gray-700 hover:shadow-md transition-all duration-200 bg-white dark:bg-gray-900 shadow-sm">
           <div class="flex flex-col md:flex-row md:items-start md:justify-between">
             <div class="flex-1">
-              <div class="flex items-center space-x-2 mb-2">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{.Title}}</h3>
-                {{if .TitleVersion}}
-                <span class="text-sm text-gray-500 dark:text-gray-400">({{.TitleVersion}})</span>
-                {{end}}
-              </div>
+               <div class="flex items-center space-x-2 mb-2">
+                 <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{.Title}}</h3>
+                 {{if .TitleVersion}}
+                 <span class="text-sm text-gray-600 dark:text-gray-300">({{.TitleVersion}})</span>
+                 {{end}}
+               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p class="text-gray-600 dark:text-gray-400">
-                    <i class="fas fa-microphone mr-1"></i>
-                    <strong>Artist:</strong>
-                    {{range $i, $artist := .Artists}}
-                      {{if $i}}, {{end}}{{.Artist.Name}}
-                    {{end}}
-                  </p>
-                  {{if .Album}}
-                  <p class="text-gray-600 dark:text-gray-400">
-                    <i class="fas fa-compact-disc mr-1"></i>
-                    <strong>Album:</strong> {{.Album.Title}}
-                  </p>
-                  {{end}}
-                </div>
+               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                 <div>
+                   <p class="text-gray-700 dark:text-gray-300">
+                     <i class="fas fa-microphone mr-1"></i>
+                     <strong>Artist:</strong>
+                     {{range $i, $artist := .Artists}}
+                       {{if $i}}, {{end}}{{.Artist.Name}}
+                     {{end}}
+                   </p>
+                   {{if .Album}}
+                   <p class="text-gray-700 dark:text-gray-300">
+                     <i class="fas fa-compact-disc mr-1"></i>
+                     <strong>Album:</strong> {{.Album.Title}}
+                   </p>
+                   {{end}}
+                 </div>
 
-                <div>
-                  {{if .Metadata.Year}}
-                  <p class="text-gray-600 dark:text-gray-400">
-                    <i class="fas fa-calendar mr-1"></i>
-                    <strong>Year:</strong> {{.Metadata.Year}}
-                  </p>
-                  {{end}}
-                  {{if .Metadata.Genre}}
-                  <p class="text-gray-600 dark:text-gray-400">
-                    <i class="fas fa-tag mr-1"></i>
-                    <strong>Genre:</strong> {{.Metadata.Genre}}
-                  </p>
-                  {{end}}
-                  {{if .ISRC}}
-                  <p class="text-gray-600 dark:text-gray-400">
-                    <i class="fas fa-barcode mr-1"></i>
-                    <strong>ISRC:</strong> {{.ISRC}}
-                  </p>
-                  {{end}}
-                </div>
-              </div>
+                 <div>
+                   {{if .Metadata.Year}}
+                   <p class="text-gray-700 dark:text-gray-300">
+                     <i class="fas fa-calendar mr-1"></i>
+                     <strong>Year:</strong> {{.Metadata.Year}}
+                   </p>
+                   {{end}}
+                   {{if .Metadata.Genre}}
+                   <p class="text-gray-700 dark:text-gray-300">
+                     <i class="fas fa-tag mr-1"></i>
+                     <strong>Genre:</strong> {{.Metadata.Genre}}
+                   </p>
+                   {{end}}
+                   {{if .ISRC}}
+                   <p class="text-gray-700 dark:text-gray-300">
+                     <i class="fas fa-barcode mr-1"></i>
+                     <strong>ISRC:</strong> {{.ISRC}}
+                   </p>
+                   {{end}}
+                 </div>
+               </div>
             </div>
 
              <button
                hx-get="/ui/tag/edit/{{$.TrackID}}/select/{{$.ProviderName}}?index={{$index}}"
                hx-target="#contenido"
                hx-swap="outerHTML"
-               class="ml-4 mt-2 px-4 py-2 border-2 border-gray-300 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
+               class="px-5 py-2 mt-2 backdrop-blur-sm hover:bg-blue-200/80 bg-blue-100/80 hover:dark:bg-blue-800/30 dark:bg-blue-900/30 border border-blue-200/50 dark:border-blue-700/50 text-sm text-blue-800 dark:text-blue-200 rounded-lg transition-colors font-medium text-center">
                <i class="fas fa-check mr-1"></i>
                Select
              </button>
