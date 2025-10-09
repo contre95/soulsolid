@@ -60,6 +60,11 @@ func Load(path string) (*Manager, error) {
 	setProviderAPIKey(&cfg, "discogs", "DISCOGS_API_KEY")
 	setProviderAPIKey(&cfg, "musicbrainz", "MUSICBRAINZ_API_KEY")
 
+	// Override views path with environment variable if set
+	if viewsPath := os.Getenv("SS_VIEWS"); viewsPath != "" {
+		cfg.Server.ViewsPath = viewsPath
+	}
+
 	return NewManager(&cfg), nil
 }
 
@@ -98,6 +103,7 @@ func createDefaultConfig() *Config {
 		Server: Server{
 			PrintRoutes: false,
 			Port:        3535,
+			ViewsPath:   "./views",
 		},
 		Database: Database{
 			Path: "./library.db",

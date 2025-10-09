@@ -22,6 +22,7 @@ RUN go build -ldflags='-s -w -extldflags "-static"' -o /app/soulsolid src/main.g
 FROM scratch
 ARG IMAGE_TAG
 ENV IMAGE_TAG=$IMAGE_TAG
+ENV SS_VIEWS=/app/views
 
 LABEL maintainer="contre95"
 

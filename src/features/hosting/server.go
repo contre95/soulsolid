@@ -26,7 +26,7 @@ type Server struct {
 
 // NewServer creates a new HTTP server.
 func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, syncService *syncdap.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *tagging.Service) *Server {
-	engine := html.New("./views", ".html")
+	engine := html.New(cfg.Get().Server.ViewsPath, ".html")
 	engine.Debug(cfg.Get().Logger.Level == "debug")
 	// Add custom template functions
 	engine.AddFunc("isDebug", func() bool {
