@@ -51,6 +51,7 @@ type Database struct {
 type Server struct {
 	PrintRoutes bool   `yaml:"show_routes"`
 	Port        uint32 `yaml:"port"`
+	ViewsPath   string `yaml:"views_path"`
 }
 
 // Logger holds the configuration for the app logging

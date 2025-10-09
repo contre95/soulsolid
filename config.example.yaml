@@ -26,6 +26,7 @@ downloaders:
 server:
   show_routes: false
   port: 3535
+  views_path: ./views
 database:
   path: ./library.db
 import:
