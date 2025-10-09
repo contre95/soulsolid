@@ -29,7 +29,7 @@ downloaders:
 server:
   show_routes: false
   port: 3535
-  views_path: ./views
+  views_path: ./views # Beware of this var if running in a Container
 database:
   path: ./library.db
 import:
