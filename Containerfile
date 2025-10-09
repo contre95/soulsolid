@@ -1,43 +1,27 @@
-FROM golang:bookworm AS builder
-
-# Install Go and C dependencies
+FROM golang:bookworm AS plugin-builder
 ENV CGO_ENABLED=2
-RUN apt-get update && apt-get install -y gcc libc-dev libsqlite3-dev tree
+RUN apt-get update && apt-get install -y gcc libc-dev git
+WORKDIR /plugins
+RUN git clone https://github.com/contre95/soulsolid-dummy-plugin.git dummy
+RUN cd dummy && go mod tidy && go build -buildmode=plugin -o /plugins/dummy.so main.go
 
-# Install Node.js and npm
-RUN apt-get install -y nodejs npm
-
-# Copy application files
+FROM golang:bookworm AS app-builder
+ENV CGO_ENABLED=2
+RUN apt-get update && apt-get install -y gcc libc-dev libsqlite3-dev nodejs npm git
 WORKDIR /app
+# Copy your source code here - adjust the path as needed
 ADD . .
-
-# Build CSS
-RUN npm install
-RUN npm run build:css
-
-# Build Go application
+RUN npm install && npm run build:css
 RUN go mod tidy
-RUN go build -ldflags='-s -w -extldflags "-static"' -o /app/soulsolid src/main.go
+# Build without static linking for plugin compatibility
+RUN go build -o /app/soulsolid src/main.go
 
-FROM scratch
-ARG IMAGE_TAG
-ENV IMAGE_TAG=$IMAGE_TAG
-ENV SS_VIEWS=/app/views
-
-LABEL maintainer="contre95"
-
+FROM golang:bookworm
 WORKDIR /app
-
-# Copy application assets
-COPY ./views /app/views
-COPY --from=builder /app/public /app/public
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /app/soulsolid /app/soulsolid
-
-# Copy tree binary
-COPY --from=builder /usr/bin/tree /usr/bin/tree
-COPY --from=builder /lib/x86_64-linux-gnu /lib/x86_64-linux-gnu
-COPY --from=builder /lib64 /lib64
-
+ENV SS_VIEWS=/app/views
+# Copy the dynamically built app and assets
+COPY --from=app-builder /app/soulsolid /app/soulsolid
+COPY --from=app-builder /app/views /app/views
+COPY --from=app-builder /app/public /app/public
+COPY --from=plugin-builder /plugins /app/plugins
 ENTRYPOINT ["/app/soulsolid"]
-
