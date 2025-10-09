@@ -2,8 +2,12 @@ package downloading
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
+	"os"
 	"plugin"
+	"strings"
 
 	"github.com/contre95/soulsolid/src/features/config"
 )
@@ -42,8 +46,43 @@ func (pm *PluginManager) LoadPlugins(cfg *config.Config) error {
 func (pm *PluginManager) loadPlugin(pluginCfg config.PluginConfig) error {
 	slog.Debug("Loading plugin", "name", pluginCfg.Name, "path", pluginCfg.Path)
 
-	p, err := plugin.Open(pluginCfg.Path)
+	pluginPath := pluginCfg.Path
+
+	// If path is a URL, download the plugin to a temporary file
+	if strings.HasPrefix(pluginCfg.Path, "http://") || strings.HasPrefix(pluginCfg.Path, "https://") {
+		tempFile, err := os.CreateTemp("", "*.so")
+		if err != nil {
+			return fmt.Errorf("failed to create temp file for plugin %s: %w", pluginCfg.Name, err)
+		}
+		defer tempFile.Close()
+
+		resp, err := http.Get(pluginCfg.Path)
+		if err != nil {
+			os.Remove(tempFile.Name()) // cleanup on error
+			return fmt.Errorf("failed to download plugin %s from %s: %w", pluginCfg.Name, pluginCfg.Path, err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			os.Remove(tempFile.Name()) // cleanup on error
+			return fmt.Errorf("failed to download plugin %s: HTTP %d", pluginCfg.Name, resp.StatusCode)
+		}
+
+		_, err = io.Copy(tempFile, resp.Body)
+		if err != nil {
+			os.Remove(tempFile.Name()) // cleanup on error
+			return fmt.Errorf("failed to write plugin %s to temp file: %w", pluginCfg.Name, err)
+		}
+
+		tempFile.Close() // close before opening as plugin
+		pluginPath = tempFile.Name()
+	}
+
+	p, err := plugin.Open(pluginPath)
 	if err != nil {
+		if strings.HasPrefix(pluginCfg.Path, "http://") || strings.HasPrefix(pluginCfg.Path, "https://") {
+			os.Remove(pluginPath) // cleanup temp file on error
+		}
 		return fmt.Errorf("failed to open plugin %s: %w", pluginCfg.Path, err)
 	}
 
