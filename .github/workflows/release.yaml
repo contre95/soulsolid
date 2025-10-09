@@ -4,6 +4,26 @@ on:
     branches:
       - main
     types: [closed]
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      custom_version:
+        description: 'Custom version (optional, overrides version_type)'
+        required: false
+        type: string
+      update_latest:
+        description: 'Update the latest tag'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,7 +35,7 @@ permissions:
 
 jobs:
   tag-and-release:
-    if: github.event.pull_request.merged == true && (startsWith(github.event.pull_request.head.ref, 'fix/') || startsWith(github.event.pull_request.head.ref, 'feat/') || startsWith(github.event.pull_request.head.ref, 'release/'))
+    if: (github.event.pull_request.merged == true && (startsWith(github.event.pull_request.head.ref, 'fix/') || startsWith(github.event.pull_request.head.ref, 'feat/') || startsWith(github.event.pull_request.head.ref, 'release/'))) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       tag_name: ${{ steps.set_tag.outputs.tag_name }}
@@ -37,18 +57,43 @@ jobs:
           version=${tag#v}
           IFS='.' read -r major minor patch <<< "$version"
 
-          if [[ "${{ github.event.pull_request.head.ref }}" == fix/* ]]; then
-            patch=$((patch + 1))
-          elif [[ "${{ github.event.pull_request.head.ref }}" == feat/* ]]; then
-            minor=$((minor + 1))
-            patch=0
-          elif [[ "${{ github.event.pull_request.head.ref }}" == release/* ]]; then
-            major=$((major + 1))
-            minor=0
-            patch=0
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ -n "${{ github.event.inputs.custom_version }}" ]]; then
+              new_version="${{ github.event.inputs.custom_version }}"
+              if [[ ! $new_version =~ ^v ]]; then
+                new_version="v$new_version"
+              fi
+            else
+              case "${{ github.event.inputs.version_type }}" in
+                patch)
+                  patch=$((patch + 1))
+                  ;;
+                minor)
+                  minor=$((minor + 1))
+                  patch=0
+                  ;;
+                major)
+                  major=$((major + 1))
+                  minor=0
+                  patch=0
+                  ;;
+              esac
+              new_version="v${major}.${minor}.${patch}"
+            fi
+          else
+            if [[ "${{ github.event.pull_request.head.ref }}" == fix/* ]]; then
+              patch=$((patch + 1))
+            elif [[ "${{ github.event.pull_request.head.ref }}" == feat/* ]]; then
+              minor=$((minor + 1))
+              patch=0
+            elif [[ "${{ github.event.pull_request.head.ref }}" == release/* ]]; then
+              major=$((major + 1))
+              minor=0
+              patch=0
+            fi
+            new_version="v${major}.${minor}.${patch}"
           fi
 
-          new_version="v${major}.${minor}.${patch}"
           echo "New version: $new_version"
           echo "new_version=$new_version" >> $GITHUB_ENV
       - name: Create Git tag
@@ -96,7 +141,7 @@ jobs:
           podman image build --no-cache --build-arg IMAGE_TAG=beta-$version -t contre95/soulsolid:beta .
           podman push contre95/soulsolid:beta
 
-          if [[ "${{ github.event.pull_request.head.ref }}" == release/* ]]; then
+          if [[ "${{ github.event.pull_request.head.ref }}" == release/* ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.update_latest }}" == "true" ]]; then
             # Tag and push the :latest tag
             podman tag contre95/soulsolid:$version contre95/soulsolid:latest
             podman push contre95/soulsolid:latest
