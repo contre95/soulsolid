@@ -51,6 +51,11 @@ func Load(path string) (*Manager, error) {
 		return nil, err
 	}
 
+	// Set defaults for missing values
+	if cfg.Server.ViewsPath == "" {
+		cfg.Server.ViewsPath = "./views"
+	}
+
 	// Override with environment variables if set
 	if token := os.Getenv("TELEGRAM_TOKEN"); token != "" {
 		cfg.Telegram.Token = token
