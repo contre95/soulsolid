@@ -56,9 +56,7 @@ func Load(path string) (*Manager, error) {
 		cfg.Telegram.Token = token
 	}
 
-	setProviderAPIKey(&cfg, "acoustid", "ACCOUSTID_API_KEY")
 	setProviderAPIKey(&cfg, "discogs", "DISCOGS_API_KEY")
-	setProviderAPIKey(&cfg, "musicbrainz", "MUSICBRAINZ_API_KEY")
 
 	// Override views path with environment variable if set
 	if viewsPath := os.Getenv("SS_VIEWS"); viewsPath != "" {
@@ -121,19 +119,16 @@ func createDefaultConfig() *Config {
 			},
 		},
 		Tag: Tag{
-			Enabled: false,
 			Providers: map[string]Provider{
-				"acoustid": {
-					Enabled: false,
-					APIKey:  "",
-				},
 				"discogs": {
 					Enabled: false,
 					APIKey:  "",
 				},
 				"musicbrainz": {
 					Enabled: false,
-					APIKey:  "",
+				},
+				"deezer": {
+					Enabled: false,
 				},
 			},
 		},
