@@ -12,6 +12,8 @@ module.exports = {
     "hidden",
     "invisible",
     "opacity-0",
+    "backdrop-blur-md",
+    "bg-opacity-20",
   ],
   theme: {
     extend: {

@@ -43,7 +43,8 @@ tmp
 # JS 
 node_modules/
 
-# Soulsolid generated files
+# Soulsolid
+pocs
 **/*.db
 **/*.db-journal
 downloads
@@ -56,3 +57,4 @@ public/fontawesome/
 public/js/
 config.yaml
 music_library
+sample.flac

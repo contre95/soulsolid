@@ -29,8 +29,7 @@
          <tr>
            <th class="px-1.5 py-1 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Album</th>
            <th class="px-1.5 py-1 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Artist</th>
-             <th class="px-1.5 py-1 text-center font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Year</th>
-            <th class="px-1.5 py-1 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Actions</th>
+              <th class="px-1.5 py-1 text-center font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">Year</th>
          </tr>
        </thead>
        <tbody class="bg-white/50 dark:bg-gray-800/70 divide-y divide-gray-200/30 dark:divide-gray-700/40 backdrop-blur-sm">
@@ -61,17 +60,9 @@
                  {{range $index, $artist := .Artists}}{{if $index}}, {{end}}{{.Artist.Name}}{{if not (eq .Role "main")}} ({{.Role}}){{end}}{{end}}
                {{end}}
              </td>
-              <td class="px-1.5 py-1 text-center text-gray-600 dark:text-gray-300 text-xs">
-                {{if .ReleaseDate}}{{.ReleaseDate.Year}}{{else}}-{{end}}
-              </td>
-              <td class="px-1.5 py-1 whitespace-nowrap">
-                <button class="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 px-2 py-1 bg-purple-50/50 dark:bg-purple-900/40 rounded backdrop-blur-sm border border-purple-200/50 dark:border-purple-700/50 text-xs"
-                        hx-get="/library/albums/{{.ID}}"
-                        hx-target="#album-detail"
-                        hx-swap="innerHTML">
-                  View
-                </button>
-              </td>
+               <td class="px-1.5 py-1 text-center text-gray-600 dark:text-gray-300 text-xs">
+                 {{if .ReleaseDate}}{{.ReleaseDate.Year}}{{else}}-{{end}}
+               </td>
            </tr>
          {{end}}
       </tbody>
