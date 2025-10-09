@@ -92,7 +92,6 @@ func main() {
 		}
 	}
 
-	// Create and start the HTTP server
 	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped: %v", "error", err)
