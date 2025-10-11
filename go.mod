@@ -6,6 +6,7 @@ require (
 	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/charmbracelet/log v0.4.2
 	github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8
+	github.com/go-flac/flacpicture v0.3.0
 	github.com/go-flac/flacvorbis v0.2.0
 	github.com/go-flac/go-flac v1.0.0
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
@@ -15,6 +16,7 @@ require (
 	github.com/gosimple/unidecode v1.0.1
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
+	golang.org/x/image v0.32.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -42,5 +44,5 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/text v0.30.0 // indirect
 )

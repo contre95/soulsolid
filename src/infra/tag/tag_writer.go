@@ -1,28 +1,100 @@
 package tag
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/bogem/id3v2/v2"
+	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/music"
+	"github.com/go-flac/flacpicture"
 	"github.com/go-flac/flacvorbis"
 	goflac "github.com/go-flac/go-flac"
+	"github.com/nfnt/resize"
+	_ "golang.org/x/image/webp"
+	_ "image/gif"
 )
 
 // TagWriter implements writing tags into files for MP3 and FLAC formats.
-type TagWriter struct{}
+type TagWriter struct {
+	config *config.Manager
+}
 
 // NewTagWriter creates a new TagWriter.
-func NewTagWriter() downloading.TagWriter {
-	return &TagWriter{}
+func NewTagWriter(cfg *config.Manager) downloading.TagWriter {
+	return &TagWriter{config: cfg}
+}
+
+// resizeImage resizes image data to fit within maxSize pixels, maintaining aspect ratio.
+func (t *TagWriter) resizeImage(imgData []byte, maxSize int) ([]byte, error) {
+	if maxSize <= 0 {
+		return imgData, nil
+	}
+
+	// Decode image
+	img, format, err := image.Decode(bytes.NewReader(imgData))
+	if err != nil {
+		return imgData, fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	// Get current bounds
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	// Check if resizing is needed
+	if width <= maxSize && height <= maxSize {
+		return imgData, nil
+	}
+
+	// Calculate new dimensions
+	if width > height {
+		height = (height * maxSize) / width
+		width = maxSize
+	} else {
+		width = (width * maxSize) / height
+		height = maxSize
+	}
+
+	// Resize
+	resizedImg := resize.Resize(uint(width), uint(height), img, resize.Lanczos3)
+
+	// Encode back
+	var buf bytes.Buffer
+	switch strings.ToLower(format) {
+	case "jpeg":
+		quality := t.config.Get().Downloaders.Artwork.Embedded.Quality
+		if quality <= 0 {
+			quality = 85
+		}
+		err = jpeg.Encode(&buf, resizedImg, &jpeg.Options{Quality: quality})
+	case "png":
+		err = png.Encode(&buf, resizedImg)
+	default:
+		// Default to JPEG
+		quality := t.config.Get().Downloaders.Artwork.Embedded.Quality
+		if quality <= 0 {
+			quality = 85
+		}
+		err = jpeg.Encode(&buf, resizedImg, &jpeg.Options{Quality: quality})
+	}
+	if err != nil {
+		return imgData, fmt.Errorf("failed to encode resized image: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 // WriteFileTags writes metadata to the file.
@@ -40,17 +112,63 @@ func (t *TagWriter) WriteFileTags(ctx context.Context, filePath string, track *m
 
 // tagMP3 handles MP3 tagging using id3v2.
 func (t *TagWriter) tagMP3(ctx context.Context, filePath string, track *music.Track) error {
-	tag, err := id3v2.Open(filePath, id3v2.Options{Parse: true})
+	// Read the audio data
+	audioData, err := os.ReadFile(filePath)
 	if err != nil {
-		tag = id3v2.NewEmptyTag()
+		return fmt.Errorf("failed to read audio file: %w", err)
 	}
-	defer tag.Close()
+
+	// Embedded picture - prefer local artwork path, fallback to downloading from URL
+	var imgData []byte
+	var artworkPath string
+
+	if track.Album != nil && track.Album.ArtworkPath != "" {
+		// Use local artwork file
+		artworkPath = track.Album.ArtworkPath
+		imgData, err = os.ReadFile(artworkPath)
+		if err != nil {
+			slog.Warn("Failed to read local artwork file", "filePath", filePath, "artworkPath", artworkPath, "error", err)
+		}
+	} else if track.Album != nil && track.Album.ImageLarge != "" {
+		// Download from URL
+		imgData, err = t.DownloadImage(ctx, track.Album.ImageLarge)
+		if err != nil {
+			slog.Warn("Failed to download artwork for MP3", "filePath", filePath, "imageURL", track.Album.ImageLarge, "error", err)
+		}
+	} else if len(track.Artists) > 0 && track.Artists[0].Artist != nil && track.Artists[0].Artist.ImageLarge != "" {
+		// Use artist image for compilations or when no album cover is available
+		imgData, err = t.DownloadImage(ctx, track.Artists[0].Artist.ImageLarge)
+		if err != nil {
+			slog.Warn("Failed to download artist artwork for MP3", "filePath", filePath, "imageURL", track.Artists[0].Artist.ImageLarge, "error", err)
+		}
+	}
+
+	if len(imgData) > 0 {
+		// Resize image if configured
+		if t.config != nil {
+			cfg := t.config.Get()
+			if cfg.Downloaders.Artwork.Embedded.Enabled {
+				maxSize := cfg.Downloaders.Artwork.Embedded.Size
+				if maxSize > 0 {
+					resizedData, err := t.resizeImage(imgData, maxSize)
+					if err != nil {
+						slog.Warn("Failed to resize artwork for MP3", "filePath", filePath, "error", err)
+					} else {
+						imgData = resizedData
+					}
+				}
+			}
+		}
+	}
+
+	// Create new tag
+	tag := id3v2.NewEmptyTag()
 
 	// Set basic metadata
 	tag.SetTitle(track.Title)
 	if len(track.Artists) > 0 {
 		tag.SetArtist(track.Artists[0].Artist.Name)
-		tag.AddTextFrame(tag.CommonID("Album Artist"), tag.DefaultEncoding(), track.Artists[0].Artist.Name)
+		tag.AddTextFrame(tag.CommonID("Album Artist"), id3v2.EncodingUTF8, track.Artists[0].Artist.Name)
 
 		// Add additional artists if present
 		if len(track.Artists) > 1 {
@@ -59,7 +177,7 @@ func (t *TagWriter) tagMP3(ctx context.Context, filePath string, track *music.Tr
 				additionalArtists = append(additionalArtists, track.Artists[i].Artist.Name)
 			}
 			if len(additionalArtists) > 0 {
-				tag.AddTextFrame(tag.CommonID("REMIXER"), tag.DefaultEncoding(), strings.Join(additionalArtists, "; "))
+				tag.AddTextFrame(tag.CommonID("REMIXER"), id3v2.EncodingUTF8, strings.Join(additionalArtists, "; "))
 			}
 		}
 	}
@@ -71,84 +189,86 @@ func (t *TagWriter) tagMP3(ctx context.Context, filePath string, track *music.Tr
 
 	// Set additional metadata
 	if track.TitleVersion != "" {
-		tag.AddTextFrame(tag.CommonID("Subtitle"), tag.DefaultEncoding(), track.TitleVersion)
+		tag.AddTextFrame(tag.CommonID("Subtitle"), id3v2.EncodingUTF8, track.TitleVersion)
 	}
 	if track.Metadata.BPM > 0 {
-		tag.AddTextFrame(tag.CommonID("BPM"), tag.DefaultEncoding(), fmt.Sprintf("%.0f", track.Metadata.BPM))
+		tag.AddTextFrame(tag.CommonID("BPM"), id3v2.EncodingUTF8, fmt.Sprintf("%.0f", track.Metadata.BPM))
 	}
 	if track.Metadata.Gain != 0 {
-		tag.AddTextFrame(tag.CommonID("REPLAYGAIN_TRACK_GAIN"), tag.DefaultEncoding(), fmt.Sprintf("%.2f dB", track.Metadata.Gain))
+		tag.AddTextFrame(tag.CommonID("REPLAYGAIN_TRACK_GAIN"), id3v2.EncodingUTF8, fmt.Sprintf("%.2f dB", track.Metadata.Gain))
 	}
 	if track.Album != nil {
 		if track.Album.Label != "" {
-			tag.AddTextFrame(tag.CommonID("PUBLISHER"), tag.DefaultEncoding(), track.Album.Label)
+			tag.AddTextFrame(tag.CommonID("PUBLISHER"), id3v2.EncodingUTF8, track.Album.Label)
 		}
 		if track.Album.Barcode != "" {
-			tag.AddTextFrame(tag.CommonID("BARCODE"), tag.DefaultEncoding(), track.Album.Barcode)
+			tag.AddTextFrame(tag.CommonID("BARCODE"), id3v2.EncodingUTF8, track.Album.Barcode)
 		}
 	}
 
 	// Additional metadata
 	if track.ISRC != "" {
-		tag.AddTextFrame(tag.CommonID("ISRC"), tag.DefaultEncoding(), track.ISRC)
+		tag.AddTextFrame(tag.CommonID("ISRC"), id3v2.EncodingUTF8, track.ISRC)
 	}
 	if track.Metadata.TrackNumber > 0 {
-		tag.AddTextFrame(tag.CommonID("Track number/Position in set"), tag.DefaultEncoding(), fmt.Sprintf("%d", track.Metadata.TrackNumber))
+		tag.AddTextFrame(tag.CommonID("Track number/Position in set"), id3v2.EncodingUTF8, fmt.Sprintf("%d", track.Metadata.TrackNumber))
 	}
 	if track.Metadata.DiscNumber > 0 {
-		tag.AddTextFrame(tag.CommonID("Part of a set"), tag.DefaultEncoding(), fmt.Sprintf("%d", track.Metadata.DiscNumber))
+		tag.AddTextFrame(tag.CommonID("Part of a set"), id3v2.EncodingUTF8, fmt.Sprintf("%d", track.Metadata.DiscNumber))
 	}
 	if track.Metadata.Composer != "" {
-		tag.AddTextFrame(tag.CommonID("Composer"), tag.DefaultEncoding(), track.Metadata.Composer)
+		tag.AddTextFrame(tag.CommonID("Composer"), id3v2.EncodingUTF8, track.Metadata.Composer)
 	}
 	if track.Metadata.Lyrics != "" {
 		fmt.Printf("DEBUG: Writing lyrics to MP3 file %s: %s\n", filePath, track.Metadata.Lyrics)
-		tag.AddTextFrame(tag.CommonID("Lyrics"), tag.DefaultEncoding(), track.Metadata.Lyrics)
+		tag.AddTextFrame(tag.CommonID("Lyrics"), id3v2.EncodingUTF8, track.Metadata.Lyrics)
 	} else {
 		fmt.Printf("DEBUG: No lyrics to write to MP3 file %s\n", filePath)
 	}
 
-	// Embedded picture - prefer album cover, fallback to artist image for compilations
-	var imageURL string
-	var imageDescription string
+	// Add picture
+	if len(imgData) > 0 {
+		// Always use JPEG for consistency
+		mimeType := "image/jpeg"
 
-	if track.Album != nil && track.Album.ImageLarge != "" {
-		imageURL = track.Album.ImageLarge
-		imageDescription = "Cover"
-	} else if len(track.Artists) > 0 && track.Artists[0].Artist != nil && track.Artists[0].Artist.ImageLarge != "" {
-		// Use artist image for compilations or when no album cover is available
-		imageURL = track.Artists[0].Artist.ImageLarge
-		imageDescription = "Artist"
+		pic := id3v2.PictureFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			MimeType:    mimeType,
+			PictureType: id3v2.PTFrontCover,
+			Description: "",
+			Picture:     imgData,
+		}
+		tag.AddAttachedPicture(pic)
+		slog.Debug("Embedded artwork in MP3", "filePath", filePath, "size", len(imgData), "type", mimeType)
 	}
 
-	if imageURL != "" {
-		imgData, err := t.DownloadImage(ctx, imageURL)
-		if err != nil {
-			slog.Warn("Failed to download artwork for MP3", "filePath", filePath, "imageURL", imageURL, "error", err)
-		} else if len(imgData) > 0 {
-			// Detect MIME type from data
-			mimeType := "image/jpeg" // default
-			if len(imgData) >= 4 {
-				if string(imgData[:4]) == "\x89PNG" {
-					mimeType = "image/png"
-				} else if string(imgData[:2]) == "\xFF\xD8" {
-					mimeType = "image/jpeg"
-				}
-			}
+	// Get tag bytes
+	var buf bytes.Buffer
+	_, err = tag.WriteTo(&buf)
+	if err != nil {
+		return fmt.Errorf("failed to write tag to buffer: %w", err)
+	}
+	tagData := buf.Bytes()
 
-			pic := id3v2.PictureFrame{
-				Encoding:    tag.DefaultEncoding(),
-				MimeType:    mimeType,
-				PictureType: id3v2.PTFrontCover,
-				Description: imageDescription,
-				Picture:     imgData,
-			}
-			tag.AddAttachedPicture(pic)
-			slog.Debug("Embedded artwork in MP3", "filePath", filePath, "size", len(imgData), "type", mimeType)
+	// Prepend to audio data
+	taggedData := append(tagData, audioData...)
+
+	// Write back
+	err = os.WriteFile(filePath, taggedData, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write tagged MP3 file: %w", err)
+	}
+
+	// Clean up temp artwork file if it was used
+	if artworkPath != "" && strings.HasPrefix(artworkPath, "/tmp/") {
+		if err := os.Remove(artworkPath); err != nil {
+			slog.Warn("Failed to cleanup temp artwork file", "path", artworkPath, "error", err)
+		} else {
+			slog.Debug("Cleaned up temp artwork file", "path", artworkPath)
 		}
 	}
 
-	return tag.Save()
+	return nil
 }
 
 // tagFLAC handles FLAC tagging using Vorbis comments.
@@ -268,44 +388,89 @@ func (t *TagWriter) tagFLAC(ctx context.Context, filePath string, track *music.T
 		f.Meta = append(f.Meta, &commentMeta)
 	}
 
-	// Add artwork as PICTURE metadata block - prefer album cover, fallback to artist image
-	var imageURL string
+	// Add artwork as PICTURE metadata block - prefer local artwork path, fallback to downloading from URL
+	var imgData []byte
 	var imageDescription string
+	var artworkPath string
 
-	if track.Album != nil && track.Album.ImageLarge != "" {
-		imageURL = track.Album.ImageLarge
+	if track.Album != nil && track.Album.ArtworkPath != "" {
+		// Use local artwork file
+		artworkPath = track.Album.ArtworkPath
 		imageDescription = "Cover"
+		imgData, err = os.ReadFile(artworkPath)
+		if err != nil {
+			slog.Warn("Failed to read local artwork file for FLAC", "filePath", filePath, "artworkPath", artworkPath, "error", err)
+		}
+	} else if track.Album != nil && track.Album.ImageLarge != "" {
+		// Download from URL
+		imageDescription = "Cover"
+		imgData, err = t.DownloadImage(ctx, track.Album.ImageLarge)
+		if err != nil {
+			slog.Warn("Failed to download artwork for FLAC", "filePath", filePath, "imageURL", track.Album.ImageLarge, "error", err)
+		}
 	} else if len(track.Artists) > 0 && track.Artists[0].Artist != nil && track.Artists[0].Artist.ImageLarge != "" {
 		// Use artist image for compilations or when no album cover is available
-		imageURL = track.Artists[0].Artist.ImageLarge
 		imageDescription = "Artist"
+		imgData, err = t.DownloadImage(ctx, track.Artists[0].Artist.ImageLarge)
+		if err != nil {
+			slog.Warn("Failed to download artist artwork for FLAC", "filePath", filePath, "imageURL", track.Artists[0].Artist.ImageLarge, "error", err)
+		}
 	}
 
-	if imageURL != "" {
-		imgData, err := t.DownloadImage(ctx, imageURL)
-		if err != nil {
-			slog.Warn("Failed to download artwork for FLAC", "filePath", filePath, "imageURL", imageURL, "error", err)
-		} else if len(imgData) > 0 {
-			// Detect MIME type from data
-			mimeType := "image/jpeg" // default
-			if len(imgData) >= 4 {
-				if string(imgData[:4]) == "\x89PNG" {
-					mimeType = "image/png"
-				} else if string(imgData[:2]) == "\xFF\xD8" {
-					mimeType = "image/jpeg"
-				}
-			}
+	if len(imgData) > 0 {
+		slog.Info("Embedding artwork in FLAC", "filePath", filePath, "artworkPath", artworkPath, "imgSize", len(imgData))
 
-			// Create PICTURE metadata block manually
-			// PICTURE block type is 6 according to FLAC specification
-			pictureData := t.createFLACPictureBlock(mimeType, 3, imageDescription, imgData)
-			pictureBlock := &goflac.MetaDataBlock{
-				Type: 6, // PICTURE block type
-				Data: pictureData,
+		// Resize image if configured
+		if t.config != nil {
+			cfg := t.config.Get()
+			if cfg.Downloaders.Artwork.Embedded.Enabled {
+				maxSize := cfg.Downloaders.Artwork.Embedded.Size
+				if maxSize > 0 {
+					slog.Debug("Resizing artwork for FLAC", "filePath", filePath, "maxSize", maxSize)
+					resizedData, err := t.resizeImage(imgData, maxSize)
+					if err != nil {
+						slog.Warn("Failed to resize artwork for FLAC", "filePath", filePath, "error", err)
+					} else {
+						imgData = resizedData
+						slog.Debug("Resized artwork for FLAC", "filePath", filePath, "newSize", len(imgData))
+					}
+				}
+			} else {
+				slog.Debug("Artwork embedding disabled in config", "filePath", filePath)
 			}
-			f.Meta = append(f.Meta, pictureBlock)
-			slog.Debug("Embedded artwork in FLAC", "filePath", filePath, "size", len(imgData), "type", mimeType)
 		}
+
+		// Detect MIME type from data
+		mimeType := "image/jpeg" // default
+		if len(imgData) >= 4 {
+			if string(imgData[:4]) == "\x89PNG" {
+				mimeType = "image/png"
+			} else if string(imgData[:2]) == "\xFF\xD8" {
+				mimeType = "image/jpeg"
+			}
+		}
+
+		// Create PICTURE metadata block using flacpicture library
+		pic, _ := flacpicture.NewFromImageData(flacpicture.PictureTypeFrontCover, imageDescription, imgData, mimeType)
+		marshaled := pic.Marshal()
+		pictureBlock := &goflac.MetaDataBlock{
+			Type: goflac.Picture,
+			Data: marshaled.Data,
+		}
+		f.Meta = append(f.Meta, pictureBlock)
+		f.Meta = append(f.Meta, pictureBlock)
+		slog.Info("Embedded artwork in FLAC", "filePath", filePath, "size", len(imgData), "type", mimeType, "blocks", len(f.Meta))
+
+		// Clean up temp artwork file if it was used
+		if artworkPath != "" && strings.HasPrefix(artworkPath, "/tmp/") {
+			if err := os.Remove(artworkPath); err != nil {
+				slog.Warn("Failed to cleanup temp artwork file", "path", artworkPath, "error", err)
+			} else {
+				slog.Debug("Cleaned up temp artwork file", "path", artworkPath)
+			}
+		}
+	} else {
+		slog.Debug("No artwork data to embed in FLAC", "filePath", filePath)
 	}
 
 	// Save the file
@@ -314,104 +479,6 @@ func (t *TagWriter) tagFLAC(ctx context.Context, filePath string, track *music.T
 	}
 
 	return nil
-}
-
-// createFLACPictureBlock creates a FLAC PICTURE metadata block
-func (t *TagWriter) createFLACPictureBlock(mimeType string, pictureType uint32, description string, imageData []byte) []byte {
-	// FLAC PICTURE block format:
-	// 4 bytes: picture type (big endian)
-	// 4 bytes: MIME type length (big endian)
-	// n bytes: MIME type string
-	// 4 bytes: description length (big endian)
-	// n bytes: description string
-	// 4 bytes: width (big endian) - set to 0
-	// 4 bytes: height (big endian) - set to 0
-	// 4 bytes: color depth (big endian) - set to 0
-	// 4 bytes: color count (big endian) - set to 0
-	// 4 bytes: image data length (big endian)
-	// n bytes: image data
-
-	mimeTypeBytes := []byte(mimeType)
-	descriptionBytes := []byte(description)
-
-	// Calculate total size
-	totalSize := 4 + 4 + len(mimeTypeBytes) + 4 + len(descriptionBytes) + 4 + 4 + 4 + 4 + len(imageData)
-
-	result := make([]byte, totalSize)
-
-	offset := 0
-
-	// Picture type (3 = Cover (front))
-	result[offset] = byte(pictureType >> 24)
-	result[offset+1] = byte(pictureType >> 16)
-	result[offset+2] = byte(pictureType >> 8)
-	result[offset+3] = byte(pictureType)
-	offset += 4
-
-	// MIME type length
-	mimeLen := uint32(len(mimeTypeBytes))
-	result[offset] = byte(mimeLen >> 24)
-	result[offset+1] = byte(mimeLen >> 16)
-	result[offset+2] = byte(mimeLen >> 8)
-	result[offset+3] = byte(mimeLen)
-	offset += 4
-
-	// MIME type
-	copy(result[offset:], mimeTypeBytes)
-	offset += len(mimeTypeBytes)
-
-	// Description length
-	descLen := uint32(len(descriptionBytes))
-	result[offset] = byte(descLen >> 24)
-	result[offset+1] = byte(descLen >> 16)
-	result[offset+2] = byte(descLen >> 8)
-	result[offset+3] = byte(descLen)
-	offset += 4
-
-	// Description
-	copy(result[offset:], descriptionBytes)
-	offset += len(descriptionBytes)
-
-	// Width (0 = unspecified)
-	result[offset] = 0
-	result[offset+1] = 0
-	result[offset+2] = 0
-	result[offset+3] = 0
-	offset += 4
-
-	// Height (0 = unspecified)
-	result[offset] = 0
-	result[offset+1] = 0
-	result[offset+2] = 0
-	result[offset+3] = 0
-	offset += 4
-
-	// Color depth (0 = unspecified)
-	result[offset] = 0
-	result[offset+1] = 0
-	result[offset+2] = 0
-	result[offset+3] = 0
-	offset += 4
-
-	// Color count (0 = unspecified)
-	result[offset] = 0
-	result[offset+1] = 0
-	result[offset+2] = 0
-	result[offset+3] = 0
-	offset += 4
-
-	// Image data length
-	dataLen := uint32(len(imageData))
-	result[offset] = byte(dataLen >> 24)
-	result[offset+1] = byte(dataLen >> 16)
-	result[offset+2] = byte(dataLen >> 8)
-	result[offset+3] = byte(dataLen)
-	offset += 4
-
-	// Image data
-	copy(result[offset:], imageData)
-
-	return result
 }
 
 // DownloadImage fetches image data from URL with improved error handling.

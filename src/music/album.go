@@ -45,6 +45,8 @@ type Album struct {
 	ImageMedium string
 	ImageLarge  string
 	ImageXL     string
+	// Local artwork file path for embedding
+	ArtworkPath string
 	Genre       string
 }
 
