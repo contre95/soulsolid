@@ -7,9 +7,7 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
-	"io"
 	"log/slog"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -118,7 +116,7 @@ func (t *TagWriter) tagMP3(ctx context.Context, filePath string, track *music.Tr
 		return fmt.Errorf("failed to read audio file: %w", err)
 	}
 
-	// Embedded picture - prefer local artwork path, fallback to downloading from URL
+	// Embedded picture - use local artwork path only
 	var imgData []byte
 	var artworkPath string
 
@@ -128,18 +126,6 @@ func (t *TagWriter) tagMP3(ctx context.Context, filePath string, track *music.Tr
 		imgData, err = os.ReadFile(artworkPath)
 		if err != nil {
 			slog.Warn("Failed to read local artwork file", "filePath", filePath, "artworkPath", artworkPath, "error", err)
-		}
-	} else if track.Album != nil && track.Album.ImageLarge != "" {
-		// Download from URL
-		imgData, err = t.DownloadImage(ctx, track.Album.ImageLarge)
-		if err != nil {
-			slog.Warn("Failed to download artwork for MP3", "filePath", filePath, "imageURL", track.Album.ImageLarge, "error", err)
-		}
-	} else if len(track.Artists) > 0 && track.Artists[0].Artist != nil && track.Artists[0].Artist.ImageLarge != "" {
-		// Use artist image for compilations or when no album cover is available
-		imgData, err = t.DownloadImage(ctx, track.Artists[0].Artist.ImageLarge)
-		if err != nil {
-			slog.Warn("Failed to download artist artwork for MP3", "filePath", filePath, "imageURL", track.Artists[0].Artist.ImageLarge, "error", err)
 		}
 	}
 
@@ -388,7 +374,7 @@ func (t *TagWriter) tagFLAC(ctx context.Context, filePath string, track *music.T
 		f.Meta = append(f.Meta, &commentMeta)
 	}
 
-	// Add artwork as PICTURE metadata block - prefer local artwork path, fallback to downloading from URL
+	// Add artwork as PICTURE metadata block - use local artwork path only
 	var imgData []byte
 	var imageDescription string
 	var artworkPath string
@@ -400,20 +386,6 @@ func (t *TagWriter) tagFLAC(ctx context.Context, filePath string, track *music.T
 		imgData, err = os.ReadFile(artworkPath)
 		if err != nil {
 			slog.Warn("Failed to read local artwork file for FLAC", "filePath", filePath, "artworkPath", artworkPath, "error", err)
-		}
-	} else if track.Album != nil && track.Album.ImageLarge != "" {
-		// Download from URL
-		imageDescription = "Cover"
-		imgData, err = t.DownloadImage(ctx, track.Album.ImageLarge)
-		if err != nil {
-			slog.Warn("Failed to download artwork for FLAC", "filePath", filePath, "imageURL", track.Album.ImageLarge, "error", err)
-		}
-	} else if len(track.Artists) > 0 && track.Artists[0].Artist != nil && track.Artists[0].Artist.ImageLarge != "" {
-		// Use artist image for compilations or when no album cover is available
-		imageDescription = "Artist"
-		imgData, err = t.DownloadImage(ctx, track.Artists[0].Artist.ImageLarge)
-		if err != nil {
-			slog.Warn("Failed to download artist artwork for FLAC", "filePath", filePath, "imageURL", track.Artists[0].Artist.ImageLarge, "error", err)
 		}
 	}
 
@@ -479,51 +451,4 @@ func (t *TagWriter) tagFLAC(ctx context.Context, filePath string, track *music.T
 	}
 
 	return nil
-}
-
-// DownloadImage fetches image data from URL with improved error handling.
-func (t *TagWriter) DownloadImage(ctx context.Context, url string) ([]byte, error) {
-	if url == "" {
-		return nil, fmt.Errorf("empty image URL")
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	// Set user agent to avoid blocking
-	req.Header.Set("User-Agent", "Soulsolid/1.0")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to download image: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("image download returned status %d", resp.StatusCode)
-	}
-
-	// Check content type
-	contentType := resp.Header.Get("Content-Type")
-	if contentType != "" && !strings.HasPrefix(contentType, "image/") {
-		return nil, fmt.Errorf("invalid content type: %s", contentType)
-	}
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read image data: %w", err)
-	}
-
-	if len(data) == 0 {
-		return nil, fmt.Errorf("empty image data received")
-	}
-
-	// Basic validation - check if it looks like image data
-	if len(data) < 4 {
-		return nil, fmt.Errorf("image data too small")
-	}
-
-	return data, nil
 }
