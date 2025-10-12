@@ -15,6 +15,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/logging"
 	"github.com/contre95/soulsolid/src/features/syncdap"
 	"github.com/contre95/soulsolid/src/features/tagging"
+	"github.com/contre95/soulsolid/src/infra/artwork"
 	"github.com/contre95/soulsolid/src/infra/chroma"
 	"github.com/contre95/soulsolid/src/infra/database"
 	"github.com/contre95/soulsolid/src/infra/files"
@@ -68,13 +69,14 @@ func main() {
 	}
 
 	tagWriter := tag.NewTagWriter(cfgManager)
+	artworkService := artwork.NewService(cfgManager)
 
 	musicbrainzProvider := metadata.NewMusicBrainzProvider(cfgManager.Get().Tag.Providers["musicbrainz"].Enabled)
 	discogsProvider := metadata.NewDiscogsProvider(cfgManager.Get().Tag.Providers["discogs"].Enabled, cfgManager.Get().Tag.Providers["discogs"].APIKey)
 	deezerProvider := metadata.NewDeezerProvider(cfgManager.Get().Tag.Providers["deezer"].Enabled)
 
 	tagService := tagging.NewService(tagWriter, tagReader, db, []tagging.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, fingerprintReader, cfgManager)
-	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
+	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter, artworkService)
 
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)
 	jobService.RegisterHandler("download_track", jobs.NewBaseTaskHandler(downloadTask))

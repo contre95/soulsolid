@@ -3,8 +3,6 @@ package downloading
 import (
 	"context"
 	"fmt"
-	"image"
-	"image/jpeg"
 	"io"
 	"log/slog"
 	"net/http"
@@ -15,7 +13,6 @@ import (
 
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/music"
-	"github.com/nfnt/resize"
 )
 
 // Sanitize creates a filesystem-safe filename
@@ -184,23 +181,51 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *jobs.Jo
 	safeFileName := Sanitize(track.Title) + extension
 	filePath := filepath.Join(downloadPath, safeFileName)
 
-	slog.Debug("Writing track data to file", "trackID", track.ID, "filePath", filePath, "fileSize", len(track.Data))
-	// Write track data to file
-	err = os.WriteFile(filePath, track.Data, 0644)
-	if err != nil {
-		slog.Error("Failed to save track to disk", "filePath", filePath, "error", err)
-		return nil, fmt.Errorf("failed to save track: %w", err)
+	// Download artwork for embedding if enabled
+	var artworkCleanup func()
+	if e.service.configManager.Get().Downloaders.Artwork.Embedded.Enabled {
+		artworkPath, cleanup, err := e.service.artworkService.GetArtworkForTrack(ctx, track)
+		if err != nil {
+			slog.Warn("Failed to download artwork for embedding", "trackID", track.ID, "error", err)
+		} else if artworkPath != "" {
+			// Set artwork path for tag writer to use
+			if track.Album == nil {
+				track.Album = &music.Album{}
+			}
+			track.Album.ArtworkPath = artworkPath
+			artworkCleanup = cleanup
+		}
 	}
 
-	// Tag the file
-	slog.Debug("Tagging file", "trackID", track.ID, "filePath", filePath)
-	if err := e.service.tagWriter.WriteFileTags(ctx, filePath, track); err != nil {
-		slog.Error("Failed to tag file", "filePath", filePath, "error", err)
-		return nil, fmt.Errorf("failed to tag file: %w", err)
+	// Tag the audio data in memory
+	slog.Debug("Tagging audio data in memory", "trackID", track.ID, "fileSize", len(track.Data))
+	taggedData, err := e.service.tagWriter.TagAudioData(ctx, track.Data, track)
+	if err != nil {
+		slog.Error("Failed to tag audio data", "trackID", track.ID, "error", err)
+		if artworkCleanup != nil {
+			artworkCleanup()
+		}
+		return nil, fmt.Errorf("failed to tag audio data: %w", err)
+	}
+
+	// Write tagged data to file
+	slog.Debug("Writing tagged data to file", "trackID", track.ID, "filePath", filePath, "originalSize", len(track.Data), "taggedSize", len(taggedData))
+	err = os.WriteFile(filePath, taggedData, 0644)
+	if err != nil {
+		slog.Error("Failed to save tagged track to disk", "filePath", filePath, "error", err)
+		if artworkCleanup != nil {
+			artworkCleanup()
+		}
+		return nil, fmt.Errorf("failed to save tagged track: %w", err)
+	}
+
+	// Clean up temp artwork file
+	if artworkCleanup != nil {
+		artworkCleanup()
 	}
 
 	// Save local artwork file if enabled
-	if err := e.saveLocalArtwork(ctx, track, filepath.Dir(filePath)); err != nil {
+	if err := e.service.artworkService.SaveLocalArtwork(ctx, track, filepath.Dir(filePath)); err != nil {
 		slog.Warn("Failed to save local artwork", "trackID", track.ID, "error", err)
 		// Don't fail the download for artwork issues
 	}
@@ -311,17 +336,19 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *jobs.Jo
 		extension := "." + downloadedTrack.Format
 		safeFileName := fmt.Sprintf("%02d - %s%s", trackNumber, Sanitize(downloadedTrack.Title), extension)
 		filePath := filepath.Join(albumPath, safeFileName)
-		slog.Debug("Writing album track to file", "trackID", downloadedTrack.ID, "filePath", filePath, "fileSize", len(downloadedTrack.Data))
-		// Write track data to file
-		err = os.WriteFile(filePath, downloadedTrack.Data, 0644)
+		// Tag the audio data in memory
+		slog.Debug("Tagging album track data in memory", "trackID", downloadedTrack.ID, "fileSize", len(downloadedTrack.Data))
+		taggedData, err := e.service.tagWriter.TagAudioData(ctx, downloadedTrack.Data, downloadedTrack)
 		if err != nil {
-			slog.Error("Failed to save track to disk", "filePath", filePath, "error", err)
+			slog.Error("Failed to tag album track data", "trackID", downloadedTrack.ID, "error", err)
 			continue
 		}
 
-		// Tag the file
-		if err := e.service.tagWriter.WriteFileTags(ctx, filePath, downloadedTrack); err != nil {
-			slog.Error("Failed to tag album track", "filePath", filePath, "error", err)
+		// Write tagged data to file
+		slog.Debug("Writing tagged album track to file", "trackID", downloadedTrack.ID, "filePath", filePath, "originalSize", len(downloadedTrack.Data), "taggedSize", len(taggedData))
+		err = os.WriteFile(filePath, taggedData, 0644)
+		if err != nil {
+			slog.Error("Failed to save tagged track to disk", "filePath", filePath, "error", err)
 			continue
 		}
 		downloadedTracks = append(downloadedTracks, downloadedTrack)
@@ -332,7 +359,7 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *jobs.Jo
 	// Save local artwork file to album folder if enabled
 	if len(downloadedTracks) > 0 && downloadedTracks[0].Album != nil {
 		progressUpdater(90, "Saving album artwork...")
-		if err := e.saveLocalArtwork(ctx, downloadedTracks[0], albumPath); err != nil {
+		if err := e.service.artworkService.SaveLocalArtwork(ctx, downloadedTracks[0], albumPath); err != nil {
 			slog.Warn("Failed to save album artwork", "albumID", albumID, "error", err)
 			// Don't fail the download for artwork issues
 		}
@@ -366,66 +393,4 @@ func downloadImage(ctx context.Context, url string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 	return io.ReadAll(resp.Body)
-}
-
-// saveLocalArtwork downloads and saves artwork as a local file
-func (e *DownloadJobTask) saveLocalArtwork(ctx context.Context, track *music.Track, dirPath string) error {
-	config := e.service.configManager.Get()
-
-	// Check if local artwork is enabled
-	if !config.Downloaders.Artwork.Local.Enabled {
-		return nil
-	}
-
-	// Get artwork URL - prefer album cover, fallback to artist image
-	var imageURL string
-	if track.Album != nil && track.Album.ImageLarge != "" {
-		imageURL = track.Album.ImageLarge
-	} else if len(track.Artists) > 0 && track.Artists[0].Artist != nil && track.Artists[0].Artist.ImageLarge != "" {
-		imageURL = track.Artists[0].Artist.ImageLarge
-	}
-
-	if imageURL == "" {
-		slog.Debug("No artwork URL available for track", "trackID", track.ID)
-		return nil
-	}
-
-	// Download image data
-	imgData, err := downloadImage(ctx, imageURL)
-	if err != nil {
-		return fmt.Errorf("failed to download artwork: %w", err)
-	}
-
-	// Decode image
-	img, _, err := image.Decode(strings.NewReader(string(imgData)))
-	if err != nil {
-		return fmt.Errorf("failed to decode artwork image: %w", err)
-	}
-
-	// Resize image if needed
-	if config.Downloaders.Artwork.Local.Size > 0 {
-		img = resize.Resize(uint(config.Downloaders.Artwork.Local.Size), uint(config.Downloaders.Artwork.Local.Size), img, resize.Lanczos3)
-	}
-
-	// Create output file path
-	artworkPath := filepath.Join(dirPath, config.Downloaders.Artwork.Local.Template)
-	if config.Downloaders.Artwork.Local.Template == "" {
-		artworkPath = filepath.Join(dirPath, "cover.jpg")
-	}
-
-	// Create output file
-	outFile, err := os.Create(artworkPath)
-	if err != nil {
-		return fmt.Errorf("failed to create artwork file: %w", err)
-	}
-	defer outFile.Close()
-
-	// Encode and save image
-	options := &jpeg.Options{Quality: 85}
-	if err := jpeg.Encode(outFile, img, options); err != nil {
-		return fmt.Errorf("failed to encode artwork image: %w", err)
-	}
-
-	slog.Info("Saved local artwork", "path", artworkPath, "trackID", track.ID)
-	return nil
 }
