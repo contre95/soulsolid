@@ -12,19 +12,21 @@ import (
 
 // Service handles downloading operations
 type Service struct {
-	configManager *config.Manager
-	jobService    jobs.JobService
-	pluginManager *PluginManager
-	tagWriter     TagWriter
+	configManager  *config.Manager
+	jobService     jobs.JobService
+	pluginManager  *PluginManager
+	tagWriter      TagWriter
+	artworkService ArtworkService
 }
 
 // NewService creates a new downloading service
-func NewService(cfgManager *config.Manager, jobService jobs.JobService, pluginManager *PluginManager, tagWriter TagWriter) *Service {
+func NewService(cfgManager *config.Manager, jobService jobs.JobService, pluginManager *PluginManager, tagWriter TagWriter, artworkService ArtworkService) *Service {
 	return &Service{
-		configManager: cfgManager,
-		jobService:    jobService,
-		pluginManager: pluginManager,
-		tagWriter:     tagWriter,
+		configManager:  cfgManager,
+		jobService:     jobService,
+		pluginManager:  pluginManager,
+		tagWriter:      tagWriter,
+		artworkService: artworkService,
 	}
 }
 
