@@ -29,7 +29,6 @@ type Track struct {
 	PreviewURL             string // URL for 30-second preview
 	AddedDate              time.Time
 	ModifiedDate           time.Time
-	Data                   []byte // Raw audio data for downloads
 }
 
 // Validate validates the track fields.
@@ -126,6 +125,47 @@ func (t *Track) Validate() error {
 	if t.Metadata.Lyrics != "" && len(t.Metadata.Lyrics) > 15000 {
 		err := fmt.Errorf("lyrics cannot exceed 15000 characters, got %d", len(t.Metadata.Lyrics))
 		return err
+	}
+	return nil
+}
+
+// EnsureMetadataDefaults adds fallback values for missing metadata fields
+func (t *Track) EnsureMetadataDefaults() {
+	// Fallback for missing artist
+	if len(t.Artists) == 0 || t.Artists[0].Artist.Name == "" {
+		t.Artists = []ArtistRole{{
+			Artist: &Artist{Name: "Unknown Artist"},
+			Role:   "main",
+		}}
+	}
+	// Fallback for missing album
+	if t.Album == nil || t.Album.Title == "" {
+		t.Album = &Album{Title: "Unknown Album"}
+	}
+	// Fallback for missing year
+	if t.Metadata.Year == 0 {
+		t.Metadata.Year = 0000
+	}
+	// Fallback for missing genre
+	if t.Metadata.Genre == "" {
+		t.Metadata.Genre = "Unknown"
+	}
+}
+
+// ValidateRequiredMetadata checks for required metadata fields and returns an error if any are missing
+func (t *Track) ValidateRequiredMetadata() error {
+	var missingFields []string
+	if len(t.Artists) == 0 || t.Artists[0].Artist.Name == "" {
+		missingFields = append(missingFields, "Artist")
+	}
+	if t.Album == nil || t.Album.Title == "" {
+		missingFields = append(missingFields, "Album")
+	}
+	if t.Metadata.Year == 0 {
+		missingFields = append(missingFields, "Year")
+	}
+	if len(missingFields) > 0 {
+		return fmt.Errorf("missing required metadata fields: %s", strings.Join(missingFields, ", "))
 	}
 	return nil
 }
