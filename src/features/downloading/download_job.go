@@ -128,22 +128,13 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *jobs.Jo
 		return nil, fmt.Errorf("metadata validation failed: %w", err)
 	}
 
-	// Tag the file (artwork is already downloaded by plugin and set in track.Album.ArtworkPath)
+	// Tag the file (artwork is already downloaded by plugin and set in track.Album.ArtworkData)
 	filePath := track.Path
 	slog.Debug("Tagging file", "trackID", track.ID, "filePath", filePath)
 	err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
 	if err != nil {
 		slog.Error("Failed to tag file", "trackID", track.ID, "error", err)
 		return nil, fmt.Errorf("failed to tag file: %w", err)
-	}
-
-	// Save local artwork file if enabled
-	if e.service.configManager.Get().Downloaders.Artwork.Local.Enabled && track.Album != nil && track.Album.ArtworkPath != "" {
-		localArtworkPath := filepath.Join(filepath.Dir(filePath), "cover.jpg")
-		if err := copyFile(track.Album.ArtworkPath, localArtworkPath); err != nil {
-			slog.Warn("Failed to copy artwork locally", "trackID", track.ID, "error", err)
-			// Don't fail the download for artwork issues
-		}
 	}
 
 	slog.Info("Track downloaded and tagged", "trackID", track.ID, "filePath", filePath)
@@ -272,16 +263,6 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *jobs.Jo
 		slog.Info("Track downloaded successfully", "title", downloadedTrack.Title, "filePath", filePath)
 	}
 
-	// Save local artwork file to album folder if enabled
-	if e.service.configManager.Get().Downloaders.Artwork.Local.Enabled && len(downloadedTracks) > 0 && downloadedTracks[0].Album != nil && downloadedTracks[0].Album.ArtworkPath != "" {
-		progressUpdater(90, "Saving album artwork...")
-		localArtworkPath := filepath.Join(albumPath, "cover.jpg")
-		if err := copyFile(downloadedTracks[0].Album.ArtworkPath, localArtworkPath); err != nil {
-			slog.Warn("Failed to copy album artwork", "albumID", albumID, "error", err)
-			// Don't fail the download for artwork issues
-		}
-	}
-
 	progressUpdater(100, fmt.Sprintf("Album download completed - %d tracks saved to %s", len(downloadedTracks), albumFolderName))
 	return map[string]any{
 		"albumID":    albumID,
@@ -310,31 +291,4 @@ func downloadImage(ctx context.Context, url string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 	return io.ReadAll(resp.Body)
-}
-
-// copyFile copies a file from src to dst
-func copyFile(src, dst string) error {
-	sourceFileStat, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	if !sourceFileStat.Mode().IsRegular() {
-		return fmt.Errorf("%s is not a regular file", src)
-	}
-
-	source, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer source.Close()
-
-	destination, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destination.Close()
-
-	_, err = io.Copy(destination, source)
-	return err
 }

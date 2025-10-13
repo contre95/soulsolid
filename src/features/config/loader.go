@@ -95,12 +95,6 @@ func createDefaultConfig() *Config {
 					Format:  "jpeg",
 					Quality: 85,
 				},
-				Local: LocalArtwork{
-					Enabled:  false,
-					Size:     1200,
-					Format:   "jpeg",
-					Template: "cover.jpg",
-				},
 			},
 		},
 		Server: Server{
