@@ -24,51 +24,6 @@ func Sanitize(filename string) string {
 	return sanitized
 }
 
-// validateRequiredMetadata ensures all required metadata fields are present
-func validateRequiredMetadata(track *music.Track) error {
-	var missingFields []string
-	if len(track.Artists) == 0 || track.Artists[0].Artist.Name == "" {
-		missingFields = append(missingFields, "Artist")
-	}
-	if track.Album == nil || track.Album.Title == "" {
-		missingFields = append(missingFields, "Album")
-	}
-	if track.Metadata.Year == 0 {
-		missingFields = append(missingFields, "Year")
-	}
-	if len(missingFields) > 0 {
-		return fmt.Errorf("missing required metadata fields: %s", strings.Join(missingFields, ", "))
-	}
-	return nil
-}
-
-// replaceNonExistentMetadata adds fallback values for missing metadata
-func replaceNonExistentMetadata(track *music.Track) {
-	// Fallback for missing artist
-	if len(track.Artists) == 0 || track.Artists[0].Artist.Name == "" {
-		slog.Warn("Missing artist metadata, using fallback", "trackID", track.ID)
-		track.Artists = []music.ArtistRole{{
-			Artist: &music.Artist{Name: "Unknown Artist"},
-			Role:   "main",
-		}}
-	}
-	// Fallback for missing album
-	if track.Album == nil || track.Album.Title == "" {
-		slog.Warn("Missing album metadata, using fallback", "trackID", track.ID)
-		track.Album = &music.Album{Title: "Unknown Album"}
-	}
-	// Fallback for missing year
-	if track.Metadata.Year == 0 {
-		slog.Warn("Missing year metadata, using current year", "trackID", track.ID)
-		track.Metadata.Year = 0000
-	}
-	// Fallback for missing genre
-	if track.Metadata.Genre == "" {
-		slog.Warn("Missing genre metadata, using fallback", "trackID", track.ID)
-		track.Metadata.Genre = "Unknown"
-	}
-}
-
 // DownloadJobTask handles download job execution
 type DownloadJobTask struct {
 	service *Service
@@ -149,94 +104,65 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *jobs.Jo
 		}
 	}
 
-	track, err := downloader.DownloadTrack(trackID, downloadProgressCallback)
+	track, err := downloader.DownloadTrack(trackID, downloadPath, downloadProgressCallback)
 	if err != nil {
 		slog.Error("Failed to download track", "trackID", trackID, "error", err)
 		return nil, fmt.Errorf("failed to download track: %w", err)
 	}
 
 	// Update job name with track title if it's still generic
-	if job.Name == "Download Track" {
-		job.Name = fmt.Sprintf("Download: %s (with %s)", track.Title, track.Artists[0].Artist.Name)
-		job.Metadata["trackTitle"] = track.Title
-		slog.Info("Updated job name with track title", "jobID", job.ID, "title", track.Title)
-	}
+	job.Name = fmt.Sprintf("Download: %s (with %s)", track.Title, track.Artists[0].Artist.Name)
+	job.Metadata["trackTitle"] = track.Title
+	slog.Info("Updated job name with track title", "jobID", job.ID, "title", track.Title)
 
-	progressUpdater(75, "Track downloaded, embedding metadata...")
+	progressUpdater(75, "Track downloaded, processing metadata...")
 
 	// Enhance track metadata with fallbacks
 	slog.Debug("Enhancing track metadata with fallbacks", "trackID", track.ID)
-	replaceNonExistentMetadata(track)
+	track.EnsureMetadataDefaults()
 
 	// Validate required metadata
 	slog.Debug("Validating required metadata", "trackID", track.ID)
-	if err := validateRequiredMetadata(track); err != nil {
+	if err := track.ValidateRequiredMetadata(); err != nil {
 		slog.Error("Metadata validation failed", "trackID", track.ID, "error", err)
 		return nil, fmt.Errorf("metadata validation failed: %w", err)
 	}
 
-	// Sanitize filename with proper extension based on format
-	slog.Debug("Preparing file path", "trackID", track.ID, "format", track.Format)
-	extension := "." + track.Format
-	safeFileName := Sanitize(track.Title) + extension
-	filePath := filepath.Join(downloadPath, safeFileName)
-
-	// Download artwork for embedding if enabled
-	var artworkCleanup func()
-	if e.service.configManager.Get().Downloaders.Artwork.Embedded.Enabled {
-		artworkPath, cleanup, err := e.service.artworkService.GetArtworkForTrack(ctx, track)
-		if err != nil {
-			slog.Warn("Failed to download artwork for embedding", "trackID", track.ID, "error", err)
-		} else if artworkPath != "" {
-			// Set artwork path for tag writer to use
-			if track.Album == nil {
-				track.Album = &music.Album{}
-			}
-			track.Album.ArtworkPath = artworkPath
-			artworkCleanup = cleanup
-		}
-	}
-
-	// Tag the audio data in memory
-	slog.Debug("Tagging audio data in memory", "trackID", track.ID, "fileSize", len(track.Data))
-	taggedData, err := e.service.tagWriter.TagAudioData(ctx, track.Data, track)
+	// Tag the file (artwork is already downloaded by plugin and set in track.Album.ArtworkPath)
+	filePath := track.Path
+	slog.Debug("Tagging file", "trackID", track.ID, "filePath", filePath)
+	err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
 	if err != nil {
-		slog.Error("Failed to tag audio data", "trackID", track.ID, "error", err)
-		if artworkCleanup != nil {
-			artworkCleanup()
-		}
-		return nil, fmt.Errorf("failed to tag audio data: %w", err)
-	}
-
-	// Write tagged data to file
-	slog.Debug("Writing tagged data to file", "trackID", track.ID, "filePath", filePath, "originalSize", len(track.Data), "taggedSize", len(taggedData))
-	err = os.WriteFile(filePath, taggedData, 0644)
-	if err != nil {
-		slog.Error("Failed to save tagged track to disk", "filePath", filePath, "error", err)
-		if artworkCleanup != nil {
-			artworkCleanup()
-		}
-		return nil, fmt.Errorf("failed to save tagged track: %w", err)
-	}
-
-	// Clean up temp artwork file
-	if artworkCleanup != nil {
-		artworkCleanup()
+		slog.Error("Failed to tag file", "trackID", track.ID, "error", err)
+		return nil, fmt.Errorf("failed to tag file: %w", err)
 	}
 
 	// Save local artwork file if enabled
-	if err := e.service.artworkService.SaveLocalArtwork(ctx, track, filepath.Dir(filePath)); err != nil {
-		slog.Warn("Failed to save local artwork", "trackID", track.ID, "error", err)
-		// Don't fail the download for artwork issues
+	if e.service.configManager.Get().Downloaders.Artwork.Local.Enabled && track.Album != nil && track.Album.ArtworkPath != "" {
+		localArtworkPath := filepath.Join(filepath.Dir(filePath), "cover.jpg")
+		if err := copyFile(track.Album.ArtworkPath, localArtworkPath); err != nil {
+			slog.Warn("Failed to copy artwork locally", "trackID", track.ID, "error", err)
+			// Don't fail the download for artwork issues
+		}
 	}
 
 	slog.Info("Track downloaded and tagged", "trackID", track.ID, "filePath", filePath)
 	progressUpdater(100, "Track download completed")
 
+	// Get file size
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		slog.Warn("Failed to get file size", "filePath", filePath, "error", err)
+	}
+	fileSize := int64(0)
+	if fileInfo != nil {
+		fileSize = fileInfo.Size()
+	}
+
 	return map[string]any{
 		"trackID":  trackID,
 		"filePath": filePath,
-		"fileSize": len(track.Data),
+		"fileSize": fileSize,
 	}, nil
 }
 
@@ -311,19 +237,19 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *jobs.Jo
 		progressUpdater(progress, fmt.Sprintf("Downloading track %d/%d: %s...", i+1, totalTracks, track.Title))
 		slog.Debug("Downloading album track", "albumID", albumID, "trackID", track.ID, "trackNumber", i+1, "title", track.Title)
 		// Download the track
-		downloadedTrack, err := downloader.DownloadTrack(track.ID, nil)
+		downloadedTrack, err := downloader.DownloadTrack(track.ID, albumPath, nil)
 		if err != nil {
 			slog.Error("Failed to download track", "trackID", track.ID, "error", err)
 			continue // Continue with other tracks
 		}
-		if downloadedTrack == nil || len(downloadedTrack.Data) == 0 {
-			slog.Warn("Track download returned empty data", "trackID", track.ID)
+		if downloadedTrack == nil {
+			slog.Warn("Track download returned nil", "trackID", track.ID)
 			continue
 		}
 		slog.Debug("Processing album track metadata", "trackID", downloadedTrack.ID)
 		// Enhance and validate metadata
-		replaceNonExistentMetadata(downloadedTrack)
-		if err := validateRequiredMetadata(downloadedTrack); err != nil {
+		downloadedTrack.EnsureMetadataDefaults()
+		if err := downloadedTrack.ValidateRequiredMetadata(); err != nil {
 			slog.Error("Album track metadata validation failed", "trackID", downloadedTrack.ID, "error", err)
 			continue // Skip this track but continue with others
 		}
@@ -333,22 +259,12 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *jobs.Jo
 		if trackNumber == 0 {
 			trackNumber = i + 1 // Fallback to position in array
 		}
-		extension := "." + downloadedTrack.Format
-		safeFileName := fmt.Sprintf("%02d - %s%s", trackNumber, Sanitize(downloadedTrack.Title), extension)
-		filePath := filepath.Join(albumPath, safeFileName)
-		// Tag the audio data in memory
-		slog.Debug("Tagging album track data in memory", "trackID", downloadedTrack.ID, "fileSize", len(downloadedTrack.Data))
-		taggedData, err := e.service.tagWriter.TagAudioData(ctx, downloadedTrack.Data, downloadedTrack)
+		// Tag the file
+		filePath := downloadedTrack.Path
+		slog.Debug("Tagging album track file", "trackID", downloadedTrack.ID, "filePath", filePath)
+		err = e.service.tagWriter.WriteFileTags(ctx, filePath, downloadedTrack)
 		if err != nil {
-			slog.Error("Failed to tag album track data", "trackID", downloadedTrack.ID, "error", err)
-			continue
-		}
-
-		// Write tagged data to file
-		slog.Debug("Writing tagged album track to file", "trackID", downloadedTrack.ID, "filePath", filePath, "originalSize", len(downloadedTrack.Data), "taggedSize", len(taggedData))
-		err = os.WriteFile(filePath, taggedData, 0644)
-		if err != nil {
-			slog.Error("Failed to save tagged track to disk", "filePath", filePath, "error", err)
+			slog.Error("Failed to tag album track file", "trackID", downloadedTrack.ID, "error", err)
 			continue
 		}
 		downloadedTracks = append(downloadedTracks, downloadedTrack)
@@ -357,10 +273,11 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *jobs.Jo
 	}
 
 	// Save local artwork file to album folder if enabled
-	if len(downloadedTracks) > 0 && downloadedTracks[0].Album != nil {
+	if e.service.configManager.Get().Downloaders.Artwork.Local.Enabled && len(downloadedTracks) > 0 && downloadedTracks[0].Album != nil && downloadedTracks[0].Album.ArtworkPath != "" {
 		progressUpdater(90, "Saving album artwork...")
-		if err := e.service.artworkService.SaveLocalArtwork(ctx, downloadedTracks[0], albumPath); err != nil {
-			slog.Warn("Failed to save album artwork", "albumID", albumID, "error", err)
+		localArtworkPath := filepath.Join(albumPath, "cover.jpg")
+		if err := copyFile(downloadedTracks[0].Album.ArtworkPath, localArtworkPath); err != nil {
+			slog.Warn("Failed to copy album artwork", "albumID", albumID, "error", err)
 			// Don't fail the download for artwork issues
 		}
 	}
@@ -393,4 +310,31 @@ func downloadImage(ctx context.Context, url string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 	return io.ReadAll(resp.Body)
+}
+
+// copyFile copies a file from src to dst
+func copyFile(src, dst string) error {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, source)
+	return err
 }
