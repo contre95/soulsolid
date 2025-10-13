@@ -101,7 +101,6 @@ type Device struct {
 // Artwork holds configuration for artwork handling
 type Artwork struct {
 	Embedded EmbeddedArtwork `yaml:"embedded"`
-	Local    LocalArtwork    `yaml:"local"`
 }
 
 // EmbeddedArtwork holds configuration for embedded artwork
@@ -110,14 +109,6 @@ type EmbeddedArtwork struct {
 	Size    int    `yaml:"size"`
 	Format  string `yaml:"format"`
 	Quality int    `yaml:"quality"`
-}
-
-// LocalArtwork holds configuration for local artwork files
-type LocalArtwork struct {
-	Enabled  bool   `yaml:"enabled"`
-	Size     int    `yaml:"size"`
-	Format   string `yaml:"format"`
-	Template string `yaml:"template"`
 }
 
 // PluginConfig holds configuration for a plugin downloader

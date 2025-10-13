@@ -8,7 +8,6 @@ import (
 	"image/jpeg"
 	"image/png"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -181,40 +180,36 @@ func (t *TagWriter) tagMP3(ctx context.Context, filePath string, track *music.Tr
 	}
 
 	// Add artwork if available
-	if track.Album != nil && track.Album.ArtworkPath != "" {
-		imgData, err := os.ReadFile(track.Album.ArtworkPath)
-		if err != nil {
-			slog.Warn("Failed to read local artwork file", "filePath", filePath, "artworkPath", track.Album.ArtworkPath, "error", err)
-		} else if len(imgData) > 0 {
-			// Resize image if configured
-			if t.config != nil {
-				cfg := t.config.Get()
-				if cfg.Downloaders.Artwork.Embedded.Enabled {
-					maxSize := cfg.Downloaders.Artwork.Embedded.Size
-					if maxSize > 0 {
-						resizedData, err := t.resizeImage(imgData, maxSize)
-						if err != nil {
-							slog.Warn("Failed to resize artwork for MP3", "filePath", filePath, "error", err)
-						} else {
-							imgData = resizedData
-						}
+	if track.Album != nil && len(track.Album.ArtworkData) > 0 {
+		imgData := track.Album.ArtworkData
+		// Resize image if configured
+		if t.config != nil {
+			cfg := t.config.Get()
+			if cfg.Downloaders.Artwork.Embedded.Enabled {
+				maxSize := cfg.Downloaders.Artwork.Embedded.Size
+				if maxSize > 0 {
+					resizedData, err := t.resizeImage(imgData, maxSize)
+					if err != nil {
+						slog.Warn("Failed to resize artwork for MP3", "filePath", filePath, "error", err)
+					} else {
+						imgData = resizedData
 					}
 				}
 			}
-
-			// Always use JPEG for consistency
-			mimeType := "image/jpeg"
-
-			pic := id3v2.PictureFrame{
-				Encoding:    id3v2.EncodingUTF8,
-				MimeType:    mimeType,
-				PictureType: id3v2.PTFrontCover,
-				Description: "",
-				Picture:     imgData,
-			}
-			tag.AddAttachedPicture(pic)
-			slog.Debug("Embedded artwork in MP3", "filePath", filePath, "size", len(imgData), "type", mimeType)
 		}
+
+		// Always use JPEG for consistency
+		mimeType := "image/jpeg"
+
+		pic := id3v2.PictureFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			MimeType:    mimeType,
+			PictureType: id3v2.PTFrontCover,
+			Description: "",
+			Picture:     imgData,
+		}
+		tag.AddAttachedPicture(pic)
+		slog.Debug("Embedded artwork in MP3", "filePath", filePath, "size", len(imgData), "type", mimeType)
 	}
 
 	// Save the tag (this properly interleaves tags with audio data)
@@ -348,14 +343,10 @@ func (t *TagWriter) tagFLAC(ctx context.Context, filePath string, track *music.T
 	var imageDescription string
 	var artworkPath string
 
-	if track.Album != nil && track.Album.ArtworkPath != "" {
-		// Use local artwork file
-		artworkPath = track.Album.ArtworkPath
+	if track.Album != nil && len(track.Album.ArtworkData) > 0 {
+		// Use artwork data directly
 		imageDescription = "Cover"
-		imgData, err = os.ReadFile(artworkPath)
-		if err != nil {
-			slog.Warn("Failed to read local artwork file for FLAC", "filePath", filePath, "artworkPath", artworkPath, "error", err)
-		}
+		imgData = track.Album.ArtworkData
 	}
 
 	if len(imgData) > 0 {
