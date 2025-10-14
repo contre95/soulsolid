@@ -68,6 +68,7 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 					Enabled: c.FormValue("tag.providers.deezer.enabled") == "true",
 				},
 			},
+			Artwork: currentConfig.Tag.Artwork, // Preserve artwork settings
 		},
 		// Preserve server settings from current config, no sense to be changed on runtime
 		Server: Server{
@@ -88,9 +89,6 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 			Log:      c.FormValue("jobs.log") == "true",
 			LogPath:  c.FormValue("jobs.log_path"),
 			Webhooks: currentConfig.Jobs.Webhooks,
-		},
-		Downloaders: Downloaders{
-			Artwork: currentConfig.Downloaders.Artwork, // Preserve artwork settings
 		},
 	}
 

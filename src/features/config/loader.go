@@ -87,16 +87,7 @@ func createDefaultConfig() *Config {
 			Format:    "text",
 			HTMXDebug: false,
 		},
-		Downloaders: Downloaders{
-			Artwork: Artwork{
-				Embedded: EmbeddedArtwork{
-					Enabled: true,
-					Size:    1000,
-					Format:  "jpeg",
-					Quality: 85,
-				},
-			},
-		},
+		Downloaders: Downloaders{},
 		Server: Server{
 			PrintRoutes: false,
 			Port:        3535,
@@ -128,6 +119,14 @@ func createDefaultConfig() *Config {
 				},
 				"deezer": {
 					Enabled: false,
+				},
+			},
+			Artwork: Artwork{
+				Embedded: EmbeddedArtwork{
+					Enabled: true,
+					Size:    1000,
+					Format:  "jpeg",
+					Quality: 85,
 				},
 			},
 		},
