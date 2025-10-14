@@ -40,14 +40,12 @@ type Album struct {
 	Attributes     map[string]string
 	AddedDate      time.Time
 	ModifiedDate   time.Time
-	// Image URLs from external sources
-	ImageSmall  string
-	ImageMedium string
-	ImageLarge  string
-	ImageXL     string
-	// Artwork data for embedding
-	ArtworkData []byte
-	Genre       string
+	ImageSmall     string
+	ImageMedium    string
+	ImageLarge     string
+	ImageXL        string
+	ArtworkData    []byte
+	Genre          string
 }
 
 // Validate validates the album fields.
