@@ -72,7 +72,7 @@ func (t *TagWriter) resizeImage(imgData []byte, maxSize int) ([]byte, error) {
 	var buf bytes.Buffer
 	switch strings.ToLower(format) {
 	case "jpeg":
-		quality := t.config.Get().Tag.Artwork.Embedded.Quality
+		quality := t.config.Get().Metadata.Artwork.Embedded.Quality
 		if quality <= 0 {
 			quality = 85
 		}
@@ -81,7 +81,7 @@ func (t *TagWriter) resizeImage(imgData []byte, maxSize int) ([]byte, error) {
 		err = png.Encode(&buf, resizedImg)
 	default:
 		// Default to JPEG
-		quality := t.config.Get().Tag.Artwork.Embedded.Quality
+		quality := t.config.Get().Metadata.Artwork.Embedded.Quality
 		if quality <= 0 {
 			quality = 85
 		}
@@ -185,8 +185,8 @@ func (t *TagWriter) tagMP3(ctx context.Context, filePath string, track *music.Tr
 		// Resize image if configured
 		if t.config != nil {
 			cfg := t.config.Get()
-			if cfg.Tag.Artwork.Embedded.Enabled {
-				maxSize := cfg.Tag.Artwork.Embedded.Size
+			if cfg.Metadata.Artwork.Embedded.Enabled {
+				maxSize := cfg.Metadata.Artwork.Embedded.Size
 				if maxSize > 0 {
 					resizedData, err := t.resizeImage(imgData, maxSize)
 					if err != nil {
@@ -354,8 +354,8 @@ func (t *TagWriter) tagFLAC(ctx context.Context, filePath string, track *music.T
 		// Resize image if configured
 		if t.config != nil {
 			cfg := t.config.Get()
-			if cfg.Tag.Artwork.Embedded.Enabled {
-				maxSize := cfg.Tag.Artwork.Embedded.Size
+			if cfg.Metadata.Artwork.Embedded.Enabled {
+				maxSize := cfg.Metadata.Artwork.Embedded.Size
 				if maxSize > 0 {
 					slog.Debug("Resizing artwork for FLAC", "filePath", filePath, "maxSize", maxSize)
 					resizedData, err := t.resizeImage(imgData, maxSize)

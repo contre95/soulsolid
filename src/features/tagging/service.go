@@ -349,8 +349,8 @@ func (s *Service) matchArtistsWithDatabase(ctx context.Context, track *music.Tra
 func (s *Service) GetEnabledProviders() map[string]bool {
 	enabled := make(map[string]bool)
 	cfg := s.config.Get()
-	if cfg.Tag.Providers != nil {
-		for name, provider := range cfg.Tag.Providers {
+	if cfg.Metadata.Providers != nil {
+		for name, provider := range cfg.Metadata.Providers {
 			enabled[name] = provider.Enabled
 		}
 	}

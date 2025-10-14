@@ -11,14 +11,14 @@ import (
 // setProviderAPIKey sets the API key for a provider from an environment variable
 func setProviderAPIKey(cfg *Config, providerName, envVar string) {
 	if key := os.Getenv(envVar); key != "" {
-		if cfg.Tag.Providers == nil {
-			cfg.Tag.Providers = make(map[string]Provider)
+		if cfg.Metadata.Providers == nil {
+			cfg.Metadata.Providers = make(map[string]Provider)
 		}
-		if provider, exists := cfg.Tag.Providers[providerName]; exists {
+		if provider, exists := cfg.Metadata.Providers[providerName]; exists {
 			provider.APIKey = key
-			cfg.Tag.Providers[providerName] = provider
+			cfg.Metadata.Providers[providerName] = provider
 		} else {
-			cfg.Tag.Providers[providerName] = Provider{Enabled: false, APIKey: key}
+			cfg.Metadata.Providers[providerName] = Provider{Enabled: false, APIKey: key}
 		}
 	}
 }
@@ -108,7 +108,7 @@ func createDefaultConfig() *Config {
 				DefaultPath:     "%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}",
 			},
 		},
-		Tag: Tag{
+		Metadata: Metadata{
 			Providers: map[string]Provider{
 				"discogs": {
 					Enabled: false,

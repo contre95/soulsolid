@@ -55,20 +55,20 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 			Token:        c.FormValue("telegram.token"),
 			AllowedUsers: parseStringSlice(c.FormValue("telegram.allowedUsers")),
 		},
-		Tag: Tag{
+		Metadata: Metadata{
 			Providers: map[string]Provider{
 				"musicbrainz": {
-					Enabled: c.FormValue("tag.providers.musicbrainz.enabled") == "true",
+					Enabled: c.FormValue("metadata.providers.musicbrainz.enabled") == "true",
 				},
 				"discogs": {
-					Enabled: c.FormValue("tag.providers.discogs.enabled") == "true",
-					APIKey:  c.FormValue("tag.providers.discogs.api_key"),
+					Enabled: c.FormValue("metadata.providers.discogs.enabled") == "true",
+					APIKey:  c.FormValue("metadata.providers.discogs.api_key"),
 				},
 				"deezer": {
-					Enabled: c.FormValue("tag.providers.deezer.enabled") == "true",
+					Enabled: c.FormValue("metadata.providers.deezer.enabled") == "true",
 				},
 			},
-			Artwork: currentConfig.Tag.Artwork, // Preserve artwork settings
+			Artwork: currentConfig.Metadata.Artwork, // Preserve artwork settings
 		},
 		// Preserve server settings from current config, no sense to be changed on runtime
 		Server: Server{
