@@ -183,87 +183,83 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *jobs.Jo
 	default:
 	}
 	progressUpdater(10, fmt.Sprintf("Downloading album from %s...", downloader.Name()))
-	album, err := downloader.DownloadAlbum(albumID)
+	tracks, err := downloader.DownloadAlbum(albumID, downloadPath, func(downloaded, total int64) {
+		// Convert plugin progress (0-100) to job progress (10-90)
+		jobProgress := 10 + (downloaded * 80 / total)
+		progressUpdater(int(jobProgress), fmt.Sprintf("Downloading album from %s... (%d%%)", downloader.Name(), downloaded*100/total))
+	})
 	if err != nil {
 		slog.Error("Failed to download album", "albumID", albumID, "error", err)
 		return nil, fmt.Errorf("failed to download album: %w", err)
 	}
-	if album == nil {
-		return nil, fmt.Errorf("album download returned nil")
-	}
-
-	// Update job name with album title if it's still generic
-	if job.Name == "Download Album" {
-		job.Name = fmt.Sprintf("Download: %s", album.Title)
-		job.Metadata["albumTitle"] = album.Title
-		slog.Info("Updated job name with album title", "jobID", job.ID, "title", album.Title)
-	}
-	totalTracks := len(album.Tracks)
-	if totalTracks == 0 {
+	if len(tracks) == 0 {
 		progressUpdater(100, "Album download completed (no tracks)")
 		return map[string]any{
 			"albumID":    albumID,
-			"album":      album,
 			"trackCount": 0,
 		}, nil
 	}
-	progressUpdater(20, fmt.Sprintf("Album downloaded, processing %d tracks...", totalTracks))
-	slog.Debug("Creating album folder", "albumID", albumID, "artist", album.Artists[0].Artist.Name, "title", album.Title)
-	// Create album folder
-	albumFolderName := Sanitize(fmt.Sprintf("%s - %s", album.Artists[0].Artist.Name, album.Title))
-	albumPath := filepath.Join(downloadPath, albumFolderName)
-	if err := os.MkdirAll(albumPath, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create album directory: %w", err)
+
+	// Update job name with album title if it's still generic (extract from first track)
+	if job.Name == "Download Album" && len(tracks) > 0 && tracks[0].Album != nil {
+		albumTitle := tracks[0].Album.Title
+		job.Name = fmt.Sprintf("Download: %s", albumTitle)
+		job.Metadata["albumTitle"] = albumTitle
+		slog.Info("Updated job name with album title", "jobID", job.ID, "title", albumTitle)
 	}
+
+	totalTracks := len(tracks)
+	progressUpdater(20, fmt.Sprintf("Album downloaded, processing %d tracks...", totalTracks))
+
 	var downloadedTracks []*music.Track
 	var filePaths []string
-	// Download each track in the album
-	for i, track := range album.Tracks {
+	// Process each downloaded track
+	for i, track := range tracks {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
 		}
 		progress := 20 + (i * 70 / totalTracks)
-		progressUpdater(progress, fmt.Sprintf("Downloading track %d/%d: %s...", i+1, totalTracks, track.Title))
-		slog.Debug("Downloading album track", "albumID", albumID, "trackID", track.ID, "trackNumber", i+1, "title", track.Title)
-		// Download the track
-		downloadedTrack, err := downloader.DownloadTrack(track.ID, albumPath, nil)
-		if err != nil {
-			slog.Error("Failed to download track", "trackID", track.ID, "error", err)
-			continue // Continue with other tracks
-		}
-		if downloadedTrack == nil {
-			slog.Warn("Track download returned nil", "trackID", track.ID)
-			continue
-		}
-		slog.Debug("Processing album track metadata", "trackID", downloadedTrack.ID)
+		progressUpdater(progress, fmt.Sprintf("Processing track %d/%d: %s...", i+1, totalTracks, track.Title))
+		slog.Debug("Processing album track", "albumID", albumID, "trackID", track.ID, "trackNumber", i+1, "title", track.Title)
+
+		// Track is already downloaded by plugin, just validate and tag
+		slog.Debug("Processing album track metadata", "trackID", track.ID, "hasAlbum", track.Album != nil, "hasArtwork", track.Album != nil && len(track.Album.ArtworkData) > 0)
 		// Enhance and validate metadata
-		downloadedTrack.EnsureMetadataDefaults()
-		if err := downloadedTrack.ValidateRequiredMetadata(); err != nil {
-			slog.Error("Album track metadata validation failed", "trackID", downloadedTrack.ID, "error", err)
+		track.EnsureMetadataDefaults()
+		if err := track.ValidateRequiredMetadata(); err != nil {
+			slog.Error("Album track metadata validation failed", "trackID", track.ID, "error", err)
 			continue // Skip this track but continue with others
 		}
-		slog.Debug("Preparing album track file path", "trackID", downloadedTrack.ID, "trackNumber", downloadedTrack.Metadata.TrackNumber)
-		// Create filename with track number and proper extension
-		trackNumber := downloadedTrack.Metadata.TrackNumber
-		if trackNumber == 0 {
-			trackNumber = i + 1 // Fallback to position in array
-		}
-		// Tag the file
-		filePath := downloadedTrack.Path
-		slog.Debug("Tagging album track file", "trackID", downloadedTrack.ID, "filePath", filePath)
-		err = e.service.tagWriter.WriteFileTags(ctx, filePath, downloadedTrack)
-		if err != nil {
-			slog.Error("Failed to tag album track file", "trackID", downloadedTrack.ID, "error", err)
+
+		// Tag the file (artwork is already downloaded by plugin and set in track.Album.ArtworkData)
+		filePath := track.Path
+		slog.Debug("Tagging album track file", "trackID", track.ID, "filePath", filePath, "title", track.Title, "artist", track.Artists[0].Artist.Name)
+
+		// Check if file exists
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			slog.Error("Track file does not exist for tagging", "trackID", track.ID, "filePath", filePath)
 			continue
 		}
-		downloadedTracks = append(downloadedTracks, downloadedTrack)
+
+		err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
+		if err != nil {
+			slog.Error("Failed to tag album track file", "trackID", track.ID, "filePath", filePath, "error", err)
+			continue
+		}
+		downloadedTracks = append(downloadedTracks, track)
 		filePaths = append(filePaths, filePath)
-		slog.Info("Track downloaded successfully", "title", downloadedTrack.Title, "filePath", filePath)
+		slog.Info("Track processed successfully", "title", track.Title, "filePath", filePath)
 	}
 
-	progressUpdater(100, fmt.Sprintf("Album download completed - %d tracks saved to %s", len(downloadedTracks), albumFolderName))
+	// Extract album path from the first track's directory
+	albumPath := ""
+	if len(downloadedTracks) > 0 {
+		albumPath = filepath.Dir(downloadedTracks[0].Path)
+	}
+
+	progressUpdater(100, fmt.Sprintf("Album download completed - %d tracks processed", len(downloadedTracks)))
 	return map[string]any{
 		"albumID":    albumID,
 		"trackCount": len(downloadedTracks),

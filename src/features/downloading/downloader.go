@@ -12,7 +12,7 @@ type Downloader interface {
 	GetChartTracks(limit int) ([]music.Track, error)
 	// Download methods
 	DownloadTrack(trackID string, downloadDir string, progressCallback func(downloaded, total int64)) (*music.Track, error)
-	DownloadAlbum(albumID string) (*music.Album, error)
+	DownloadAlbum(albumID string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error)
 	// User info
 	GetUserInfo() *UserInfo
 	GetStatus() DownloaderStatus
