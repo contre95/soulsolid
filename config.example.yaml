@@ -1,4 +1,4 @@
-libraryPath: ./music
+icibraryPath: ./music
 downloadPath: ./downloads
 demo: false
 telegram:
@@ -15,6 +15,12 @@ downloaders:
     - name: "dummy"
       path: "/path/to/plugin.so"
       icon: https://demo2.contre.io/img/galaxy.png
+  artwork:
+    embedded:
+      enabled: true
+      size: 1000
+      format: jpeg
+      quality: 85
 server:
   show_routes: false
   port: 3535
@@ -41,12 +47,6 @@ metadata:
       api_key: ""
     musicbrainz:
       enabled: true
-  artwork:
-    embedded:
-      enabled: true
-      size: 1000
-      format: jpeg
-      quality: 85
 sync:
   enabled: true
   devices:

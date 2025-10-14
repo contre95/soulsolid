@@ -87,7 +87,16 @@ func createDefaultConfig() *Config {
 			Format:    "text",
 			HTMXDebug: false,
 		},
-		Downloaders: Downloaders{},
+		Downloaders: Downloaders{
+			Artwork: Artwork{
+				Embedded: EmbeddedArtwork{
+					Enabled: true,
+					Size:    1000,
+					Format:  "jpeg",
+					Quality: 85,
+				},
+			},
+		},
 		Server: Server{
 			PrintRoutes: false,
 			Port:        3535,
@@ -110,23 +119,15 @@ func createDefaultConfig() *Config {
 		},
 		Metadata: Metadata{
 			Providers: map[string]Provider{
+				"deezer": {
+					Enabled: false,
+				},
 				"discogs": {
 					Enabled: false,
 					APIKey:  "",
 				},
 				"musicbrainz": {
 					Enabled: false,
-				},
-				"deezer": {
-					Enabled: false,
-				},
-			},
-			Artwork: Artwork{
-				Embedded: EmbeddedArtwork{
-					Enabled: true,
-					Size:    1000,
-					Format:  "jpeg",
-					Quality: 85,
 				},
 			},
 		},

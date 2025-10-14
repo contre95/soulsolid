@@ -67,7 +67,7 @@ func main() {
 		panic("Failed to load plugins")
 	}
 
-	tagWriter := tag.NewTagWriter(cfgManager)
+	tagWriter := tag.NewTagWriter(cfgManager.Get().Downloaders.Artwork.Embedded)
 
 	musicbrainzProvider := metadata.NewMusicBrainzProvider(cfgManager.Get().Metadata.Providers["musicbrainz"].Enabled)
 	discogsProvider := metadata.NewDiscogsProvider(cfgManager.Get().Metadata.Providers["discogs"].Enabled, cfgManager.Get().Metadata.Providers["discogs"].APIKey)

@@ -71,12 +71,12 @@ type Telegram struct {
 // Downloaders holds the configuration for the various downloaders.
 type Downloaders struct {
 	Plugins []PluginConfig `yaml:"plugins"`
+	Artwork Artwork        `yaml:"artwork"`
 }
 
 // Metadata holds the configuration for metadata tagging providers
 type Metadata struct {
 	Providers map[string]Provider `yaml:"providers"`
-	Artwork   Artwork             `yaml:"artwork"`
 }
 
 // Provider holds configuration for individual tagging providers
