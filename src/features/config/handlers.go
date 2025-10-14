@@ -55,6 +55,9 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 			Token:        c.FormValue("telegram.token"),
 			AllowedUsers: parseStringSlice(c.FormValue("telegram.allowedUsers")),
 		},
+		Downloaders: Downloaders{
+			Artwork: currentConfig.Downloaders.Artwork, // Preserve artwork settings
+		},
 		Metadata: Metadata{
 			Providers: map[string]Provider{
 				"musicbrainz": {
@@ -68,7 +71,6 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 					Enabled: c.FormValue("metadata.providers.deezer.enabled") == "true",
 				},
 			},
-			Artwork: currentConfig.Metadata.Artwork, // Preserve artwork settings
 		},
 		// Preserve server settings from current config, no sense to be changed on runtime
 		Server: Server{
