@@ -338,10 +338,9 @@ func (t *TagWriter) tagFLAC(ctx context.Context, filePath string, track *music.T
 		f.Meta = append(f.Meta, &commentMeta)
 	}
 
-	// Add artwork as PICTURE metadata block - use local artwork path only
+	// Add artwork as PICTURE metadata block
 	var imgData []byte
 	var imageDescription string
-	var artworkPath string
 
 	if track.Album != nil && len(track.Album.ArtworkData) > 0 {
 		// Use artwork data directly
@@ -350,7 +349,7 @@ func (t *TagWriter) tagFLAC(ctx context.Context, filePath string, track *music.T
 	}
 
 	if len(imgData) > 0 {
-		slog.Info("Embedding artwork in FLAC", "filePath", filePath, "artworkPath", artworkPath, "imgSize", len(imgData))
+		slog.Info("Embedding artwork in FLAC", "filePath", filePath, "imgSize", len(imgData))
 
 		// Resize image if configured
 		if t.config != nil {
