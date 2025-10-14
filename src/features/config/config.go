@@ -11,7 +11,7 @@ type Config struct {
 	Server       Server      `yaml:"server"`
 	Database     Database    `yaml:"database"`
 	Import       Import      `yaml:"import"`
-	Tag          Tag         `yaml:"tag"`
+	Metadata     Metadata    `yaml:"metadata"`
 	Sync         Sync        `yaml:"sync"`
 	Jobs         Jobs        `yaml:"jobs"`
 }
@@ -73,8 +73,8 @@ type Downloaders struct {
 	Plugins []PluginConfig `yaml:"plugins"`
 }
 
-// Tag holds the configuration for metadata tagging providers
-type Tag struct {
+// Metadata holds the configuration for metadata tagging providers
+type Metadata struct {
 	Providers map[string]Provider `yaml:"providers"`
 	Artwork   Artwork             `yaml:"artwork"`
 }

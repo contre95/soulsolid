@@ -31,7 +31,7 @@ import:
     album:single: '%asciify{$albumartist}/%asciify{$album} [Single] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
     album:ep: '%asciify{$albumartist}/%asciify{$album} [EP] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
     default_path: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
-tag:
+metadata:
   providers:
     deezer:
       enabled: true
@@ -47,6 +47,7 @@ tag:
       size: 1000
       format: jpeg
       quality: 85
+sync:
   enabled: true
   devices:
     - uuid: 8722-177E
