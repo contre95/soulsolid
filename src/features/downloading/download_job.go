@@ -140,20 +140,9 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *jobs.Jo
 	slog.Info("Track downloaded and tagged", "trackID", track.ID, "filePath", filePath)
 	progressUpdater(100, "Track download completed")
 
-	// Get file size
-	fileInfo, err := os.Stat(filePath)
-	if err != nil {
-		slog.Warn("Failed to get file size", "filePath", filePath, "error", err)
-	}
-	fileSize := int64(0)
-	if fileInfo != nil {
-		fileSize = fileInfo.Size()
-	}
-
 	return map[string]any{
 		"trackID":  trackID,
 		"filePath": filePath,
-		"fileSize": fileSize,
 	}, nil
 }
 
