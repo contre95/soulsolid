@@ -286,9 +286,6 @@
                 {{if .Track.PreviewURL}}
                 <div>Preview URL: {{.Track.PreviewURL}}</div>
                 {{end}}
-                {{if .Track.Data}}
-                <div>Data: {{.Track.Data}}</div>
-                {{end}}
                 {{if .Track.AddedDate}}
                 <div>Added Date: {{.Track.AddedDate.Format "2006-01-02 15:04:05"}}</div>
                 {{end}}
@@ -304,7 +301,7 @@
                 {{end}}
 
                 <!-- Show message if no additional metadata -->
-                {{if and (not (or .Track.SampleRate .Track.BitDepth .Track.Channels .Track.Bitrate .Track.Metadata.Duration .Track.Metadata.OriginalYear .Track.Metadata.ExplicitLyrics .Track.ExplicitContent .Track.PreviewURL .Track.Data .Track.AddedDate .Track.ModifiedDate)) (not .Track.Attributes)}}
+                {{if and (not (or .Track.SampleRate .Track.BitDepth .Track.Channels .Track.Bitrate .Track.Metadata.Duration .Track.Metadata.OriginalYear .Track.Metadata.ExplicitLyrics .Track.ExplicitContent .Track.PreviewURL .Track.AddedDate .Track.ModifiedDate)) (not .Track.Attributes)}}
                 <div class="text-gray-500 dark:text-gray-400 italic">No additional metadata available</div>
                 {{end}}
               </div>
