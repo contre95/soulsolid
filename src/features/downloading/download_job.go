@@ -3,9 +3,7 @@ package downloading
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -109,8 +107,9 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *jobs.Jo
 		slog.Error("Failed to download track", "trackID", trackID, "error", err)
 		return nil, fmt.Errorf("failed to download track: %w", err)
 	}
+	// Print track pretty for debugging
+	track.Pretty()
 
-	// Update job name with track title if it's still generic
 	job.Name = fmt.Sprintf("Download: %s (with %s)", track.Title, track.Artists[0].Artist.Name)
 	job.Metadata["trackTitle"] = track.Title
 	slog.Info("Updated job name with track title", "jobID", job.ID, "title", track.Title)
@@ -128,16 +127,21 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *jobs.Jo
 		return nil, fmt.Errorf("metadata validation failed: %w", err)
 	}
 
-	// Tag the file (artwork is already downloaded by plugin and set in track.Album.ArtworkData)
 	filePath := track.Path
-	slog.Debug("Tagging file", "trackID", track.ID, "filePath", filePath)
-	err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
-	if err != nil {
-		slog.Error("Failed to tag file", "trackID", track.ID, "error", err)
-		return nil, fmt.Errorf("failed to tag file: %w", err)
-	}
+	cfg := e.service.configManager.Get()
+	if cfg.Downloaders.TagFile {
+		// Tag the file
+		slog.Debug("Tagging file", "trackID", track.ID, "filePath", filePath)
+		err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
+		if err != nil {
+			slog.Error("Failed to tag file", "trackID", track.ID, "error", err)
+			return nil, fmt.Errorf("failed to tag file: %w", err)
+		}
 
-	slog.Info("Track downloaded and tagged", "trackID", track.ID, "filePath", filePath)
+		slog.Info("Track downloaded, tagged and artwork embedded", "trackID", track.ID, "filePath", filePath)
+	} else {
+		slog.Info("Track downloaded without tagging or artwork embedding", "trackID", track.ID, "filePath", filePath)
+	}
 	progressUpdater(100, "Track download completed")
 
 	return map[string]any{
@@ -222,24 +226,30 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *jobs.Jo
 			continue // Skip this track but continue with others
 		}
 
-		// Tag the file (artwork is already downloaded by plugin and set in track.Album.ArtworkData)
-		filePath := track.Path
-		slog.Debug("Tagging album track file", "trackID", track.ID, "filePath", filePath, "title", track.Title, "artist", track.Artists[0].Artist.Name)
+		cfg := e.service.configManager.Get()
+		if cfg.Downloaders.TagFile {
+			// Tag the file (artwork is already downloaded by plugin and set in track.Album.ArtworkData)
+			filePath := track.Path
+			slog.Debug("Tagging album track file", "trackID", track.ID, "filePath", filePath, "title", track.Title, "artist", track.Artists[0].Artist.Name)
 
-		// Check if file exists
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			slog.Error("Track file does not exist for tagging", "trackID", track.ID, "filePath", filePath)
-			continue
-		}
+			// Check if file exists
+			if _, err := os.Stat(filePath); os.IsNotExist(err) {
+				slog.Error("Track file does not exist for tagging", "trackID", track.ID, "filePath", filePath)
+				continue
+			}
 
-		err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
-		if err != nil {
-			slog.Error("Failed to tag album track file", "trackID", track.ID, "filePath", filePath, "error", err)
-			continue
+			err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
+			if err != nil {
+				slog.Error("Failed to tag album track file", "trackID", track.ID, "filePath", filePath, "error", err)
+				continue
+			}
+
+			slog.Info("Track processed successfully", "title", track.Title, "filePath", filePath)
+		} else {
+			slog.Info("Track downloaded without tagging or artwork embedding", "trackID", track.ID, "filePath", track.Path)
 		}
 		downloadedTracks = append(downloadedTracks, track)
-		filePaths = append(filePaths, filePath)
-		slog.Info("Track processed successfully", "title", track.Title, "filePath", filePath)
+		filePaths = append(filePaths, track.Path)
 	}
 
 	// Extract album path from the first track's directory
@@ -262,18 +272,4 @@ func (e *DownloadJobTask) Cleanup(job *jobs.Job) error {
 	// TODO: Clean up temporary files, etc.
 	slog.Debug("Cleaning up download job", "jobID", job.ID)
 	return nil
-}
-
-// downloadImage fetches image data from URL
-func downloadImage(ctx context.Context, url string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	return io.ReadAll(resp.Body)
 }

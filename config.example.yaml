@@ -11,6 +11,7 @@ logger:
   format: text
   htmx_debug: false
 downloaders:
+  tag_file: true
   plugins:
     - name: "dummy"
       path: "/path/to/plugin.so"
