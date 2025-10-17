@@ -11,7 +11,7 @@ type Config struct {
 	Server       Server      `yaml:"server"`
 	Database     Database    `yaml:"database"`
 	Import       Import      `yaml:"import"`
-	Tag          Tag         `yaml:"tag"`
+	Metadata     Metadata    `yaml:"metadata"`
 	Sync         Sync        `yaml:"sync"`
 	Jobs         Jobs        `yaml:"jobs"`
 }
@@ -72,10 +72,11 @@ type Telegram struct {
 type Downloaders struct {
 	Plugins []PluginConfig `yaml:"plugins"`
 	Artwork Artwork        `yaml:"artwork"`
+	TagFile bool           `yaml:"tag_file"`
 }
 
-// Tag holds the configuration for metadata tagging providers
-type Tag struct {
+// Metadata holds the configuration for metadata tagging providers
+type Metadata struct {
 	Providers map[string]Provider `yaml:"providers"`
 }
 
@@ -101,7 +102,6 @@ type Device struct {
 // Artwork holds configuration for artwork handling
 type Artwork struct {
 	Embedded EmbeddedArtwork `yaml:"embedded"`
-	Local    LocalArtwork    `yaml:"local"`
 }
 
 // EmbeddedArtwork holds configuration for embedded artwork
@@ -110,14 +110,6 @@ type EmbeddedArtwork struct {
 	Size    int    `yaml:"size"`
 	Format  string `yaml:"format"`
 	Quality int    `yaml:"quality"`
-}
-
-// LocalArtwork holds configuration for local artwork files
-type LocalArtwork struct {
-	Enabled  bool   `yaml:"enabled"`
-	Size     int    `yaml:"size"`
-	Format   string `yaml:"format"`
-	Template string `yaml:"template"`
 }
 
 // PluginConfig holds configuration for a plugin downloader

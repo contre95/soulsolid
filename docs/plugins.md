@@ -19,8 +19,8 @@ type Downloader interface {
     GetAlbumTracks(albumID string) ([]music.Track, error)
     GetChartTracks(limit int) ([]music.Track, error)
     // Download methods
-    DownloadTrack(trackID string, progressCallback func(downloaded, total int64)) (*music.Track, error)
-    DownloadAlbum(albumID string) (*music.Album, error)
+    DownloadTrack(trackID string, downloadDir string, progressCallback func(downloaded, total int64)) (*music.Track, error)
+    DownloadAlbum(albumID string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error)
     // User info
     GetUserInfo() *UserInfo
     GetStatus() DownloaderStatus
@@ -82,12 +82,13 @@ func (d *MyDownloader) GetChartTracks(limit int) ([]music.Track, error) {
     // Implement getting chart tracks
 }
 
-func (d *MyDownloader) DownloadTrack(trackID string, progressCallback func(downloaded, total int64)) (*music.Track, error) {
+func (d *MyDownloader) DownloadTrack(trackID string, downloadDir string, progressCallback func(downloaded, total int64)) (*music.Track, error) {
     // Implement track download
 }
 
-func (d *MyDownloader) DownloadAlbum(albumID string) (*music.Album, error) {
-    // Implement album download
+func (d *MyDownloader) DownloadAlbum(albumID string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error) {
+    // Implement album download - return downloaded tracks with folder structure in downloadDir
+    // Use progressCallback to report download progress (0-100)
 }
 
 func (d *MyDownloader) GetUserInfo() *downloading.UserInfo {
@@ -127,6 +128,8 @@ go build -buildmode=plugin -o mydownloader.so .
 
 Plugins receive their configuration through the `NewDownloader` function as a `map[string]interface{}`. The configuration comes from the Soulsolid config file.
 
+Each plugin can optionally specify an icon path for display in the UI.
+
 Example config.yaml:
 
 ```yaml
@@ -134,6 +137,7 @@ downloaders:
   plugins:
     - name: "mydownloader"
       path: "/path/to/mydownloader.so"
+      icon: "path/to/icon.png"  # Optional icon for the downloader
       config:
         api_key: "your_api_key_here"
         base_url: "https://api.example.com"

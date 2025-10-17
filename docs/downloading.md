@@ -25,17 +25,12 @@ downloaders:
         preferred_quality: "FLAC"
   builtin:
     dummy: true  # Enable built-in dummy downloader for testing
-  artwork:
-    embedded:
-      enabled: true
-      size: 1000
-      format: "jpeg"
-      quality: 85
-    local:
-      enabled: true
-      size: 1200
-      format: "jpeg"
-      template: "cover.jpg"
+   artwork:
+     embedded:
+       enabled: true
+       size: 1000
+       format: "jpeg"
+       quality: 85
 ```
 
 ## Downloading Process

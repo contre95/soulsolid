@@ -38,6 +38,7 @@ func (h *Handler) getBaseRenderData() fiber.Map {
 		"Version":     version,
 		"Demo":        cfg.Demo,
 		"Downloaders": downloaders,
+		"SyncEnabled": cfg.Sync.Enabled,
 	}
 }
 

@@ -164,7 +164,7 @@ func (r *TagReader) readLyrics(tags tag.Metadata) string {
 }
 
 // getTagKeys returns a slice of all tag field names for debugging
-func getTagKeys(rawTags map[string]interface{}) []string {
+func getTagKeys(rawTags map[string]any) []string {
 	keys := make([]string, 0, len(rawTags))
 	for k := range rawTags {
 		keys = append(keys, k)
@@ -204,13 +204,11 @@ func (r *TagReader) extractAudioProperties(track *music.Track) {
 // findISRC attempts to find ISRC in various tag fields
 func (r *TagReader) findISRC(tags tag.Metadata) string {
 	rawTags := tags.Raw()
-	if rawTags != nil {
-		// Debug: print all available tag fields that might contain ISRC
-		for key, value := range rawTags {
-			if strings.Contains(strings.ToUpper(key), "ISRC") || strings.Contains(strings.ToUpper(key), "TSRC") {
-				if strValue, ok := value.(string); ok && strValue != "" {
-					fmt.Printf("DEBUG: Found potential ISRC field %s: %s (length: %d)\n", key, strValue, len(strValue))
-				}
+	// Debug: print all available tag fields that might contain ISRC
+	for key, value := range rawTags {
+		if strings.Contains(strings.ToUpper(key), "ISRC") || strings.Contains(strings.ToUpper(key), "TSRC") {
+			if strValue, ok := value.(string); ok && strValue != "" {
+				fmt.Printf("DEBUG: Found potential ISRC field %s: %s (length: %d)\n", key, strValue, len(strValue))
 			}
 		}
 	}

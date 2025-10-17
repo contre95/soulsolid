@@ -55,17 +55,20 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 			Token:        c.FormValue("telegram.token"),
 			AllowedUsers: parseStringSlice(c.FormValue("telegram.allowedUsers")),
 		},
-		Tag: Tag{
+		Downloaders: Downloaders{
+			Artwork: currentConfig.Downloaders.Artwork, // Preserve artwork settings
+		},
+		Metadata: Metadata{
 			Providers: map[string]Provider{
 				"musicbrainz": {
-					Enabled: c.FormValue("tag.providers.musicbrainz.enabled") == "true",
+					Enabled: c.FormValue("metadata.providers.musicbrainz.enabled") == "true",
 				},
 				"discogs": {
-					Enabled: c.FormValue("tag.providers.discogs.enabled") == "true",
-					APIKey:  c.FormValue("tag.providers.discogs.api_key"),
+					Enabled: c.FormValue("metadata.providers.discogs.enabled") == "true",
+					APIKey:  c.FormValue("metadata.providers.discogs.api_key"),
 				},
 				"deezer": {
-					Enabled: c.FormValue("tag.providers.deezer.enabled") == "true",
+					Enabled: c.FormValue("metadata.providers.deezer.enabled") == "true",
 				},
 			},
 		},
@@ -88,9 +91,6 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 			Log:      c.FormValue("jobs.log") == "true",
 			LogPath:  c.FormValue("jobs.log_path"),
 			Webhooks: currentConfig.Jobs.Webhooks,
-		},
-		Downloaders: Downloaders{
-			Artwork: currentConfig.Downloaders.Artwork, // Preserve artwork settings
 		},
 	}
 

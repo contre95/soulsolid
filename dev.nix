@@ -6,6 +6,8 @@ pkgs.mkShell {
     pkgs.tailwindcss
     pkgs.go
     pkgs.tree
+    pkgs.flac
+    pkgs.id3v2
   ];
   
   shellHook = ''

@@ -204,7 +204,7 @@ func (s *Service) StartJob(jobType string, name string, metadata map[string]any)
 	s.jobs[job.ID] = job
 
 	// Check if we can start this job immediately
-	if !s.isJobTypeRunning(jobType) {
+	if !s.isAnyJobRunning() {
 		job.Status = JobStatusRunning
 		s.mu.Unlock()
 		go s.executeJob(job)
@@ -264,8 +264,8 @@ func (s *Service) executeJob(job *Job) {
 			s.executeWebhook(job)
 		}
 	}
-	// After job completes, check for pending jobs of the same type
-	s.startNextPendingJob(job.Type)
+	// After job completes, check for pending jobs
+	s.startNextPendingJob()
 }
 
 func (s *Service) updateJobStatus(jobID string, status JobStatus, message string) {
@@ -335,22 +335,22 @@ func (s *Service) GetJobs() []*Job {
 	return jobs
 }
 
-func (s *Service) isJobTypeRunning(jobType string) bool {
+func (s *Service) isAnyJobRunning() bool {
 	for _, job := range s.jobs {
-		if job.Type == jobType && job.Status == JobStatusRunning {
+		if job.Status == JobStatusRunning {
 			return true
 		}
 	}
 	return false
 }
 
-func (s *Service) startNextPendingJob(jobType string) {
+func (s *Service) startNextPendingJob() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// Find the oldest pending job of this type
+	// Find the oldest pending job
 	var nextJob *Job
 	for _, job := range s.jobs {
-		if job.Type == jobType && job.Status == JobStatusPending {
+		if job.Status == JobStatusPending {
 			if nextJob == nil || job.CreatedAt.Before(nextJob.CreatedAt) {
 				nextJob = job
 			}
