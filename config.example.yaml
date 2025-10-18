@@ -1,4 +1,4 @@
-icibraryPath: ./music
+libraryPath: ./music
 downloadPath: ./downloads
 demo: false
 telegram:
