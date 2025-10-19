@@ -67,11 +67,11 @@ func main() {
 		panic("Failed to load plugins")
 	}
 
-	tagWriter := tag.NewTagWriter()
+	tagWriter := tag.NewTagWriter(cfgManager.Get().Downloaders.Artwork.Embedded)
 
-	musicbrainzProvider := metadata.NewMusicBrainzProvider(cfgManager.Get().Tag.Providers["musicbrainz"].Enabled)
-	discogsProvider := metadata.NewDiscogsProvider(cfgManager.Get().Tag.Providers["discogs"].Enabled, cfgManager.Get().Tag.Providers["discogs"].APIKey)
-	deezerProvider := metadata.NewDeezerProvider(cfgManager.Get().Tag.Providers["deezer"].Enabled)
+	musicbrainzProvider := metadata.NewMusicBrainzProvider(cfgManager.Get().Metadata.Providers["musicbrainz"].Enabled)
+	discogsProvider := metadata.NewDiscogsProvider(cfgManager.Get().Metadata.Providers["discogs"].Enabled, cfgManager.Get().Metadata.Providers["discogs"].APIKey)
+	deezerProvider := metadata.NewDeezerProvider(cfgManager.Get().Metadata.Providers["deezer"].Enabled)
 
 	tagService := tagging.NewService(tagWriter, tagReader, db, []tagging.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, fingerprintReader, cfgManager)
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)

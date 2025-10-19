@@ -11,14 +11,14 @@ import (
 // setProviderAPIKey sets the API key for a provider from an environment variable
 func setProviderAPIKey(cfg *Config, providerName, envVar string) {
 	if key := os.Getenv(envVar); key != "" {
-		if cfg.Tag.Providers == nil {
-			cfg.Tag.Providers = make(map[string]Provider)
+		if cfg.Metadata.Providers == nil {
+			cfg.Metadata.Providers = make(map[string]Provider)
 		}
-		if provider, exists := cfg.Tag.Providers[providerName]; exists {
+		if provider, exists := cfg.Metadata.Providers[providerName]; exists {
 			provider.APIKey = key
-			cfg.Tag.Providers[providerName] = provider
+			cfg.Metadata.Providers[providerName] = provider
 		} else {
-			cfg.Tag.Providers[providerName] = Provider{Enabled: false, APIKey: key}
+			cfg.Metadata.Providers[providerName] = Provider{Enabled: false, APIKey: key}
 		}
 	}
 }
@@ -52,9 +52,6 @@ func Load(path string) (*Manager, error) {
 	}
 
 	// Set defaults for missing values
-	if cfg.Server.ViewsPath == "" {
-		cfg.Server.ViewsPath = "./views"
-	}
 
 	// Override with environment variables if set
 	if token := os.Getenv("TELEGRAM_TOKEN"); token != "" {
@@ -62,11 +59,6 @@ func Load(path string) (*Manager, error) {
 	}
 
 	setProviderAPIKey(&cfg, "discogs", "DISCOGS_API_KEY")
-
-	// Override views path with environment variable if set
-	if viewsPath := os.Getenv("SS_VIEWS"); viewsPath != "" {
-		cfg.Server.ViewsPath = viewsPath
-	}
 
 	return NewManager(&cfg), nil
 }
@@ -80,6 +72,7 @@ func createDefaultConfig() *Config {
 			Enabled:      false,
 			Token:        "",
 			AllowedUsers: []string{},
+			BotHandle:    "@SoulsolidDemoBot",
 		},
 		Logger: Logger{
 			Enabled:   true,
@@ -92,25 +85,19 @@ func createDefaultConfig() *Config {
 				Embedded: EmbeddedArtwork{
 					Enabled: true,
 					Size:    1000,
-					Format:  "jpeg",
 					Quality: 85,
 				},
-				Local: LocalArtwork{
-					Enabled:  false,
-					Size:     1200,
-					Format:   "jpeg",
-					Template: "cover.jpg",
-				},
 			},
+			TagFile: true,
 		},
 		Server: Server{
 			PrintRoutes: false,
 			Port:        3535,
-			ViewsPath:   "./views",
 		},
 		Database: Database{
 			Path: "./library.db",
 		},
+
 		Import: Import{
 			Move:        false,
 			AlwaysQueue: false,
@@ -123,16 +110,16 @@ func createDefaultConfig() *Config {
 				DefaultPath:     "%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}",
 			},
 		},
-		Tag: Tag{
+		Metadata: Metadata{
 			Providers: map[string]Provider{
+				"deezer": {
+					Enabled: false,
+				},
 				"discogs": {
 					Enabled: false,
 					APIKey:  "",
 				},
 				"musicbrainz": {
-					Enabled: false,
-				},
-				"deezer": {
 					Enabled: false,
 				},
 			},
