@@ -72,6 +72,7 @@ func createDefaultConfig() *Config {
 			Enabled:      false,
 			Token:        "",
 			AllowedUsers: []string{},
+			BotHandle:    "@SoulsolidDemoBot",
 		},
 		Logger: Logger{
 			Enabled:   true,
@@ -96,6 +97,7 @@ func createDefaultConfig() *Config {
 		Database: Database{
 			Path: "./library.db",
 		},
+
 		Import: Import{
 			Move:        false,
 			AlwaysQueue: false,

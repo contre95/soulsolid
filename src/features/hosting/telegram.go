@@ -115,7 +115,7 @@ func (t *TelegramBot) handleMessage(update tgbotapi.Update) {
 
 	// Check if message is from authorized user
 	allowedUsers := t.config.Get().Telegram.AllowedUsers
-	if len(allowedUsers) == 0 && !t.config.Get().Demo {
+	if len(allowedUsers) == 0 && t.config.Get().Telegram.Enabled {
 		slog.Warn("No allowed users configured", "chat_id", chatID)
 		t.sendMessage(chatID, "❌ Access denied: No users configured. Please add users to the config.")
 		return
@@ -130,7 +130,7 @@ func (t *TelegramBot) handleMessage(update tgbotapi.Update) {
 		}
 	}
 	found := slices.Contains(allowedUsers, username)
-	if !found && !t.config.Get().Demo {
+	if !found && t.config.Get().Telegram.Enabled {
 		slog.Warn("Unauthorized user", "username", username, "chat_id", chatID)
 		t.sendMessage(chatID, "Unknown user, please add your user to the config")
 		return
