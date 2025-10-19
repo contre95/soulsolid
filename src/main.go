@@ -93,10 +93,10 @@ func main() {
 	}
 
 	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService)
+	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped: %v", "error", err)
 	}
-	slog.Info("Server started. Press Ctrl+C to shut down.", "port", cfgManager.Get().Server.Port)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 	<-quit
