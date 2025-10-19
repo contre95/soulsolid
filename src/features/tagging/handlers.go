@@ -510,6 +510,43 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 
 	selectedTrack := tracks[selectedTrackIndex]
 
+	// Create/find artists and album for the selected track only
+	// Create/find track artists
+	for j, artistRole := range selectedTrack.Artists {
+		dbArtist, err := h.service.libraryRepo.FindOrCreateArtist(c.Context(), artistRole.Artist.Name)
+		if err != nil {
+			slog.Warn("Failed to find/create selected track artist", "artistName", artistRole.Artist.Name, "error", err)
+			continue
+		}
+		selectedTrack.Artists[j].Artist = dbArtist
+	}
+
+	// Handle album if present
+	if selectedTrack.Album != nil {
+		// Create/find album artists
+		for j, artistRole := range selectedTrack.Album.Artists {
+			dbArtist, err := h.service.libraryRepo.FindOrCreateArtist(c.Context(), artistRole.Artist.Name)
+			if err != nil {
+				slog.Warn("Failed to find/create selected album artist", "artistName", artistRole.Artist.Name, "error", err)
+				continue
+			}
+			selectedTrack.Album.Artists[j].Artist = dbArtist
+		}
+
+		// Find or create album using first album artist
+		var albumArtist *music.Artist
+		if len(selectedTrack.Album.Artists) > 0 {
+			albumArtist = selectedTrack.Album.Artists[0].Artist
+		}
+
+		dbAlbum, err := h.service.libraryRepo.FindOrCreateAlbum(c.Context(), albumArtist, selectedTrack.Album.Title, selectedTrack.Metadata.Year)
+		if err != nil {
+			slog.Warn("Failed to find/create selected album", "albumTitle", selectedTrack.Album.Title, "error", err)
+		} else {
+			selectedTrack.Album = dbAlbum
+		}
+	}
+
 	// Get current track data
 	currentTrack, err := h.service.GetTrackForEditing(c.Context(), trackID)
 	if err != nil {
