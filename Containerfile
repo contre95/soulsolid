@@ -1,10 +1,3 @@
-FROM golang:bookworm AS plugin-builder
-ENV CGO_ENABLED=2
-RUN apt-get update && apt-get install -y gcc libc-dev git
-WORKDIR /plugins
-RUN git clone https://github.com/contre95/soulsolid-dummy-plugin.git dummy
-RUN cd dummy && go mod tidy && go build -buildmode=plugin -o /plugins/dummy.so main.go
-
 FROM golang:bookworm AS app-builder
 ENV CGO_ENABLED=2
 RUN apt-get update && apt-get install -y gcc libc-dev libsqlite3-dev nodejs npm git
@@ -17,11 +10,15 @@ RUN go mod tidy
 RUN go build -o /app/soulsolid src/main.go
 
 FROM golang:bookworm
+ENV CGO_ENABLED=2
+RUN apt-get update && apt-get install -y git
+RUN mkdir -p /app/plugins
 WORKDIR /app
-ENV SS_VIEWS=/app/views
 # Copy the dynamically built app and assets
 COPY --from=app-builder /app/soulsolid /app/soulsolid
-COPY --from=app-builder /app/views /app/views
-COPY --from=app-builder /app/public /app/public
-COPY --from=plugin-builder /plugins /app/plugins
+COPY go.mod /app/go.mod
+COPY go.sum /app/go.sum
+COPY views /app/views
+COPY public /app/public
+COPY src /app/src
 ENTRYPOINT ["/app/soulsolid"]

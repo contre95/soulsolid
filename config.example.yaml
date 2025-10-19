@@ -15,7 +15,7 @@ downloaders:
   tag_file: true
   plugins:
     - name: "dummy"
-      path: "/path/to/plugin.so"
+      path: "/app/plugins/dummy.so"
       icon: https://demo2.contre.io/img/galaxy.png
   artwork:
     embedded:

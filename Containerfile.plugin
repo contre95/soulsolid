@@ -1,0 +1,7 @@
+FROM contre95/ss:latest
+RUN git clone https://github.com/contre95/soulsolid-dummy-plugin /tmp/plugin
+WORKDIR /tmp/plugin
+RUN go mod edit -replace=github.com/contre95/soulsolid=/app
+RUN go mod tidy
+RUN go build -buildmode=plugin -o /app/plugins/plugin.so .
+WORKDIR /app
