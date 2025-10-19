@@ -40,11 +40,12 @@ type Album struct {
 	Attributes     map[string]string
 	AddedDate      time.Time
 	ModifiedDate   time.Time
-	// Image URLs from external sources
+	// Image* are used by plugins to set URL that will be displayed in the search results of the downloaders
 	ImageSmall  string
 	ImageMedium string
 	ImageLarge  string
 	ImageXL     string
+	ArtworkData []byte
 	Genre       string
 }
 

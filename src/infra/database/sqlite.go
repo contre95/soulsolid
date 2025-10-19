@@ -72,7 +72,6 @@ func createTables(db *sql.DB) error {
 			channels INTEGER,
 			explicit_content BOOLEAN DEFAULT FALSE,
 			preview_url TEXT,
-			data BLOB,
 			composer TEXT,
 			genre TEXT,
 			year INTEGER,
@@ -166,12 +165,12 @@ func (d *SqliteLibrary) AddTrack(ctx context.Context, track *music.Track) error 
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO tracks (id, path, title, title_version, duration, track_number, disc_number,
 			isrc, chromaprint_fingerprint, bitrate, format, sample_rate, bit_depth, channels,
-			explicit_content, preview_url, data, composer, genre, year, original_year, lyrics,
+			explicit_content, preview_url, composer, genre, year, original_year, lyrics,
 			explicit_lyrics, bpm, gain, added_date, modified_date)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, track.ID, track.Path, track.Title, track.TitleVersion, track.Metadata.Duration, track.Metadata.TrackNumber, track.Metadata.DiscNumber,
 		track.ISRC, track.ChromaprintFingerprint, track.Bitrate, track.Format, track.SampleRate, track.BitDepth, track.Channels,
-		track.ExplicitContent, track.PreviewURL, track.Data, track.Metadata.Composer, track.Metadata.Genre, track.Metadata.Year,
+		track.ExplicitContent, track.PreviewURL, track.Metadata.Composer, track.Metadata.Genre, track.Metadata.Year,
 		track.Metadata.OriginalYear, track.Metadata.Lyrics, track.Metadata.ExplicitLyrics, track.Metadata.BPM, track.Metadata.Gain,
 		track.AddedDate.Format(time.RFC3339), track.ModifiedDate.Format(time.RFC3339))
 	if err != nil {
@@ -302,7 +301,7 @@ func (d *SqliteLibrary) GetTrack(ctx context.Context, id string) (*music.Track, 
 	row := tx.QueryRowContext(ctx, `
 		SELECT id, path, title, title_version, duration, track_number, disc_number,
 			isrc, bitrate, format, sample_rate, bit_depth, channels, explicit_content,
-			preview_url, data, composer, genre, year, original_year, lyrics, explicit_lyrics,
+			preview_url, composer, genre, year, original_year, lyrics, explicit_lyrics,
 			bpm, gain, added_date, modified_date
 		FROM tracks
 		WHERE id = ?
@@ -314,7 +313,7 @@ func (d *SqliteLibrary) GetTrack(ctx context.Context, id string) (*music.Track, 
 	err = row.Scan(&track.ID, &track.Path, &track.Title, &track.TitleVersion, &track.Metadata.Duration,
 		&track.Metadata.TrackNumber, &track.Metadata.DiscNumber,
 		&track.ISRC, &track.Bitrate, &track.Format, &track.SampleRate, &track.BitDepth,
-		&track.Channels, &track.ExplicitContent, &track.PreviewURL, &track.Data,
+		&track.Channels, &track.ExplicitContent, &track.PreviewURL,
 		&track.Metadata.Composer, &track.Metadata.Genre, &track.Metadata.Year,
 		&track.Metadata.OriginalYear, &track.Metadata.Lyrics, &track.Metadata.ExplicitLyrics,
 		&track.Metadata.BPM, &track.Metadata.Gain, &addedDateStr, &modifiedDateStr)
@@ -420,12 +419,12 @@ func (d *SqliteLibrary) UpdateTrack(ctx context.Context, track *music.Track) err
 		UPDATE tracks
 		SET path = ?, title = ?, title_version = ?, duration = ?, track_number = ?, disc_number = ?,
 			isrc = ?, bitrate = ?, format = ?, sample_rate = ?, bit_depth = ?, channels = ?,
-			explicit_content = ?, preview_url = ?, data = ?, composer = ?, genre = ?, year = ?,
+			explicit_content = ?, preview_url = ?, composer = ?, genre = ?, year = ?,
 			original_year = ?, lyrics = ?, explicit_lyrics = ?, bpm = ?, gain = ?, modified_date = ?
 		WHERE id = ?
 	`, track.Path, track.Title, track.TitleVersion, track.Metadata.Duration, track.Metadata.TrackNumber, track.Metadata.DiscNumber,
 		track.ISRC, track.Bitrate, track.Format, track.SampleRate, track.BitDepth, track.Channels,
-		track.ExplicitContent, track.PreviewURL, track.Data, track.Metadata.Composer, track.Metadata.Genre, track.Metadata.Year,
+		track.ExplicitContent, track.PreviewURL, track.Metadata.Composer, track.Metadata.Genre, track.Metadata.Year,
 		track.Metadata.OriginalYear, track.Metadata.Lyrics, track.Metadata.ExplicitLyrics, track.Metadata.BPM, track.Metadata.Gain,
 		track.ModifiedDate.Format(time.RFC3339), track.ID)
 	if err != nil {
@@ -1033,7 +1032,7 @@ func (d *SqliteLibrary) FindTrackByMetadata(ctx context.Context, title, artistNa
 	row := d.db.QueryRowContext(ctx, `
 		SELECT t.id, t.path, t.title, t.title_version, t.duration, t.track_number, t.disc_number,
 			   t.isrc, t.bitrate, t.format, t.sample_rate, t.bit_depth, t.channels,
-			   t.explicit_content, t.preview_url, t.data, t.composer, t.genre, t.year,
+			   t.explicit_content, t.preview_url, t.composer, t.genre, t.year,
 			   t.original_year, t.lyrics, t.explicit_lyrics, t.bpm, t.gain, t.added_date, t.modified_date
 		FROM tracks t
 		JOIN track_albums ta ON t.id = ta.track_id
@@ -1051,7 +1050,7 @@ func (d *SqliteLibrary) FindTrackByMetadata(ctx context.Context, title, artistNa
 	err := row.Scan(&track.ID, &track.Path, &track.Title, &track.TitleVersion, &track.Metadata.Duration,
 		&track.Metadata.TrackNumber, &track.Metadata.DiscNumber,
 		&track.ISRC, &track.Bitrate, &track.Format, &track.SampleRate, &track.BitDepth,
-		&track.Channels, &track.ExplicitContent, &track.PreviewURL, &track.Data,
+		&track.Channels, &track.ExplicitContent, &track.PreviewURL,
 		&track.Metadata.Composer, &track.Metadata.Genre, &track.Metadata.Year,
 		&track.Metadata.OriginalYear, &track.Metadata.Lyrics, &track.Metadata.ExplicitLyrics,
 		&track.Metadata.BPM, &track.Metadata.Gain, &addedDateStr, &modifiedDateStr)
@@ -1151,7 +1150,7 @@ func (d *SqliteLibrary) FindTrackByPath(ctx context.Context, path string) (*musi
 	row := d.db.QueryRowContext(ctx, `
 		SELECT t.id, t.path, t.title, t.title_version, t.duration, t.track_number, t.disc_number,
 			   t.isrc, t.bitrate, t.format, t.sample_rate, t.bit_depth, t.channels,
-			   t.explicit_content, t.preview_url, t.data, t.composer, t.genre, t.year,
+			   t.explicit_content, t.preview_url, t.composer, t.genre, t.year,
 			   t.original_year, t.lyrics, t.explicit_lyrics, t.bpm, t.gain, t.added_date, t.modified_date
 		FROM tracks t
 		WHERE t.path = ?
@@ -1163,7 +1162,7 @@ func (d *SqliteLibrary) FindTrackByPath(ctx context.Context, path string) (*musi
 	err := row.Scan(&track.ID, &track.Path, &track.Title, &track.TitleVersion, &track.Metadata.Duration,
 		&track.Metadata.TrackNumber, &track.Metadata.DiscNumber,
 		&track.ISRC, &track.Bitrate, &track.Format, &track.SampleRate, &track.BitDepth,
-		&track.Channels, &track.ExplicitContent, &track.PreviewURL, &track.Data,
+		&track.Channels, &track.ExplicitContent, &track.PreviewURL,
 		&track.Metadata.Composer, &track.Metadata.Genre, &track.Metadata.Year,
 		&track.Metadata.OriginalYear, &track.Metadata.Lyrics, &track.Metadata.ExplicitLyrics,
 		&track.Metadata.BPM, &track.Metadata.Gain, &addedDateStr, &modifiedDateStr)

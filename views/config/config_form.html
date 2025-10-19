@@ -77,19 +77,43 @@
            <i class="fas fa-download text-green-500 text-lg"></i>
            Downloaders
           </h2>
-        <div class="space-y-3">
-          <!-- Plugin Downloaders -->
-          <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
-            <h4 class="text-sm font-medium text-gray-900 dark:text-gray-300 mb-3">Plugin Downloaders</h4>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              Downloaders are now loaded as plugins. Configure plugin paths and settings in the config.yaml file.
-              See <a href="/docs/plugins" class="text-blue-600 hover:text-blue-500">plugin documentation</a> for details.
-            </p>
-          </div>
-           <div class="text-sm text-yellow-600 dark:text-yellow-300 italic py-2 px-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
-             Changes require application restart
+         <div class="space-y-3">
+           <!-- Tag File -->
+           <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+             <div class="flex items-center">
+               <input type="checkbox" id="tag_file" {{if .Config.Downloaders.TagFile}}checked{{end}} disabled
+                      class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded">
+               <label for="tag_file" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Tag Files</label>
+             </div>
+             <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+               Whether to tag downloaded files with metadata.
+             </p>
            </div>
-        </div>
+           <!-- Plugin Downloaders -->
+           <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+             <h4 class="text-sm font-medium text-gray-900 dark:text-gray-300 mb-3">Plugin Downloaders</h4>
+             {{if .Config.Downloaders.Plugins}}
+               <ul class="list-none space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                 {{range .Config.Downloaders.Plugins}}
+                   <li class="flex items-center gap-2">
+                
+                      <img src="{{if .Icon}}{{.Icon}}{{else}}/img/generic-downloader.png{{end}}" alt="Plugin icon" class="size-6">
+                     {{capitalize .Name}}
+                   </li>
+                 {{end}}
+               </ul>
+             {{else}}
+               <p class="text-xs text-gray-500 dark:text-gray-400">No plugins configured.</p>
+             {{end}}
+             <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">
+               Downloaders are loaded as plugins. Configure in config.yaml file.
+               See <a href="/docs/plugins" class="text-blue-600 hover:text-blue-500">plugin documentation</a> for details.
+             </p>
+           </div>
+            <div class="text-sm text-yellow-600 dark:text-yellow-300 italic py-2 px-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
+              Changes require application restart
+            </div>
+         </div>
        </div>
 
          <!-- Logger Settings -->
@@ -174,9 +198,6 @@
            <div class="text-sm text-yellow-600 dark:text-yellow-300 italic py-2 px-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
              Changes require application restart
            </div>
-            <div class="text-sm text-yellow-600 dark:text-yellow-300 italic py-2 px-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
-              Changes require application restart
-            </div>
         </div>
       </div>
 
@@ -220,7 +241,7 @@
             <!-- MusicBrainz Provider -->
             <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
               <div class="flex items-center mb-3">
-                 <input type="checkbox" id="tag.providers.musicbrainz.enabled" name="tag.providers.musicbrainz.enabled" value="true" {{if .Config.Tag.Providers.musicbrainz.Enabled}}checked{{end}}
+                  <input type="checkbox" id="metadata.providers.musicbrainz.enabled" name="metadata.providers.musicbrainz.enabled" value="true" {{if .Config.Metadata.Providers.musicbrainz.Enabled}}checked{{end}}
                        class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                  <label for="tag.providers.musicbrainz.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
                    <img src="/svg/brainz.svg" alt="MusicBrainz" class="w-4 h-4 mr-2">
@@ -233,7 +254,7 @@
               <!-- Discogs Provider -->
               <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
                 <div class="flex items-center mb-3">
-                   <input type="checkbox" id="tag.providers.discogs.enabled" name="tag.providers.discogs.enabled" value="true" {{if .Config.Tag.Providers.discogs.Enabled}}checked{{end}}
+                    <input type="checkbox" id="metadata.providers.discogs.enabled" name="metadata.providers.discogs.enabled" value="true" {{if .Config.Metadata.Providers.discogs.Enabled}}checked{{end}}
                          class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                    <label for="tag.providers.discogs.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
                      <img src="/svg/discogs.svg" alt="Discogs" class="w-4 h-4 mr-2">
@@ -242,7 +263,7 @@
                 </div>
                 <div>
                   <label for="tag.providers.discogs.api_key" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
-                   <input type="password" id="tag.providers.discogs.api_key" name="tag.providers.discogs.api_key" value="{{.Config.Tag.Providers.discogs.APIKey}}"
+                    <input type="password" id="metadata.providers.discogs.api_key" name="metadata.providers.discogs.api_key" value="{{.Config.Metadata.Providers.discogs.APIKey}}"
                          class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
                          placeholder="API key">
                 </div>
@@ -251,7 +272,7 @@
              <!-- Deezer Provider -->
              <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
                <div class="flex items-center mb-3">
-                  <input type="checkbox" id="tag.providers.deezer.enabled" name="tag.providers.deezer.enabled" value="true" {{if .Config.Tag.Providers.deezer.Enabled}}checked{{end}}
+                   <input type="checkbox" id="metadata.providers.deezer.enabled" name="metadata.providers.deezer.enabled" value="true" {{if .Config.Metadata.Providers.deezer.Enabled}}checked{{end}}
                         class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                   <label for="tag.providers.deezer.enabled" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
                     <img src="/img/deezer.png" alt="Deezer" class="w-4 h-4 mr-2">

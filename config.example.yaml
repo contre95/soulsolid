@@ -3,6 +3,7 @@ downloadPath: ./downloads
 demo: false
 telegram:
   enabled: true
+  bot_handle: SoulsolidExampleBot # Optional: UI purposes only
   token: you_can_use_TELEGRAM_TOKEN_var_instead
   allowedUsers: []
 logger:
@@ -11,6 +12,7 @@ logger:
   format: text
   htmx_debug: false
 downloaders:
+  tag_file: true
   plugins:
     - name: "dummy"
       path: "/path/to/plugin.so"
@@ -19,17 +21,10 @@ downloaders:
     embedded:
       enabled: true
       size: 1000
-      format: jpeg
       quality: 85
-    local:
-      enabled: false
-      size: 1200
-      format: jpeg
-      template: cover.jpg
 server:
   show_routes: false
   port: 3535
-  views_path: ./views # Beware of this var if running in a Container
 database:
   path: ./library.db
 import:
@@ -37,12 +32,12 @@ import:
   always_queue: false
   duplicates: queue
   paths:
-    compilations: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
-    album:soundtrack: '%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
-    album:single: '%asciify{$albumartist}/%asciify{$album} [Single] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
-    album:ep: '%asciify{$albumartist}/%asciify{$album} [EP] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
-    default_path: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
-tag:
+    compilations: "%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}"
+    album:soundtrack: "%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}"
+    album:single: "%asciify{$albumartist}/%asciify{$album} [Single] (%if{$original_year,$original_year,$year})/%asciify{$track $title}"
+    album:ep: "%asciify{$albumartist}/%asciify{$album} [EP] (%if{$original_year,$original_year,$year})/%asciify{$track $title}"
+    default_path: "%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}"
+metadata:
   providers:
     deezer:
       enabled: true
@@ -52,6 +47,7 @@ tag:
       api_key: ""
     musicbrainz:
       enabled: true
+sync:
   enabled: true
   devices:
     - uuid: 8722-177E
@@ -66,4 +62,4 @@ jobs:
       - directory_import
       - download_album
       - dap_sync
-    command: "TEXT=\"\U0001F3B5 Job {{.Name}} ({{.Type}}) {{.Status}}\\n\U0001F4DD {{.Message}}\\n⏱️ Duration: {{.Duration}}\"\ncurl -X POST -H 'Content-Type: application/json' \\\n  -d '{\"chat_id\": \"<chat_id>\", \"text\": \"'\"$TEXT\"'\", \"parse_mode\": \"HTML\"}' \\\n  https://api.telegram.org/bot<bot_token>/sendMessage\n"
+    command: "TEXT=\"🎵 Job {{.Name}} ({{.Type}}) {{.Status}}\\n📝 {{.Message}}\\n⏱️ Duration: {{.Duration}}\"\ncurl -X POST -H 'Content-Type: application/json' \\\n  -d '{\"chat_id\": \"<chat_id>\", \"text\": \"'\"$TEXT\"'\", \"parse_mode\": \"HTML\"}' \\\n  https://api.telegram.org/bot<bot_token>/sendMessage\n"
