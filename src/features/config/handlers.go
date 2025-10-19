@@ -56,7 +56,9 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 			AllowedUsers: parseStringSlice(c.FormValue("telegram.allowedUsers")),
 		},
 		Downloaders: Downloaders{
+			Plugins: currentConfig.Downloaders.Plugins, // Preserve plugins
 			Artwork: currentConfig.Downloaders.Artwork, // Preserve artwork settings
+			TagFile: currentConfig.Downloaders.TagFile, // Preserve tag_file
 		},
 		Metadata: Metadata{
 			Providers: map[string]Provider{

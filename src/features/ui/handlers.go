@@ -28,11 +28,7 @@ func (h *Handler) getBaseRenderData() fiber.Map {
 	cfg := h.configManager.Get()
 	downloaders := make(map[string]interface{})
 	for _, plugin := range cfg.Downloaders.Plugins {
-		icon := "/img/generic-downloader.png"
-		if plugin.Icon != "" {
-			icon = plugin.Icon
-		}
-		downloaders[plugin.Name] = struct{ Name, Icon string }{Name: plugin.Name, Icon: icon}
+		downloaders[plugin.Name] = struct{ Name, Icon string }{Name: plugin.Name, Icon: plugin.Icon}
 	}
 	return fiber.Map{
 		"Version":     version,
