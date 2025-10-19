@@ -169,13 +169,13 @@
             </a>
           </button>
         </li>
-        {{if .Demo}}
+        {{if .Telegram.BotHandle}}
         <li>
           <hr class="border-gray-300 dark:border-gray-600">
         </li>
         <li>
           <button type="button" class="w-full">
-            <a href="https://t.me/SoulsolidDemoBot" target="_blank"
+            <a href="https://t.me/{{.Telegram.BotHandle}}" target="_blank"
               class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
               <img src="/img/telegram.png" alt="Telegram" class="size-6">
               <span class="mx-4">Telegram</span>

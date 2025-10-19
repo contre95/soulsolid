@@ -32,9 +32,9 @@ func (h *Handler) getBaseRenderData() fiber.Map {
 	}
 	return fiber.Map{
 		"Version":     version,
-		"Demo":        cfg.Demo,
 		"Downloaders": downloaders,
 		"SyncEnabled": cfg.Sync.Enabled,
+		"Telegram":    cfg.Telegram,
 	}
 }
 

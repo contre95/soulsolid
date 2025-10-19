@@ -4,7 +4,6 @@ package config
 type Config struct {
 	LibraryPath  string      `yaml:"libraryPath"`
 	DownloadPath string      `yaml:"downloadPath"`
-	Demo         bool        `yaml:"demo"`
 	Telegram     Telegram    `yaml:"telegram"`
 	Logger       Logger      `yaml:"logger"`
 	Downloaders  Downloaders `yaml:"downloaders"`
@@ -65,6 +64,7 @@ type Telegram struct {
 	Enabled      bool     `yaml:"enabled"`
 	Token        string   `yaml:"token"`
 	AllowedUsers []string `yaml:"allowedUsers"`
+	BotHandle    string   `yaml:"bot_handle"`
 }
 
 // Downloaders holds the configuration for the various downloaders.

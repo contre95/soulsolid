@@ -3,6 +3,7 @@ downloadPath: ./downloads
 demo: false
 telegram:
   enabled: true
+  bot_handle: SoulsolidExampleBot # Optional: UI purposes only
   token: you_can_use_TELEGRAM_TOKEN_var_instead
   allowedUsers: []
 logger:

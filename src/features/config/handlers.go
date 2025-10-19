@@ -32,12 +32,8 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	// TODO: We might want to add some validations probably, not sure if here.
 	slog.Warn("Method not fully implemented")
 	newConfig := &Config{
-		Database: Database{
-			Path: c.FormValue("database.path"),
-		},
 		LibraryPath:  c.FormValue("libraryPath"),
 		DownloadPath: c.FormValue("downloadPath"),
-		Demo:         currentConfig.Demo, // Preserve demo setting from current config
 		Import: Import{
 			Move:        c.FormValue("import.move") == "true",
 			AlwaysQueue: c.FormValue("import.always_queue") == "true",
@@ -54,6 +50,7 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 			Enabled:      c.FormValue("telegram.enabled") == "true",
 			Token:        c.FormValue("telegram.token"),
 			AllowedUsers: parseStringSlice(c.FormValue("telegram.allowedUsers")),
+			BotHandle:    c.FormValue("telegram.bot_handle"),
 		},
 		Downloaders: Downloaders{
 			Plugins: currentConfig.Downloaders.Plugins, // Preserve plugins
