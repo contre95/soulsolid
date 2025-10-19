@@ -51,7 +51,6 @@ type Database struct {
 type Server struct {
 	PrintRoutes bool   `yaml:"show_routes"`
 	Port        uint32 `yaml:"port"`
-	ViewsPath   string `yaml:"views_path"`
 }
 
 // Logger holds the configuration for the app logging
@@ -106,10 +105,9 @@ type Artwork struct {
 
 // EmbeddedArtwork holds configuration for embedded artwork
 type EmbeddedArtwork struct {
-	Enabled bool   `yaml:"enabled"`
-	Size    int    `yaml:"size"`
-	Format  string `yaml:"format"`
-	Quality int    `yaml:"quality"`
+	Enabled bool `yaml:"enabled"`
+	Size    int  `yaml:"size"`
+	Quality int  `yaml:"quality"`
 }
 
 // PluginConfig holds configuration for a plugin downloader

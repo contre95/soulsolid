@@ -52,9 +52,6 @@ func Load(path string) (*Manager, error) {
 	}
 
 	// Set defaults for missing values
-	if cfg.Server.ViewsPath == "" {
-		cfg.Server.ViewsPath = "./views"
-	}
 
 	// Override with environment variables if set
 	if token := os.Getenv("TELEGRAM_TOKEN"); token != "" {
@@ -62,11 +59,6 @@ func Load(path string) (*Manager, error) {
 	}
 
 	setProviderAPIKey(&cfg, "discogs", "DISCOGS_API_KEY")
-
-	// Override views path with environment variable if set
-	if viewsPath := os.Getenv("SS_VIEWS"); viewsPath != "" {
-		cfg.Server.ViewsPath = viewsPath
-	}
 
 	return NewManager(&cfg), nil
 }
@@ -92,7 +84,6 @@ func createDefaultConfig() *Config {
 				Embedded: EmbeddedArtwork{
 					Enabled: true,
 					Size:    1000,
-					Format:  "jpeg",
 					Quality: 85,
 				},
 			},
@@ -101,7 +92,6 @@ func createDefaultConfig() *Config {
 		Server: Server{
 			PrintRoutes: false,
 			Port:        3535,
-			ViewsPath:   "./views",
 		},
 		Database: Database{
 			Path: "./library.db",
