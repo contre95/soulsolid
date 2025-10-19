@@ -79,6 +79,7 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 	tag.SetDefaultEncoding(id3v2.EncodingUTF8)
 
 	// Set minimal tags only (like working example app)
+	track.Pretty()
 
 	// Title
 	if title := tag.Title(); title == "" && track.Title != "" {
@@ -93,6 +94,26 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 	// Album
 	if album := tag.Album(); album == "" && track.Album != nil && track.Album.Title != "" {
 		tag.SetAlbum(track.Album.Title)
+	}
+
+	// Genre
+	if genre := tag.Genre(); genre == "" && track.Metadata.Genre != "" {
+		tag.SetGenre(track.Metadata.Genre)
+	}
+
+	// Year
+	if year := tag.Year(); year == "" && track.Metadata.Year > 0 {
+		tag.SetYear(strconv.Itoa(track.Metadata.Year))
+	}
+
+	// ISRC
+	if track.ISRC != "" {
+		tag.AddTextFrame("TSRC", id3v2.EncodingUTF8, track.ISRC)
+	}
+
+	// Track number
+	if track.Metadata.TrackNumber > 0 {
+		tag.AddTextFrame("TRCK", id3v2.EncodingUTF8, strconv.Itoa(track.Metadata.TrackNumber))
 	}
 
 	// Cover artwork - embedded image only (URL references cause compatibility issues)
