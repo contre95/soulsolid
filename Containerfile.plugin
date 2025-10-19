@@ -1,4 +1,4 @@
-FROM contre95/ss:latest
+FROM contre95/soulsolid:latest
 RUN git clone https://github.com/contre95/soulsolid-dummy-plugin /tmp/plugin
 WORKDIR /tmp/plugin
 RUN go mod edit -replace=github.com/contre95/soulsolid=/app
