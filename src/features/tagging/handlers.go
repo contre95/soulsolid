@@ -3,6 +3,7 @@ package tagging
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
@@ -651,8 +652,12 @@ func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 	}
 
 	// Handle dropdown fields - strict selection only
-	if artistIDs := c.FormValue("artist_ids"); artistIDs != "" {
-		formData["artist_ids"] = artistIDs
+	if artistIDs := c.Context().PostArgs().PeekMulti("artist_ids"); len(artistIDs) > 0 {
+		artistIDsStr := make([]string, len(artistIDs))
+		for i, b := range artistIDs {
+			artistIDsStr[i] = string(b)
+		}
+		formData["artist_ids"] = strings.Join(artistIDsStr, ",")
 	}
 	if albumID := c.FormValue("album_id"); albumID != "" {
 		formData["album_id"] = albumID

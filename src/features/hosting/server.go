@@ -3,6 +3,7 @@ package hosting
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/contre95/soulsolid/src/features/config"
@@ -85,11 +86,29 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 		DisableStartupMessage: true,
 		EnablePrintRoutes:     cfg.Get().Server.PrintRoutes,
 		BodyLimit:             1000 * 1024 * 1024, // 100MB limit for file uploads
+		PassLocalsToViews:     true,
 	})
 
 	// Add middleware
 	app.Use(HTMXMiddleware())
 	app.Use(LogAllRequestsMiddleware())
+
+	app.Use(func(c *fiber.Ctx) error {
+		version := os.Getenv("IMAGE_TAG")
+		if version == "" {
+			version = "dev"
+		}
+		cfgData := cfg.Get()
+		downloaders := make(map[string]any)
+		for _, plugin := range cfgData.Downloaders.Plugins {
+			downloaders[plugin.Name] = struct{ Name, Icon string }{Name: plugin.Name, Icon: plugin.Icon}
+		}
+		c.Locals("Version", version)
+		c.Locals("Downloaders", downloaders)
+		c.Locals("SyncEnabled", cfgData.Sync.Enabled)
+		c.Locals("Telegram", cfgData.Telegram)
+		return c.Next()
+	})
 
 	app.Static("/", "./public")
 	app.Static("/node_modules", "./node_modules")
