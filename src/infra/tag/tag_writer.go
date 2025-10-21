@@ -50,6 +50,18 @@ func NewTagWriter(artworkConfig config.EmbeddedArtwork) downloading.TagWriter {
 	return &TagWriter{artworkConfig: artworkConfig}
 }
 
+// removeExistingFields removes all existing fields with the given key from the Vorbis comment (case-insensitive)
+func removeExistingFields(vorbisComment *flacvorbis.MetaDataBlockVorbisComment, field string) {
+	prefix := strings.ToUpper(field) + "="
+	var filtered []string
+	for _, comment := range vorbisComment.Comments {
+		if !strings.HasPrefix(strings.ToUpper(comment), prefix) {
+			filtered = append(filtered, comment)
+		}
+	}
+	vorbisComment.Comments = filtered
+}
+
 // WriteFileTags writes metadata to the file.
 func (t *TagWriter) WriteFileTags(ctx context.Context, filePath string, track *music.Track) error {
 	ext := strings.ToLower(filepath.Ext(filePath))
@@ -81,28 +93,26 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 	// Set minimal tags only (like working example app)
 	track.Pretty()
 
-	// Title
-	if title := tag.Title(); title == "" && track.Title != "" {
-		tag.SetTitle(track.Title)
+	// Title - always set, replacing existing
+	tag.SetTitle(track.Title)
+
+	// Artist - always set, replacing existing
+	if len(track.Artists) > 0 {
+		artists := make([]string, len(track.Artists))
+		for i, ar := range track.Artists {
+			artists[i] = ar.Artist.Name
+		}
+		tag.SetArtist(strings.Join(artists, " / "))
 	}
 
-	// Artist
-	if artist := tag.Artist(); artist == "" && len(track.Artists) > 0 {
-		tag.SetArtist(track.Artists[0].Artist.Name)
-	}
-
-	// Album
-	if album := tag.Album(); album == "" && track.Album != nil && track.Album.Title != "" {
+	if track.Album != nil {
 		tag.SetAlbum(track.Album.Title)
 	}
 
-	// Genre
-	if genre := tag.Genre(); genre == "" && track.Metadata.Genre != "" {
-		tag.SetGenre(track.Metadata.Genre)
-	}
+	tag.SetGenre(track.Metadata.Genre)
 
-	// Year
-	if year := tag.Year(); year == "" && track.Metadata.Year > 0 {
+	// Year - always set, replacing existing
+	if track.Metadata.Year > 0 {
 		tag.SetYear(strconv.Itoa(track.Metadata.Year))
 	}
 
@@ -114,6 +124,44 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 	// Track number
 	if track.Metadata.TrackNumber > 0 {
 		tag.AddTextFrame("TRCK", id3v2.EncodingUTF8, strconv.Itoa(track.Metadata.TrackNumber))
+	}
+
+	// Disc number
+	if track.Metadata.DiscNumber > 0 {
+		tag.AddTextFrame("TPOS", id3v2.EncodingUTF8, strconv.Itoa(track.Metadata.DiscNumber))
+	}
+
+	// Composer
+	if track.Metadata.Composer != "" {
+		tag.AddTextFrame("TCOM", id3v2.EncodingUTF8, track.Metadata.Composer)
+	}
+
+	// BPM
+	if track.Metadata.BPM > 0 {
+		tag.AddTextFrame("TBPM", id3v2.EncodingUTF8, fmt.Sprintf("%.0f", track.Metadata.BPM))
+	}
+
+	// Replay Gain
+	if track.Metadata.Gain != 0 {
+		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			Description: "REPLAYGAIN_TRACK_GAIN",
+			Value:       fmt.Sprintf("%.2f dB", track.Metadata.Gain),
+		})
+	}
+
+	// Title version (subtitle)
+	if track.TitleVersion != "" {
+		tag.AddTextFrame("TIT3", id3v2.EncodingUTF8, track.TitleVersion)
+	}
+
+	// Lyrics (using TXXX frame as fallback)
+	if track.Metadata.Lyrics != "" {
+		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			Description: "LYRICS",
+			Value:       track.Metadata.Lyrics,
+		})
 	}
 
 	// Cover artwork - embedded image only (URL references cause compatibility issues)
@@ -195,61 +243,60 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 		vorbisComment = flacvorbis.New()
 	}
 
-	// Set basic metadata
+	// Set basic metadata - remove existing single-value fields first
+	removeExistingFields(vorbisComment, flacvorbis.FIELD_TITLE)
 	vorbisComment.Add(flacvorbis.FIELD_TITLE, track.Title)
 
-	if len(track.Artists) > 0 {
-		vorbisComment.Add(flacvorbis.FIELD_ARTIST, track.Artists[0].Artist.Name)
-
-		// Add additional artists if present
-		if len(track.Artists) > 1 {
-			for i := 1; i < len(track.Artists); i++ {
-				vorbisComment.Add("REMIXER", track.Artists[i].Artist.Name)
-			}
-		}
+	// Artists - remove existing and add new ARTIST fields
+	removeExistingFields(vorbisComment, flacvorbis.FIELD_ARTIST)
+	for _, ar := range track.Artists {
+		vorbisComment.Add(flacvorbis.FIELD_ARTIST, ar.Artist.Name)
 	}
 
 	if track.Album != nil {
+		removeExistingFields(vorbisComment, flacvorbis.FIELD_ALBUM)
 		vorbisComment.Add(flacvorbis.FIELD_ALBUM, track.Album.Title)
-		if len(track.Album.Artists) > 0 {
-			vorbisComment.Add("ALBUMARTIST", track.Album.Artists[0].Artist.Name)
-
-			// Add additional album artists if present
-			if len(track.Album.Artists) > 1 {
-				for i := 1; i < len(track.Album.Artists); i++ {
-					vorbisComment.Add("ALBUMARTIST", track.Album.Artists[i].Artist.Name)
-				}
-			}
+		// Album artists - remove existing and add new
+		removeExistingFields(vorbisComment, "ALBUMARTIST")
+		for _, ar := range track.Album.Artists {
+			vorbisComment.Add("ALBUMARTIST", ar.Artist.Name)
 		}
 	}
 
 	if track.Metadata.Year > 0 {
+		removeExistingFields(vorbisComment, flacvorbis.FIELD_DATE)
 		vorbisComment.Add(flacvorbis.FIELD_DATE, strconv.Itoa(track.Metadata.Year))
 	}
 
 	if track.Metadata.Genre != "" {
+		removeExistingFields(vorbisComment, flacvorbis.FIELD_GENRE)
 		vorbisComment.Add(flacvorbis.FIELD_GENRE, track.Metadata.Genre)
 	}
 
 	// Additional metadata
 	if track.ISRC != "" {
+		removeExistingFields(vorbisComment, flacvorbis.FIELD_ISRC)
 		vorbisComment.Add(flacvorbis.FIELD_ISRC, track.ISRC)
 	}
 
 	if track.Metadata.TrackNumber > 0 {
+		removeExistingFields(vorbisComment, flacvorbis.FIELD_TRACKNUMBER)
 		vorbisComment.Add(flacvorbis.FIELD_TRACKNUMBER, strconv.Itoa(track.Metadata.TrackNumber))
 	}
 
 	if track.Metadata.DiscNumber > 0 {
+		removeExistingFields(vorbisComment, "DISCNUMBER")
 		vorbisComment.Add("DISCNUMBER", strconv.Itoa(track.Metadata.DiscNumber))
 	}
 
 	if track.Metadata.Composer != "" {
+		removeExistingFields(vorbisComment, "COMPOSER")
 		vorbisComment.Add("COMPOSER", track.Metadata.Composer)
 	}
 
 	if track.Metadata.Lyrics != "" {
 		fmt.Printf("DEBUG: Writing lyrics to FLAC file %s: %s\n", filePath, track.Metadata.Lyrics)
+		removeExistingFields(vorbisComment, "LYRICS")
 		vorbisComment.Add("LYRICS", track.Metadata.Lyrics)
 	} else {
 		fmt.Printf("DEBUG: No lyrics to write to FLAC file %s\n", filePath)
@@ -257,19 +304,24 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 
 	// Set additional metadata
 	if track.TitleVersion != "" {
+		removeExistingFields(vorbisComment, "VERSION")
 		vorbisComment.Add("VERSION", track.TitleVersion)
 	}
 	if track.Metadata.BPM > 0 {
+		removeExistingFields(vorbisComment, "BPM")
 		vorbisComment.Add("BPM", fmt.Sprintf("%.0f", track.Metadata.BPM))
 	}
 	if track.Metadata.Gain != 0 {
+		removeExistingFields(vorbisComment, "REPLAYGAIN_TRACK_GAIN")
 		vorbisComment.Add("REPLAYGAIN_TRACK_GAIN", fmt.Sprintf("%.2f dB", track.Metadata.Gain))
 	}
 	if track.Album != nil {
 		if track.Album.Label != "" {
+			removeExistingFields(vorbisComment, "LABEL")
 			vorbisComment.Add("LABEL", track.Album.Label)
 		}
 		if track.Album.Barcode != "" {
+			removeExistingFields(vorbisComment, "BARCODE")
 			vorbisComment.Add("BARCODE", track.Album.Barcode)
 		}
 	}

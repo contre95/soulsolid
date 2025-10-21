@@ -2,7 +2,6 @@ package ui
 
 import (
 	"log/slog"
-	"os"
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/gofiber/fiber/v2"
@@ -20,81 +19,69 @@ func NewHandler(configManager *config.Manager) *Handler {
 	}
 }
 
-func (h *Handler) getBaseRenderData() fiber.Map {
-	version := os.Getenv("IMAGE_TAG")
-	if version == "" {
-		version = "dev"
-	}
-	cfg := h.configManager.Get()
-	downloaders := make(map[string]interface{})
-	for _, plugin := range cfg.Downloaders.Plugins {
-		downloaders[plugin.Name] = struct{ Name, Icon string }{Name: plugin.Name, Icon: plugin.Icon}
-	}
-	return fiber.Map{
-		"Version":     version,
-		"Downloaders": downloaders,
-		"SyncEnabled": cfg.Sync.Enabled,
-		"Telegram":    cfg.Telegram,
-	}
-}
-
-func (h *Handler) renderMain(c *fiber.Ctx, page string, data fiber.Map) error {
-	baseData := h.getBaseRenderData()
-	for k, v := range data {
-		baseData[k] = v
-	}
-
-	if c.Get("HX-Request") != "true" {
-		return c.Render("main", baseData)
-	}
-
-	return c.Render("sections/"+page, data)
-}
-
 // RenderAdmin renders the admin page.
 func (h *Handler) RenderAdmin(c *fiber.Ctx) error {
 	slog.Debug("RenderAdmin handler called")
-	return h.renderMain(c, "dashboard", fiber.Map{
-		"DashboardTrigger": ",revealed",
-	})
+	if c.Get("HX-Request") != "true" {
+		return c.Render("main", fiber.Map{
+			"Section": "dashboard",
+		})
+	}
+	return c.Render("sections/dashboard", fiber.Map{})
 }
 
 // RenderDashboard renders the main dashboard page.
 func (h *Handler) RenderDashboard(c *fiber.Ctx) error {
 	slog.Debug("RenderDashboard handler called")
-	return h.renderMain(c, "dashboard", fiber.Map{
-		"Title":            "Dashboard",
-		"DashboardTrigger": ",revealed",
-		"SyncEnabled":      h.configManager.Get().Sync.Enabled,
-	})
+	data := fiber.Map{
+		"Title":       "Dashboard",
+		"SyncEnabled": h.configManager.Get().Sync.Enabled,
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "dashboard"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/dashboard", data)
 }
 
 // RenderLibrarySection renders the library page.
 func (h *Handler) RenderLibrarySection(c *fiber.Ctx) error {
 	slog.Debug("RenderLibrary handler called")
-	return h.renderMain(c, "library", fiber.Map{
+	data := fiber.Map{
 		"Title":               "Library",
 		"DefaultDownloadPath": h.configManager.Get().DownloadPath,
-		"LibraryTrigger":      ",revealed",
-	})
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "library"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/library", data)
 }
 
 // RenderImportSection renders the organize page.
 func (h *Handler) RenderImportSection(c *fiber.Ctx) error {
 	slog.Debug("RenderImport handler called")
-	return h.renderMain(c, "import", fiber.Map{
-		"Title":         "Import",
-		"ImportTrigger": ",revealed",
-	})
+	data := fiber.Map{
+		"Title": "Import",
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "import"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/import", data)
 }
 
 // GetSettingsSection renders the settings form with current configuration values.
 func (h *Handler) GetSettingsSection(c *fiber.Ctx) error {
 	slog.Debug("GetSettings handler called")
-	return h.renderMain(c, "settings", fiber.Map{
-		"Title":           "Settings",
-		"SettingsTrigger": ",revealed",
-	})
+	data := fiber.Map{
+		"Title": "Settings",
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "settings"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/settings", data)
 }
 
 // RenderSyncStatus renders the sync status page.
@@ -108,11 +95,15 @@ func (h *Handler) RenderSyncStatus(c *fiber.Ctx) error {
 // RenderSyncPage renders the sync page.
 func (h *Handler) RenderSyncPage(c *fiber.Ctx) error {
 	slog.Debug("RenderSyncPage handler called")
-	return h.renderMain(c, "sync", fiber.Map{
+	data := fiber.Map{
 		"Title":       "Sync",
-		"SyncTrigger": ",revealed",
 		"SyncEnabled": h.configManager.Get().Sync.Enabled,
-	})
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "sync"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/sync", data)
 }
 
 // GetQuickActionsCard renders the quick actions card for the dashboard.
@@ -124,10 +115,14 @@ func (h *Handler) GetQuickActionsCard(c *fiber.Ctx) error {
 // RenderJobsSection renders the jobs page.
 func (h *Handler) RenderJobsSection(c *fiber.Ctx) error {
 	slog.Debug("RenderJobsSection handler called")
-	return h.renderMain(c, "jobs", fiber.Map{
-		"Title":       "Jobs",
-		"JobsTrigger": ",revealed",
-	})
+	data := fiber.Map{
+		"Title": "Jobs",
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "jobs"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/jobs", data)
 }
 
 // RenderDownloadSection renders the download page.
@@ -140,9 +135,13 @@ func (h *Handler) RenderDownloadSection(c *fiber.Ctx) error {
 			downloader = cfg.Downloaders.Plugins[0].Name
 		}
 	}
-	return h.renderMain(c, "download", fiber.Map{
+	data := fiber.Map{
 		"Title":             "Download",
-		"DownloadTrigger":   ",revealed",
 		"CurrentDownloader": downloader,
-	})
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "download"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/download", data)
 }
