@@ -5,6 +5,8 @@ WORKDIR /app
 # Copy your source code here - adjust the path as needed
 ADD . .
 RUN npm install && npm run build:assets
+RUN npm run build:css
+RUN npm run copy:deps
 RUN go mod tidy
 # Build without static linking for plugin compatibility
 RUN go build -o /app/soulsolid src/main.go

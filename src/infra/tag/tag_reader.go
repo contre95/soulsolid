@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/contre95/soulsolid/src/features/importing"
@@ -125,6 +126,11 @@ func (r *TagReader) readAdditionalMetadata(tags tag.Metadata, track *music.Track
 	// Try to read ISRC from various tag fields
 	if isrc := r.findISRC(tags); isrc != "" {
 		track.ISRC = isrc
+	}
+
+	// Try to read BPM from various tag fields
+	if bpm := r.findBPM(tags); bpm > 0 {
+		track.Metadata.BPM = bpm
 	}
 
 	// Try to read lyrics from tags
@@ -252,4 +258,38 @@ func (r *TagReader) findISRC(tags tag.Metadata) string {
 
 	fmt.Printf("DEBUG: No ISRC found in standard fields\n")
 	return ""
+}
+
+// findBPM attempts to find BPM in various tag fields
+func (r *TagReader) findBPM(tags tag.Metadata) float64 {
+	rawTags := tags.Raw()
+	// Debug: print all available tag fields that might contain BPM
+	for key, value := range rawTags {
+		if strings.Contains(strings.ToUpper(key), "BPM") || strings.Contains(strings.ToUpper(key), "TBPM") {
+			if strValue, ok := value.(string); ok && strValue != "" {
+				fmt.Printf("DEBUG: Found potential BPM field %s: %s\n", key, strValue)
+			}
+		}
+	}
+
+	// Try common BPM field names (both uppercase and lowercase)
+	bpmFields := []string{"BPM", "bpm", "TBPM", "tbpm"}
+
+	for _, field := range bpmFields {
+		if value, ok := rawTags[field]; ok {
+			if strValue, ok := value.(string); ok && strValue != "" {
+				fmt.Printf("DEBUG: Processing BPM field %s: %s\n", field, strValue)
+				// Parse as float64
+				if bpm, err := strconv.ParseFloat(strings.TrimSpace(strValue), 64); err == nil && bpm > 0 {
+					fmt.Printf("DEBUG: Returning BPM: %.2f\n", bpm)
+					return bpm
+				} else {
+					fmt.Printf("DEBUG: Failed to parse BPM '%s': %v\n", strValue, err)
+				}
+			}
+		}
+	}
+
+	fmt.Printf("DEBUG: No BPM found in standard fields\n")
+	return 0
 }

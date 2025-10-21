@@ -23,7 +23,6 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	ui.Get("/sync", handler.RenderSyncPage)
 
 	// Dashboard card endpoints
-
 	ui.Get("/quick-actions-card", handler.GetQuickActionsCard)
 
 }
