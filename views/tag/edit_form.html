@@ -289,10 +289,10 @@
                 {{end}}
 
                  {{if .Track.SourceData.Source}}
-                 <div class="{{if eq .Track.SourceData.Source "LocalFile"}}text-white{{else if eq .Track.SourceData.Source "musicbrainz"}}text-orange-400 dark:text-orange-300{{else if eq .Track.SourceData.Source "deezer"}}text-purple-400 dark:text-purple-300{{else if eq .Track.SourceData.Source "discogs"}}text-violet-400 dark:text-violet-300{{else}}text-orange-400 dark:text-orange-300{{end}}">Source: {{.Track.SourceData.Source}}</div>
+                  <div class="{{if eq .Track.SourceData.Source "LocalFile"}}text-gray-300{{else if eq .Track.SourceData.Source "musicbrainz"}}text-orange-400 dark:text-orange-300{{else if eq .Track.SourceData.Source "deezer"}}text-purple-400 dark:text-purple-300{{else if eq .Track.SourceData.Source "discogs"}}text-violet-400 dark:text-violet-300{{else}}text-orange-400 dark:text-orange-300{{end}}">Source: {{.Track.SourceData.Source}}</div>
                  {{end}}
                   {{if .Track.SourceData.URL}}
-                  <div class="{{if eq .Track.SourceData.Source "LocalFile"}}text-white{{else if eq .Track.SourceData.Source "musicbrainz"}}text-orange-400 dark:text-orange-300{{else if eq .Track.SourceData.Source "deezer"}}text-purple-400 dark:text-purple-300{{else if eq .Track.SourceData.Source "discogs"}}text-violet-400 dark:text-violet-300{{else}}text-orange-400 dark:text-orange-300{{end}}">Source URL: <a href="{{.Track.SourceData.URL}}" target="_blank" rel="noopener noreferrer" class="hover:underline">{{.Track.SourceData.URL}}</a></div>
+                   <div class="{{if eq .Track.SourceData.Source "LocalFile"}}text-gray-300{{else if eq .Track.SourceData.Source "musicbrainz"}}text-orange-400 dark:text-orange-300{{else if eq .Track.SourceData.Source "deezer"}}text-purple-400 dark:text-purple-300{{else if eq .Track.SourceData.Source "discogs"}}text-violet-400 dark:text-violet-300{{else}}text-orange-400 dark:text-orange-300{{end}}">Source URL: <a href="{{.Track.SourceData.URL}}" target="_blank" rel="noopener noreferrer" class="hover:underline">{{.Track.SourceData.URL}}</a></div>
                   {{end}}
                  {{if .Track.AddedDate}}
                  <div>Added Date: {{.Track.AddedDate.Format "2006-01-02 15:04:05"}}</div>
