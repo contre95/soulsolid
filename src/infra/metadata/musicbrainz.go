@@ -42,6 +42,10 @@ func (p *MusicBrainzProvider) SearchTracks(ctx context.Context, params tagging.S
 					Composer:    "Freddie Mercury",
 				},
 				ISRC: "GBCEE7500710",
+				SourceData: music.SourceData{
+					Source: "musicbrainz",
+					URL:    "https://musicbrainz.org/recording/9a4b5b5b-7b5b-4b5b-8b5b-9a4b5b5b7b5b",
+				},
 			},
 			{
 				Title: "Stairway to Heaven",
@@ -61,6 +65,10 @@ func (p *MusicBrainzProvider) SearchTracks(ctx context.Context, params tagging.S
 					Composer:    "Jimmy Page, Robert Plant",
 				},
 				ISRC: "USAT21300959",
+				SourceData: music.SourceData{
+					Source: "musicbrainz",
+					URL:    "https://musicbrainz.org/recording/8c4a4a4a-6a6a-4a4a-9a4a-8c4a4a4a6a6a",
+				},
 			},
 			{
 				Title: "Hotel California",
@@ -80,6 +88,10 @@ func (p *MusicBrainzProvider) SearchTracks(ctx context.Context, params tagging.S
 					Composer:    "Don Felder, Don Henley, Glenn Frey",
 				},
 				ISRC: "USWB17600001",
+				SourceData: music.SourceData{
+					Source: "musicbrainz",
+					URL:    "https://musicbrainz.org/recording/7b3b3b3b-5b5b-3b3b-8b3b-7b3b3b3b5b5b",
+				},
 			},
 		}
 		return tracks, nil
@@ -105,6 +117,10 @@ func (p *MusicBrainzProvider) SearchTracks(ctx context.Context, params tagging.S
 				Composer:    "Freddie Mercury",
 			},
 			ISRC: "GBCEE7500710",
+			SourceData: music.SourceData{
+				Source: "musicbrainz",
+				URL:    "https://musicbrainz.org/recording/9a4b5b5b-7b5b-4b5b-8b5b-9a4b5b5b7b5b",
+			},
 		},
 	}
 

@@ -8,6 +8,12 @@ import (
 	"github.com/google/uuid"
 )
 
+// SourceData contains information about where the track metadata originated from
+type SourceData struct {
+	Source string // "LocalFile" or metadata provider name (e.g., "MusicBrainz", "Deezer")
+	URL    string // File path for LocalFile, or URL from provider
+}
+
 // Track represents a single audio file.
 type Track struct {
 	ID                     string
@@ -26,7 +32,8 @@ type Track struct {
 	Channels               int
 	ExplicitContent        bool
 	Attributes             map[string]string
-	PreviewURL             string // URL for 30-second preview
+	PreviewURL             string     // URL for 30-second preview
+	SourceData             SourceData // Information about metadata source
 	AddedDate              time.Time
 	ModifiedDate           time.Time
 }
@@ -179,6 +186,12 @@ func (t *Track) Pretty() {
 	}
 	if t.PreviewURL != "" {
 		fmt.Printf("%-30s : %s\n", "Preview URL", t.PreviewURL)
+	}
+	if t.SourceData.Source != "" {
+		fmt.Printf("%-30s : %s\n", "Source", t.SourceData.Source)
+	}
+	if t.SourceData.URL != "" {
+		fmt.Printf("%-30s : %s\n", "Source URL", t.SourceData.URL)
 	}
 	fmt.Printf("%-30s : %s\n", "Added Date", t.AddedDate.Format("2006:01:02 15:04:05-07:00"))
 	fmt.Printf("%-30s : %s\n", "Modified Date", t.ModifiedDate.Format("2006:01:02 15:04:05-07:00"))
