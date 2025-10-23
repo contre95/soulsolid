@@ -1,10 +1,14 @@
 {{define "tag/edit_form"}}
 
       <form id="tag-edit-form"
-           hx-post="/tag/{{.Track.ID}}"
-           hx-target="#toast-container"
-           hx-swap="beforeend"
-           class="space-y-4">
+            hx-post="/tag/{{.Track.ID}}"
+            hx-target="#toast-container"
+            hx-swap="beforeend"
+            class="space-y-4">
+
+        <!-- Hidden fields for SourceData -->
+        <input type="hidden" name="source" value="{{.Track.SourceData.Source}}">
+        <input type="hidden" name="source_url" value="{{.Track.SourceData.URL}}">
 
         <!-- Title and Title Version -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -283,15 +287,19 @@
                 {{if .Track.ExplicitContent}}
                 <div>Explicit Content: {{.Track.ExplicitContent}}</div>
                 {{end}}
-                {{if .Track.PreviewURL}}
-                <div>Preview URL: {{.Track.PreviewURL}}</div>
-                {{end}}
-                {{if .Track.AddedDate}}
-                <div>Added Date: {{.Track.AddedDate.Format "2006-01-02 15:04:05"}}</div>
-                {{end}}
-                {{if .Track.ModifiedDate}}
-                <div>Modified Date: {{.Track.ModifiedDate.Format "2006-01-02 15:04:05"}}</div>
-                {{end}}
+
+                 {{if .Track.SourceData.Source}}
+                 <div class="{{if eq .Track.SourceData.Source "LocalFile"}}text-white{{else if eq .Track.SourceData.Source "musicbrainz"}}text-orange-400 dark:text-orange-300{{else if eq .Track.SourceData.Source "deezer"}}text-purple-400 dark:text-purple-300{{else if eq .Track.SourceData.Source "discogs"}}text-violet-400 dark:text-violet-300{{else}}text-orange-400 dark:text-orange-300{{end}}">Source: {{.Track.SourceData.Source}}</div>
+                 {{end}}
+                  {{if .Track.SourceData.URL}}
+                  <div class="{{if eq .Track.SourceData.Source "LocalFile"}}text-white{{else if eq .Track.SourceData.Source "musicbrainz"}}text-orange-400 dark:text-orange-300{{else if eq .Track.SourceData.Source "deezer"}}text-purple-400 dark:text-purple-300{{else if eq .Track.SourceData.Source "discogs"}}text-violet-400 dark:text-violet-300{{else}}text-orange-400 dark:text-orange-300{{end}}">Source URL: <a href="{{.Track.SourceData.URL}}" target="_blank" rel="noopener noreferrer" class="hover:underline">{{.Track.SourceData.URL}}</a></div>
+                  {{end}}
+                 {{if .Track.AddedDate}}
+                 <div>Added Date: {{.Track.AddedDate.Format "2006-01-02 15:04:05"}}</div>
+                 {{end}}
+                 {{if .Track.ModifiedDate}}
+                 <div>Modified Date: {{.Track.ModifiedDate.Format "2006-01-02 15:04:05"}}</div>
+                 {{end}}
 
                 <!-- Display Attributes map if it exists -->
                 {{if .Track.Attributes}}

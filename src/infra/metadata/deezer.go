@@ -42,6 +42,10 @@ func (p *DeezerProvider) SearchTracks(ctx context.Context, params tagging.Search
 					Composer:    "Michael Jackson",
 				},
 				ISRC: "USSM18200341",
+				SourceData: music.SourceData{
+					Source: "deezer",
+					URL:    "https://www.deezer.com/track/123456789",
+				},
 			},
 			{
 				Title: "Beat It",
@@ -61,6 +65,10 @@ func (p *DeezerProvider) SearchTracks(ctx context.Context, params tagging.Search
 					Composer:    "Michael Jackson",
 				},
 				ISRC: "USSM18200340",
+				SourceData: music.SourceData{
+					Source: "deezer",
+					URL:    "https://www.deezer.com/track/987654321",
+				},
 			},
 			{
 				Title: "Uptown Funk",
@@ -81,6 +89,10 @@ func (p *DeezerProvider) SearchTracks(ctx context.Context, params tagging.Search
 					Composer:    "Mark Ronson, Bruno Mars, Jeff Bhasker",
 				},
 				ISRC: "GBARL1400786",
+				SourceData: music.SourceData{
+					Source: "deezer",
+					URL:    "https://www.deezer.com/track/555666777",
+				},
 			},
 		}
 		return tracks, nil
@@ -106,6 +118,10 @@ func (p *DeezerProvider) SearchTracks(ctx context.Context, params tagging.Search
 				Composer:    "Michael Jackson",
 			},
 			ISRC: "USSM18200341",
+			SourceData: music.SourceData{
+				Source: "deezer",
+				URL:    "https://www.deezer.com/track/123456789",
+			},
 		},
 	}
 
