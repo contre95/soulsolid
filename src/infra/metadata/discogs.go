@@ -246,9 +246,9 @@ func (p *DiscogsProvider) convertDiscogsResultToTrack(result discogsResult) *mus
 		discogsURL = "https://www.discogs.com" + discogsURL
 	}
 
-	track.SourceData = music.SourceData{
-		Source: "discogs",
-		URL:    discogsURL,
+	track.MetadataSource = music.MetadataSource{
+		Source:            "discogs",
+		MetadataSourceURL: discogsURL,
 	}
 
 	return track
@@ -307,9 +307,9 @@ func (p *DiscogsProvider) convertDiscogsTrackToTrack(discogsTrack discogsTrack, 
 		discogsURL = "https://www.discogs.com" + discogsURL
 	}
 
-	track.SourceData = music.SourceData{
-		Source: "discogs",
-		URL:    discogsURL,
+	track.MetadataSource = music.MetadataSource{
+		Source:            "discogs",
+		MetadataSourceURL: discogsURL,
 	}
 
 	return track

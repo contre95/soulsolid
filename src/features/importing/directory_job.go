@@ -238,9 +238,9 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 			slog.Info("Read metadata from file", "path", path, "track", trackToImport)
 
 			// Set source data for local file
-			trackToImport.SourceData = music.SourceData{
-				Source: "LocalFile",
-				URL:    path,
+			trackToImport.MetadataSource = music.MetadataSource{
+				Source:            "LocalFile",
+				MetadataSourceURL: path,
 			}
 
 			fingerprint, err := e.service.fingerprintReader.GenerateFingerprint(ctx, path)

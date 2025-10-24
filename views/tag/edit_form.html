@@ -6,9 +6,9 @@
             hx-swap="beforeend"
             class="space-y-4">
 
-        <!-- Hidden fields for SourceData -->
-        <input type="hidden" name="source" value="{{.Track.SourceData.Source}}">
-        <input type="hidden" name="source_url" value="{{.Track.SourceData.URL}}">
+        <!-- Hidden fields for MetadataSource -->
+        <input type="hidden" name="source" value="{{.Track.MetadataSource.Source}}">
+        <input type="hidden" name="source_url" value="{{.Track.MetadataSource.MetadataSourceURL}}">
 
         <!-- Title and Title Version -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -288,12 +288,12 @@
                 <div>Explicit Content: {{.Track.ExplicitContent}}</div>
                 {{end}}
 
-                 {{if .Track.SourceData.Source}}
-                  <div class="{{if eq .Track.SourceData.Source "LocalFile"}}text-gray-300{{else if eq .Track.SourceData.Source "musicbrainz"}}text-orange-400 dark:text-orange-300{{else if eq .Track.SourceData.Source "deezer"}}text-purple-400 dark:text-purple-300{{else if eq .Track.SourceData.Source "discogs"}}text-violet-400 dark:text-violet-300{{else}}text-orange-400 dark:text-orange-300{{end}}">Source: {{.Track.SourceData.Source}}</div>
-                 {{end}}
-                   {{if .Track.SourceData.URL}}
-                    <div class="{{if eq .Track.SourceData.Source "LocalFile"}}text-gray-300{{else if eq .Track.SourceData.Source "musicbrainz"}}text-orange-400 dark:text-orange-300{{else if eq .Track.SourceData.Source "deezer"}}text-purple-400 dark:text-purple-300{{else if eq .Track.SourceData.Source "discogs"}}text-violet-400 dark:text-violet-300{{else}}text-orange-400 dark:text-orange-300{{end}}">Source URL: {{if eq .Track.SourceData.Source "LocalFile"}}{{.Track.SourceData.URL}}{{else}}<a href="{{.Track.SourceData.URL}}" target="_blank" rel="noopener noreferrer" class="hover:underline">{{.Track.SourceData.URL}}</a>{{end}}</div>
-                   {{end}}
+                  {{if .Track.MetadataSource.Source}}
+                   <div class="{{if eq .Track.MetadataSource.Source "LocalFile"}}text-gray-300{{else if eq .Track.MetadataSource.Source "musicbrainz"}}text-orange-400 dark:text-orange-300{{else if eq .Track.MetadataSource.Source "deezer"}}text-purple-400 dark:text-purple-300{{else if eq .Track.MetadataSource.Source "discogs"}}text-violet-400 dark:text-violet-300{{else}}text-orange-400 dark:text-orange-300{{end}}">Source: {{.Track.MetadataSource.Source}}</div>
+                  {{end}}
+                    {{if .Track.MetadataSource.MetadataSourceURL}}
+                     <div class="{{if eq .Track.MetadataSource.Source "LocalFile"}}text-gray-300{{else if eq .Track.MetadataSource.Source "musicbrainz"}}text-orange-400 dark:text-orange-300{{else if eq .Track.MetadataSource.Source "deezer"}}text-purple-400 dark:text-purple-300{{else if eq .Track.MetadataSource.Source "discogs"}}text-violet-400 dark:text-violet-300{{else}}text-orange-400 dark:text-orange-300{{end}}">Source URL: {{if eq .Track.MetadataSource.Source "LocalFile"}}{{.Track.MetadataSource.MetadataSourceURL}}{{else}}<a href="{{.Track.MetadataSource.MetadataSourceURL}}" target="_blank" rel="noopener noreferrer" class="hover:underline">{{.Track.MetadataSource.MetadataSourceURL}}</a>{{end}}</div>
+                    {{end}}
                  {{if .Track.AddedDate}}
                  <div>Added Date: {{.Track.AddedDate.Format "2006-01-02 15:04:05"}}</div>
                  {{end}}
