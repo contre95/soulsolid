@@ -188,7 +188,7 @@ func (d *SqliteLibrary) AddTrack(ctx context.Context, track *music.Track) error 
 		track.ISRC, track.ChromaprintFingerprint, track.Bitrate, track.Format, track.SampleRate, track.BitDepth, track.Channels,
 		track.ExplicitContent, track.PreviewURL, track.Metadata.Composer, track.Metadata.Genre, track.Metadata.Year,
 		track.Metadata.OriginalYear, track.Metadata.Lyrics, track.Metadata.ExplicitLyrics, track.Metadata.BPM, track.Metadata.Gain,
-		track.SourceData.Source, track.SourceData.URL, track.AddedDate.Format(time.RFC3339), track.ModifiedDate.Format(time.RFC3339))
+		track.MetadataSource.Source, track.MetadataSource.MetadataSourceURL, track.AddedDate.Format(time.RFC3339), track.ModifiedDate.Format(time.RFC3339))
 	if err != nil {
 		return err
 	}
@@ -336,8 +336,8 @@ func (d *SqliteLibrary) GetTrack(ctx context.Context, id string) (*music.Track, 
 		&track.Metadata.BPM, &track.Metadata.Gain, &sourceNull, &sourceURLNull, &addedDateStr, &modifiedDateStr)
 
 	// Handle nullable source fields
-	track.SourceData.Source = sourceNull.String
-	track.SourceData.URL = sourceURLNull.String
+	track.MetadataSource.Source = sourceNull.String
+	track.MetadataSource.MetadataSourceURL = sourceURLNull.String
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -447,7 +447,7 @@ func (d *SqliteLibrary) UpdateTrack(ctx context.Context, track *music.Track) err
 		track.ISRC, track.Bitrate, track.Format, track.SampleRate, track.BitDepth, track.Channels,
 		track.ExplicitContent, track.PreviewURL, track.Metadata.Composer, track.Metadata.Genre, track.Metadata.Year,
 		track.Metadata.OriginalYear, track.Metadata.Lyrics, track.Metadata.ExplicitLyrics, track.Metadata.BPM, track.Metadata.Gain,
-		track.SourceData.Source, track.SourceData.URL, track.ModifiedDate.Format(time.RFC3339), track.ID)
+		track.MetadataSource.Source, track.MetadataSource.MetadataSourceURL, track.ModifiedDate.Format(time.RFC3339), track.ID)
 	if err != nil {
 		return err
 	}
@@ -1078,8 +1078,8 @@ func (d *SqliteLibrary) FindTrackByMetadata(ctx context.Context, title, artistNa
 		&track.Metadata.BPM, &track.Metadata.Gain, &sourceNull, &sourceURLNull, &addedDateStr, &modifiedDateStr)
 
 	// Handle nullable source fields
-	track.SourceData.Source = sourceNull.String
-	track.SourceData.URL = sourceURLNull.String
+	track.MetadataSource.Source = sourceNull.String
+	track.MetadataSource.MetadataSourceURL = sourceURLNull.String
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // No track found
@@ -1172,7 +1172,6 @@ func (d *SqliteLibrary) UpdateTrackFingerprint(ctx context.Context, trackID, fin
 
 // FindTrackByPath finds a track by its file path
 func (d *SqliteLibrary) FindTrackByPath(ctx context.Context, path string) (*music.Track, error) {
-	// Query to find track with matching path
 	row := d.db.QueryRowContext(ctx, `
 		SELECT t.id, t.path, t.title, t.title_version, t.duration, t.track_number, t.disc_number,
 			   t.isrc, t.bitrate, t.format, t.sample_rate, t.bit_depth, t.channels,
@@ -1195,8 +1194,8 @@ func (d *SqliteLibrary) FindTrackByPath(ctx context.Context, path string) (*musi
 		&track.Metadata.BPM, &track.Metadata.Gain, &sourceNull, &sourceURLNull, &addedDateStr, &modifiedDateStr)
 
 	// Handle nullable source fields
-	track.SourceData.Source = sourceNull.String
-	track.SourceData.URL = sourceURLNull.String
+	track.MetadataSource.Source = sourceNull.String
+	track.MetadataSource.MetadataSourceURL = sourceURLNull.String
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // No track found

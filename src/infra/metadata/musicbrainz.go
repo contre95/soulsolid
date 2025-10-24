@@ -196,9 +196,9 @@ func (p *MusicBrainzProvider) convertMBRecordingToTrack(recording mbRecording) *
 			Year: year,
 		},
 		ISRC: isrc,
-		SourceData: music.SourceData{
-			Source: "musicbrainz",
-			URL:    fmt.Sprintf("https://musicbrainz.org/recording/%s", recording.ID),
+		MetadataSource: music.MetadataSource{
+			Source:            "musicbrainz",
+			MetadataSourceURL: fmt.Sprintf("https://musicbrainz.org/recording/%s", recording.ID),
 		},
 	}
 

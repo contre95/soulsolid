@@ -225,9 +225,9 @@ func (p *DeezerProvider) convertDeezerTrackToTrack(deezerTrack deezerTrack, albu
 			DiscNumber:  deezerTrack.DiskNumber,
 		},
 		ISRC: deezerTrack.ISRC,
-		SourceData: music.SourceData{
-			Source: "deezer",
-			URL:    deezerTrack.Link,
+		MetadataSource: music.MetadataSource{
+			Source:            "deezer",
+			MetadataSourceURL: deezerTrack.Link,
 		},
 	}
 
