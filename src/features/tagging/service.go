@@ -170,6 +170,10 @@ func (s *Service) buildTrackFromFormData(ctx context.Context, originalTrack *mus
 		},
 		ISRC:         formData["isrc"],
 		TitleVersion: formData["title_version"],
+		MetadataSource: music.MetadataSource{
+			Source:            formData["source"],
+			MetadataSourceURL: formData["source_url"],
+		},
 	}
 
 	// Handle artists - support both existing and temporary IDs
@@ -398,6 +402,16 @@ func (s *Service) SearchTracksForTrack(ctx context.Context, trackID string, prov
 	tracks, err := targetProvider.SearchTracks(ctx, searchParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search tracks: %w", err)
+	}
+
+	// Set source data for tracks from this provider
+	for _, resultTrack := range tracks {
+		// Set source to provider name (if not already set by provider)
+		if resultTrack.MetadataSource.Source == "" {
+			resultTrack.MetadataSource.Source = providerName
+		}
+		// Note: URLs should be provided by the metadata providers themselves
+		// No URL generation here - providers must provide complete URLs
 	}
 
 	// Try to match artists with database artists by name for each result
