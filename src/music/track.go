@@ -1,12 +1,27 @@
 package music
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+// AutoTagAction represents the recommended action for auto-tagging a track
+type AutoTagAction int
+
+const (
+	AutoApply AutoTagAction = iota
+	QueueReview
+	Reject
+)
+
+// TaggingService defines the interface for auto-tagging functionality
+type TaggingService interface {
+	AutoTagTrack(ctx context.Context, track *Track) (*Track, AutoTagAction, error)
+}
 
 // SourceData contains information about where the track metadata originated from
 type SourceData struct {

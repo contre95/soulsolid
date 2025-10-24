@@ -125,6 +125,22 @@ func determineAction(track *music.Track, existingTrack *music.Track, config conf
 	return ImportTrack, ""
 }
 
+// getPrimaryArtistName safely gets the primary artist name from a track
+func getPrimaryArtistName(track *music.Track) string {
+	if track == nil || len(track.Artists) == 0 || track.Artists[0].Artist == nil {
+		return ""
+	}
+	return track.Artists[0].Artist.Name
+}
+
+// getAlbumTitle safely gets the album title from a track
+func getAlbumTitle(track *music.Track) string {
+	if track == nil || track.Album == nil {
+		return ""
+	}
+	return track.Album.Title
+}
+
 // addTrackToQueue adds a track to the queue
 func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType QueueItemType, jobID string, logger *slog.Logger) error {
 	if track == nil {
@@ -254,6 +270,71 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 			trackToImport.ChromaprintFingerprint = fingerprint
 			trackToImport.ID = music.GenerateTrackID(fingerprint)
 			slog.Info("Generated track id", "id", trackToImport.ID)
+
+			// Auto-tag the track if enabled
+			if e.service.taggingService != nil {
+				autoTaggedTrack, autoTagAction, err := e.service.taggingService.AutoTagTrack(ctx, trackToImport)
+				if err != nil {
+					logger.Warn("Auto-tagging failed, proceeding with original metadata", "error", err, "title", trackToImport.Title)
+				} else {
+					switch autoTagAction {
+					case music.AutoApply:
+						trackToImport = autoTaggedTrack
+						logger.Info("Auto-applied metadata from provider", "title", trackToImport.Title, "source", trackToImport.SourceData.Source, "color", "green")
+					case music.QueueReview:
+						logger.Info("Track queued for manual metadata review", "title", trackToImport.Title, "source", trackToImport.SourceData.Source, "color", "orange")
+						// Queue the track for metadata review before proceeding with import
+						// Store both original and proposed metadata for comparison
+						originalTrack := *trackToImport                                             // Make a copy of the original
+						originalTrack.SourceData = music.SourceData{Source: "LocalFile", URL: path} // Ensure original source
+
+						// Preserve essential fields from original track
+						proposedTrack := *autoTaggedTrack
+						proposedTrack.ID = trackToImport.ID
+						proposedTrack.Path = trackToImport.Path
+						proposedTrack.ChromaprintFingerprint = trackToImport.ChromaprintFingerprint
+						proposedTrack.Format = trackToImport.Format
+						proposedTrack.SampleRate = trackToImport.SampleRate
+						proposedTrack.BitDepth = trackToImport.BitDepth
+						proposedTrack.Channels = trackToImport.Channels
+						proposedTrack.Bitrate = trackToImport.Bitrate
+
+						queueItem := QueueItem{
+							ID:            trackToImport.ID,
+							Type:          MetadataReview,
+							Track:         &proposedTrack, // The proposed changes with correct ID
+							OriginalTrack: &originalTrack, // The original version
+							Timestamp:     time.Now(),
+							JobID:         job.ID,
+						}
+
+						if err := e.service.queue.Add(queueItem); err != nil {
+							if errors.Is(err, ErrAlreadyExists) {
+								logger.Warn("Track already exists in metadata review queue", "error", err, "title", trackToImport.Title)
+							} else {
+								stats.Errors++
+								logger.Error("Failed to queue track for metadata review", "error", err, "title", trackToImport.Title)
+							}
+						} else {
+							stats.Queued++
+							// Log detailed metadata changes
+							logger.Info("Track queued for metadata review with proposed changes",
+								"title", fmt.Sprintf("%s → %s", originalTrack.Title, autoTaggedTrack.Title),
+								"artist", fmt.Sprintf("%s → %s", getPrimaryArtistName(&originalTrack), getPrimaryArtistName(autoTaggedTrack)),
+								"album", fmt.Sprintf("%s → %s", getAlbumTitle(&originalTrack), getAlbumTitle(autoTaggedTrack)),
+								"year", fmt.Sprintf("%d → %d", originalTrack.Metadata.Year, autoTaggedTrack.Metadata.Year),
+								"isrc", fmt.Sprintf("%s → %s", originalTrack.ISRC, autoTaggedTrack.ISRC),
+								"source", fmt.Sprintf("%s → %s", originalTrack.SourceData.Source, autoTaggedTrack.SourceData.Source),
+								"color", "orange")
+						}
+						processedFiles++
+						return nil // Skip further processing for this track
+					case music.Reject:
+						// Continue with original metadata
+						logger.Debug("Auto-tagging rejected, using original metadata", "title", trackToImport.Title)
+					}
+				}
+			}
 
 			existingTrack, err := e.findExistingTrack(ctx, trackToImport, fingerprint, logger)
 			if err != nil {

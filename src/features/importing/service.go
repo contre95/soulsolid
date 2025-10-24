@@ -34,10 +34,11 @@ type Service struct {
 	config            *config.Manager
 	jobService        jobs.JobService
 	queue             Queue
+	taggingService    music.TaggingService
 }
 
 // NewService creates a new organizing service.
-func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, organizer FileOrganizer, cfg *config.Manager, jobService jobs.JobService, queue Queue) *Service {
+func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, organizer FileOrganizer, cfg *config.Manager, jobService jobs.JobService, queue Queue, taggingService music.TaggingService) *Service {
 	return &Service{
 		config:            cfg,
 		library:           lib,
@@ -46,6 +47,7 @@ func NewService(lib music.Library, tagReader TagReader, fingerprintReader Finger
 		fileOrganizer:     organizer,
 		jobService:        jobService,
 		queue:             queue,
+		taggingService:    taggingService,
 	}
 }
 

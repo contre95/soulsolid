@@ -18,8 +18,9 @@ var (
 )
 
 const (
-	ManualReview QueueItemType = "manual_review"
-	Duplicate    QueueItemType = "duplicate"
+	ManualReview   QueueItemType = "manual_review"
+	Duplicate      QueueItemType = "duplicate"
+	MetadataReview QueueItemType = "metadata_review"
 )
 
 // QueueItem represents an item in the import queue
@@ -33,6 +34,8 @@ type QueueItem struct {
 	ArtistNames []string `json:"artist_names"`
 	AlbumTitle  string   `json:"album_title"`
 	AlbumYear   int      `json:"album_year"`
+	// For metadata review: store original track before auto-tagging
+	OriginalTrack *music.Track `json:"original_track,omitempty"`
 }
 
 // Queue defines the interface for managing import queue items
