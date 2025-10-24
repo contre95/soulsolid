@@ -188,10 +188,10 @@ func (t *Track) Pretty() {
 		fmt.Printf("%-30s : %s\n", "Preview URL", t.PreviewURL)
 	}
 	if t.MetadataSource.Source != "" {
-		fmt.Printf("%-30s : %s\n", "Source", t.MetadataSource.Source)
+		fmt.Printf("%-30s : %s\n", "Metadata Source", t.MetadataSource.Source)
 	}
 	if t.MetadataSource.MetadataSourceURL != "" {
-		fmt.Printf("%-30s : %s\n", "Source URL", t.MetadataSource.MetadataSourceURL)
+		fmt.Printf("%-30s : %s\n", "Metadata Source URL", t.MetadataSource.MetadataSourceURL)
 	}
 	fmt.Printf("%-30s : %s\n", "Added Date", t.AddedDate.Format("2006:01:02 15:04:05-07:00"))
 	fmt.Printf("%-30s : %s\n", "Modified Date", t.ModifiedDate.Format("2006:01:02 15:04:05-07:00"))
