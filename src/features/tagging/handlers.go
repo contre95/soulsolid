@@ -695,6 +695,12 @@ func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 	if titleVersion := c.FormValue("title_version"); titleVersion != "" {
 		formData["title_version"] = titleVersion
 	}
+	if source := c.FormValue("source"); source != "" {
+		formData["source"] = source
+	}
+	if sourceURL := c.FormValue("source_url"); sourceURL != "" {
+		formData["source_url"] = sourceURL
+	}
 
 	slog.Debug("Parsed form data", "formData", formData)
 

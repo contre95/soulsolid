@@ -45,21 +45,6 @@ func main() {
 	tagReader := tag.NewTagReader()
 	fingerprintReader := chroma.NewFingerprintService()
 
-	importQueue := queue.NewInMemoryQueue()
-	importingService := importing.NewService(db, tagReader, fingerprintReader, fileOrganizer, cfgManager, jobService, importQueue)
-
-	directoryImportTask := importing.NewDirectoryImportTask(importingService)
-	jobService.RegisterHandler("directory_import", jobs.NewBaseTaskHandler(directoryImportTask))
-
-	syncService := syncdap.NewService(cfgManager, jobService)
-	if cfgManager.Get().Sync.Enabled {
-		syncService.Start()
-		defer syncService.Stop()
-	}
-
-	syncTask := syncdap.NewSyncDapTask(syncService)
-	jobService.RegisterHandler("dap_sync", jobs.NewBaseTaskHandler(syncTask))
-
 	pluginManager := downloading.NewPluginManager()
 	err = pluginManager.LoadPlugins(cfgManager.Get())
 	if err != nil {
@@ -74,6 +59,21 @@ func main() {
 	deezerProvider := metadata.NewDeezerProvider(cfgManager.Get().Metadata.Providers["deezer"].Enabled)
 
 	tagService := tagging.NewService(tagWriter, tagReader, db, []tagging.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, fingerprintReader, cfgManager)
+
+	importQueue := queue.NewInMemoryQueue()
+	importingService := importing.NewService(db, tagReader, fingerprintReader, fileOrganizer, cfgManager, jobService, importQueue, tagService)
+
+	directoryImportTask := importing.NewDirectoryImportTask(importingService)
+	jobService.RegisterHandler("directory_import", jobs.NewBaseTaskHandler(directoryImportTask))
+
+	syncService := syncdap.NewService(cfgManager, jobService)
+	if cfgManager.Get().Sync.Enabled {
+		syncService.Start()
+		defer syncService.Stop()
+	}
+
+	syncTask := syncdap.NewSyncDapTask(syncService)
+	jobService.RegisterHandler("dap_sync", jobs.NewBaseTaskHandler(syncTask))
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
 
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)

@@ -27,10 +27,11 @@ type WebhookConfig struct {
 }
 
 type Import struct {
-	Move        bool   `yaml:"move"` // If not copies
-	AlwaysQueue bool   `yaml:"always_queue"`
-	Duplicates  string `yaml:"duplicates"` // "replace", "skip", "queue"
-	PathOptions Paths  `yaml:"paths"`
+	Move        bool        `yaml:"move"` // If not copies
+	AlwaysQueue bool        `yaml:"always_queue"`
+	Duplicates  string      `yaml:"duplicates"` // "replace", "skip", "queue"
+	PathOptions Paths       `yaml:"paths"`
+	AutoTagging AutoTagging `yaml:"auto_tagging"`
 }
 
 type Paths struct {
@@ -39,6 +40,22 @@ type Paths struct {
 	AlbumSingle     string `yaml:"album:single"`
 	AlbumEP         string `yaml:"album:ep"`
 	DefaultPath     string `yaml:"default_path"`
+}
+
+type AutoTagging struct {
+	Enabled   bool     `yaml:"enabled"`
+	Providers []string `yaml:"providers"`
+	Scoring   Scoring  `yaml:"scoring"`
+}
+
+type Scoring struct {
+	TitleMatch         int `yaml:"title_match"`
+	ArtistMatch        int `yaml:"artist_match"`
+	AlbumMatch         int `yaml:"album_match"`
+	YearMatch          int `yaml:"year_match"`
+	ISRCMatch          int `yaml:"isrc_match"`
+	AutoApplyThreshold int `yaml:"auto_apply_threshold"`
+	QueueThreshold     int `yaml:"queue_threshold"`
 }
 
 // Database holds the configuration for the database

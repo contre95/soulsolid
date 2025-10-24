@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -23,10 +24,22 @@ type Service struct {
 	metadataProviders   []MetadataProvider
 	fingerprintProvider importing.FingerprintProvider
 	config              *config.Manager
+	scorer              *Scorer
 }
 
 // NewService creates a new tag service
 func NewService(tagWriter downloading.TagWriter, tagReader importing.TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, fingerprintProvider importing.FingerprintProvider, config *config.Manager) *Service {
+	cfg := config.Get()
+	scoringConfig := &ScoringConfig{
+		TitleWeight:        cfg.Import.AutoTagging.Scoring.TitleMatch,
+		ArtistWeight:       cfg.Import.AutoTagging.Scoring.ArtistMatch,
+		AlbumWeight:        cfg.Import.AutoTagging.Scoring.AlbumMatch,
+		YearWeight:         cfg.Import.AutoTagging.Scoring.YearMatch,
+		ISRCWeight:         cfg.Import.AutoTagging.Scoring.ISRCMatch,
+		AutoApplyThreshold: cfg.Import.AutoTagging.Scoring.AutoApplyThreshold,
+		QueueThreshold:     cfg.Import.AutoTagging.Scoring.QueueThreshold,
+	}
+
 	return &Service{
 		tagWriter:           tagWriter,
 		tagReader:           tagReader,
@@ -34,6 +47,7 @@ func NewService(tagWriter downloading.TagWriter, tagReader importing.TagReader, 
 		metadataProviders:   metadataProviders,
 		fingerprintProvider: fingerprintProvider,
 		config:              config,
+		scorer:              NewScorer(scoringConfig),
 	}
 }
 
@@ -170,6 +184,10 @@ func (s *Service) buildTrackFromFormData(ctx context.Context, originalTrack *mus
 		},
 		ISRC:         formData["isrc"],
 		TitleVersion: formData["title_version"],
+		SourceData: music.SourceData{
+			Source: formData["source"],
+			URL:    formData["source_url"],
+		},
 	}
 
 	// Handle artists - support both existing and temporary IDs
@@ -400,6 +418,16 @@ func (s *Service) SearchTracksForTrack(ctx context.Context, trackID string, prov
 		return nil, fmt.Errorf("failed to search tracks: %w", err)
 	}
 
+	// Set source data for tracks from this provider
+	for _, resultTrack := range tracks {
+		// Set source to provider name (if not already set by provider)
+		if resultTrack.SourceData.Source == "" {
+			resultTrack.SourceData.Source = providerName
+		}
+		// Note: URLs should be provided by the metadata providers themselves
+		// No URL generation here - providers must provide complete URLs
+	}
+
 	// Try to match artists with database artists by name for each result
 	for i, resultTrack := range tracks {
 		tracks[i] = s.matchArtistsWithDatabase(ctx, resultTrack)
@@ -420,4 +448,131 @@ func (s *Service) FetchMetadataForTrack(ctx context.Context, trackID string) (*m
 		}
 	}
 	return nil, fmt.Errorf("no metadata found from enabled providers")
+}
+
+// AutoTagTrack searches for and applies the best metadata match for a track during import
+func (s *Service) AutoTagTrack(ctx context.Context, track *music.Track) (*music.Track, music.AutoTagAction, error) {
+	if !s.config.Get().Import.AutoTagging.Enabled {
+		return track, music.Reject, nil // Auto-tagging disabled, return original track
+	}
+
+	providers := s.config.Get().Import.AutoTagging.Providers
+	if len(providers) == 0 {
+		return track, music.Reject, nil // No providers configured
+	}
+
+	// Build search parameters from track
+	searchParams := SearchParams{
+		Title: track.Title,
+		Year:  track.Metadata.Year,
+	}
+
+	if track.Album != nil {
+		searchParams.Album = track.Album.Title
+		if len(track.Album.Artists) > 0 {
+			searchParams.AlbumArtist = track.Album.Artists[0].Artist.Name
+		}
+	}
+
+	var allResults []ScoredResult
+
+	// Search across configured providers
+	for _, providerName := range providers {
+		var targetProvider MetadataProvider
+		for _, provider := range s.metadataProviders {
+			if provider.Name() == providerName && provider.IsEnabled() {
+				targetProvider = provider
+				break
+			}
+		}
+
+		if targetProvider == nil {
+			continue // Provider not found or not enabled
+		}
+
+		// Search for tracks
+		candidates, err := targetProvider.SearchTracks(ctx, searchParams)
+		if err != nil {
+			slog.Warn("Failed to search tracks with provider", "provider", providerName, "error", err)
+			continue
+		}
+
+		// Score the results
+		scoredResults := s.scorer.EvaluateMatches(track, candidates, providerName)
+		allResults = append(allResults, scoredResults...)
+	}
+
+	if len(allResults) == 0 {
+		return track, music.Reject, nil // No results found
+	}
+
+	// Sort all results by confidence (already sorted by EvaluateMatches, but we combined multiple providers)
+	sort.Slice(allResults, func(i, j int) bool {
+		return allResults[i].Score.Confidence > allResults[j].Score.Confidence
+	})
+
+	// Take the best match
+	bestMatch := allResults[0]
+
+	// Apply metadata if confidence is high enough
+	if bestMatch.Action == music.AutoApply {
+		// Merge the metadata from the best match into the original track
+		updatedTrack := s.mergeMetadata(track, bestMatch.Track)
+		return updatedTrack, music.AutoApply, nil
+	} else if bestMatch.Action == music.QueueReview {
+		// For queue review, return the full proposed track so user can see all changes
+		// (don't use conservative merge, show what would be applied)
+		return bestMatch.Track, music.QueueReview, nil
+	}
+
+	// Reject - return original track
+	return track, music.Reject, nil
+}
+
+// mergeMetadata merges metadata from a source track into a target track
+func (s *Service) mergeMetadata(target, source *music.Track) *music.Track {
+	// Create a copy of the target track
+	result := *target
+
+	// Update metadata fields if source has better data
+	if source.Title != "" && source.Title != target.Title {
+		result.Title = source.Title
+	}
+
+	if source.ISRC != "" && target.ISRC == "" {
+		result.ISRC = source.ISRC
+	}
+
+	// Update metadata
+	if source.Metadata.Year != 0 && target.Metadata.Year == 0 {
+		result.Metadata.Year = source.Metadata.Year
+	}
+
+	if source.Metadata.Genre != "" && target.Metadata.Genre == "" {
+		result.Metadata.Genre = source.Metadata.Genre
+	}
+
+	if source.Metadata.TrackNumber != 0 && target.Metadata.TrackNumber == 0 {
+		result.Metadata.TrackNumber = source.Metadata.TrackNumber
+	}
+
+	if source.Metadata.DiscNumber != 0 && target.Metadata.DiscNumber == 0 {
+		result.Metadata.DiscNumber = source.Metadata.DiscNumber
+	}
+
+	// Update artists if source has them and target doesn't
+	if len(source.Artists) > 0 && len(target.Artists) == 0 {
+		result.Artists = make([]music.ArtistRole, len(source.Artists))
+		copy(result.Artists, source.Artists)
+	}
+
+	// Update album if source has it and target doesn't
+	if source.Album != nil && target.Album == nil {
+		result.Album = source.Album
+	}
+
+	// Update source data to reflect the provider
+	result.SourceData = source.SourceData
+
+	return &result
 }

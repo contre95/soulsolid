@@ -13,7 +13,7 @@ RUN go build -o /app/soulsolid src/main.go
 
 FROM golang:bookworm
 ENV CGO_ENABLED=2
-RUN apt-get update && apt-get install -y git
+RUN apt-get update && apt-get install -y git tree
 RUN mkdir -p /app/plugins
 WORKDIR /app
 # Copy the dynamically built app and assets
