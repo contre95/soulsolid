@@ -22,6 +22,7 @@
     "htmx.org": "^2.0.6",
     "hyperscript.org": "^0.9.14",
     "jquery": "^3.7.1",
+    "slim-select": "^3.0.3",
     "tailwindcss": "^4.1.12"
   }
 }
