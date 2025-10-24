@@ -23,6 +23,18 @@ body:where(.dark, .dark *), aside:where(.dark, .dark *) {
   .glowy-blue {
     text-shadow: 0 0 5px rgba(0, 172, 238, 0.8), 0 0 10px rgba(0, 172, 238, 0.6), 0 0 20px rgba(0, 172, 238, 0.4);
   }
+
+  .htmx-indicator {
+    display: none;
+  }
+
+  .htmx-request .htmx-indicator {
+    display: inline-block;
+  }
+
+  .htmx-request.htmx-indicator {
+    display: inline-block;
+  }
 }
 
 /* Hyperscript */
