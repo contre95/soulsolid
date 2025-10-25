@@ -16,9 +16,9 @@ RUN mkdir -p /app/plugins
 WORKDIR /app
 # Copy the dynamically built app and assets
 COPY --from=app-builder /app/soulsolid /app/soulsolid
+COPY --from=app-builder /app/public /app/public
 COPY go.mod /app/go.mod
 COPY go.sum /app/go.sum
 COPY views /app/views
-COPY public /app/public
 COPY src /app/src
 ENTRYPOINT ["/app/soulsolid"]
