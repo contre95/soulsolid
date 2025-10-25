@@ -35,7 +35,9 @@ go.work.sum
 .idea/
 .vscode/
 
-# CSS
+# Public
+public/fontawesome/
+public/js/
 public/css/style.css
 
 # Air
@@ -54,8 +56,6 @@ logs
 others
 .opencode/
 AGENTS.md
-public/fontawesome/
-public/js/
 config.yaml
 music_library
 sample.flac
