@@ -8,7 +8,7 @@
     "build:css:watch": "npx @tailwindcss/cli -i ./public/css/input.css -o ./public/css/style.css --watch",
     "build:assets": "npm run build:css && npm run copy:deps",
     "copy:deps": "cp node_modules/htmx.org/dist/htmx.min.js public/js/ && cp node_modules/hyperscript.org/dist/_hyperscript.min.js public/js/ && cp node_modules/animate.css/animate.min.css public/css/ && cp -r node_modules/@fortawesome/fontawesome-free/css public/fontawesome/ && cp -r node_modules/@fortawesome/fontawesome-free/webfonts public/fontawesome/ && cp node_modules/@iconify/iconify/dist/iconify.min.js public/js/ && cp node_modules/jquery/dist/jquery.min.js public/js/ && cp node_modules/slim-select/dist/slimselect.js public/js/slimselect.min.js && cp node_modules/slim-select/dist/slimselect.css public/css/",
-    "dev": "npm run build:assets && npm run build:css",
+    "dev": "npm run build:assets && npm run build:css && go run ./src/main.go",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
