@@ -28,10 +28,10 @@
              </button>
              {{end}}
              {{if index .EnabledProviders "discogs"}}
-              <button type="button"
-                       hx-get="/ui/tag/edit/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/search/discogs"
-                       hx-target="body"
-                       hx-swap="beforeend"
+               <button type="button"
+                        hx-get="/ui/tag/edit/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/search/discogs"
+                        hx-target="body"
+                        hx-swap="beforeend"
                       class="cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-base font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-slate-500/10 backdrop-blur-md border border-slate-400/30 text-slate-600 dark:text-slate-300 shadow-lg shadow-slate-500/10 hover:shadow-slate-500/20">
                  <img src="/svg/discogs.svg" alt="Discogs" class="w-6 h-6 mr-2">
                <span class="hidden sm:inline text-base font-bold">Discogs</span>
@@ -41,10 +41,10 @@
              </button>
              {{end}}
              {{if index .EnabledProviders "deezer"}}
-             <button type="button"
-                      hx-get="/ui/tag/edit/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/search/deezer"
-                      hx-target="body"
-                      hx-swap="beforeend"
+              <button type="button"
+                       hx-get="/ui/tag/edit/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/search/deezer"
+                       hx-target="body"
+                       hx-swap="beforeend"
                      class="cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-base font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-purple-500/10 backdrop-blur-md border border-purple-400/30 text-purple-600 dark:text-purple-300 shadow-lg shadow-purple-500/10 hover:shadow-purple-500/20">
              <img src="/img/deezer.png" alt="Deezer" class="w-6 h-6 mr-2">
               <span class="hidden sm:inline text-base font-bold">Deezer</span>
@@ -72,12 +72,12 @@
         {{template "tag/edit_form" .}}
       </div>
 
-      <script>
-        // Close the search modal after selecting a track
-        var modal = document.getElementById('search-modal');
-        if (modal) {
-          modal.remove();
-        }
-      </script>
+       <script>
+         // Close the search modal after selecting a track
+         var modal = document.getElementById('search-modal');
+         if (modal) {
+           modal.remove();
+         }
+       </script>
 
  </div>

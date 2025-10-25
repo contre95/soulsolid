@@ -4,9 +4,7 @@ RUN apt-get update && apt-get install -y gcc libc-dev libsqlite3-dev nodejs npm 
 WORKDIR /app
 # Copy your source code here - adjust the path as needed
 ADD . .
-RUN npm install && npm run build:assets
-RUN npm run build:css
-RUN npm run copy:deps
+RUN npm install && npm run build
 RUN go mod tidy
 # Build without static linking for plugin compatibility
 RUN go build -o /app/soulsolid src/main.go
