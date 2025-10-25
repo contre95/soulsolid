@@ -335,7 +335,26 @@
          </div>
        </form>
 
-       <script src="/js/slimselect.js"></script>
-    </div>
-  </div>
-  {{end}}
+        <script src="/js/slimselect.js"></script>
+        <script>
+          // Initialize SlimSelect for selects in tag edit form
+          if (document.getElementById('album')) {
+            new SlimSelect({
+              select: '#album'
+            });
+          }
+          if (document.getElementById('album_artist')) {
+            new SlimSelect({
+              select: '#album_artist'
+            });
+          }
+          // Initialize SlimSelect for multiple select
+          if (document.getElementById('artist')) {
+            new SlimSelect({
+              select: '#artist'
+            });
+          }
+        </script>
+     </div>
+   </div>
+   {{end}}
