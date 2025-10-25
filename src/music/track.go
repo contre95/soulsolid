@@ -144,13 +144,19 @@ func (t *Track) Pretty() {
 		fmt.Printf("%-30s : %s\n", "Title Version", t.TitleVersion)
 	}
 	var artistNames []string
-	for _, ar := range t.Artists {
-		artistNames = append(artistNames, ar.Artist.Name)
+	if t.Artists != nil {
+		for _, ar := range t.Artists {
+			if ar.Artist != nil {
+				artistNames = append(artistNames, ar.Artist.Name)
+			}
+		}
 	}
-	fmt.Printf("%-30s : %d\n", "Artwork", len(t.Album.ArtworkData))
 	fmt.Printf("%-30s : %s\n", "Artist", strings.Join(artistNames, ", "))
 	if t.Album != nil {
+		fmt.Printf("%-30s : %d\n", "Artwork", len(t.Album.ArtworkData))
 		fmt.Printf("%-30s : %s\n", "Album", t.Album.Title)
+	} else {
+		fmt.Printf("%-30s : %d\n", "Artwork", 0)
 	}
 	if t.Metadata.Composer != "" {
 		fmt.Printf("%-30s : %s\n", "Composer", t.Metadata.Composer)
@@ -181,8 +187,10 @@ func (t *Track) Pretty() {
 	fmt.Printf("%-30s : %d\n", "Bit Depth", t.BitDepth)
 	fmt.Printf("%-30s : %d\n", "Channels", t.Channels)
 	fmt.Printf("%-30s : %t\n", "Explicit Content", t.ExplicitContent)
-	for k, v := range t.Attributes {
-		fmt.Printf("%-30s : %s\n", k, v)
+	if t.Attributes != nil {
+		for k, v := range t.Attributes {
+			fmt.Printf("%-30s : %s\n", k, v)
+		}
 	}
 	if t.PreviewURL != "" {
 		fmt.Printf("%-30s : %s\n", "Preview URL", t.PreviewURL)

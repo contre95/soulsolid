@@ -473,7 +473,9 @@ func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
 	tracks, err := h.service.SearchTracksForTrack(c.Context(), trackID, providerName)
 	if err != nil {
 		slog.Error("Failed to search tracks", "error", err, "trackId", trackID, "provider", providerName)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to search tracks")
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": fmt.Sprintf("Failed to search tracks: %v", err),
+		})
 	}
 
 	// Get provider colors for styling
