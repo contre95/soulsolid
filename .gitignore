@@ -36,8 +36,8 @@ go.work.sum
 .vscode/
 
 # Public
-public/fontawesome/
-public/js/
+public/fontawesome/*
+public/js/*
 public/css/style.css
 
 # Air
