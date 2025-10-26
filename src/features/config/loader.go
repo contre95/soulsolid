@@ -15,10 +15,10 @@ func setProviderAPIKey(cfg *Config, providerName, envVar string) {
 			cfg.Metadata.Providers = make(map[string]Provider)
 		}
 		if provider, exists := cfg.Metadata.Providers[providerName]; exists {
-			provider.APIKey = key
+			provider.APIKey = &key
 			cfg.Metadata.Providers[providerName] = provider
 		} else {
-			cfg.Metadata.Providers[providerName] = Provider{Enabled: false, APIKey: key}
+			cfg.Metadata.Providers[providerName] = Provider{Enabled: false, APIKey: &key}
 		}
 	}
 }
@@ -117,7 +117,7 @@ func createDefaultConfig() *Config {
 				},
 				"discogs": {
 					Enabled: false,
-					APIKey:  "",
+					APIKey:  nil,
 				},
 				"musicbrainz": {
 					Enabled: false,
