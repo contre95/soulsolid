@@ -104,8 +104,14 @@ func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action st
 			return fmt.Errorf("failed to import track: %w", err)
 		}
 		return s.queue.Remove(itemID)
+	case "delete":
+		// Delete the file from the import location
+		if err := s.fileOrganizer.DeleteTrack(ctx, item.Track.Path); err != nil {
+			return fmt.Errorf("failed to delete track file: %w", err)
+		}
+		return s.queue.Remove(itemID)
 	default:
-		return fmt.Errorf("Invalid action %s. Should be one of %s", action, "import,replace,cancel")
+		return fmt.Errorf("Invalid action %s. Should be one of %s", action, "import,replace,cancel,delete")
 	}
 
 }
