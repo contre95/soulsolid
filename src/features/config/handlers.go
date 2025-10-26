@@ -34,6 +34,7 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	newConfig := &Config{
 		LibraryPath:  c.FormValue("libraryPath"),
 		DownloadPath: c.FormValue("downloadPath"),
+		Database:     currentConfig.Database, // Preserve database settings
 		Import: Import{
 			Move:        c.FormValue("import.move") == "true",
 			AlwaysQueue: c.FormValue("import.always_queue") == "true",
@@ -64,7 +65,13 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 				},
 				"discogs": {
 					Enabled: c.FormValue("metadata.providers.discogs.enabled") == "true",
-					APIKey:  c.FormValue("metadata.providers.discogs.api_key"),
+					APIKey: func() *string {
+						apiKey := c.FormValue("metadata.providers.discogs.api_key")
+						if apiKey != "" {
+							return &apiKey
+						}
+						return nil
+					}(),
 				},
 				"deezer": {
 					Enabled: c.FormValue("metadata.providers.deezer.enabled") == "true",
