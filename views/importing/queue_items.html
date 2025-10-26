@@ -29,40 +29,56 @@
 
         <!-- Actions - Full width with wrapping -->
         <div class="flex flex-wrap gap-2 justify-start">
-                {{if eq .Type "duplicate"}}
-                <!-- For duplicates: Replace/Skip -->
-                <button
-                    hx-post="/import/queue/{{.ID}}/replace"
-                    hx-target="#toast-container"
-                    hx-swap="innerHTML"
-                    hx-confirm="Replace existing track with this one?"
-                    class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-orange-500/10 backdrop-blur-md border border-orange-400/30 text-orange-600 dark:text-orange-300 shadow-md shadow-orange-500/10 hover:shadow-orange-500/20 hover:bg-orange-500/20 dark:hover:bg-orange-500/30">
-                    Replace
-                </button>
-                <button
-                    hx-post="/import/queue/{{.ID}}/cancel"
-                    hx-target="#toast-container"
-                    hx-swap="innerHTML"
-                    hx-confirm="Skip this duplicate track?"
-                    class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-gray-500/10 backdrop-blur-md border border-gray-400/30 text-gray-600 dark:text-gray-300 shadow-md shadow-gray-500/10 hover:shadow-gray-500/20 hover:bg-gray-500/20 dark:hover:bg-gray-500/30">
-                    Skip
-                </button>
-                {{else}}
-                <!-- For manual review: Import/Cancel -->
-                <button
-                    hx-post="/import/queue/{{.ID}}/import"
-                    hx-target="#toast-container"
-                    hx-swap="innerHTML"
-                    class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-md shadow-green-500/10 hover:shadow-green-500/20 hover:bg-green-500/20 dark:hover:bg-green-500/30">
-                    Import
-                </button>
-                <button
-                    hx-post="/import/queue/{{.ID}}/cancel"
-                    hx-target="#toast-container"
-                    hx-swap="innerHTML"
-                    class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-md shadow-red-500/10 hover:shadow-red-500/20 hover:bg-red-500/20 dark:hover:bg-red-500/30">
-                    Cancel
-                </button>
+                 {{if eq .Type "duplicate"}}
+                 <!-- For duplicates: Replace/Skip/Delete -->
+                 <button
+                     hx-post="/import/queue/{{.ID}}/replace"
+                     hx-target="#toast-container"
+                     hx-swap="innerHTML"
+                     hx-confirm="Replace existing track with this one?"
+                     class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-orange-500/10 backdrop-blur-md border border-orange-400/30 text-orange-600 dark:text-orange-300 shadow-md shadow-orange-500/10 hover:shadow-orange-500/20 hover:bg-orange-500/20 dark:hover:bg-orange-500/30">
+                     Replace
+                 </button>
+                 <button
+                     hx-post="/import/queue/{{.ID}}/cancel"
+                     hx-target="#toast-container"
+                     hx-swap="innerHTML"
+                     hx-confirm="Skip this duplicate track?"
+                     class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-gray-500/10 backdrop-blur-md border border-gray-400/30 text-gray-600 dark:text-gray-300 shadow-md shadow-gray-500/10 hover:shadow-gray-500/20 hover:bg-gray-500/20 dark:hover:bg-gray-500/30">
+                     Skip
+                 </button>
+                 <button
+                     hx-post="/import/queue/{{.ID}}/delete"
+                     hx-target="#toast-container"
+                     hx-swap="innerHTML"
+                     hx-confirm="Delete this file from import location?"
+                     class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-md shadow-red-500/10 hover:shadow-red-500/20 hover:bg-red-500/20 dark:hover:bg-red-500/30">
+                     Delete
+                 </button>
+                 {{else}}
+                 <!-- For manual review: Import/Cancel/Delete -->
+                 <button
+                     hx-post="/import/queue/{{.ID}}/import"
+                     hx-target="#toast-container"
+                     hx-swap="innerHTML"
+                     class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-md shadow-green-500/10 hover:shadow-green-500/20 hover:bg-green-500/20 dark:hover:bg-green-500/30">
+                     Import
+                 </button>
+                 <button
+                     hx-post="/import/queue/{{.ID}}/cancel"
+                     hx-target="#toast-container"
+                     hx-swap="innerHTML"
+                     class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-md shadow-red-500/10 hover:shadow-red-500/20 hover:bg-red-500/20 dark:hover:bg-red-500/30">
+                     Cancel
+                 </button>
+                 <button
+                     hx-post="/import/queue/{{.ID}}/delete"
+                     hx-target="#toast-container"
+                     hx-swap="innerHTML"
+                     hx-confirm="Delete this file from import location?"
+                     class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-md shadow-red-500/10 hover:shadow-red-500/20 hover:bg-red-500/20 dark:hover:bg-red-500/30">
+                     Delete
+                 </button>
                 {{end}}
             </div>
         </div>
