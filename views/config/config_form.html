@@ -179,20 +179,29 @@
                     placeholder="Bot token">
            </div>
 
-           <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
-             <label for="telegram.allowedUsers" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Allowed Users</label>
-             <input type="text" id="telegram.allowedUsers" name="telegram.allowedUsers" value="{{range $index, $user := .Config.Telegram.AllowedUsers}}{{if $index}}, {{end}}{{$user}}{{end}}"
-                    class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
-                    placeholder="username1, username2, ...">
-             <div class="mt-2">
-               <a href="https://api.telegram.org/bot7686456512:AAEB9tCEt44Ox-_JwFxn3T1f_-GH6Kq2pf4/getUpdates"
-                  target="_blank"
-                  class="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
-                 <i class="fas fa-external-link-alt mr-1"></i>
-                 Get Bot Updates (for Chat ID)
-                </a>
-              </div>
+            <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+              <label for="telegram.bot_handle" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Bot Handle</label>
+              <input type="text" id="telegram.bot_handle" name="telegram.bot_handle" value="{{.Config.Telegram.BotHandle}}"
+                     class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                     placeholder="@your_bot_handle">
             </div>
+
+            <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+              <label for="telegram.allowedUsers" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Allowed Users</label>
+              <input type="text" id="telegram.allowedUsers" name="telegram.allowedUsers" value="{{range $index, $user := .Config.Telegram.AllowedUsers}}{{if $index}}, {{end}}{{$user}}{{end}}"
+                     class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+                     placeholder="username1, username2, ...">
+              {{if .Config.Telegram.Token}}
+              <div class="mt-2">
+                <a href="https://api.telegram.org/bot{{.Config.Telegram.Token}}/getUpdates"
+                   target="_blank"
+                   class="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                  <i class="fas fa-external-link-alt mr-1"></i>
+                  Get Bot Updates (for Chat ID)
+                 </a>
+               </div>
+              {{end}}
+             </div>
            <div class="text-sm text-yellow-600 dark:text-yellow-300 italic py-2 px-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
              Changes require application restart
            </div>
