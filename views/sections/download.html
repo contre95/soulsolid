@@ -1,24 +1,28 @@
 <div id="contenido" class="animate__animated animate__fadeIn">
     <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">Music Download</h1>
 
-    <!-- User Profile Section - Loaded from downloading feature -->
-    <div hx-get="/downloads/user/info?downloader={{.CurrentDownloader}}" hx-trigger="load" hx-swap="innerHTML">
-      <!-- Loading state -->
-      <div class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg p-6 mb-8 animate__animated animate__heartBeat">
-        <div class="flex items-center gap-4">
-          <div class="w-16 h-16 rounded-full bg-gray-300 dark:bg-gray-600"></div>
-          <div>
-            <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32 mb-2"></div>
-            <div class="h-3 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
-          </div>
-        </div>
-      </div>
-    </div>
+     <!-- User Profile Section - Loaded from downloading feature -->
+     <div hx-get="/downloads/user/info?downloader={{.CurrentDownloader}}" hx-trigger="load" hx-swap="innerHTML">
+       <!-- Loading state -->
+       <div class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg p-6 mb-8 animate__animated animate__heartBeat">
+         <div class="flex items-center gap-4">
+           <div class="w-16 h-16 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+           <div>
+             <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32 mb-2"></div>
+             <div class="h-3 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
+           </div>
+         </div>
+     </div>
+             <span class="htmx-indicator-off">Search</span>
+           </button>
+         </div>
+       </form>
+     </div>
 
 
 
-       <!-- Search Results -->
-       <div id="search-results" style="display: none;">
+        <!-- Search Results -->
+        <div id="search-results">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <button _="on click put 'block' into #homepage-content.style.display then put 'none' into #search-results.style.display" class="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 flex items-center gap-2">
              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">

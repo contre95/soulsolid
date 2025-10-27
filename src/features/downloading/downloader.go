@@ -17,6 +17,7 @@ type Downloader interface {
 	GetUserInfo() *UserInfo
 	GetStatus() DownloaderStatus
 	Name() string
+	Capabilities() DownloaderCapabilities
 }
 
 // UserInfo represents user information from a downloader
@@ -30,4 +31,10 @@ type UserInfo struct {
 	Tracklist    string `json:"tracklist"`
 	Type         string `json:"type"`
 	UserOptions  any    `json:"user_options"`
+}
+
+// DownloaderCapabilities represents the capabilities of a downloader
+type DownloaderCapabilities struct {
+	SupportsSearch      bool `json:"supports_search"`
+	SupportsDirectLinks bool `json:"supports_direct_links"`
 }

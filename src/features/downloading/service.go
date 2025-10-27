@@ -148,6 +148,15 @@ func (s *Service) GetAllDownloaders() map[string]Downloader {
 	return s.pluginManager.GetAllDownloaders()
 }
 
+// GetDownloaderCapabilities returns the capabilities of a specific downloader
+func (s *Service) GetDownloaderCapabilities(downloaderName string) (DownloaderCapabilities, error) {
+	downloader, exists := s.pluginManager.GetDownloader(downloaderName)
+	if !exists {
+		return DownloaderCapabilities{}, fmt.Errorf("downloader %s not found", downloaderName)
+	}
+	return downloader.Capabilities(), nil
+}
+
 // GetDownloaderStatuses returns the current status of all configured downloaders
 func (s *Service) GetDownloaderStatuses() map[string]DownloaderStatus {
 	statuses := make(map[string]DownloaderStatus)

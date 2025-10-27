@@ -150,6 +150,37 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 		req.Limit = 20
 	}
 
+	// If type is "link", force URL parsing
+	if req.Type == "link" {
+		if parsedURL, err := ParseMusicURL(req.Query); err == nil {
+			return h.handleDirectURL(c, req.Downloader, parsedURL)
+		} else if req.Downloader == "dummy" {
+			if parsedURL, err := parseDummyURL(req.Query); err == nil {
+				return h.handleDirectURL(c, req.Downloader, parsedURL)
+			}
+		}
+		// If parsing failed, show error
+		if c.Get("HX-Request") == "true" {
+			return c.Render("toast/toastErr", fiber.Map{
+				"Msg": "Invalid URL format",
+			})
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid URL format",
+		})
+	}
+
+	// Check if query is a URL (auto-detect)
+	if parsedURL, err := ParseMusicURL(req.Query); err == nil {
+		// Handle direct URL
+		return h.handleDirectURL(c, req.Downloader, parsedURL)
+	} else if req.Downloader == "dummy" {
+		// For dummy, try parsing as dummy URL
+		if parsedURL, err := parseDummyURL(req.Query); err == nil {
+			return h.handleDirectURL(c, req.Downloader, parsedURL)
+		}
+	}
+
 	// Check if it's an HTMX request
 	if c.Get("HX-Request") == "true" {
 		// Return HTML for HTMX
@@ -208,6 +239,110 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 	default:
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid search type",
+		})
+	}
+}
+
+// parseDummyURL parses URLs for the dummy downloader
+func parseDummyURL(url string) (*ParsedURL, error) {
+	// For dummy, accept any URL and extract type/ID from path
+	// e.g., https://example.com/album/123 -> album 123
+	// or https://example.com/track/456 -> track 456
+	if strings.Contains(url, "/album/") {
+		parts := strings.Split(url, "/album/")
+		if len(parts) > 1 {
+			id := strings.Split(parts[1], "/")[0] // take first part before /
+			if id != "" {
+				return &ParsedURL{
+					Service: "dummy",
+					Type:    "album",
+					ID:      id,
+				}, nil
+			}
+		}
+	} else if strings.Contains(url, "/track/") {
+		parts := strings.Split(url, "/track/")
+		if len(parts) > 1 {
+			id := strings.Split(parts[1], "/")[0]
+			if id != "" {
+				return &ParsedURL{
+					Service: "dummy",
+					Type:    "track",
+					ID:      id,
+				}, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("invalid dummy URL format")
+}
+
+// handleDirectURL handles direct music URLs
+func (h *Handler) handleDirectURL(c *fiber.Ctx, downloaderName string, parsedURL *ParsedURL) error {
+	switch parsedURL.Type {
+	case "album":
+		tracks, err := h.service.GetAlbumTracks(downloaderName, parsedURL.ID)
+		if err != nil {
+			slog.Error("Failed to get album tracks from URL", "error", err, "url", parsedURL)
+			if c.Get("HX-Request") == "true" {
+				return c.Render("toast/toastErr", fiber.Map{
+					"Msg": "Failed to load album from URL",
+				})
+			}
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to get album tracks",
+			})
+		}
+		if c.Get("HX-Request") == "true" {
+			return h.renderTrackResults(c, tracks, downloaderName)
+		}
+		return c.JSON(fiber.Map{
+			"tracks": tracks,
+		})
+	case "track":
+		// For dummy, create a dummy track
+		if downloaderName == "dummy" {
+			track := &music.Track{
+				ID:    parsedURL.ID,
+				Title: fmt.Sprintf("Dummy Track %s", parsedURL.ID),
+				Artists: []music.ArtistRole{{
+					Artist: &music.Artist{
+						ID:   "dummy-artist",
+						Name: "Dummy Artist",
+					},
+					Role: "main",
+				}},
+				Album: &music.Album{
+					ID:    "dummy-album",
+					Title: "Dummy Album",
+				},
+				Metadata: music.Metadata{
+					Duration: 180,
+				},
+			}
+			if c.Get("HX-Request") == "true" {
+				return h.renderTrackResults(c, []music.Track{*track}, downloaderName)
+			}
+			return c.JSON(fiber.Map{
+				"tracks": []music.Track{*track},
+			})
+		}
+		// For others, not supported yet
+		if c.Get("HX-Request") == "true" {
+			return c.Render("toast/toastErr", fiber.Map{
+				"Msg": "Direct track URLs are not yet supported. Please use album URLs or search.",
+			})
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Direct track URLs are not supported",
+		})
+	default:
+		if c.Get("HX-Request") == "true" {
+			return c.Render("toast/toastErr", fiber.Map{
+				"Msg": "Unsupported URL type",
+			})
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Unsupported URL type",
 		})
 	}
 }
@@ -468,6 +603,12 @@ func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
 	// Check if any downloaders are available
 	hasDownloaders := len(h.service.pluginManager.GetAllDownloaders()) > 0
 
+	// Get downloader capabilities
+	var caps DownloaderCapabilities
+	if d, exists := h.service.pluginManager.GetDownloader(downloader); exists {
+		caps = d.Capabilities()
+	}
+
 	if c.Get("HX-Request") == "true" {
 		return c.Render("downloading/user_info", fiber.Map{
 			"UserInfo":          userInfo,
@@ -477,10 +618,23 @@ func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
 			"DownloaderStatus":  downloaderStatus,
 			"HasDownloaders":    hasDownloaders,
 			"CurrentDownloader": downloader,
+			"Capabilities":      caps,
 		})
 	}
 	return c.JSON(fiber.Map{
 		"userInfo": userInfo,
 		"statuses": statuses,
 	})
+}
+
+// GetDownloaderCapabilities handles requests for downloader capabilities
+func (h *Handler) GetDownloaderCapabilities(c *fiber.Ctx) error {
+	downloader := c.Query("downloader", "dummy")
+	caps, err := h.service.GetDownloaderCapabilities(downloader)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+	return c.JSON(caps)
 }
