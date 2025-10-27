@@ -13,6 +13,7 @@ type Downloader interface {
 	// Download methods
 	DownloadTrack(trackID string, downloadDir string, progressCallback func(downloaded, total int64)) (*music.Track, error)
 	DownloadAlbum(albumID string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error)
+	DownloadLink(url string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error)
 	// User info
 	GetUserInfo() *UserInfo
 	GetStatus() DownloaderStatus
