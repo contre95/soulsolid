@@ -1,6 +1,10 @@
 package downloading
 
-import "github.com/contre95/soulsolid/src/music"
+import (
+	"fmt"
+
+	"github.com/contre95/soulsolid/src/music"
+)
 
 // Downloader defines the interface for music downloaders
 type Downloader interface {
@@ -39,3 +43,6 @@ type DownloaderCapabilities struct {
 	SupportsSearch      bool `json:"supports_search"`
 	SupportsDirectLinks bool `json:"supports_direct_links"`
 }
+
+// ErrMethodNotSupported is returned when a downloader does not support a requested method
+var ErrMethodNotSupported = fmt.Errorf("method not supported by this downloader")
