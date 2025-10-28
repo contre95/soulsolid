@@ -87,7 +87,7 @@ func main() {
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {
 		var err error
-		telegramBot, err = hosting.NewTelegramBot(cfgManager, libraryService, jobService, syncService, downloadingService, importingService)
+		telegramBot, err = hosting.NewTelegramBot(cfgManager, libraryService, jobService, syncService, importingService)
 		if err != nil {
 			slog.Error("Failed to initialize Telegram bot", "error", err)
 		} else {

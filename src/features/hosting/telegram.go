@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
@@ -33,7 +32,7 @@ type TelegramBot struct {
 }
 
 // NewTelegramBot creates a new Telegram bot instance
-func NewTelegramBot(cfg *config.Manager, libraryService *library.Service, jobService *jobs.Service, syncService *syncdap.Service, downloadingService *downloading.Service, importingService *importing.Service) (*TelegramBot, error) {
+func NewTelegramBot(cfg *config.Manager, libraryService *library.Service, jobService *jobs.Service, syncService *syncdap.Service, importingService *importing.Service) (*TelegramBot, error) {
 	telegramConfig := cfg.Get().Telegram
 
 	if !telegramConfig.Enabled {
@@ -71,7 +70,6 @@ func NewTelegramBot(cfg *config.Manager, libraryService *library.Service, jobSer
 	telegramBot.RegisterHandler("config", config.NewTelegramHandler(cfg))
 	telegramBot.RegisterHandler("jobs", jobs.NewTelegramHandler(jobService))
 	telegramBot.RegisterHandler("syncdap", syncdap.NewTelegramHandler(syncService))
-	telegramBot.RegisterHandler("downloading", downloading.NewTelegramHandler(downloadingService))
 	telegramBot.RegisterHandler("importing", importing.NewTelegramHandler(importingService, cfg))
 
 	return telegramBot, nil
@@ -187,8 +185,6 @@ func (t *TelegramBot) routeCommand(command, args string, chatID int64) error {
 		"config":      "config",
 		"jobs":        "jobs",
 		"dap":         "syncdap",
-		"search":      "downloading",
-		"download":    "downloading",
 		"import":      "importing",
 		"queue":       "importing",
 		"queue_clear": "importing",
@@ -274,7 +270,6 @@ Choose an action below or use commands directly:`
 	buttons := [][]tgbotapi.InlineKeyboardButton{
 		{
 			tgbotapi.NewInlineKeyboardButtonData("📊 Library", "menu_library"),
-			tgbotapi.NewInlineKeyboardButtonData("🔍 Download", "menu_download"),
 		},
 		{
 			tgbotapi.NewInlineKeyboardButtonData("📋 Jobs", "menu_jobs"),
