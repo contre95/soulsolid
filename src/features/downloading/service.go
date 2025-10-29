@@ -102,6 +102,26 @@ func (s *Service) DownloadAlbum(downloaderName, albumID string) (string, error) 
 	return jobID, nil
 }
 
+// DownloadTracks starts a download job for multiple tracks
+func (s *Service) DownloadTracks(downloaderName string, trackIDs []string) (string, error) {
+	_, exists := s.pluginManager.GetDownloader(downloaderName)
+	if !exists {
+		return "", fmt.Errorf("downloader %s not found", downloaderName)
+	}
+
+	jobID, err := s.jobService.StartJob("download_tracks", "Download Tracks", map[string]any{
+		"trackIDs":   trackIDs,
+		"downloader": downloaderName,
+		"type":       "tracks",
+	})
+	if err != nil {
+		slog.Error("Failed to start download job", "error", err)
+		return "", fmt.Errorf("failed to start download job: %w", err)
+	}
+
+	return jobID, nil
+}
+
 // GetAlbumTracks retrieves all tracks from a specific album
 func (s *Service) GetAlbumTracks(downloaderName, albumID string) ([]music.Track, error) {
 	downloader, exists := s.pluginManager.GetDownloader(downloaderName)

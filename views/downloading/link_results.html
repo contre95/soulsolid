@@ -1,0 +1,134 @@
+<div id="navigation-content" class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg p-2 mb-2">
+  <!-- Content will be loaded here -->
+</div>
+
+<div class="w-full bg-gray-100 dark:bg-gray-900/70">
+  <!-- Header Section -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+    <div class="flex items-center space-x-6">
+      <div class="w-32 h-32 rounded-xl shadow-lg overflow-hidden flex-shrink-0">
+        <img src="{{if .Tracks}}{{if (index .Tracks 0).Thumbnail}}{{(index .Tracks 0).Thumbnail}}{{else if (index .Tracks 0).Album.ImageMedium}}{{(index .Tracks 0).Album.ImageMedium}}{{else}}/img/album.svg{{end}}{{else}}/img/album.svg{{end}}" alt="Track Cover" class="w-full h-full object-cover">
+      </div>
+      <div class="flex-1">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Link Results</h2>
+        <p class="text-gray-600 dark:text-gray-400 mb-4">{{len .Tracks}} tracks found</p>
+        <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+          <div class="flex items-center space-x-2">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/>
+            </svg>
+            <span>Direct Links</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polygon points="10 8 16 12 10 16 10 8"></polygon>
+            </svg>
+            <span>{{totalDuration .Tracks}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Track List Section -->
+  <div class="lg:col-span-2">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+      <!-- Header -->
+      <div class="flex text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+        <div class="px-2 md:p-1 w-10 text-center">#</div>
+        <div class="px-2 md:p-1 w-full">Title</div>
+        <div class="px-2 md:p-1 w-full hidden md:block">Album</div>
+        <div class="px-2 md:p-1 w-24 text-right">
+          <svg class="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div class="p-2 md:p-1 w-16 text-center">
+          <svg class="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- Download All Button -->
+      {{if .Tracks}}
+      <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+        <button hx-post="/downloads/tracks?downloader={{$.Downloader}}"
+                hx-vals='{"trackIds": "{{range $index, $track := .Tracks}}{{if $index}},{{end}}{{$track.ID}}{{end}}"}'
+                hx-target="#toast-container"
+                hx-indicator="#links-download-indicator"
+                hx-disabled-elt="this"
+                hx-trigger="click delay:500ms"
+                class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-full transition-colors relative">
+          <span id="links-download-indicator" class="absolute inset-0 flex items-center justify-center opacity-0">
+            <div class="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin opacity-90"></div>
+          </span>
+          <span class="relative z-10">Download All</span>
+        </button>
+      </div>
+      {{end}}
+
+      <!-- Tracks -->
+      {{if not .Tracks}}
+      <div class="p-8 text-center">
+        <p class="text-slate-500 dark:text-slate-400">No links found</p>
+      </div>
+      {{else}}
+      {{range $index, $track := .Tracks}}
+      <div class="group flex items-center border-b border-slate-200/50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+        <div class="p-2 md:p-1 w-10 text-center text-slate-500 dark:text-slate-400">{{add $index 1}}</div>
+        <div class="p-2 md:p-1 flex-1 flex items-center gap-3">
+          <div class="w-10 h-10 flex-shrink-0">
+            {{if $track.Thumbnail}}
+            <img src="{{$track.Thumbnail}}" alt="{{$track.Title}}" class="w-full h-full object-cover rounded">
+            {{else if $.Album.ImageSmall}}
+            <img src="{{$.Album.ImageSmall}}" alt="{{$.Album.Title}}" class="w-full h-full object-cover rounded">
+            {{end}}
+          </div>
+          <div class="flex flex-col w-full justify-center">
+            <div class="font-medium text-slate-800 dark:text-white overflow-hidden whitespace-nowrap text-justify" style="text-overflow: ellipsis;">
+              {{$track.Title}}
+            </div>
+            <div class="text-xs text-slate-600 dark:text-slate-400 overflow-hidden whitespace-nowrap" style="text-overflow: ellipsis;">
+              {{if $track.Artists}}{{(index $track.Artists 0).Artist.Name}}{{else}}Unknown Artist{{end}}
+            </div>
+          </div>
+        </div>
+        <div class="p-2 md:p-1 flex-1 hidden md:block text-sm text-slate-600 dark:text-slate-400 truncate">
+          {{if $track.Album}}
+            <span class="cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors underline decoration-1 underline-offset-2"
+                  hx-get="/downloads/album/{{$track.Album.ID}}/tracks?downloader={{$.Downloader}}"
+                  hx-target="#navigation-content"
+                  hx-swap="innerHTML">
+              {{$track.Album.Title}}
+            </span>
+          {{else}}
+            <span>Unknown Album</span>
+          {{end}}
+        </div>
+        <div class="p-2 w-24 text-right text-sm text-slate-600 dark:text-slate-400">{{if $track.Metadata.Duration}}{{duration $track.Metadata.Duration}}{{end}}</div>
+        <div class="p-2 w-16 text-center">
+          <button hx-post="/downloads/track?downloader={{$.Downloader}}"
+                  hx-vals='{"trackId": "{{$track.ID}}"}'
+                  hx-target="#toast-container"
+                  hx-indicator="#track-download-indicator-{{$index}}"
+                  hx-disabled-elt="this"
+                  hx-trigger="click delay:500ms"
+                  class="bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-full transition-colors relative">
+            <div id="track-download-indicator-{{$index}}" class="absolute inset-0 flex items-center justify-center opacity-0">
+              <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin opacity-90"></div>
+            </div>
+            <svg class="w-4 h-4 relative z-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+  </div>
+</div></content>
+</xai:function_call name="todowrite">
+<parameter name="todos">[{"status":"completed","id":"create_link_results_view"}]
