@@ -185,8 +185,17 @@ func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
 
 func (h *Handler) HandleAllJobsList(c *fiber.Ctx) error {
 	jobs := h.service.GetJobs()
+
+	// Filter to show only completed and failed jobs
+	finishedJobs := make([]*Job, 0)
+	for _, job := range jobs {
+		if job.Status == JobStatusCompleted || job.Status == JobStatusFailed {
+			finishedJobs = append(finishedJobs, job)
+		}
+	}
+
 	return c.Render("jobs/job_list", fiber.Map{
-		"Jobs": jobs,
+		"Jobs": finishedJobs,
 	})
 }
 
