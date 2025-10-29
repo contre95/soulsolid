@@ -2,10 +2,13 @@ package hosting
 
 import (
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
+
+var debugPaths = []string{"/jobs/", "/ui/jobs/"}
 
 // HTMXMiddleware creates middleware for logging HTMX requests
 func HTMXMiddleware() fiber.Handler {
@@ -144,13 +147,30 @@ func LogAllRequestsMiddleware() fiber.Handler {
 				"error", err,
 			)
 		} else {
-			slog.Info("HTTP request",
-				"type", requestType,
-				"method", c.Method(),
-				"path", c.Path(),
-				"status", status,
-				"duration", duration.String(),
-			)
+			isDebug := false
+			for _, p := range debugPaths {
+				if strings.HasPrefix(c.Path(), p) {
+					isDebug = true
+					break
+				}
+			}
+			if isDebug {
+				slog.Debug("HTTP request",
+					"type", requestType,
+					"method", c.Method(),
+					"path", c.Path(),
+					"status", status,
+					"duration", duration.String(),
+				)
+			} else {
+				slog.Info("HTTP request",
+					"type", requestType,
+					"method", c.Method(),
+					"path", c.Path(),
+					"status", status,
+					"duration", duration.String(),
+				)
+			}
 		}
 
 		return err

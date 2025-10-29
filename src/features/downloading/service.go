@@ -62,8 +62,10 @@ func (s *Service) SearchTracks(downloaderName, query string, limit int) ([]music
 
 // DownloadTrack starts a download job for a track
 func (s *Service) DownloadTrack(downloaderName, trackID string) (string, error) {
+	slog.Info("DownloadTrack service", "downloaderName", downloaderName, "trackID", trackID)
 	_, exists := s.pluginManager.GetDownloader(downloaderName)
 	if !exists {
+		slog.Error("Downloader not found", "downloaderName", downloaderName, "available", s.pluginManager.GetDownloaderNames())
 		return "", fmt.Errorf("downloader %s not found", downloaderName)
 	}
 

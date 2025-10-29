@@ -95,11 +95,13 @@
 
   <!-- Action Buttons -->
   <div class="flex items-center gap-4">
-       <button hx-post="/downloads/album?downloader={{$.Downloader}}"
-               hx-vals='{"albumId": "{{.Album.ID}}"}'
-               hx-target="#toast-container"
-               hx-indicator="#album-download-indicator"
-               class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 md:px-2 px-8 rounded-full transition-colors relative mr-4">
+        <button hx-post="/downloads/album?downloader={{$.Downloader}}"
+                hx-vals='{"albumId": "{{.Album.ID}}"}'
+                hx-target="#toast-container"
+                hx-indicator="#album-download-indicator"
+                hx-disabled-elt="this"
+                    hx-trigger="click delay:500ms"
+                class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 md:px-2 px-8 rounded-full transition-colors relative mr-4">
          <span id="album-download-indicator" class="absolute inset-0 flex items-center justify-center opacity-0">
            <div class="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin opacity-90"></div>
          </span>
@@ -130,12 +132,14 @@
     {{range $index, $track := .Tracks}}
       <div class="group flex items-center border-b border-slate-200/50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
         <div class="p-2 md:p-1 w-10 text-center text-slate-500 dark:text-slate-400">{{add $index 1}}</div>
-         <div class="p-2 md:p-1 flex-1 flex items-center gap-3">
-        <div class="w-10 h-10 flex-shrink-0">
-          {{if $.Album.ImageSmall}}
-          <img src="{{$.Album.ImageSmall}}" alt="{{$.Album.Title}}" class="w-full h-full object-cover rounded">
-          {{end}}
-        </div>
+            <div class="p-2 md:p-1 flex-1 flex items-center gap-3">
+         <div class="w-10 h-10 flex-shrink-0">
+           {{if $track.Thumbnail}}
+           <img src="{{$track.Thumbnail}}" alt="{{$track.Title}}" class="w-full h-full object-cover rounded">
+           {{else if $.Album.ImageSmall}}
+           <img src="{{$.Album.ImageSmall}}" alt="{{$.Album.Title}}" class="w-full h-full object-cover rounded">
+           {{end}}
+         </div>
            <div class="flex flex-col w-full justify-center">
              <div class="font-medium text-slate-800 dark:text-white overflow-hidden whitespace-nowrap text-justify" style="text-overflow: ellipsis;">
                {{if gt (len $track.Title) 15}}
@@ -154,11 +158,13 @@
         <div class="p-2 md:p-1 flex-1 hidden md:block text-sm text-slate-600 dark:text-slate-400 truncate">{{$track.Album.Title}}</div>
       <div class="p-2 w-24 text-right text-sm text-slate-600 dark:text-slate-400">{{duration $track.Metadata.Duration}}</div>
       <div class="p-2 w-16 text-center">
-           <button hx-post="/downloads/track?downloader={{$.Downloader}}"
-                   hx-vals='{"trackId": "{{$track.ID}}"}'
-                   hx-target="#toast-container"
-                   hx-indicator="#track-download-indicator-{{$index}}"
-                   class="bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-full transition-colors relative">
+            <button hx-post="/downloads/track?downloader={{$.Downloader}}"
+                    hx-vals='{"trackId": "{{$track.ID}}"}'
+                    hx-target="#toast-container"
+                    hx-indicator="#track-download-indicator-{{$index}}"
+                    hx-disabled-elt="this"
+                hx-trigger="click delay:500ms"
+                    class="bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-full transition-colors relative">
              <div id="track-download-indicator-{{$index}}" class="absolute inset-0 flex items-center justify-center opacity-0">
                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin opacity-90"></div>
              </div>

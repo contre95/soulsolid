@@ -262,9 +262,37 @@ func (h *Handler) renderAlbumResults(c *fiber.Ctx, albums []music.Album, downloa
 
 // renderTrackResults renders track search results as HTML for HTMX
 func (h *Handler) renderTrackResults(c *fiber.Ctx, tracks []music.Track, downloader string) error {
-	return c.Render("downloading/spotify_track_results", fiber.Map{
-		"Tracks":     tracks,
-		"Downloader": downloader,
+	// Calculate total duration
+	totalDuration := 0
+	for _, track := range tracks {
+		totalDuration += track.Metadata.Duration
+	}
+
+	// Create album object from first track's album info, or create a synthetic one
+	var album *music.Album
+	if len(tracks) > 0 && tracks[0].Album != nil {
+		album = tracks[0].Album
+	} else {
+		// Create a synthetic album for tracks without album info
+		album = &music.Album{
+			ID:          "link-results",
+			Title:       "Link Results",
+			Type:        music.AlbumTypeDefault,
+			ImageSmall:  "/img/album.svg",
+			ImageMedium: "/img/album.svg",
+			ImageLarge:  "/img/album.svg",
+			ImageXL:     "/img/album.svg",
+		}
+		if len(tracks) > 0 && len(tracks[0].Artists) > 0 {
+			album.Artists = []music.ArtistRole{tracks[0].Artists[0]}
+		}
+	}
+
+	return c.Render("downloading/album_tracks", fiber.Map{
+		"Album":         album,
+		"Tracks":        tracks,
+		"TotalDuration": totalDuration,
+		"Downloader":    downloader,
 	})
 }
 
@@ -300,7 +328,10 @@ func (h *Handler) DownloadTrack(c *fiber.Ctx) error {
 		})
 	}
 
-	jobID, err := h.service.DownloadTrack(c.Query("downloader", "dummy"), req.TrackID)
+	downloader := strings.Clone(c.Query("downloader", "dummy"))
+	slog.Info("DownloadTrack", "downloader", downloader, "trackID", req.TrackID, "raw_query", c.Request().URI().QueryString())
+
+	jobID, err := h.service.DownloadTrack(downloader, req.TrackID)
 	if err != nil {
 		slog.Error("Failed to start track download", "error", err)
 		if c.Get("HX-Request") == "true" {
@@ -356,7 +387,8 @@ func (h *Handler) DownloadAlbum(c *fiber.Ctx) error {
 		})
 	}
 
-	jobID, err := h.service.DownloadAlbum(c.Query("downloader", "dummy"), req.AlbumID)
+	downloader := strings.Clone(c.Query("downloader", "dummy"))
+	jobID, err := h.service.DownloadAlbum(downloader, req.AlbumID)
 	if err != nil {
 		slog.Error("Failed to start album download", "error", err)
 		if c.Get("HX-Request") == "true" {
@@ -421,7 +453,8 @@ func (h *Handler) GetAlbumTracks(c *fiber.Ctx) error {
 		})
 	}
 
-	tracks, err := h.service.GetAlbumTracks(c.Query("downloader", "dummy"), albumID)
+	downloader := strings.Clone(c.Query("downloader", "dummy"))
+	tracks, err := h.service.GetAlbumTracks(downloader, albumID)
 	if err != nil {
 		slog.Error("Failed to get album tracks", "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -445,7 +478,7 @@ func (h *Handler) GetAlbumTracks(c *fiber.Ctx) error {
 		"Album":         album,
 		"Tracks":        tracks,
 		"TotalDuration": totalDuration,
-		"Downloader":    c.Query("downloader", "dummy"),
+		"Downloader":    downloader,
 	})
 }
 
@@ -458,7 +491,7 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 		}
 	}
 
-	downloader := c.Query("downloader", "dummy")
+	downloader := strings.Clone(c.Query("downloader", "dummy"))
 
 	// Get downloader capabilities
 	var caps DownloaderCapabilities
@@ -513,7 +546,7 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 
 // GetUserInfo handles requests for user information
 func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
-	downloader := c.Query("downloader", "dummy")
+	downloader := strings.Clone(c.Query("downloader", "dummy"))
 	userInfo := h.service.GetUserInfo(downloader)
 	config := h.service.configManager.Get()
 	statuses := h.service.GetDownloaderStatuses()
@@ -555,7 +588,7 @@ func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
 
 // GetDownloaderCapabilities handles requests for downloader capabilities
 func (h *Handler) GetDownloaderCapabilities(c *fiber.Ctx) error {
-	downloader := c.Query("downloader", "dummy")
+	downloader := strings.Clone(c.Query("downloader", "dummy"))
 	caps, err := h.service.GetDownloaderCapabilities(downloader)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
