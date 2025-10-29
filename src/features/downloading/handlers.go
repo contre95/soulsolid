@@ -460,6 +460,27 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 
 	downloader := c.Query("downloader", "dummy")
 
+	// Get downloader capabilities
+	var caps DownloaderCapabilities
+	if d, exists := h.service.pluginManager.GetDownloader(downloader); exists {
+		caps = d.Capabilities()
+	}
+
+	// If downloader doesn't support chart tracks, show not supported message
+	if !caps.SupportsChartTracks {
+		// Get the downloader name
+		downloaderName := downloader
+		if d, exists := h.service.pluginManager.GetDownloader(downloader); exists {
+			downloaderName = d.Name()
+		}
+		return c.Render("downloading/chart_tracks", fiber.Map{
+			"Tracks":         []music.Track{},
+			"NotSupported":   true,
+			"DownloaderName": downloaderName,
+			"Downloader":     downloader,
+		})
+	}
+
 	// Always try to fetch tracks, even if the downloader is disabled
 	tracks, err := h.service.GetChartTracks(downloader, limit)
 

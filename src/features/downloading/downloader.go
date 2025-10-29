@@ -42,6 +42,7 @@ type UserInfo struct {
 type DownloaderCapabilities struct {
 	SupportsSearch      bool `json:"supports_search"`
 	SupportsDirectLinks bool `json:"supports_direct_links"`
+	SupportsChartTracks bool `json:"supports_chart_tracks"`
 }
 
 // ErrMethodNotSupported is returned when a downloader does not support a requested method
