@@ -262,37 +262,9 @@ func (h *Handler) renderAlbumResults(c *fiber.Ctx, albums []music.Album, downloa
 
 // renderTrackResults renders track search results as HTML for HTMX
 func (h *Handler) renderTrackResults(c *fiber.Ctx, tracks []music.Track, downloader string) error {
-	// Calculate total duration
-	totalDuration := 0
-	for _, track := range tracks {
-		totalDuration += track.Metadata.Duration
-	}
-
-	// Create album object from first track's album info, or create a synthetic one
-	var album *music.Album
-	if len(tracks) > 0 && tracks[0].Album != nil {
-		album = tracks[0].Album
-	} else {
-		// Create a synthetic album for tracks without album info
-		album = &music.Album{
-			ID:          "link-results",
-			Title:       "Link Results",
-			Type:        music.AlbumTypeDefault,
-			ImageSmall:  "/img/album.svg",
-			ImageMedium: "/img/album.svg",
-			ImageLarge:  "/img/album.svg",
-			ImageXL:     "/img/album.svg",
-		}
-		if len(tracks) > 0 && len(tracks[0].Artists) > 0 {
-			album.Artists = []music.ArtistRole{tracks[0].Artists[0]}
-		}
-	}
-
-	return c.Render("downloading/album_tracks", fiber.Map{
-		"Album":         album,
-		"Tracks":        tracks,
-		"TotalDuration": totalDuration,
-		"Downloader":    downloader,
+	return c.Render("downloading/spotify_track_results", fiber.Map{
+		"Tracks":     tracks,
+		"Downloader": downloader,
 	})
 }
 
