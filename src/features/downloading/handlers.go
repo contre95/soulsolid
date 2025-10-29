@@ -150,27 +150,6 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 		req.Limit = 20
 	}
 
-	// If type is "link", treat as search with URL
-	if req.Type == "link" {
-		tracks, err := h.service.SearchTracks(req.Downloader, req.Query, req.Limit)
-		if err != nil {
-			if c.Get("HX-Request") == "true" {
-				return c.Render("toast/toastErr", fiber.Map{
-					"Msg": "Failed to process link: " + err.Error(),
-				})
-			}
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Failed to process link",
-			})
-		}
-		if c.Get("HX-Request") == "true" {
-			return h.renderTrackResults(c, tracks, req.Downloader)
-		}
-		return c.JSON(fiber.Map{
-			"tracks": tracks,
-		})
-	}
-
 	// Auto-detect URLs for link-supporting downloaders
 	if strings.Contains(req.Query, "://") {
 		if d, exists := h.service.pluginManager.GetDownloader(req.Downloader); exists {
@@ -204,12 +183,21 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 				})
 			}
 			return h.renderAlbumResults(c, albums, req.Downloader)
-		case "track", "all":
+		case "track":
 			tracks, err := h.service.SearchTracks(req.Downloader, req.Query, req.Limit)
 			if err != nil {
 				slog.Error("Failed to search tracks", "error", err)
 				return c.Render("toast/toastErr", fiber.Map{
 					"Msg": "Failed to search tracks",
+				})
+			}
+			return h.renderTrackResults(c, tracks, req.Downloader)
+		case "link":
+			tracks, err := h.service.SearchTracks(req.Downloader, req.Query, req.Limit)
+			if err != nil {
+				slog.Error("Failed to search links", "error", err)
+				return c.Render("toast/toastErr", fiber.Map{
+					"Msg": "Failed to search links",
 				})
 			}
 			return h.renderTrackResults(c, tracks, req.Downloader)
@@ -234,12 +222,23 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"albums": albums,
 		})
-	case "track", "all":
+	case "track":
 		tracks, err := h.service.SearchTracks(req.Downloader, req.Query, req.Limit)
 		if err != nil {
 			slog.Error("Failed to search tracks", "error", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Failed to search tracks",
+			})
+		}
+		return c.JSON(fiber.Map{
+			"tracks": tracks,
+		})
+	case "link":
+		tracks, err := h.service.SearchTracks(req.Downloader, req.Query, req.Limit)
+		if err != nil {
+			slog.Error("Failed to search links", "error", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to search links",
 			})
 		}
 		return c.JSON(fiber.Map{
