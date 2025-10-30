@@ -55,6 +55,8 @@ func (e *DownloadJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 		return e.executeTrackDownload(ctx, job, progressUpdater, downloadPath)
 	case "album":
 		return e.executeAlbumDownload(ctx, job, progressUpdater, downloadPath)
+	case "tracks":
+		return e.executeTracksDownload(ctx, job, progressUpdater, downloadPath)
 	default:
 		return nil, fmt.Errorf("unsupported download type: %s", jobType)
 	}
@@ -264,6 +266,113 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *jobs.Jo
 		"trackCount": len(downloadedTracks),
 		"filePaths":  filePaths,
 		"albumPath":  albumPath,
+	}, nil
+}
+
+// executeTracksDownload handles multiple track download jobs
+func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *jobs.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
+	var trackIDs []string
+
+	// Try to get trackIDs as []string first
+	if ids, ok := job.Metadata["trackIDs"].([]string); ok {
+		trackIDs = ids
+	} else if idsInterface, ok := job.Metadata["trackIDs"].([]interface{}); ok {
+		// Handle as []interface{}
+		for _, id := range idsInterface {
+			if idStr, ok := id.(string); ok {
+				trackIDs = append(trackIDs, idStr)
+			}
+		}
+	} else if trackIDsStr, ok := job.Metadata["trackIDs"].(string); ok {
+		// Fallback: if stored as comma-separated string
+		trackIDs = strings.Split(trackIDsStr, ",")
+		for i, id := range trackIDs {
+			trackIDs[i] = strings.TrimSpace(id)
+		}
+	} else {
+		return nil, fmt.Errorf("trackIDs not found in job metadata or invalid format")
+	}
+
+	if len(trackIDs) == 0 {
+		return nil, fmt.Errorf("no track IDs provided")
+	}
+
+	downloaderName, ok := job.Metadata["downloader"].(string)
+	if !ok {
+		return nil, fmt.Errorf("downloader not found in job metadata")
+	}
+
+	downloader, exists := e.service.pluginManager.GetDownloader(downloaderName)
+	if !exists {
+		return nil, fmt.Errorf("downloader %s not found", downloaderName)
+	}
+
+	slog.Debug("Starting tracks download job", "trackIDs", trackIDs, "downloader", downloaderName, "jobID", job.ID)
+	progressUpdater(5, fmt.Sprintf("Starting download of %d tracks...", len(trackIDs)))
+
+	totalTracks := len(trackIDs)
+	var downloadedTracks []*music.Track
+	var filePaths []string
+
+	// Process each track
+	for i, trackID := range trackIDs {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		progress := 5 + (i * 90 / totalTracks)
+		progressUpdater(progress, fmt.Sprintf("Downloading track %d/%d: %s...", i+1, totalTracks, trackID))
+
+		slog.Debug("Downloading track", "trackID", trackID, "downloader", downloaderName, "jobID", job.ID)
+
+		// Download the track
+		track, err := downloader.DownloadTrack(trackID, downloadPath, func(downloaded, total int64) {
+			// Track-level progress (small portion of overall progress)
+			trackProgress := progress + int(downloaded*5/total)
+			progressUpdater(trackProgress, fmt.Sprintf("Downloading track %d/%d... (%d%%)", i+1, totalTracks, downloaded*100/total))
+		})
+		if err != nil {
+			slog.Error("Failed to download track", "trackID", trackID, "error", err)
+			continue // Skip this track but continue with others
+		}
+
+		// Process the downloaded track
+		track.EnsureMetadataDefaults()
+		if err := track.ValidateRequiredMetadata(); err != nil {
+			slog.Error("Track metadata validation failed", "trackID", trackID, "error", err)
+			continue
+		}
+
+		cfg := e.service.configManager.Get()
+		if cfg.Downloaders.TagFile {
+			filePath := track.Path
+			slog.Debug("Tagging track file", "trackID", trackID, "filePath", filePath, "title", track.Title)
+
+			if _, err := os.Stat(filePath); os.IsNotExist(err) {
+				slog.Error("Track file does not exist for tagging", "trackID", trackID, "filePath", filePath)
+				continue
+			}
+
+			err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
+			if err != nil {
+				slog.Error("Failed to tag track file", "trackID", trackID, "filePath", filePath, "error", err)
+				continue
+			}
+
+			slog.Info("Track processed successfully", "title", track.Title, "filePath", filePath)
+		}
+
+		downloadedTracks = append(downloadedTracks, track)
+		filePaths = append(filePaths, track.Path)
+	}
+
+	progressUpdater(100, fmt.Sprintf("Tracks download completed - %d tracks processed", len(downloadedTracks)))
+	return map[string]any{
+		"trackIDs":   trackIDs,
+		"trackCount": len(downloadedTracks),
+		"filePaths":  filePaths,
 	}, nil
 }
 

@@ -1,81 +1,136 @@
 <div id="contenido" class="animate__animated animate__fadeIn">
-    <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">Music Download</h1>
-
-    <!-- User Profile Section - Loaded from downloading feature -->
-    <div hx-get="/downloads/user/info?downloader={{.CurrentDownloader}}" hx-trigger="load" hx-swap="innerHTML">
-      <!-- Loading state -->
-      <div class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg p-6 mb-8 animate__animated animate__heartBeat">
-        <div class="flex items-center gap-4">
-          <div class="w-16 h-16 rounded-full bg-gray-300 dark:bg-gray-600"></div>
-          <div>
-            <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32 mb-2"></div>
-            <div class="h-3 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
-          </div>
+  <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">
+    Music Download
+  </h1>
+  <!-- User Profile Section - Loaded from downloading feature -->
+  <div
+    hx-get="/downloads/user/info?downloader={{.CurrentDownloader}}"
+    hx-trigger="load"
+    hx-swap="innerHTML"
+  >
+    <!-- Loading state -->
+    <div
+      class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg p-6 mb-8 animate__animated animate__heartBeat"
+    >
+      <div class="flex items-center gap-4">
+        <div class="w-16 h-16 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+        <div>
+          <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32 mb-2"></div>
+          <div class="h-3 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
         </div>
       </div>
     </div>
+  </div>
+  <span class="htmx-indicator-off">Search</span>
 
+  <!-- Search Results -->
+  <div id="search-results">
+    <div
+      class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4"
+    >
+      <button
+        _="on click put 'block' into #homepage-content.style.display then put 'none' into #search-results.style.display"
+        class="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 flex items-center gap-2"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="size-4"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+          />
+        </svg>
+        Back to Home
+      </button>
+    </div>
+    <h3 class="text-lg font-medium text-slate-800 dark:text-white mb-4">
+      Search Results
+    </h3>
+    <div id="results-container" class="space-y-4">
+      <!-- Results will be populated here -->
+    </div>
+  </div>
 
-
-       <!-- Search Results -->
-       <div id="search-results" style="display: none;">
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-            <button _="on click put 'block' into #homepage-content.style.display then put 'none' into #search-results.style.display" class="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 flex items-center gap-2">
-             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-               <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-             </svg>
-             Back to Home
-           </button>
-         </div>
-       <h3 class="text-lg font-medium text-slate-800 dark:text-white mb-4">Search Results</h3>
-        <div id="results-container" class="space-y-4">
-          <!-- Results will be populated here -->
-        </div>
-     </div>
-
-    <!-- Navigation Modal -->
-    <div id="navigation-modal"
-         class="fixed inset-0 bg-black bg-opacity-50 opacity-0 invisible z-50 transition-all duration-300"
-          _="on click if event.target is #navigation-modal then add .opacity-0 .invisible then remove .opacity-100 .visible then wait 300ms then remove #navigation-modal"
-          _="on keydown[key is 'Escape'] add .opacity-0 .invisible then remove .opacity-100 .visible then wait 300ms then remove #navigation-modal"
-           _="on htmx:before-request from #navigation-modal then put '' into #navigation-content">
-      <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden transform scale-95 transition-transform duration-300"
-             _="on click halt">
-           <!-- Modal Header -->
-            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 class="modal-title text-xl font-semibold text-slate-800 dark:text-white">Browse Music</h2>
-              <button _="on click add .opacity-0 .invisible to #navigation-modal then remove .opacity-100 .visible from #navigation-modal then wait 300ms then remove #navigation-modal"
-                      class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full p-2 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+  <!-- Navigation Modal -->
+  <div
+    id="navigation-modal"
+    class="fixed inset-0 bg-black bg-opacity-50 opacity-0 invisible z-50 transition-all duration-300"
+    _="on click if event.target is #navigation-modal then add .opacity-0 .invisible then remove .opacity-100 .visible then wait 300ms then remove #navigation-modal"
+    _="on keydown[key is 'Escape'] add .opacity-0 .invisible then remove .opacity-100 .visible then wait 300ms then remove #navigation-modal"
+    _="on htmx:before-request from #navigation-modal then put '' into #navigation-content"
+  >
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden transform scale-95 transition-transform duration-300"
+        _="on click halt"
+      >
+        <!-- Modal Header -->
+        <div
+          class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700"
+        >
+          <h2
+            class="modal-title text-xl font-semibold text-slate-800 dark:text-white"
+          >
+            Browse Music
+          </h2>
+          <button
+            _="on click add .opacity-0 .invisible to #navigation-modal then remove .opacity-100 .visible from #navigation-modal then wait 300ms then remove #navigation-modal"
+            class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full p-2 transition-colors"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-6"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
         </div>
       </div>
     </div>
+  </div>
 
-     <div id="selected-tracks" class="space-y-2 mb-4">
-       <!-- Selected tracks will appear here -->
-     </div>
+  <div id="selected-tracks" class="space-y-2 mb-4">
+    <!-- Selected tracks will appear here -->
+  </div>
 
-    <!-- Homepage Content -->
-    <div id="homepage-content" class="space-y-8">
-      <!-- Chart Tracks -->
-      <div class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg px-4 py-6">
-         <h2 class="text-xl font-semibold text-slate-800 dark:text-white mb-4">Chart Tracks</h2>
-        <div id="chart-tracks" class="space-y-4"
-             hx-get="/ui/downloading/chart/tracks?downloader={{.CurrentDownloader}}"
-             hx-trigger="load"
-             hx-swap="innerHTML">
-           <!-- Loading state -->
-             <div class="text-center py-8 text-slate-500 dark:text-slate-400">
-               <div class="w-12 h-12 mx-auto mb-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin opacity-80"></div>
-               <p>Loading chart tracks...</p>
-             </div>
-         </div>
+  <!-- Homepage Content -->
+  <div id="homepage-content" class="space-y-8">
+    <!-- Chart Tracks -->
+    <div
+      class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg px-4 py-6"
+    >
+      <h2 class="text-xl font-semibold text-slate-800 dark:text-white mb-4">
+        Chart Tracks
+      </h2>
+      <div
+        id="chart-tracks"
+        class="space-y-4"
+        hx-get="/ui/downloading/chart/tracks?downloader={{.CurrentDownloader}}"
+        hx-trigger="load"
+        hx-swap="innerHTML"
+      >
+        <!-- Loading state -->
+        <div class="text-center py-8 text-slate-500 dark:text-slate-400">
+          <div
+            class="w-12 h-12 mx-auto mb-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin opacity-80"
+          ></div>
+          <p>Loading chart tracks...</p>
+        </div>
       </div>
-
-   </div>
- </div>
+    </div>
+  </div>
+</div>

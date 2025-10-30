@@ -65,8 +65,7 @@
         <div class="flex-1">
           <h2 class="text-xl font-semibold text-slate-800 dark:text-white mb-1">{{.UserInfo.Name}}</h2>
           <div class="flex items-center gap-2 mb-3">
-            <img class="mb-1" src="https://flagsapi.com/{{.UserInfo.Country}}/flat/32.png">
-            <p class="text-slate-600 dark:text-slate-400">{{.DownloaderName}} User</p>
+            <p class="text-slate-600 dark:text-slate-400">{{.DownloaderName}}</p>
           </div>
 
           <div class="flex items-center gap-3 flex-wrap">
@@ -108,10 +107,15 @@
             placeholder="Search for albums, tracks..."
             class="flex-1 bg-white/60 dark:bg-gray-700/60 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-full focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 px-4 py-2.5 dark:placeholder-gray-400 backdrop-blur-sm"
           required>
-           <select name="type" class="bg-white/60 dark:bg-gray-700/60 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 px-3 py-2.5 dark:placeholder-gray-400 backdrop-blur-sm sm:flex-shrink-0">
-             <option value="track">Tracks</option>
-             <option value="album">Albums</option>
-           </select>
+            <select name="type" class="bg-white/60 dark:bg-gray-700/60 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 px-3 py-2.5 dark:placeholder-gray-400 backdrop-blur-sm sm:flex-shrink-0">
+              {{if .Capabilities.SupportsSearch}}
+              <option value="track">Tracks</option>
+              <option value="album">Albums</option>
+              {{end}}
+              {{if .Capabilities.SupportsDirectLinks}}
+              <option value="link">Link</option>
+              {{end}}
+            </select>
            <input type="hidden" name="downloader" value="{{.CurrentDownloader}}">
         </div>
         <button

@@ -168,6 +168,17 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 	if track.Album != nil && len(track.Album.ArtworkData) > 0 {
 		mimeType := t.detectMimeType(track.Album.ArtworkData)
 
+		// Convert WebP to JPEG for better compatibility
+		if mimeType == "image/webp" {
+			if converted, err := t.convertToJPEG(track.Album.ArtworkData); err == nil {
+				track.Album.ArtworkData = converted
+				mimeType = "image/jpeg"
+				slog.Debug("Converted WebP artwork to JPEG", "filePath", filePath)
+			} else {
+				slog.Warn("Failed to convert WebP to JPEG, using original", "filePath", filePath, "error", err)
+			}
+		}
+
 		// Resize if configured
 		imgData := track.Album.ArtworkData
 		if t.artworkConfig.Enabled && t.artworkConfig.Size > 0 {
@@ -403,6 +414,28 @@ func (t *TagWriter) detectMimeType(imgData []byte) string {
 		slog.Warn("Unknown image format, defaulting to jpeg", "format", format)
 		return "image/jpeg"
 	}
+}
+
+// convertToJPEG converts image data to JPEG format for better compatibility
+func (t *TagWriter) convertToJPEG(imgData []byte) ([]byte, error) {
+	// Decode image
+	img, _, err := image.Decode(bytes.NewReader(imgData))
+	if err != nil {
+		return imgData, fmt.Errorf("failed to decode image for JPEG conversion: %w", err)
+	}
+
+	// Encode to JPEG
+	var buf bytes.Buffer
+	quality := t.artworkConfig.Quality
+	if quality <= 0 {
+		quality = 85
+	}
+	err = jpeg.Encode(&buf, img, &jpeg.Options{Quality: quality})
+	if err != nil {
+		return imgData, fmt.Errorf("failed to encode image to JPEG: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 // resizeImage resizes image data to fit within maxSize pixels, maintaining aspect ratio.

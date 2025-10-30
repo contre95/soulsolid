@@ -30,7 +30,6 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	slog.Debug(h.configManager.GetJSON())
 	// Parse form data into a new config struct
 	// TODO: We might want to add some validations probably, not sure if here.
-	slog.Warn("Method not fully implemented")
 	newConfig := &Config{
 		LibraryPath:  c.FormValue("libraryPath"),
 		DownloadPath: c.FormValue("downloadPath"),

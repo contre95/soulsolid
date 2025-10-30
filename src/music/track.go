@@ -33,6 +33,7 @@ type Track struct {
 	ExplicitContent        bool
 	Attributes             map[string]string
 	PreviewURL             string         // URL for 30-second preview
+	Thumbnail              string         // URL for track thumbnail image
 	MetadataSource         MetadataSource // Information about metadata source
 	AddedDate              time.Time
 	ModifiedDate           time.Time

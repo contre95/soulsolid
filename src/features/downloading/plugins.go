@@ -8,6 +8,7 @@ import (
 	"os"
 	"plugin"
 	"strings"
+	"sync"
 
 	"github.com/contre95/soulsolid/src/features/config"
 )
@@ -18,6 +19,7 @@ type PluginNewDownloaderFunc func(config map[string]interface{}) (Downloader, er
 // PluginManager manages loading and providing access to plugin downloaders
 type PluginManager struct {
 	downloaders map[string]Downloader
+	mu          sync.RWMutex
 }
 
 // NewPluginManager creates a new plugin manager
@@ -38,7 +40,10 @@ func (pm *PluginManager) LoadPlugins(cfg *config.Config) error {
 		}
 	}
 
-	slog.Info("Plugin loading completed", "total_downloaders", len(pm.downloaders))
+	pm.mu.RLock()
+	total := len(pm.downloaders)
+	pm.mu.RUnlock()
+	slog.Info("Plugin loading completed", "total_downloaders", total)
 	return nil
 }
 
@@ -101,37 +106,48 @@ func (pm *PluginManager) loadPlugin(pluginCfg config.PluginConfig) error {
 		return fmt.Errorf("failed to create downloader from plugin %s: %w", pluginCfg.Name, err)
 	}
 
+	pm.mu.Lock()
 	pm.downloaders[pluginCfg.Name] = downloader
-	slog.Info("Successfully loaded plugin", "name", pluginCfg.Name, "downloader_name", downloader.Name())
+	total := len(pm.downloaders)
+	pm.mu.Unlock()
+	slog.Info("Successfully loaded plugin", "name", pluginCfg.Name, "downloader_name", downloader.Name(), "total_downloaders", total)
 
 	return nil
 }
 
 // GetDownloader returns a downloader by name
 func (pm *PluginManager) GetDownloader(name string) (Downloader, bool) {
+	pm.mu.RLock()
 	downloader, exists := pm.downloaders[name]
+	pm.mu.RUnlock()
 	return downloader, exists
 }
 
 // AddDownloader adds a downloader to the manager
 func (pm *PluginManager) AddDownloader(name string, downloader Downloader) {
+	pm.mu.Lock()
 	pm.downloaders[name] = downloader
+	pm.mu.Unlock()
 }
 
 // GetAllDownloaders returns all loaded downloaders
 func (pm *PluginManager) GetAllDownloaders() map[string]Downloader {
+	pm.mu.RLock()
 	result := make(map[string]Downloader)
 	for k, v := range pm.downloaders {
 		result[k] = v
 	}
+	pm.mu.RUnlock()
 	return result
 }
 
 // GetDownloaderNames returns a list of all downloader names
 func (pm *PluginManager) GetDownloaderNames() []string {
+	pm.mu.RLock()
 	names := make([]string, 0, len(pm.downloaders))
 	for name := range pm.downloaders {
 		names = append(names, name)
 	}
+	pm.mu.RUnlock()
 	return names
 }

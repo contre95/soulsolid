@@ -1,6 +1,10 @@
 package downloading
 
-import "github.com/contre95/soulsolid/src/music"
+import (
+	"fmt"
+
+	"github.com/contre95/soulsolid/src/music"
+)
 
 // Downloader defines the interface for music downloaders
 type Downloader interface {
@@ -13,10 +17,12 @@ type Downloader interface {
 	// Download methods
 	DownloadTrack(trackID string, downloadDir string, progressCallback func(downloaded, total int64)) (*music.Track, error)
 	DownloadAlbum(albumID string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error)
+	DownloadLink(url string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error)
 	// User info
 	GetUserInfo() *UserInfo
 	GetStatus() DownloaderStatus
 	Name() string
+	Capabilities() DownloaderCapabilities
 }
 
 // UserInfo represents user information from a downloader
@@ -31,3 +37,13 @@ type UserInfo struct {
 	Type         string `json:"type"`
 	UserOptions  any    `json:"user_options"`
 }
+
+// DownloaderCapabilities represents the capabilities of a downloader
+type DownloaderCapabilities struct {
+	SupportsSearch      bool `json:"supports_search"`
+	SupportsDirectLinks bool `json:"supports_direct_links"`
+	SupportsChartTracks bool `json:"supports_chart_tracks"`
+}
+
+// ErrMethodNotSupported is returned when a downloader does not support a requested method
+var ErrMethodNotSupported = fmt.Errorf("method not supported by this downloader")

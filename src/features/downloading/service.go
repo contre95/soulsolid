@@ -62,8 +62,10 @@ func (s *Service) SearchTracks(downloaderName, query string, limit int) ([]music
 
 // DownloadTrack starts a download job for a track
 func (s *Service) DownloadTrack(downloaderName, trackID string) (string, error) {
+	slog.Info("DownloadTrack service", "downloaderName", downloaderName, "trackID", trackID)
 	_, exists := s.pluginManager.GetDownloader(downloaderName)
 	if !exists {
+		slog.Error("Downloader not found", "downloaderName", downloaderName, "available", s.pluginManager.GetDownloaderNames())
 		return "", fmt.Errorf("downloader %s not found", downloaderName)
 	}
 
@@ -91,6 +93,26 @@ func (s *Service) DownloadAlbum(downloaderName, albumID string) (string, error) 
 		"albumID":    albumID,
 		"downloader": downloaderName,
 		"type":       "album",
+	})
+	if err != nil {
+		slog.Error("Failed to start download job", "error", err)
+		return "", fmt.Errorf("failed to start download job: %w", err)
+	}
+
+	return jobID, nil
+}
+
+// DownloadTracks starts a download job for multiple tracks
+func (s *Service) DownloadTracks(downloaderName string, trackIDs []string) (string, error) {
+	_, exists := s.pluginManager.GetDownloader(downloaderName)
+	if !exists {
+		return "", fmt.Errorf("downloader %s not found", downloaderName)
+	}
+
+	jobID, err := s.jobService.StartJob("download_tracks", "Download Tracks", map[string]any{
+		"trackIDs":   trackIDs,
+		"downloader": downloaderName,
+		"type":       "tracks",
 	})
 	if err != nil {
 		slog.Error("Failed to start download job", "error", err)
@@ -146,6 +168,15 @@ type DownloaderStatus struct {
 // GetAllDownloaders returns all loaded downloaders
 func (s *Service) GetAllDownloaders() map[string]Downloader {
 	return s.pluginManager.GetAllDownloaders()
+}
+
+// GetDownloaderCapabilities returns the capabilities of a specific downloader
+func (s *Service) GetDownloaderCapabilities(downloaderName string) (DownloaderCapabilities, error) {
+	downloader, exists := s.pluginManager.GetDownloader(downloaderName)
+	if !exists {
+		return DownloaderCapabilities{}, fmt.Errorf("downloader %s not found", downloaderName)
+	}
+	return downloader.Capabilities(), nil
 }
 
 // GetDownloaderStatuses returns the current status of all configured downloaders
