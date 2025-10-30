@@ -126,9 +126,12 @@ func determineAction(track *music.Track, existingTrack *music.Track, config conf
 }
 
 // addTrackToQueue adds a track to the queue
-func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType QueueItemType, jobID string, logger *slog.Logger) error {
+func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType QueueItemType, jobID string, existingTrack *music.Track, logger *slog.Logger) error {
 	if track == nil {
 		return fmt.Errorf("track cannot be nil")
+	}
+	if existingTrack != nil {
+		track.ID = existingTrack.ID
 	}
 	if track.ID == "" {
 		return fmt.Errorf("track ID cannot be empty")
@@ -237,6 +240,12 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 			}
 			slog.Info("Read metadata from file", "path", path, "track", trackToImport)
 
+			// Set source data for local file
+			trackToImport.MetadataSource = music.MetadataSource{
+				Source:            "LocalFile",
+				MetadataSourceURL: path,
+			}
+
 			fingerprint, err := e.service.fingerprintReader.GenerateFingerprint(ctx, path)
 			if err != nil {
 				logger.Warn("Service.runDirectoryImport: failed to generate fingerprint, falling back to metadata", "error", err, "trackToImport", path)
@@ -264,7 +273,7 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 				stats.Skipped++
 				logger.Info("Service.runDirectoryImport: Skipping duplicate track", "reason", "track already exists", "existing_path", path, "title", trackToImport.Title, "color", "blue")
 			case QueueTrack:
-				if err := e.addTrackToQueue(trackToImport, queueType, job.ID, logger); err != nil {
+				if err := e.addTrackToQueue(trackToImport, queueType, job.ID, existingTrack, logger); err != nil {
 					stats.Errors++
 				} else {
 					stats.Queued++

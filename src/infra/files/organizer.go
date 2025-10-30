@@ -45,20 +45,12 @@ func (o *FileOrganizer) MoveTrack(ctx context.Context, track *music.Track) (stri
 		return "", fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	// Try to rename first (works within the same filesystem)
-	if err := os.Rename(track.Path, newPath); err != nil {
-		// If rename fails due to cross-device link, fall back to copy+delete
-		if isCrossDeviceError(err) {
-			if err := copyFile(track.Path, newPath); err != nil {
-				return "", fmt.Errorf("failed to copy file: %w", err)
-			}
-			// Remove the original file after successful copy
-			if err := os.Remove(track.Path); err != nil {
-				return "", fmt.Errorf("failed to remove original file after copy: %w", err)
-			}
-		} else {
-			return "", fmt.Errorf("failed to move file: %w", err)
-		}
+	if err := copyFile(track.Path, newPath); err != nil {
+		return "", fmt.Errorf("failed to copy file: %w", err)
+	}
+	// Remove the original file after successful copy
+	if err := os.Remove(track.Path); err != nil {
+		return "", fmt.Errorf("failed to remove original file after copy: %w", err)
 	}
 	return newPath, nil
 }

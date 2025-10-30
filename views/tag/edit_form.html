@@ -1,10 +1,14 @@
 {{define "tag/edit_form"}}
 
       <form id="tag-edit-form"
-           hx-post="/tag/{{.Track.ID}}"
-           hx-target="#toast-container"
-           hx-swap="beforeend"
-           class="space-y-4">
+            hx-post="/tag/{{.Track.ID}}"
+            hx-target="#toast-container"
+            hx-swap="beforeend"
+            class="space-y-4">
+
+        <!-- Hidden fields for MetadataSource -->
+        <input type="hidden" name="source" value="{{.Track.MetadataSource.Source}}">
+        <input type="hidden" name="source_url" value="{{.Track.MetadataSource.MetadataSourceURL}}">
 
         <!-- Title and Title Version -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -283,15 +287,19 @@
                 {{if .Track.ExplicitContent}}
                 <div>Explicit Content: {{.Track.ExplicitContent}}</div>
                 {{end}}
-                {{if .Track.PreviewURL}}
-                <div>Preview URL: {{.Track.PreviewURL}}</div>
-                {{end}}
-                {{if .Track.AddedDate}}
-                <div>Added Date: {{.Track.AddedDate.Format "2006-01-02 15:04:05"}}</div>
-                {{end}}
-                {{if .Track.ModifiedDate}}
-                <div>Modified Date: {{.Track.ModifiedDate.Format "2006-01-02 15:04:05"}}</div>
-                {{end}}
+
+                  {{if .Track.MetadataSource.Source}}
+                   <div class="{{if eq .Track.MetadataSource.Source "LocalFile"}}text-gray-300{{else if eq .Track.MetadataSource.Source "musicbrainz"}}text-orange-400 dark:text-orange-300{{else if eq .Track.MetadataSource.Source "deezer"}}text-purple-400 dark:text-purple-300{{else if eq .Track.MetadataSource.Source "discogs"}}text-violet-400 dark:text-violet-300{{else}}text-orange-400 dark:text-orange-300{{end}}">Metadata Source: {{.Track.MetadataSource.Source}}</div>
+                  {{end}}
+                    {{if .Track.MetadataSource.MetadataSourceURL}}
+                     <div class="{{if eq .Track.MetadataSource.Source "LocalFile"}}text-gray-300{{else if eq .Track.MetadataSource.Source "musicbrainz"}}text-orange-400 dark:text-orange-300{{else if eq .Track.MetadataSource.Source "deezer"}}text-purple-400 dark:text-purple-300{{else if eq .Track.MetadataSource.Source "discogs"}}text-violet-400 dark:text-violet-300{{else}}text-orange-400 dark:text-orange-300{{end}}">Metadata Source URL: {{if eq .Track.MetadataSource.Source "LocalFile"}}{{.Track.MetadataSource.MetadataSourceURL}}{{else}}<a href="{{.Track.MetadataSource.MetadataSourceURL}}" target="_blank" rel="noopener noreferrer" class="hover:underline">{{.Track.MetadataSource.MetadataSourceURL}}</a>{{end}}</div>
+                    {{end}}
+                 {{if .Track.AddedDate}}
+                 <div>Added Date: {{.Track.AddedDate.Format "2006-01-02 15:04:05"}}</div>
+                 {{end}}
+                 {{if .Track.ModifiedDate}}
+                 <div>Modified Date: {{.Track.ModifiedDate.Format "2006-01-02 15:04:05"}}</div>
+                 {{end}}
 
                 <!-- Display Attributes map if it exists -->
                 {{if .Track.Attributes}}
@@ -324,131 +332,8 @@
            <i class="fas fa-save mr-2"></i>
            Save Changes
          </button>
-       </div>
-      </form>
-
-        <style>
-          /* SlimSelect dark mode styles */
-          .dark .ss-main {
-            background-color: #374151 !important;
-            border-color: #4b5563 !important;
-            color: #f9fafb !important;
-          }
-          .dark .ss-main .ss-values .ss-value {
-            color: #f9fafb !important;
-          }
-          .dark .ss-main .ss-placeholder {
-            color: #9ca3af !important;
-          }
-          .dark .ss-content {
-            background-color: #374151 !important;
-            border-color: #4b5563 !important;
-          }
-          .dark .ss-list {
-            background-color: #374151 !important;
-            color: #f9fafb !important;
-          }
-          .dark .ss-option {
-            color: #f9fafb !important;
-          }
-          .dark .ss-option:hover {
-            background-color: #4b5563 !important;
-          }
-          .dark .ss-option.ss-selected {
-            background-color: #1f2937 !important;
-            color: #f9fafb !important;
-          }
-          .dark .ss-search input {
-            background-color: #374151 !important;
-            border-color: #4b5563 !important;
-            color: #f9fafb !important;
-          }
-          .dark .ss-search input::placeholder {
-            color: #9ca3af !important;
-          }
-        </style>
-
-        <script>
-          // Initialize SlimSelect for both initial load and HTMX swaps
-          var artistSelect = artistSelect || null;
-
-         function initArtistSelect() {
-           const artistElement = document.getElementById('artist');
-           if (!artistElement) {
-             console.log('Artist select element not found');
-             return;
-           }
-
-           // Check if SlimSelect has already been initialized on this element
-           if (artistElement.closest('.ss-main')) {
-             console.log('SlimSelect already initialized on artist element');
-             return;
-           }
-
-           // Check if SlimSelect is available
-           if (typeof SlimSelect === 'undefined') {
-             console.error('SlimSelect library not loaded');
-             return;
-           }
-
-           try {
-             // Destroy existing instance if it exists
-             if (artistSelect) {
-               artistSelect.destroy();
-               artistSelect = null;
-             }
-
-             console.log('Initializing SlimSelect on artist element');
-             artistSelect = new SlimSelect({
-               select: '#artist',
-               placeholder: 'Select artists...',
-               allowDeselect: true,
-               closeOnSelect: false,
-               showSearch: true,
-               searchPlaceholder: 'Search artists...',
-               searchText: 'No results found',
-               searchingText: 'Searching...'
-             });
-             console.log('SlimSelect initialized successfully');
-           } catch (error) {
-             console.error('Error initializing SlimSelect:', error);
-           }
-         }
-
-         // Initialize on DOMContentLoaded for initial page load
-         document.addEventListener('DOMContentLoaded', function() {
-           console.log('DOMContentLoaded - initializing SlimSelect');
-           // Small delay to ensure all scripts are loaded
-           setTimeout(initArtistSelect, 100);
-         });
-
-         // Initialize on HTMX afterSwap for dynamic content loading
-         document.addEventListener('htmx:afterSwap', function(evt) {
-           console.log('htmx:afterSwap triggered', evt.detail.target.id);
-           // Check if the swapped content contains our form
-           if (evt.detail.target.id === 'contenido' || evt.detail.target.querySelector('#artist')) {
-             console.log('Artist form detected in swap, initializing SlimSelect');
-             setTimeout(initArtistSelect, 100);
-           }
-         });
-
-         // Also listen for htmx:afterRequest in case the form is loaded via other HTMX requests
-         document.addEventListener('htmx:afterRequest', function(evt) {
-           console.log('htmx:afterRequest triggered');
-           if (evt.detail.target && (evt.detail.target.id === 'contenido' || evt.detail.target.querySelector('#artist'))) {
-             console.log('Artist form detected in request, initializing SlimSelect');
-             setTimeout(initArtistSelect, 100);
-           }
-         });
-
-         // Fallback: try to initialize after a longer delay in case of timing issues
-         setTimeout(function() {
-           if (!document.getElementById('artist')?.closest('.ss-main')) {
-             console.log('Fallback initialization attempt');
-             initArtistSelect();
-           }
-         }, 500);
-       </script>
-   </div>
- </div>
- {{end}}
+         </div>
+        </form>
+      </div>
+    </div>
+    {{end}}

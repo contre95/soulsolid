@@ -81,8 +81,8 @@ type Metadata struct {
 
 // Provider holds configuration for individual tagging providers
 type Provider struct {
-	Enabled bool   `yaml:"enabled"`
-	APIKey  string `yaml:"api_key"`
+	Enabled bool    `yaml:"enabled"`
+	APIKey  *string `yaml:"api_key,omitempty"`
 }
 
 // Sync holds configuration for device synchronization

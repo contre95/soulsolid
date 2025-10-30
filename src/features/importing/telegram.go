@@ -190,11 +190,13 @@ func (h *TelegramHandler) createInlineKeyboard(item QueueItem) tgbotapi.InlineKe
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("✴️ Replace", fmt.Sprintf("queue_replace_%s", item.ID)),
 			tgbotapi.NewInlineKeyboardButtonData("⏭️ Skip", fmt.Sprintf("queue_cancel_%s", item.ID)),
+			tgbotapi.NewInlineKeyboardButtonData("🗑️ Delete", fmt.Sprintf("queue_delete_%s", item.ID)),
 		})
 	} else {
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("✅ Import", fmt.Sprintf("queue_import_%s", item.ID)),
 			tgbotapi.NewInlineKeyboardButtonData("❌ Cancel", fmt.Sprintf("queue_cancel_%s", item.ID)),
+			tgbotapi.NewInlineKeyboardButtonData("🗑️ Delete", fmt.Sprintf("queue_delete_%s", item.ID)),
 		})
 	}
 
@@ -228,6 +230,8 @@ func (h *TelegramHandler) HandleQueueAction(bot *tgbotapi.BotAPI, chatID int64, 
 		actionMsg = "replaced"
 	case "cancel":
 		actionMsg = "skipped"
+	case "delete":
+		actionMsg = "deleted"
 	}
 
 	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("✅ Track %s successfully", actionMsg))
@@ -327,7 +331,7 @@ func (h *TelegramHandler) HandleCallback(bot *tgbotapi.BotAPI, callback *tgbotap
 
 	// Handle different actions
 	switch action {
-	case "import", "replace":
+	case "import", "replace", "delete":
 		h.HandleQueueAction(bot, chatID, itemID, action, callback)
 	case "cancel":
 		if itemID == "session" {
