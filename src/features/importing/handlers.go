@@ -58,8 +58,13 @@ func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
 	}
 	// Return success response that updates the UI
 	actionMsg := "skipped"
-	if action == "import" {
+	switch action {
+	case "import":
 		actionMsg = "imported"
+	case "replace":
+		actionMsg = "replaced"
+	case "delete":
+		actionMsg = "deleted"
 	}
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
 	return c.Render("toast/toastOk", fiber.Map{

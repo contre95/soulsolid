@@ -14,9 +14,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- JS -->
   <script src="/js/jquery.min.js"></script>
-   <script src="/js/slimselect.min.js"></script>
+  <script src="/js/slimselect.min.js"></script>
   <script src="/js/htmx.min.js"></script>
-  <script src="/js/class-tools.js"></script>
   <script src="/js/iconify.min.js" defer></script>
   <!-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> -->
   <script src="/js/_hyperscript.min.js"></script>
@@ -33,8 +32,59 @@
   <!-- CSS -->
   <link href="/css/style.css" rel="stylesheet" />
   <link rel="stylesheet" href="/css/animate.min.css" />
-   <link rel="stylesheet" href="/css/slimselect.css">
+  <link rel="stylesheet" href="/css/slimselect.css">
   </link>
   <link rel="stylesheet" href="/fontawesome/css/all.min.css" />
+  <link href="/css/slimselect.css" rel="stylesheet">
+  <style>
+    /* SlimSelect Dark Mode Overrides */
+    .dark .ss-main {
+      background-color: #374151 !important;
+      border-color: #4b5563 !important;
+      color: #f9fafb !important;
+    }
+
+    .dark .ss-content {
+      background-color: #374151 !important;
+      border-color: #4b5563 !important;
+    }
+
+    .dark .ss-list {
+      background-color: #374151 !important;
+    }
+
+    .dark .ss-option {
+      color: #f9fafb !important;
+    }
+
+    .dark .ss-option:hover,
+    .dark .ss-option.ss-highlighted {
+      background-color: #3b82f6 !important;
+      color: #f9fafb !important;
+    }
+
+    .dark .ss-search input {
+      background-color: #374151 !important;
+      border-color: #4b5563 !important;
+      color: #f9fafb !important;
+    }
+
+    .dark .ss-search input::placeholder {
+      color: #9ca3af !important;
+    }
+
+    .dark .ss-values .ss-value {
+      background-color: #3b82f6 !important;
+      color: #f9fafb !important;
+    }
+
+    .dark .ss-values .ss-value .ss-value-delete {
+      color: #f9fafb !important;
+    }
+
+    .dark .ss-arrow {
+      color: #f9fafb !important;
+    }
+  </style>
 </head>
 {{end}}

@@ -104,8 +104,14 @@ func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action st
 			return fmt.Errorf("failed to import track: %w", err)
 		}
 		return s.queue.Remove(itemID)
+	case "delete":
+		// Delete the file from the import location
+		if err := s.fileOrganizer.DeleteTrack(ctx, item.Track.Path); err != nil {
+			return fmt.Errorf("failed to delete track file: %w", err)
+		}
+		return s.queue.Remove(itemID)
 	default:
-		return fmt.Errorf("Invalid action %s. Should be one of %s", action, "import,replace,cancel")
+		return fmt.Errorf("Invalid action %s. Should be one of %s", action, "import,replace,cancel,delete")
 	}
 
 }
@@ -134,6 +140,18 @@ func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *mus
 	existingTrack.Title = newTrack.Title
 	existingTrack.TitleVersion = newTrack.TitleVersion
 
+	if err := s.populateTrackArtistsAndAlbum(ctx, newTrack, logger); err != nil {
+		return err
+	}
+
+	existingTrack.Artists = newTrack.Artists
+	existingTrack.Album = newTrack.Album
+
+	if err := existingTrack.Validate(); err != nil {
+		logger.Error("Service.replaceTrack: existing track validation failed after update", "error", err, "title", existingTrack.Title)
+		return fmt.Errorf("existing track validation failed: %w", err)
+	}
+
 	// Update the track in the database
 	if err := s.library.UpdateTrack(ctx, existingTrack); err != nil {
 		return fmt.Errorf("failed to update existing track for replacement: %w", err)
@@ -150,35 +168,14 @@ func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *mus
 	return nil
 }
 
-// importTrack handles the import process for a track (generic method used by both directory import and queue processing)
-func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool, logger *slog.Logger) error {
-	if logger == nil {
-		logger = slog.Default()
-	}
-	if err := track.Validate(); err != nil {
-		logger.Error("Service.importTrack: track validation failed", "error", err, "title", track.Title)
-		return fmt.Errorf("track validation failed: %w", err)
-	}
-	var newPath string
-	var err error
-
-	if move {
-		newPath, err = s.fileOrganizer.MoveTrack(ctx, track)
-	} else {
-		newPath, err = s.fileOrganizer.CopyTrack(ctx, track)
-	}
-	if err != nil {
-		logger.Error("Service.importTrack: could not organize track", "error", err, "title", track.Title)
-		return fmt.Errorf("could not organize track: %w", err)
-	}
-	track.Path = newPath
-
+// populateTrackArtistsAndAlbum populates the Artists and Album fields of a track with database references
+func (s *Service) populateTrackArtistsAndAlbum(ctx context.Context, track *music.Track, logger *slog.Logger) error {
 	// Create/find artist if it doesn't exist
 	if len(track.Artists) > 0 {
 		for i, artistRole := range track.Artists {
 			artist, err := s.library.FindOrCreateArtist(ctx, artistRole.Artist.Name)
 			if err != nil {
-				logger.Error("Service.importTrack: failed to find/create artist", "error", err, "artist", artistRole.Artist.Name, "title", track.Title)
+				logger.Error("Service.populateTrackArtistsAndAlbum: failed to find/create artist", "error", err, "artist", artistRole.Artist.Name, "title", track.Title)
 				return fmt.Errorf("failed to find/create artist %s: %w", artistRole.Artist.Name, err)
 			}
 			track.Artists[i].Artist = artist
@@ -194,7 +191,7 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 			for i, artistRole := range track.Album.Artists {
 				dbArtist, err := s.library.FindOrCreateArtist(ctx, artistRole.Artist.Name)
 				if err != nil {
-					logger.Error("Service.importTrack: failed to find/create album artist", "error", err, "artist", artistRole.Artist.Name, "album", track.Album.Title, "title", track.Title)
+					logger.Error("Service.populateTrackArtistsAndAlbum: failed to find/create album artist", "error", err, "artist", artistRole.Artist.Name, "album", track.Album.Title, "title", track.Title)
 					return fmt.Errorf("failed to find/create album artist %s: %w", artistRole.Artist.Name, err)
 				}
 				track.Album.Artists[i].Artist = dbArtist
@@ -203,15 +200,46 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 		} else if len(track.Artists) > 0 {
 			artist = track.Artists[0].Artist
 		} else {
-			logger.Error("Service.importTrack: no artists available for album", "album", track.Album.Title, "title", track.Title)
+			logger.Error("Service.populateTrackArtistsAndAlbum: no artists available for album", "album", track.Album.Title, "title", track.Title)
 			return fmt.Errorf("no artists available for album %s", track.Album.Title)
 		}
 		album, err := s.library.FindOrCreateAlbum(ctx, artist, track.Album.Title, track.Metadata.Year)
 		if err != nil {
-			logger.Error("Service.importTrack: failed to find/create album", "error", err, "album", track.Album.Title, "title", track.Title)
+			logger.Error("Service.populateTrackArtistsAndAlbum: failed to find/create album", "error", err, "album", track.Album.Title, "title", track.Title)
 			return fmt.Errorf("failed to find/create album %s: %w", track.Album.Title, err)
 		}
 		track.Album = album
+	}
+
+	return nil
+}
+
+// importTrack handles the import process for a track (generic method used by both directory import and queue processing)
+func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool, logger *slog.Logger) error {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	var newPath string
+	var err error
+
+	if move {
+		newPath, err = s.fileOrganizer.MoveTrack(ctx, track)
+	} else {
+		newPath, err = s.fileOrganizer.CopyTrack(ctx, track)
+	}
+	if err != nil {
+		logger.Error("Service.importTrack: could not organize track", "error", err, "title", track.Title)
+		return fmt.Errorf("could not organize track: %w", err)
+	}
+	track.Path = newPath
+
+	if err := s.populateTrackArtistsAndAlbum(ctx, track, logger); err != nil {
+		return err
+	}
+
+	if err := track.Validate(); err != nil {
+		logger.Error("Service.importTrack: track validation failed after population", "error", err, "title", track.Title)
+		return fmt.Errorf("track validation failed: %w", err)
 	}
 
 	// Add track to database

@@ -7,8 +7,9 @@
     "build:css": "npx @tailwindcss/cli -i ./public/css/input.css -o ./public/css/style.css",
     "build:css:watch": "npx @tailwindcss/cli -i ./public/css/input.css -o ./public/css/style.css --watch",
     "build:assets": "npm run build:css && npm run copy:deps",
-    "copy:deps": "cp node_modules/htmx.org/dist/htmx.min.js public/js/ && cp node_modules/htmx.org/dist/ext/class-tools.js public/js/ && cp node_modules/hyperscript.org/dist/_hyperscript.min.js public/js/ && cp node_modules/animate.css/animate.min.css public/css/ && cp -r node_modules/@fortawesome/fontawesome-free/css public/fontawesome/ && cp -r node_modules/@fortawesome/fontawesome-free/webfonts public/fontawesome/ && cp node_modules/@iconify/iconify/dist/iconify.min.js public/js/ && cp node_modules/jquery/dist/jquery.min.js public/js/ && cp node_modules/slim-select/dist/slimselect.min.js public/js/ && cp node_modules/slim-select/dist/slimselect.css public/css/",
-    "dev": "npm run build:assets && npm run build:css:watch",
+    "copy:deps": "mkdir -p public/js public/fontawesome && cp node_modules/htmx.org/dist/htmx.min.js public/js/ && cp node_modules/hyperscript.org/dist/_hyperscript.min.js public/js/ && cp node_modules/animate.css/animate.min.css public/css/ && cp -r node_modules/@fortawesome/fontawesome-free/css public/fontawesome/ && cp -r node_modules/@fortawesome/fontawesome-free/webfonts public/fontawesome/ && cp node_modules/@iconify/iconify/dist/iconify.min.js public/js/ && cp node_modules/jquery/dist/jquery.min.js public/js/ && cp node_modules/slim-select/dist/slimselect.js public/js/slimselect.min.js && cp node_modules/slim-select/dist/slimselect.css public/css/",
+    "dev": "npm run build:assets && npm run build:css && go run ./src/main.go",
+    "build": "npm run build:assets && npm run build:css",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -22,7 +23,7 @@
     "htmx.org": "^2.0.6",
     "hyperscript.org": "^0.9.14",
     "jquery": "^3.7.1",
-    "slim-select": "^2.8.2",
+    "slim-select": "^3.0.3",
     "tailwindcss": "^4.1.12"
   }
 }
