@@ -147,6 +147,7 @@ type JobService interface {
 	GetJob(jobID string) (*Job, bool)
 	CancelJob(jobID string) error
 	GetJobs() []*Job
+	ClearFinishedJobs() error
 }
 
 type Service struct {
@@ -333,6 +334,20 @@ func (s *Service) GetJobs() []*Job {
 		jobs = append(jobs, job)
 	}
 	return jobs
+}
+
+func (s *Service) ClearFinishedJobs() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for id, job := range s.jobs {
+		if job.Status == JobStatusCompleted || job.Status == JobStatusFailed || job.Status == JobStatusCancelled {
+			if job.LogPath != "" {
+				os.Remove(job.LogPath)
+			}
+			delete(s.jobs, id)
+		}
+	}
+	return nil
 }
 
 func (s *Service) isAnyJobRunning() bool {

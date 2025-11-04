@@ -9,6 +9,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	ui.Get("/active", handler.HandleActiveJob)
 	ui.Get("/list", handler.HandleAllJobsList)
 	ui.Get("/latest", handler.HandleLatestJobs)
+	ui.Post("/clear-finished", handler.HandleClearFinishedJobs)
 
 	// ui.Post("/cleanup", handler.HandleCleanupJobs)
 	jobs.Get("/", handler.HandleJobList)
