@@ -1,4 +1,5 @@
 FROM golang:bookworm AS app-builder
+ARG IMAGE_TAG
 ENV CGO_ENABLED=2
 RUN apt-get update && apt-get install -y gcc libc-dev libsqlite3-dev nodejs npm git
 WORKDIR /app
@@ -10,10 +11,12 @@ RUN go mod tidy
 RUN go build -o /app/soulsolid src/main.go
 
 FROM golang:bookworm
+ARG IMAGE_TAG
 ENV CGO_ENABLED=2
 RUN apt-get update && apt-get install -y git tree
 RUN mkdir -p /app/plugins
 WORKDIR /app
+ENV IMAGE_TAG=$IMAGE_TAG
 # Copy the dynamically built app and assets
 COPY --from=app-builder /app/soulsolid /app/soulsolid
 COPY --from=app-builder /app/public /app/public
