@@ -167,6 +167,22 @@ func (h *Handler) HandleCleanupJobs(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"status": "cleanup completed"})
 }
 
+func (h *Handler) HandleClearFinishedJobs(c *fiber.Ctx) error {
+	err := h.service.ClearFinishedJobs()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if c.Get("HX-Request") == "true" {
+		c.Set("HX-Trigger", "refreshJobList")
+		return c.Render("toast/toastOk", fiber.Map{
+			"Msg": "Finished jobs cleared",
+		})
+	}
+
+	return c.JSON(fiber.Map{"status": "finished jobs cleared"})
+}
+
 func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 

@@ -1,19 +1,22 @@
 <div id="contenido" class="animate__animated animate__fadeIn">
-  <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">Jobs</h1>
+   <div class="flex items-center justify-between mb-8">
+     <h1 class="text-3xl font-bold text-slate-800 dark:text-white">Jobs</h1>
+     <button
+       hx-post="/ui/jobs/clear-finished"
+       hx-target="#toast-container"
+       hx-swap="beforeend"
+       hx-confirm="Are you sure you want to clear all finished jobs?"
+       class="px-5 py-2.5 backdrop-blur-sm hover:bg-red-200/80 bg-red-100/80 hover:dark:bg-red-800/30 dark:bg-red-900/30 border border-red-200/50 dark:border-red-700/50 text-sm text-red-800 dark:text-red-200 rounded-lg transition-colors font-medium text-center">
+       Clear Finished Jobs
+     </button>
+   </div>
 
-  <!-- <div class="bg-blue-50/80 dark:bg-blue-900/30 border border-blue-200/50 dark:border-blue-700/50 rounded-xl p-6 mb-8 backdrop-blur-sm"> -->
-  <!--   <p class="text-sm text-blue-800 dark:text-blue-200"> -->
-  <!--     Jobs are only stored in memory during runtime and will not persist across restarts.  -->
-  <!--     All job logs are saved under the path specified by <code class="font-mono bg-blue-100/50 dark:bg-blue-800/50 px-2 py-1 rounded">log_path:</code> in the config.  -->
-  <!--     You can view the current jobs via the  -->
-  <!--     <a href="/jobs" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">/jobs</a> endpoint. -->
-  <!--   </p> -->
-  <!-- </div> -->
+   <!-- </div> -->
 
-  <div id="job-list-container" 
-       hx-get="/ui/jobs/list" 
-       hx-trigger="load, refreshJobList from:body" 
-       hx-swap="innerHTML">
+   <div id="job-list-container"
+        hx-get="/ui/jobs/list"
+        hx-trigger="load, refreshJobList from:body"
+        hx-swap="innerHTML">
     <!-- Loading state -->
     <div class="text-center py-8">
       <p class="text-sm text-gray-500 dark:text-gray-400">Loading jobs...</p>
