@@ -1,8 +1,0 @@
-{{define "status"}}
-  <div id="app-status" 
-       hx-get="/ui/jobs/active" 
-       hx-trigger="load, jobStarted from:body, every 5s" 
-       hx-target="this" 
-       hx-swap="innerHTML">
-  </div>
-{{end}}
