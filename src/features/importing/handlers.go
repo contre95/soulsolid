@@ -92,6 +92,21 @@ func (h *Handler) ClearQueue(c *fiber.Ctx) error {
 	})
 }
 
+// PruneDownloadPath handles pruning the download path and clearing the queue
+func (h *Handler) PruneDownloadPath(c *fiber.Ctx) error {
+	err := h.service.PruneDownloadPath(c.Context())
+	if err != nil {
+		slog.Error("Failed to prune download path", "error", err)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": "Failed to prune download path",
+		})
+	}
+	c.Response().Header.Set("HX-Trigger", "queueUpdated")
+	return c.Render("toast/toastOk", fiber.Map{
+		"Msg": "Download path pruned and queue cleared successfully",
+	})
+}
+
 // UI Hanlders
 // GetDirectoryForm renders the directory import form
 func (h *Handler) GetDirectoryForm(c *fiber.Ctx) error {

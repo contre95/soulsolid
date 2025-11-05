@@ -85,7 +85,7 @@ func countSupportedFiles(pathToImport string) int {
 	filepath.Walk(pathToImport, func(path string, info os.FileInfo, err error) error {
 		if err == nil && !info.IsDir() {
 			ext := strings.ToLower(filepath.Ext(path))
-			if supportedExtensions[ext] {
+			if SupportedExtensions[ext] {
 				totalFiles++
 			}
 		}
@@ -224,7 +224,7 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 		}
 		if !info.IsDir() {
 			ext := strings.ToLower(filepath.Ext(path))
-			if !supportedExtensions[ext] {
+			if !SupportedExtensions[ext] {
 				logger.Debug("Service.runDirectoryImport: skipping unsupported file", "path", path, "extension", ext)
 				return nil // Skip unsupported files
 			}

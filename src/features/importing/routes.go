@@ -18,6 +18,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	app.Post("/import/directory", handler.ImportDirectory)
 	app.Post("/import/queue/:id/:action", handler.ProcessQueueItem)
 	app.Post("/import/queue/clear", handler.ClearQueue)
+	app.Post("/import/prune/download-path", handler.PruneDownloadPath)
 	app.Get("/import/queue/count", handler.QueueCount)
 
 }
