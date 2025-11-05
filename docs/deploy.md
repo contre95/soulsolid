@@ -8,7 +8,7 @@ Here's an example `docker-compose.yaml` file:
 version: "3.8"
 services:
   soulsolid:
-    image: soulsolid:latest
+    image: soulsolid:nightly
     ports:
       - "3535:3535"
     volumes:
