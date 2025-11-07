@@ -14,7 +14,7 @@ import (
 	"github.com/contre95/soulsolid/src/music"
 )
 
-var SupportedExtensions = map[string]bool{
+var supportedExtensions = map[string]bool{
 	".mp3":  true,
 	".flac": true,
 }
@@ -87,7 +87,7 @@ func (s *Service) PruneDownloadPath(ctx context.Context) error {
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(path))
-		if _, ok := SupportedExtensions[ext]; ok {
+		if _, ok := supportedExtensions[ext]; ok {
 			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 				return fmt.Errorf("failed to delete %s: %w", path, err)
 			}
