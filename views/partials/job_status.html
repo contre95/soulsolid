@@ -1,0 +1,10 @@
+<!-- This template is currently not in use but the idea, is that if at some point we want to display the active jobs somewhere in the app in all sections
+we could do something like {{template "job_status" .}} in main.html, for example and we will be able to see them.-->
+{{define "job_status"}}
+  <div id="app-status" 
+       hx-get="/ui/jobs/active" 
+       hx-trigger="load, jobStarted from:body, every 5s" 
+       hx-target="this" 
+       hx-swap="innerHTML">
+  </div>
+{{end}}
