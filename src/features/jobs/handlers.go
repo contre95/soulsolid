@@ -32,6 +32,9 @@ func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	// Trigger HTMX to refresh the badge immediately
+	c.Set("HX-Trigger", "refreshActiveJobsBadge")
+
 	return c.JSON(fiber.Map{"job_id": jobID})
 }
 
@@ -201,17 +204,8 @@ func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
 
 func (h *Handler) HandleAllJobsList(c *fiber.Ctx) error {
 	jobs := h.service.GetJobs()
-
-	// Filter to show only completed and failed jobs
-	finishedJobs := make([]*Job, 0)
-	for _, job := range jobs {
-		if job.Status == JobStatusCompleted || job.Status == JobStatusFailed {
-			finishedJobs = append(finishedJobs, job)
-		}
-	}
-
 	return c.Render("jobs/job_list", fiber.Map{
-		"Jobs": finishedJobs,
+		"Jobs": jobs,
 	})
 }
 
@@ -226,4 +220,15 @@ func (h *Handler) HandleLatestJobs(c *fiber.Ctx) error {
 	return c.Render("cards/latest_jobs", fiber.Map{
 		"Jobs": jobs,
 	})
+}
+
+func (h *Handler) HandleActiveJobsCount(c *fiber.Ctx) error {
+	jobs := h.service.GetJobs()
+	count := 0
+	for _, job := range jobs {
+		if job.Status == JobStatusRunning || job.Status == JobStatusPending {
+			count++
+		}
+	}
+	return c.SendString(fmt.Sprintf("(%d)", count))
 }

@@ -100,10 +100,18 @@
              hx-target="#contenido"
              class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer"
            >
-             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-               <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z" />
-             </svg>
-              <span class="mx-4">Jobs</span>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z" />
+              </svg>
+                <span class="mx-4 mr-2">Jobs</span>
+                <div id="active-jobs-badge"
+                     hx-get="/ui/jobs/active-count"
+                     hx-push-url="false"
+                     hx-trigger="load, every 1s, refreshActiveJobsBadge from:body"
+                     hx-target="#active-jobs-count"
+                     hx-swap="innedHTML">
+                  <span id="active-jobs-count" class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-blue-300 dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]">(0)</span>
+                </div>
             </a>
           </button>
          </li>
