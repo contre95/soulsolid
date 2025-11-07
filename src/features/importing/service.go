@@ -3,7 +3,11 @@ package importing
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/jobs"
@@ -70,6 +74,30 @@ func (s *Service) GetQueuedItems() map[string]QueueItem {
 // ClearQueue removes all items from the queue
 func (s *Service) ClearQueue() error {
 	return s.queue.Clear()
+}
+
+// PruneDownloadPath removes all supported music files from the download path and clears the queue
+func (s *Service) PruneDownloadPath(ctx context.Context) error {
+	downloadPath := s.config.Get().DownloadPath
+	err := filepath.WalkDir(downloadPath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(path))
+		if _, ok := supportedExtensions[ext]; ok {
+			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("failed to delete %s: %w", path, err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to prune download path: %w", err)
+	}
+	return s.ClearQueue()
 }
 
 // ProcessQueueItem processes a single queue item
