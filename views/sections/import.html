@@ -1,5 +1,17 @@
-<div id="contenido" class="animate__animated animate__fadeIn">
-  <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">Importing</h1>
+ <div id="contenido" class="animate__animated animate__fadeIn">
+    <div class="flex items-center justify-between mb-8">
+      <h1 class="text-3xl font-bold text-slate-800 dark:text-white">Importing</h1>
+      <button
+        hx-post="/import/prune/download-path"
+        hx-target="#toast-container"
+        hx-trigger="click"
+        hx-confirm="Are you sure you want to delete all music files from the download path and clear the queue? This action cannot be undone."
+        class="px-5 py-2.5 backdrop-blur-sm hover:bg-red-200/80 bg-red-100/80 hover:dark:bg-red-800/30 dark:bg-red-900/30 border border-red-200/50 dark:border-red-700/50 text-sm text-red-800 dark:text-red-200 rounded-lg transition-colors font-medium text-center"
+        title="Prune Download Path">
+        <i class="fas fa-broom mr-2"></i>
+        Prune Download Path
+      </button>
+    </div>
 
    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
      <!-- Directory Import Section -->
