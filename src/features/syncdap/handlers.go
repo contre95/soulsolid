@@ -3,19 +3,17 @@ package syncdap
 import (
 	"log/slog"
 
-	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/gofiber/fiber/v2"
 )
 
 // Handler handles HTTP requests for device syncing
 type Handler struct {
-	service    *Service
-	jobService jobs.JobService
+	service *Service
 }
 
 // NewHandler creates a new sync handler
-func NewHandler(service *Service, jobService jobs.JobService) *Handler {
-	return &Handler{service: service, jobService: jobService}
+func NewHandler(service *Service) *Handler {
+	return &Handler{service: service}
 }
 
 // GetDeviceStatusCard returns a card with the current sync status of all devices
