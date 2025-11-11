@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync"
@@ -67,6 +68,26 @@ func (m *Manager) Save(path string) error {
 	}
 
 	slog.Info("Configuration saved successfully", "path", path)
+	return nil
+}
+
+// EnsureDirectories creates the library and download directories if they don't exist.
+func (m *Manager) EnsureDirectories() error {
+	m.mu.RLock()
+	cfg := m.config
+	m.mu.RUnlock()
+
+	// Create library directory
+	if err := os.MkdirAll(cfg.LibraryPath, 0755); err != nil {
+		return fmt.Errorf("failed to create library directory %s: %w", cfg.LibraryPath, err)
+	}
+
+	// Create download directory
+	if err := os.MkdirAll(cfg.DownloadPath, 0755); err != nil {
+		return fmt.Errorf("failed to create download directory %s: %w", cfg.DownloadPath, err)
+	}
+
+	slog.Info("Required directories created/verified", "library", cfg.LibraryPath, "downloads", cfg.DownloadPath)
 	return nil
 }
 
