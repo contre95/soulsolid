@@ -12,16 +12,16 @@
      </span>
   </h2>
    <div class="flex flex-col sm:flex-row gap-2">
-     <button
-       hx-get="/ui/importing/queue/items"
-       hx-target="#queue-content"
-       hx-swap="innerHTML"
-       hx-trigger="click, queueUpdated from:body"
-       class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-blue-500/10 backdrop-blur-md border border-blue-400/30 text-blue-600 dark:text-blue-300 shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/30"
-       title="Refresh Queue">
-       <i class="fas fa-sync-alt mr-2"></i>
-       Refresh
-     </button>
+      <button
+        hx-get="/ui/importing/queue/items"
+        hx-target="#queue-content"
+        hx-swap="innerHTML"
+        hx-trigger="click, queueUpdated from:body, refreshImportQueueBadge from:body"
+        class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-blue-500/10 backdrop-blur-md border border-blue-400/30 text-blue-600 dark:text-blue-300 shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/30"
+        title="Refresh Queue">
+        <i class="fas fa-sync-alt mr-2"></i>
+        Refresh
+      </button>
         <button
           hx-post="/import/queue/clear"
           hx-target="#toast-container"
