@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/fsnotify/fsnotify"
 )
 const DEBOUNCE_SECS = 5
@@ -20,11 +21,11 @@ type Watcher struct {
 	debounceMutex sync.Mutex
 	running       bool
 	stopChan      chan struct{}
-	eventChan     chan<- FileEvent
+	eventChan     chan<- importing.FileEvent
 }
 
 // NewWatcher creates a new file system watcher
-func NewWatcher(eventChan chan<- FileEvent) (*Watcher, error) {
+func NewWatcher(eventChan chan<- importing.FileEvent) (*Watcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -142,9 +143,9 @@ func (w *Watcher) isSupportedFile(filePath string) bool {
 
 // emitDebounceEvent emits a file event after debounce period
 func (w *Watcher) emitDebounceEvent() {
-	event := FileEvent{
+	event := importing.FileEvent{
 		Path:      w.watchPath,
-		EventType: FileCreated,
+		EventType: importing.FileCreated,
 		Timestamp: time.Now(),
 	}
 

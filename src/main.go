@@ -21,6 +21,7 @@ import (
 	"github.com/contre95/soulsolid/src/infra/metadata"
 	"github.com/contre95/soulsolid/src/infra/queue"
 	"github.com/contre95/soulsolid/src/infra/tag"
+	"github.com/contre95/soulsolid/src/infra/watcher"
 )
 
 func main() {
@@ -46,7 +47,12 @@ func main() {
 	fingerprintReader := chroma.NewFingerprintService()
 
 	importQueue := queue.NewInMemoryQueue()
-	importingService := importing.NewService(db, tagReader, fingerprintReader, fileOrganizer, cfgManager, jobService, importQueue)
+	eventChan := make(chan importing.FileEvent, 10)
+	watcherInstance, err := watcher.NewWatcher(eventChan)
+	if err != nil {
+		log.Fatalf("failed to create watcher: %v", err)
+	}
+	importingService := importing.NewService(db, tagReader, fingerprintReader, fileOrganizer, cfgManager, jobService, importQueue, watcherInstance)
 
 	directoryImportTask := importing.NewDirectoryImportTask(importingService)
 	jobService.RegisterHandler("directory_import", jobs.NewBaseTaskHandler(directoryImportTask))

@@ -11,7 +11,6 @@ import (
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/jobs"
-	"github.com/contre95/soulsolid/src/infra/watcher"
 	"github.com/contre95/soulsolid/src/music"
 )
 
@@ -39,14 +38,14 @@ type Service struct {
 	config            *config.Manager
 	jobService        jobs.JobService
 	queue             Queue
-	watcher           *watcher.Watcher
-	eventChan         chan watcher.FileEvent
+	watcher           Watcher
+	eventChan         chan FileEvent
 	watcherRunning    bool
 }
 
 // NewService creates a new organizing service.
-func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, organizer FileOrganizer, cfg *config.Manager, jobService jobs.JobService, queue Queue) *Service {
-	eventChan := make(chan watcher.FileEvent, 10)
+func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, organizer FileOrganizer, cfg *config.Manager, jobService jobs.JobService, queue Queue, watcher Watcher) *Service {
+	eventChan := make(chan FileEvent, 10)
 	return &Service{
 		config:            cfg,
 		library:           lib,
@@ -55,6 +54,7 @@ func NewService(lib music.Library, tagReader TagReader, fingerprintReader Finger
 		fileOrganizer:     organizer,
 		jobService:        jobService,
 		queue:             queue,
+		watcher:           watcher,
 		eventChan:         eventChan,
 		watcherRunning:    false,
 	}
@@ -108,7 +108,7 @@ func (s *Service) PruneDownloadPath(ctx context.Context) error {
 }
 
 // HandleFileEvent handles file system events from the watcher
-func (s *Service) HandleFileEvent(event watcher.FileEvent) {
+func (s *Service) HandleFileEvent(event FileEvent) {
 	slog.Info("Received file event", "path", event.Path, "type", event.EventType)
 
 	// Check for running jobs that would conflict
@@ -133,12 +133,6 @@ func (s *Service) HandleFileEvent(event watcher.FileEvent) {
 func (s *Service) StartWatcher() error {
 	if s.watcherRunning {
 		return fmt.Errorf("watcher is already running")
-	}
-
-	var err error
-	s.watcher, err = watcher.NewWatcher(s.eventChan)
-	if err != nil {
-		return fmt.Errorf("failed to create watcher: %w", err)
 	}
 
 	// Start event handler goroutine
