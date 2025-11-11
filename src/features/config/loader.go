@@ -60,7 +60,12 @@ func Load(path string) (*Manager, error) {
 
 	setProviderAPIKey(&cfg, "discogs", "DISCOGS_API_KEY")
 
-	return NewManager(&cfg), nil
+	manager := NewManager(&cfg)
+	if err := manager.EnsureDirectories(); err != nil {
+		return nil, err
+	}
+
+	return manager, nil
 }
 
 // createDefaultConfig creates a new Config with sensible default values
