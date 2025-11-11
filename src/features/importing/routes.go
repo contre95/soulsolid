@@ -1,12 +1,13 @@
 package importing
 
 import (
+	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/gofiber/fiber/v2"
 )
 
 // RegisterRoutes registers the routes for the importing feature.
-func RegisterRoutes(app *fiber.App, service *Service) {
-	handler := NewHandler(service)
+func RegisterRoutes(app *fiber.App, service *Service, jobService *jobs.Service) {
+	handler := NewHandler(service, jobService)
 
 	ui := app.Group("/ui")
 	// UI endpoints
@@ -20,5 +21,10 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	app.Post("/import/queue/clear", handler.ClearQueue)
 	app.Post("/import/prune/download-path", handler.PruneDownloadPath)
 	app.Get("/import/queue/count", handler.QueueCount)
+
+	// Watcher endpoints
+	app.Post("/import/watcher/toggle", handler.ToggleWatcher)
+	app.Get("/import/watcher/status", handler.GetWatcherStatus)
+	app.Get("/import/watcher/toggle-state", handler.GetWatcherToggleState)
 
 }

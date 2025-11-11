@@ -15,8 +15,8 @@ type Handler struct {
 }
 
 // NewHandler creates a new handler for the organizing feature.
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, jobService *jobs.Service) *Handler {
+	return &Handler{service: service, jobService: jobService}
 }
 
 // ImportDirectory is the handler for importing a directory.
@@ -105,6 +105,69 @@ func (h *Handler) PruneDownloadPath(c *fiber.Ctx) error {
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": "Download path pruned and queue cleared successfully",
 	})
+}
+
+// ToggleWatcher toggles the file system watcher on/off
+func (h *Handler) ToggleWatcher(c *fiber.Ctx) error {
+	action := c.FormValue("action")
+	if action == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "action parameter required",
+		})
+	}
+
+	var err error
+	var msg string
+
+	if action == "start" {
+		err = h.service.StartWatcher()
+		msg = "File watcher started successfully"
+	} else if action == "stop" {
+		err = h.service.StopWatcher()
+		msg = "File watcher stopped successfully"
+	} else {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid action",
+		})
+	}
+
+	if err != nil {
+		slog.Error("Failed to toggle watcher", "action", action, "error", err)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": "Failed to " + action + " file watcher",
+		})
+	}
+
+	c.Response().Header.Set("HX-Trigger", "watcherStatusChanged")
+	return c.Render("toast/toastOk", fiber.Map{
+		"Msg": msg,
+	})
+}
+
+// GetWatcherStatus returns the current status of the watcher
+func (h *Handler) GetWatcherStatus(c *fiber.Ctx) error {
+	running := h.service.GetWatcherStatus()
+	if running {
+		return c.SendString(`<span class="text-xs text-green-600 dark:text-green-400 font-medium">Active</span>`)
+	}
+	return c.SendString(`<span class="text-xs text-gray-500 dark:text-gray-400">Inactive</span>`)
+}
+
+// GetWatcherToggleState returns the toggle input element with correct checked state
+func (h *Handler) GetWatcherToggleState(c *fiber.Ctx) error {
+	running := h.service.GetWatcherStatus()
+	checked := ""
+	if running {
+		checked = "checked"
+	}
+
+	html := fmt.Sprintf(`<input id="watcher-toggle" type="checkbox" class="peer appearance-none w-11 h-5 bg-slate-100 rounded-full checked:bg-slate-800 cursor-pointer transition-colors duration-300" %s
+           hx-post="/import/watcher/toggle" hx-target="#toast-container" hx-swap="innerHTML" hx-trigger="change"
+           hx-vals="js:{action: event.target.checked ? 'start' : 'stop'}">
+<label for="watcher-toggle" class="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-slate-800 cursor-pointer">
+</label>`, checked)
+
+	return c.SendString(html)
 }
 
 // UI Hanlders

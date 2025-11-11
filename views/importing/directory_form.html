@@ -30,10 +30,35 @@
           <span class="uppercase tracking-tight font-normal opacity-90 group-hover:opacity-100 transition-opacity">DUP. {{.Config.Import.Duplicates}}</span>
         </span>
       </span>
-    </div>
-  <p class="text-sm text-gray-600 dark:text-gray-300 mb-6">
-    Import music files from a directory on your system.
-  </p>
+     </div>
+   <p class="text-sm text-gray-600 dark:text-gray-300 mb-6">
+     Import music files from a directory on your system.
+   </p>
+
+   <!-- Watch Mode Toggle -->
+   <div class="mb-6">
+     <div class="flex items-center justify-between">
+       <div>
+         <h3 class="text-sm font-medium text-gray-900 dark:text-white">Watch Mode</h3>
+         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+           Automatically import new files added to the download directory
+         </p>
+       </div>
+       <div class="flex items-center gap-3">
+          <span id="watcher-status" class="text-xs text-gray-500 dark:text-gray-400" hx-get="/import/watcher/status" hx-trigger="load,watcherStatusChanged from:body" hx-target="#watcher-status" hx-swap="innerHTML">
+            Checking...
+          </span>
+          <div id="watcher-toggle-container" class="relative inline-block w-11 h-5"
+               hx-get="/import/watcher/toggle-state" hx-target="#watcher-toggle-container" hx-trigger="load,watcherStatusChanged from:body" hx-swap="innerHTML">
+            <input id="watcher-toggle" type="checkbox" class="peer appearance-none w-11 h-5 bg-slate-100 rounded-full checked:bg-slate-800 cursor-pointer transition-colors duration-300"
+                   hx-post="/import/watcher/toggle" hx-target="#toast-container" hx-swap="innerHTML" hx-trigger="change"
+                   hx-vals="js:{action: event.target.checked ? 'start' : 'stop'}">
+            <label for="watcher-toggle" class="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-slate-800 cursor-pointer">
+            </label>
+          </div>
+       </div>
+     </div>
+   </div>
    <form hx-post="/import/directory" hx-swap="innerHTML" hx-target="#toast-container" class="space-y-6">
     <div>
       <label for="directoryPath" class="block mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">

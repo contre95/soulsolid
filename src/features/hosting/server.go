@@ -118,7 +118,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 
 	uiHandler := ui.NewHandler(cfg)
 
-	importing.RegisterRoutes(app, importingService)
+	importing.RegisterRoutes(app, importingService, jobService)
 	library.RegisterRoutes(app, libraryService)
 	ui.RegisterRoutes(app, uiHandler)
 	config.RegisterRoutes(app, cfg)

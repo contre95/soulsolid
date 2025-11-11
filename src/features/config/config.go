@@ -31,6 +31,11 @@ type Import struct {
 	AlwaysQueue bool   `yaml:"always_queue"`
 	Duplicates  string `yaml:"duplicates"` // "replace", "skip", "queue"
 	PathOptions Paths  `yaml:"paths"`
+	Watch       Watch  `yaml:"watch"`
+}
+
+type Watch struct {
+	DebounceSec int `yaml:"debounce_sec"` // Debounce time in seconds
 }
 
 type Paths struct {

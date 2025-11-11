@@ -11,6 +11,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/infra/watcher"
 	"github.com/contre95/soulsolid/src/music"
 )
 
@@ -38,10 +39,14 @@ type Service struct {
 	config            *config.Manager
 	jobService        jobs.JobService
 	queue             Queue
+	watcher           *watcher.Watcher
+	eventChan         chan watcher.FileEvent
+	watcherRunning    bool
 }
 
 // NewService creates a new organizing service.
 func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, organizer FileOrganizer, cfg *config.Manager, jobService jobs.JobService, queue Queue) *Service {
+	eventChan := make(chan watcher.FileEvent, 10)
 	return &Service{
 		config:            cfg,
 		library:           lib,
@@ -50,6 +55,8 @@ func NewService(lib music.Library, tagReader TagReader, fingerprintReader Finger
 		fileOrganizer:     organizer,
 		jobService:        jobService,
 		queue:             queue,
+		eventChan:         eventChan,
+		watcherRunning:    false,
 	}
 }
 
@@ -98,6 +105,92 @@ func (s *Service) PruneDownloadPath(ctx context.Context) error {
 		return fmt.Errorf("failed to prune download path: %w", err)
 	}
 	return s.ClearQueue()
+}
+
+// HandleFileEvent handles file system events from the watcher
+func (s *Service) HandleFileEvent(event watcher.FileEvent) {
+	slog.Info("Received file event", "path", event.Path, "type", event.EventType)
+
+	// Check for running jobs that would conflict
+	if s.hasConflictingJobs() {
+		slog.Info("Conflicting jobs running, skipping watch-triggered import")
+		return
+	}
+
+	// Trigger the import
+	jobID, err := s.jobService.StartJob("directory_import", "Watch Mode Import", map[string]any{
+		"path": event.Path,
+	})
+	if err != nil {
+		slog.Error("Failed to start watch-triggered import job", "error", err)
+		return
+	}
+
+	slog.Info("Watch-triggered import job started", "jobID", jobID, "path", event.Path)
+}
+
+// StartWatcher starts the file system watcher
+func (s *Service) StartWatcher() error {
+	if s.watcherRunning {
+		return fmt.Errorf("watcher is already running")
+	}
+
+	var err error
+	s.watcher, err = watcher.NewWatcher(s.config, s.eventChan)
+	if err != nil {
+		return fmt.Errorf("failed to create watcher: %w", err)
+	}
+
+	// Start event handler goroutine
+	go func() {
+		for event := range s.eventChan {
+			s.HandleFileEvent(event)
+		}
+	}()
+
+	if err := s.watcher.Start(context.Background()); err != nil {
+		return fmt.Errorf("failed to start watcher: %w", err)
+	}
+
+	s.watcherRunning = true
+	slog.Info("File watcher started")
+	return nil
+}
+
+// StopWatcher stops the file system watcher
+func (s *Service) StopWatcher() error {
+	if !s.watcherRunning {
+		return fmt.Errorf("watcher is not running")
+	}
+
+	if s.watcher != nil {
+		s.watcher.Stop()
+		s.watcher = nil
+	}
+
+	s.watcherRunning = false
+	slog.Info("File watcher stopped")
+	return nil
+}
+
+// GetWatcherStatus returns the current status of the watcher
+func (s *Service) GetWatcherStatus() bool {
+	return s.watcherRunning
+}
+
+// hasConflictingJobs checks if there are any running jobs that would conflict with import
+func (s *Service) hasConflictingJobs() bool {
+	jobs := s.jobService.GetJobs()
+	for _, job := range jobs {
+		if job.Status == "running" {
+			// Conflict with downloading or importing jobs
+			if job.Type == "download_track" || job.Type == "download_album" ||
+			   job.Type == "download_tracks" || job.Type == "directory_import" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // ProcessQueueItem processes a single queue item

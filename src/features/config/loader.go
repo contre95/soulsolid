@@ -102,6 +102,9 @@ func createDefaultConfig() *Config {
 			Move:        false,
 			AlwaysQueue: false,
 			Duplicates:  "queue",
+			Watch: Watch{
+				DebounceSec: 30,
+			},
 			PathOptions: Paths{
 				Compilations:    "%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}",
 				AlbumSoundtrack: "%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}",
