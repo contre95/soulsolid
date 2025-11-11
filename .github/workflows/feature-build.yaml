@@ -1,0 +1,37 @@
+name: Feature Build
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+jobs:
+  feature-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+      - name: Login to DockerHub
+        run: |
+          podman login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} docker.io
+      - name: Extract feature name
+        id: extract_feature
+        run: |
+          branch_name=${{ github.ref_name }}
+          if [[ $branch_name == feat/* ]]; then
+            feature_name=${branch_name#feat/}
+            echo "feature_name=$feature_name" >> $GITHUB_OUTPUT
+          else
+            echo "Branch does not start with feat/"
+            exit 1
+          fi
+      - name: Build and push feature image
+        run: |
+          feature_name=${{ steps.extract_feature.outputs.feature_name }}
+          podman image build --build-arg IMAGE_TAG=$feature_name -t contre95/soulsolid:feat-$feature_name .
+          podman push contre95/soulsolid:feat-$feature_name
