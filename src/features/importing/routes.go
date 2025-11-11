@@ -1,13 +1,12 @@
 package importing
 
 import (
-	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/gofiber/fiber/v2"
 )
 
 // RegisterRoutes registers the routes for the importing feature.
-func RegisterRoutes(app *fiber.App, service *Service, jobService *jobs.Service) {
-	handler := NewHandler(service, jobService)
+func RegisterRoutes(app *fiber.App, service *Service) {
+	handler := NewHandler(service)
 
 	ui := app.Group("/ui")
 	// UI endpoints
