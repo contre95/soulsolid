@@ -40,6 +40,7 @@ func (h *Handler) ImportDirectory(c *fiber.Ctx) error {
 	slog.Info("ImportDirectory: directory import started", "jobID", jobID)
 	c.Response().Header.Set("HX-Trigger", "jobStarted")
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
+	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
 	return c.Render("toast/toastInfo", fiber.Map{
 		"Msg": "Directory import started!",
 	})
@@ -67,14 +68,19 @@ func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
 		actionMsg = "deleted"
 	}
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
+	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": fmt.Sprintf("Track %s successfully", actionMsg),
 	})
 }
 
-// QueueCount returns the current queue count formatted as "X items"
+// QueueCount returns the current queue count formatted as "(X)" or empty if 0
 func (h *Handler) QueueCount(c *fiber.Ctx) error {
-	return c.SendString(fmt.Sprintf("%d items", len(h.service.GetQueuedItems())))
+	count := len(h.service.GetQueuedItems())
+	if count == 0 {
+		return c.SendString("")
+	}
+	return c.SendString(fmt.Sprintf("(%d)", count))
 }
 
 // ClearQueue handles clearing all items from the import queue
@@ -87,6 +93,7 @@ func (h *Handler) ClearQueue(c *fiber.Ctx) error {
 		})
 	}
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
+	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": "Queue cleared successfully",
 	})
@@ -102,6 +109,7 @@ func (h *Handler) PruneDownloadPath(c *fiber.Ctx) error {
 		})
 	}
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
+	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": "Download path pruned and queue cleared successfully",
 	})

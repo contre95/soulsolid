@@ -230,5 +230,8 @@ func (h *Handler) HandleActiveJobsCount(c *fiber.Ctx) error {
 			count++
 		}
 	}
+	if count == 0 {
+		return c.SendString("")
+	}
 	return c.SendString(fmt.Sprintf("(%d)", count))
 }
