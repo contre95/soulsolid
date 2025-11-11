@@ -48,11 +48,11 @@ func main() {
 
 	importQueue := queue.NewInMemoryQueue()
 	eventChan := make(chan importing.FileEvent, 10)
-	watcherInstance, err := watcher.NewWatcher(eventChan)
+	dirWatcher, err := watcher.NewWatcher(eventChan)
 	if err != nil {
 		log.Fatalf("failed to create watcher: %v", err)
 	}
-	importingService := importing.NewService(db, tagReader, fingerprintReader, fileOrganizer, cfgManager, jobService, importQueue, watcherInstance)
+	importingService := importing.NewService(db, tagReader, fingerprintReader, fileOrganizer, cfgManager, jobService, importQueue, dirWatcher)
 
 	directoryImportTask := importing.NewDirectoryImportTask(importingService)
 	jobService.RegisterHandler("directory_import", jobs.NewBaseTaskHandler(directoryImportTask))
