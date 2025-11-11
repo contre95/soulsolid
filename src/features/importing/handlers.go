@@ -74,9 +74,13 @@ func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
 	})
 }
 
-// QueueCount returns the current queue count formatted as "(X)"
+// QueueCount returns the current queue count formatted as "(X)" or empty if 0
 func (h *Handler) QueueCount(c *fiber.Ctx) error {
-	return c.SendString(fmt.Sprintf("(%d)", len(h.service.GetQueuedItems())))
+	count := len(h.service.GetQueuedItems())
+	if count == 0 {
+		return c.SendString("")
+	}
+	return c.SendString(fmt.Sprintf("(%d)", count))
 }
 
 // ClearQueue handles clearing all items from the import queue
