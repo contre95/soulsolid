@@ -124,7 +124,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	config.RegisterRoutes(app, cfg)
 	jobs.RegisterRoutes(app, jobService)
 	if cfg.Get().Sync.Enabled {
-		syncdap.RegisterRoutes(app, syncService, jobService)
+		syncdap.RegisterRoutes(app, syncService)
 	}
 	downloading.RegisterRoutes(app, downloadingService, jobService)
 	tagging.RegisterRoutes(app, tagService)

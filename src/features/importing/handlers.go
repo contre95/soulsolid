@@ -4,14 +4,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/gofiber/fiber/v2"
 )
 
 // Handler is the handler for the organizing feature.
 type Handler struct {
-	service    *Service
-	jobService *jobs.Service
+	service *Service
 }
 
 // NewHandler creates a new handler for the organizing feature.

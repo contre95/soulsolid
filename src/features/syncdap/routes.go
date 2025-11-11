@@ -1,13 +1,12 @@
 package syncdap
 
 import (
-	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/gofiber/fiber/v2"
 )
 
 // RegisterRoutes registers sync-related routes
-func RegisterRoutes(app *fiber.App, service *Service, jobService jobs.JobService) {
-	handler := NewHandler(service, jobService)
+func RegisterRoutes(app *fiber.App, service *Service) {
+	handler := NewHandler(service)
 
 	// UI routes - use existing /ui group
 	ui := app.Group("/ui")
