@@ -11,12 +11,15 @@ type Downloader interface {
 	// Search methods
 	SearchAlbums(query string, limit int) ([]music.Album, error)
 	SearchTracks(query string, limit int) ([]music.Track, error)
+	SearchArtists(query string, limit int) ([]music.Artist, error)
 	// Navigation methods
 	GetAlbumTracks(albumID string) ([]music.Track, error)
+	GetArtistAlbums(artistID string) ([]music.Album, error)
 	GetChartTracks(limit int) ([]music.Track, error)
 	// Download methods
 	DownloadTrack(trackID string, downloadDir string, progressCallback func(downloaded, total int64)) (*music.Track, error)
 	DownloadAlbum(albumID string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error)
+	DownloadArtist(artistID string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error)
 	DownloadLink(url string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error)
 	// User info
 	GetUserInfo() *UserInfo
@@ -40,9 +43,10 @@ type UserInfo struct {
 
 // DownloaderCapabilities represents the capabilities of a downloader
 type DownloaderCapabilities struct {
-	SupportsSearch      bool `json:"supports_search"`
-	SupportsDirectLinks bool `json:"supports_direct_links"`
-	SupportsChartTracks bool `json:"supports_chart_tracks"`
+	SupportsSearch       bool `json:"supports_search"`
+	SupportsArtistSearch bool `json:"supports_artist_search"`
+	SupportsDirectLinks  bool `json:"supports_direct_links"`
+	SupportsChartTracks  bool `json:"supports_chart_tracks"`
 }
 
 // ErrMethodNotSupported is returned when a downloader does not support a requested method
