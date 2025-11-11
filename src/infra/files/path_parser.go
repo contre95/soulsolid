@@ -124,6 +124,8 @@ func (p *TemplatePathParser) renderValues(template string, track *music.Track) (
 		default:
 			return raw // Unknown placeholder
 		}
+		// Sanitize path separators
+		val = strings.ReplaceAll(val, "/", "-")
 		return val
 	})
 	return rendered, nil
