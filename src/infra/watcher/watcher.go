@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/contre95/soulsolid/src/features/config"
 )
+const DEBOUNCE_SECS = 5
 
 // Watcher monitors the download path for new files and emits events
 type Watcher struct {
 	watcher       *fsnotify.Watcher
-	config        *config.Manager
+	watchPath     string
 	debounceTimer *time.Timer
 	debounceMutex sync.Mutex
 	running       bool
@@ -24,7 +24,7 @@ type Watcher struct {
 }
 
 // NewWatcher creates a new file system watcher
-func NewWatcher(cfg *config.Manager, eventChan chan<- FileEvent) (*Watcher, error) {
+func NewWatcher(eventChan chan<- FileEvent) (*Watcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -32,19 +32,18 @@ func NewWatcher(cfg *config.Manager, eventChan chan<- FileEvent) (*Watcher, erro
 
 	return &Watcher{
 		watcher:   watcher,
-		config:    cfg,
 		eventChan: eventChan,
 		stopChan:  make(chan struct{}),
 	}, nil
 }
 
 // Start begins watching the download path for file changes
-func (w *Watcher) Start(ctx context.Context) error {
-	downloadPath := w.config.Get().DownloadPath
-	slog.Info("Starting file watcher", "path", downloadPath)
+func (w *Watcher) Start(ctx context.Context, watchPath string) error {
+	w.watchPath = watchPath
+	slog.Info("Starting file watcher", "path", watchPath)
 
 	// Add the download path to watch
-	if err := w.watcher.Add(downloadPath); err != nil {
+	if err := w.watcher.Add(watchPath); err != nil {
 		return err
 	}
 
@@ -125,8 +124,7 @@ func (w *Watcher) handleEvent(event fsnotify.Event) {
 		w.debounceTimer.Stop()
 	}
 
-	debounceSec := w.config.Get().Import.Watch.DebounceSec
-	w.debounceTimer = time.AfterFunc(time.Duration(debounceSec)*time.Second, func() {
+	w.debounceTimer = time.AfterFunc(time.Duration(DEBOUNCE_SECS)*time.Second, func() {
 		w.emitDebounceEvent()
 	})
 }
@@ -145,7 +143,7 @@ func (w *Watcher) isSupportedFile(filePath string) bool {
 // emitDebounceEvent emits a file event after debounce period
 func (w *Watcher) emitDebounceEvent() {
 	event := FileEvent{
-		Path:      w.config.Get().DownloadPath,
+		Path:      w.watchPath,
 		EventType: FileCreated,
 		Timestamp: time.Now(),
 	}

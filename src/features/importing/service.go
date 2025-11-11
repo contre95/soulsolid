@@ -136,7 +136,7 @@ func (s *Service) StartWatcher() error {
 	}
 
 	var err error
-	s.watcher, err = watcher.NewWatcher(s.config, s.eventChan)
+	s.watcher, err = watcher.NewWatcher(s.eventChan)
 	if err != nil {
 		return fmt.Errorf("failed to create watcher: %w", err)
 	}
@@ -148,7 +148,8 @@ func (s *Service) StartWatcher() error {
 		}
 	}()
 
-	if err := s.watcher.Start(context.Background()); err != nil {
+	downloadPath := s.config.Get().DownloadPath
+	if err := s.watcher.Start(context.Background(), downloadPath); err != nil {
 		return fmt.Errorf("failed to start watcher: %w", err)
 	}
 
