@@ -21,11 +21,11 @@ type Watcher struct {
 	debounceMutex sync.Mutex
 	running       bool
 	stopChan      chan struct{}
-	eventChan     chan<- importing.FileEvent
+	eventChan     chan importing.FileEvent
 }
 
 // NewWatcher creates a new file system watcher
-func NewWatcher(eventChan chan<- importing.FileEvent) (*Watcher, error) {
+func NewWatcher() (*Watcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -33,9 +33,14 @@ func NewWatcher(eventChan chan<- importing.FileEvent) (*Watcher, error) {
 
 	return &Watcher{
 		watcher:   watcher,
-		eventChan: eventChan,
+		eventChan: make(chan importing.FileEvent, 10),
 		stopChan:  make(chan struct{}),
 	}, nil
+}
+
+// GetEventChan returns a receive-only channel for reading file events
+func (w *Watcher) GetEventChan() <-chan importing.FileEvent {
+	return w.eventChan
 }
 
 // Start begins watching the download path for file changes

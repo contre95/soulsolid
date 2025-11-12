@@ -47,8 +47,7 @@ func main() {
 	fingerprintReader := chroma.NewFingerprintService()
 
 	importQueue := queue.NewInMemoryQueue()
-	eventChan := make(chan importing.FileEvent, 10)
-	dirWatcher, err := watcher.NewWatcher(eventChan)
+	dirWatcher, err := watcher.NewWatcher()
 	if err != nil {
 		log.Fatalf("failed to create watcher: %v", err)
 	}

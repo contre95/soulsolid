@@ -9,6 +9,7 @@ import (
 type Watcher interface {
 	Start(ctx context.Context, watchPath string) error
 	Stop()
+	GetEventChan() <-chan FileEvent
 }
 
 // FileEventType represents the type of file system event

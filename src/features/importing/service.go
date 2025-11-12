@@ -39,13 +39,11 @@ type Service struct {
 	jobService        jobs.JobService
 	queue             Queue
 	watcher           Watcher
-	eventChan         chan FileEvent
 	watcherRunning    bool
 }
 
 // NewService creates a new organizing service.
 func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, organizer FileOrganizer, cfg *config.Manager, jobService jobs.JobService, queue Queue, watcher Watcher) *Service {
-	eventChan := make(chan FileEvent, 10)
 	return &Service{
 		config:            cfg,
 		library:           lib,
@@ -55,7 +53,6 @@ func NewService(lib music.Library, tagReader TagReader, fingerprintReader Finger
 		jobService:        jobService,
 		queue:             queue,
 		watcher:           watcher,
-		eventChan:         eventChan,
 		watcherRunning:    false,
 	}
 }
@@ -110,14 +107,10 @@ func (s *Service) PruneDownloadPath(ctx context.Context) error {
 // HandleFileEvent handles file system events from the watcher
 func (s *Service) HandleFileEvent(event FileEvent) {
 	slog.Info("Received file event", "path", event.Path, "type", event.EventType)
-
-	// Check for running jobs that would conflict
 	if s.hasConflictingJobs() {
 		slog.Info("Conflicting jobs running, skipping watch-triggered import")
 		return
 	}
-
-	// Trigger the import
 	jobID, err := s.jobService.StartJob("directory_import", "Watch Mode Import", map[string]any{
 		"path": event.Path,
 	})
@@ -125,7 +118,6 @@ func (s *Service) HandleFileEvent(event FileEvent) {
 		slog.Error("Failed to start watch-triggered import job", "error", err)
 		return
 	}
-
 	slog.Info("Watch-triggered import job started", "jobID", jobID, "path", event.Path)
 }
 
@@ -137,7 +129,7 @@ func (s *Service) StartWatcher() error {
 
 	// Start event handler goroutine
 	go func() {
-		for event := range s.eventChan {
+		for event := range s.watcher.GetEventChan() {
 			s.HandleFileEvent(event)
 		}
 	}()
