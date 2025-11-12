@@ -24,6 +24,7 @@ func RegisterRoutes(app *fiber.App, service *Service, jobService jobs.JobService
 	// Download endpoints
 	api.Post("/track", handler.DownloadTrack)
 	api.Post("/album", handler.DownloadAlbum)
+	api.Post("/artist", handler.DownloadArtist)
 	api.Post("/tracks", handler.DownloadTracks)
 
 	// User info endpoint
