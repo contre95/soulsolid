@@ -60,6 +60,23 @@ func (s *Service) SearchTracks(downloaderName, query string, limit int) ([]music
 	return downloader.SearchTracks(query, limit)
 }
 
+// SearchArtists searches for artists
+func (s *Service) SearchArtists(downloaderName, query string, limit int) ([]music.Artist, error) {
+	downloader, exists := s.pluginManager.GetDownloader(downloaderName)
+	if !exists {
+		return nil, fmt.Errorf("downloader %s not found", downloaderName)
+	}
+
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	return downloader.SearchArtists(query, limit)
+}
+
 // DownloadTrack starts a download job for a track
 func (s *Service) DownloadTrack(downloaderName, trackID string) (string, error) {
 	slog.Info("DownloadTrack service", "downloaderName", downloaderName, "trackID", trackID)
@@ -93,6 +110,26 @@ func (s *Service) DownloadAlbum(downloaderName, albumID string) (string, error) 
 		"albumID":    albumID,
 		"downloader": downloaderName,
 		"type":       "album",
+	})
+	if err != nil {
+		slog.Error("Failed to start download job", "error", err)
+		return "", fmt.Errorf("failed to start download job: %w", err)
+	}
+
+	return jobID, nil
+}
+
+// DownloadArtist starts a download job for an artist
+func (s *Service) DownloadArtist(downloaderName, artistID string) (string, error) {
+	_, exists := s.pluginManager.GetDownloader(downloaderName)
+	if !exists {
+		return "", fmt.Errorf("downloader %s not found", downloaderName)
+	}
+
+	jobID, err := s.jobService.StartJob("download_artist", "Download Artist", map[string]any{
+		"artistID":   artistID,
+		"downloader": downloaderName,
+		"type":       "artist",
 	})
 	if err != nil {
 		slog.Error("Failed to start download job", "error", err)
