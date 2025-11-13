@@ -1,0 +1,50 @@
+<h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">Artists</h3>
+
+<div id="results-container" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
+  {{if not .Artists}}
+    <p class="text-slate-500 dark:text-slate-400 col-span-full text-center">No artists found</p>
+  {{else}}
+    {{range .Artists}}
+    <div class="group bg-white dark:bg-slate-800 rounded-lg md:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+      <!-- Artist Image -->
+      <div class="aspect-square">
+        {{if .ImageXL}}
+        <img src="{{.ImageXL}}" alt="{{.Name}}" class="w-full h-full object-cover rounded-t-lg">
+        {{else if .ImageLarge}}
+        <img src="{{.ImageLarge}}" alt="{{.Name}}" class="w-full h-full object-cover rounded-t-lg">
+        {{else if .ImageMedium}}
+        <img src="{{.ImageMedium}}" alt="{{.Name}}" class="w-full h-full object-cover rounded-t-lg">
+        {{else if .ImageSmall}}
+        <img src="{{.ImageSmall}}" alt="{{.Name}}" class="w-full h-full object-cover rounded-t-lg">
+        {{else}}
+        <div class="w-full h-full bg-purple-600 rounded-t-lg flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/50">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+          </svg>
+        </div>
+        {{end}}
+      </div>
+
+      <!-- Artist Info & Actions -->
+      <div class="p-2 md:p-4">
+        <h3 class="font-semibold text-slate-900 dark:text-white truncate text-xs md:text-sm mb-2">{{.Name}}</h3>
+
+        <!-- Download Button -->
+        <form hx-post="/downloads/artist?downloader={{$.Downloader}}"
+              hx-swap="none"
+              class="mt-2">
+          <input type="hidden" name="artistId" value="{{.ID}}">
+          <button
+            type="submit"
+            class="w-full text-white bg-purple-600 hover:bg-purple-700 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-lg text-xs px-2 py-2 text-center dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-800 flex items-center justify-center gap-2 transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Download Artist
+          </button>
+        </form>
+      </div>
+    </div>
+    {{end}}
+  {{end}}
+</div>
