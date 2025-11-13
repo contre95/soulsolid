@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/importing"
@@ -19,7 +20,7 @@ type Watcher struct {
 	watchPath     string
 	debounceTimer *time.Timer
 	debounceMutex sync.Mutex
-	running       bool
+	running       atomic.Bool
 	stopChan      chan struct{}
 	eventChan     chan importing.FileEvent
 }
@@ -53,7 +54,7 @@ func (w *Watcher) Start(ctx context.Context, watchPath string) error {
 		return err
 	}
 
-	w.running = true
+	w.running.Store(true)
 
 	// Start the event loop
 	go w.watchLoop(ctx)
@@ -64,12 +65,12 @@ func (w *Watcher) Start(ctx context.Context, watchPath string) error {
 
 // Stop stops the file watcher
 func (w *Watcher) Stop() {
-	if !w.running {
+	if !w.running.Load() {
 		return
 	}
 
 	slog.Info("Stopping file watcher")
-	w.running = false
+	w.running.Store(false)
 	close(w.stopChan)
 
 	// Cancel any pending debounce timer
@@ -81,6 +82,7 @@ func (w *Watcher) Stop() {
 	w.debounceMutex.Unlock()
 
 	w.watcher.Close()
+	close(w.eventChan)
 }
 
 // watchLoop processes file system events
@@ -130,7 +132,7 @@ func (w *Watcher) handleEvent(event fsnotify.Event) {
 		w.debounceTimer.Stop()
 	}
 
-	w.debounceTimer = time.AfterFunc(time.Duration(DEBOUNCE_SECS)*time.Second, func() {
+	w.debounceTimer = time.AfterFunc(time.Duration(debounceSeconds)*time.Second, func() {
 		w.emitDebounceEvent()
 	})
 }
@@ -148,6 +150,9 @@ func (w *Watcher) isSupportedFile(filePath string) bool {
 
 // emitDebounceEvent emits a file event after debounce period
 func (w *Watcher) emitDebounceEvent() {
+	if !w.running.Load() {
+		return
+	}
 	event := importing.FileEvent{
 		Path:      w.watchPath,
 		EventType: importing.FileCreated,

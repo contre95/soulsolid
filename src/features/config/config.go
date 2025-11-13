@@ -27,10 +27,11 @@ type WebhookConfig struct {
 }
 
 type Import struct {
-	Move        bool   `yaml:"move"` // If not copies
-	AlwaysQueue bool   `yaml:"always_queue"`
-	Duplicates  string `yaml:"duplicates"` // "replace", "skip", "queue"
-	PathOptions Paths  `yaml:"paths"`
+	Move             bool   `yaml:"move"` // If not copies
+	AlwaysQueue      bool   `yaml:"always_queue"`
+	Duplicates       string `yaml:"duplicates"` // "replace", "skip", "queue"
+	PathOptions      Paths  `yaml:"paths"`
+	AutoStartWatcher bool   `yaml:"auto_start_watcher"`
 }
 
 type Paths struct {
