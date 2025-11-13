@@ -54,6 +54,23 @@ func (w *Watcher) Start(ctx context.Context, watchPath string) error {
 	w.watchPath = watchPath
 	slog.Info("Starting file watcher", "path", watchPath)
 
+	// Recreate watcher if closed
+	if w.watcher == nil {
+		var err error
+		w.watcher, err = fsnotify.NewWatcher()
+		if err != nil {
+			return err
+		}
+	}
+
+	// Recreate eventChan if closed
+	if w.eventChan == nil {
+		w.eventChan = make(chan importing.FileEvent, 10)
+	}
+
+	// Recreate stopChan
+	w.stopChan = make(chan struct{})
+
 	// Add the download path to watch
 	if err := w.watcher.Add(watchPath); err != nil {
 		return err
@@ -87,7 +104,9 @@ func (w *Watcher) Stop() {
 	w.debounceMutex.Unlock()
 
 	w.watcher.Close()
+	w.watcher = nil
 	close(w.eventChan)
+	w.eventChan = nil
 }
 
 // watchLoop processes file system events

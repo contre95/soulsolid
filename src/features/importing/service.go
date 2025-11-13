@@ -155,7 +155,6 @@ func (s *Service) StopWatcher() error {
 
 	if s.watcher != nil {
 		s.watcher.Stop()
-		s.watcher = nil
 	}
 
 	slog.Info("File watcher stopped")
