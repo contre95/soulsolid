@@ -11,7 +11,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/fsnotify/fsnotify"
 )
-const DEBOUNCE_SECS = 5
+const debounceSeconds = 5
 
 // Watcher monitors the download path for new files and emits events
 type Watcher struct {
