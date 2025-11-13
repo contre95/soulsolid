@@ -44,7 +44,7 @@ type Service struct {
 
 // NewService creates a new organizing service.
 func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, organizer FileOrganizer, cfg *config.Manager, jobService jobs.JobService, queue Queue, watcher Watcher) *Service {
-	return &Service{
+	s := &Service{
 		config:            cfg,
 		library:           lib,
 		metadataReader:    tagReader,
@@ -55,6 +55,12 @@ func NewService(lib music.Library, tagReader TagReader, fingerprintReader Finger
 		watcher:           watcher,
 		watcherRunning:    false,
 	}
+	if s.config.Get().Import.AutoStartWatcher {
+		if err := s.StartWatcher(); err != nil {
+			slog.Error("Failed to auto-start watcher", "error", err)
+		}
+	}
+	return s
 }
 
 // ImportDirectory starts a job to import all files from a directory recursively.
