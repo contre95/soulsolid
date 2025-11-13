@@ -5,8 +5,11 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/go-playground/validator/v10"
 	"gopkg.in/yaml.v3"
 )
+
+
 
 // setProviderAPIKey sets the API key for a provider from an environment variable
 func setProviderAPIKey(cfg *Config, providerName, envVar string) {
@@ -37,7 +40,11 @@ func Load(path string) (*Manager, error) {
 		}
 
 		slog.Info("Default configuration created successfully", "path", path)
-		return NewManager(defaultCfg), nil
+		manager := NewManager(defaultCfg)
+		if err := manager.EnsureDirectories(); err != nil {
+			return nil, err
+		}
+		return manager, nil
 	}
 
 	f, err := os.Open(path)
@@ -49,6 +56,11 @@ func Load(path string) (*Manager, error) {
 	var cfg Config
 	if err := yaml.NewDecoder(f).Decode(&cfg); err != nil {
 		return nil, err
+	}
+
+	validate := validator.New()
+	if err := validate.Struct(cfg); err != nil {
+		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
 	// Set defaults for missing values

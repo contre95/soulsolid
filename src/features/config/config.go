@@ -2,8 +2,8 @@ package config
 
 // Config holds the application configuration.
 type Config struct {
-	LibraryPath  string      `yaml:"libraryPath"`
-	DownloadPath string      `yaml:"downloadPath"`
+	LibraryPath  string `yaml:"libraryPath" validate:"required"`
+	DownloadPath string `yaml:"downloadPath" validate:"required"`
 	Telegram     Telegram    `yaml:"telegram"`
 	Logger       Logger      `yaml:"logger"`
 	Downloaders  Downloaders `yaml:"downloaders"`
@@ -43,7 +43,7 @@ type Paths struct {
 
 // Database holds the configuration for the database
 type Database struct {
-	Path string `yaml:"path"`
+	Path string `yaml:"path" validate:"required"`
 }
 
 // Server hold the configuration for the Fiber server Config
