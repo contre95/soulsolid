@@ -27,3 +27,4 @@ type FileEvent struct {
 	EventType FileEventType
 	Timestamp time.Time
 }
+

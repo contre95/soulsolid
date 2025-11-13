@@ -110,8 +110,8 @@ func (s *Service) PruneDownloadPath(ctx context.Context) error {
 	return s.ClearQueue()
 }
 
-// HandleFileEvent handles file system events from the watcher
-func (s *Service) HandleFileEvent(event FileEvent) {
+// handleFileEvent handles file system events from the watcher
+func (s *Service) handleFileEvent(event FileEvent) {
 	slog.Info("Received file event", "path", event.Path, "type", event.EventType)
 	if s.hasConflictingJobs() {
 		slog.Info("Conflicting jobs running, skipping watch-triggered import")
@@ -136,7 +136,7 @@ func (s *Service) StartWatcher() error {
 	// Start event handler goroutine
 	go func() {
 		for event := range s.watcher.GetEventChan() {
-			s.HandleFileEvent(event)
+			s.handleFileEvent(event)
 		}
 	}()
 
