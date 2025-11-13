@@ -112,7 +112,7 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *jobs.Jo
 		return nil, fmt.Errorf("failed to download track: %w", err)
 	}
 	// Print track pretty for debugging
-	track.Pretty()
+	slog.Debug("Track downloaded", "track", track.Pretty())
 
 	job.Name = fmt.Sprintf("Download: %s (with %s)", track.Title, track.Artists[0].Artist.Name)
 	job.Metadata["trackTitle"] = track.Title
