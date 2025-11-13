@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/jobs"
@@ -111,13 +112,18 @@ func (s *Service) PruneDownloadPath(ctx context.Context) error {
 // handleFileEvent handles file system events from the watcher
 func (s *Service) handleFileEvent(event FileEvent) {
 	slog.Info("Received file event", "path", event.Path, "type", event.EventType)
-	if s.hasConflictingJobs() {
-		slog.Info("Conflicting jobs running, skipping watch-triggered import")
-		return
+	const waitInterval = 5 * time.Second
+	const maxWait = 5 * time.Minute
+	start := time.Now()
+	for s.jobsAreRunning() {
+		if time.Since(start) > maxWait {
+			slog.Info("Timed out waiting for jobs to finish, skipping watch-triggered import")
+			return
+		}
+		slog.Info("Still waiting for jobs to finish")
+		time.Sleep(waitInterval)
 	}
-	jobID, err := s.jobService.StartJob("directory_import", "Watch Mode Import", map[string]any{
-		"path": event.Path,
-	})
+	jobID, err := s.ImportDirectory(context.Background(), s.config.Get().DownloadPath) 
 	if err != nil {
 		slog.Error("Failed to start watch-triggered import job", "error", err)
 		return
@@ -166,16 +172,12 @@ func (s *Service) GetWatcherStatus() bool {
 	return s.watcher.IsRunning()
 }
 
-// hasConflictingJobs checks if there are any running jobs that would conflict with import
-func (s *Service) hasConflictingJobs() bool {
+// jobsAreRunning checks if there are any running jobs
+func (s *Service) jobsAreRunning() bool {
 	jobs := s.jobService.GetJobs()
 	for _, job := range jobs {
 		if job.Status == "running" {
-			// Conflict with downloading or importing jobs
-			if job.Type == "download_track" || job.Type == "download_album" ||
-			   job.Type == "download_tracks" || job.Type == "directory_import" {
-				return true
-			}
+			return true
 		}
 	}
 	return false

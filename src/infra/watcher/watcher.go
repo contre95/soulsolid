@@ -23,6 +23,7 @@ type Watcher struct {
 	running       atomic.Bool
 	stopChan      chan struct{}
 	eventChan     chan importing.FileEvent
+	lastFile      string
 }
 
 // NewWatcher creates a new file system watcher
@@ -150,6 +151,7 @@ func (w *Watcher) handleEvent(event fsnotify.Event) {
 
 	// Start or reset the debounce timer
 	w.debounceMutex.Lock()
+	w.lastFile = event.Name
 	defer w.debounceMutex.Unlock()
 
 	if w.debounceTimer != nil {
@@ -178,7 +180,7 @@ func (w *Watcher) emitDebounceEvent() {
 		return
 	}
 	event := importing.FileEvent{
-		Path:      w.watchPath,
+		Path:      w.lastFile,
 		EventType: importing.FileCreated,
 		Timestamp: time.Now(),
 	}
