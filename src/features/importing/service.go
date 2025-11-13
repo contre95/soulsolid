@@ -39,7 +39,6 @@ type Service struct {
 	jobService        jobs.JobService
 	queue             Queue
 	watcher           Watcher
-	watcherRunning    bool
 }
 
 // NewService creates a new organizing service.
@@ -53,7 +52,6 @@ func NewService(lib music.Library, tagReader TagReader, fingerprintReader Finger
 		jobService:        jobService,
 		queue:             queue,
 		watcher:           watcher,
-		watcherRunning:    false,
 	}
 	if s.config.Get().Import.AutoStartWatcher {
 		if err := s.StartWatcher(); err != nil {
@@ -129,7 +127,7 @@ func (s *Service) handleFileEvent(event FileEvent) {
 
 // StartWatcher starts the file system watcher
 func (s *Service) StartWatcher() error {
-	if s.watcherRunning {
+	if s.watcher.IsRunning() {
 		return fmt.Errorf("watcher is already running")
 	}
 
@@ -145,14 +143,13 @@ func (s *Service) StartWatcher() error {
 		return fmt.Errorf("failed to start watcher: %w", err)
 	}
 
-	s.watcherRunning = true
 	slog.Info("File watcher started")
 	return nil
 }
 
 // StopWatcher stops the file system watcher
 func (s *Service) StopWatcher() error {
-	if !s.watcherRunning {
+	if !s.watcher.IsRunning() {
 		return fmt.Errorf("watcher is not running")
 	}
 
@@ -161,14 +158,13 @@ func (s *Service) StopWatcher() error {
 		s.watcher = nil
 	}
 
-	s.watcherRunning = false
 	slog.Info("File watcher stopped")
 	return nil
 }
 
 // GetWatcherStatus returns the current status of the watcher
 func (s *Service) GetWatcherStatus() bool {
-	return s.watcherRunning
+	return s.watcher.IsRunning()
 }
 
 // hasConflictingJobs checks if there are any running jobs that would conflict with import

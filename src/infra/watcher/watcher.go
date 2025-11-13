@@ -44,6 +44,11 @@ func (w *Watcher) GetEventChan() <-chan importing.FileEvent {
 	return w.eventChan
 }
 
+// IsRunning returns whether the watcher is currently running
+func (w *Watcher) IsRunning() bool {
+	return w.running.Load()
+}
+
 // Start begins watching the download path for file changes
 func (w *Watcher) Start(ctx context.Context, watchPath string) error {
 	w.watchPath = watchPath
