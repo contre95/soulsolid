@@ -2,8 +2,8 @@ package config
 
 // Config holds the application configuration.
 type Config struct {
-	LibraryPath  string      `yaml:"libraryPath"`
-	DownloadPath string      `yaml:"downloadPath"`
+	LibraryPath  string `yaml:"libraryPath" required:"true"`
+	DownloadPath string `yaml:"downloadPath" required:"true"`
 	Telegram     Telegram    `yaml:"telegram"`
 	Logger       Logger      `yaml:"logger"`
 	Downloaders  Downloaders `yaml:"downloaders"`
@@ -27,10 +27,11 @@ type WebhookConfig struct {
 }
 
 type Import struct {
-	Move        bool   `yaml:"move"` // If not copies
-	AlwaysQueue bool   `yaml:"always_queue"`
-	Duplicates  string `yaml:"duplicates"` // "replace", "skip", "queue"
-	PathOptions Paths  `yaml:"paths"`
+	Move             bool   `yaml:"move"` // If not copies
+	AlwaysQueue      bool   `yaml:"always_queue"`
+	Duplicates       string `yaml:"duplicates"` // "replace", "skip", "queue"
+	PathOptions      Paths  `yaml:"paths"`
+	AutoStartWatcher bool   `yaml:"auto_start_watcher"`
 }
 
 type Paths struct {
@@ -43,7 +44,7 @@ type Paths struct {
 
 // Database holds the configuration for the database
 type Database struct {
-	Path string `yaml:"path"`
+	Path string `yaml:"path" required:"true"`
 }
 
 // Server hold the configuration for the Fiber server Config

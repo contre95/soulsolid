@@ -4,9 +4,42 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"reflect"
 
 	"gopkg.in/yaml.v3"
 )
+
+// validateConfig checks that all required fields are present in the config
+func validateConfig(cfg *Config) error {
+	v := reflect.ValueOf(cfg).Elem()
+	return validateStruct(v)
+}
+
+func validateStruct(v reflect.Value) error {
+	t := v.Type()
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		fieldType := t.Field(i)
+		tag := fieldType.Tag.Get("required")
+		if tag == "true" {
+			if field.Kind() == reflect.String && field.String() == "" {
+				slog.Error("required field %s is missing or empty", fieldType.Name)
+				return fmt.Errorf("required field %s is missing or empty", fieldType.Name)
+			}
+			if field.Kind() == reflect.Ptr && field.IsNil() {
+				slog.Error("Required field %s is missing", fieldType.Name)
+				return fmt.Errorf("Required field %s is missing", fieldType.Name)
+			}
+		}
+		if field.Kind() == reflect.Struct {
+			if err := validateStruct(field); err != nil {
+				slog.Error("Config validation error", "error", err)
+				return err
+			}
+		}
+	}
+	return nil
+}
 
 // setProviderAPIKey sets the API key for a provider from an environment variable
 func setProviderAPIKey(cfg *Config, providerName, envVar string) {
@@ -37,7 +70,11 @@ func Load(path string) (*Manager, error) {
 		}
 
 		slog.Info("Default configuration created successfully", "path", path)
-		return NewManager(defaultCfg), nil
+		manager := NewManager(defaultCfg)
+		if err := manager.EnsureDirectories(); err != nil {
+			return nil, err
+		}
+		return manager, nil
 	}
 
 	f, err := os.Open(path)
@@ -49,6 +86,10 @@ func Load(path string) (*Manager, error) {
 	var cfg Config
 	if err := yaml.NewDecoder(f).Decode(&cfg); err != nil {
 		return nil, err
+	}
+
+	if err := validateConfig(&cfg); err != nil {
+		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
 	// Set defaults for missing values
