@@ -125,13 +125,14 @@ func (h *Handler) ToggleWatcher(c *fiber.Ctx) error {
 	var err error
 	var msg string
 
-	if action == "start" {
+	switch action {
+	case "start":
 		err = h.service.StartWatcher()
 		msg = "File watcher started successfully"
-	} else if action == "stop" {
+	case "stop":
 		err = h.service.StopWatcher()
 		msg = "File watcher stopped successfully"
-	} else {
+	default:
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "invalid action",
 		})
