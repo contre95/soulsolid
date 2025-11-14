@@ -154,27 +154,20 @@ func (h *Handler) ToggleWatcher(c *fiber.Ctx) error {
 // GetWatcherStatus returns the current status of the watcher
 func (h *Handler) GetWatcherStatus(c *fiber.Ctx) error {
 	running := h.service.GetWatcherStatus()
-	if running {
-		return c.SendString(`<span class="text-xs text-green-600 dark:text-green-400 font-medium">Active</span>`)
-	}
-	return c.SendString(`<span class="text-xs text-gray-500 dark:text-gray-400">Inactive</span>`)
+	return c.Render("components/status_badge", fiber.Map{
+		"Running": running,
+	})
 }
 
 // GetWatcherToggleState returns the toggle input element with correct checked state
 func (h *Handler) GetWatcherToggleState(c *fiber.Ctx) error {
 	running := h.service.GetWatcherStatus()
-	checked := ""
-	if running {
-		checked = "checked"
-	}
-
-	html := fmt.Sprintf(`<input id="watcher-toggle" type="checkbox" class="peer appearance-none w-11 h-5 bg-slate-100 rounded-full checked:bg-slate-800 cursor-pointer transition-colors duration-300" %s
-           hx-post="/import/watcher/toggle" hx-target="#toast-container" hx-swap="innerHTML" hx-trigger="change"
-           hx-vals="js:{action: event.target.checked ? 'start' : 'stop'}">
-<label for="watcher-toggle" class="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-slate-800 cursor-pointer">
-</label>`, checked)
-
-	return c.SendString(html)
+	return c.Render("components/toggle", fiber.Map{
+		"ID":       "watcher-toggle",
+		"Checked":  running,
+		"PostURL":  "/import/watcher/toggle",
+		"Vals":     "js:{action: event.target.checked ? 'start' : 'stop'}",
+	})
 }
 
 // UI Hanlders
