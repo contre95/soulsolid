@@ -2,9 +2,10 @@ package watcher
 
 import (
 	"context"
+	"io/fs"
 	"log/slog"
+	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/fsnotify/fsnotify"
 )
+
 const debounceSeconds = 5
 
 // Watcher monitors the download path for new files and emits events
@@ -57,6 +59,7 @@ func (w *Watcher) Start(ctx context.Context, watchPath string) error {
 
 	// Recreate watcher if closed
 	if w.watcher == nil {
+		slog.Debug("Recreating fsnotify watcher")
 		var err error
 		w.watcher, err = fsnotify.NewWatcher()
 		if err != nil {
@@ -66,16 +69,33 @@ func (w *Watcher) Start(ctx context.Context, watchPath string) error {
 
 	// Recreate eventChan if closed
 	if w.eventChan == nil {
+		slog.Debug("Recreating event channel")
 		w.eventChan = make(chan importing.FileEvent, 10)
 	}
 
 	// Recreate stopChan
+	slog.Debug("Recreating stop channel")
 	w.stopChan = make(chan struct{})
 
 	// Add the download path to watch
+	slog.Debug("Adding root watch path", "path", watchPath)
 	if err := w.watcher.Add(watchPath); err != nil {
 		return err
 	}
+
+	// Add all subdirectories recursively
+	slog.Debug("Walking subdirectories for recursive watching", "root", watchPath)
+	filepath.WalkDir(watchPath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			slog.Error("Error walking directory", "path", path, "error", err)
+			return err
+		}
+		if d.IsDir() && path != watchPath {
+			slog.Debug("Adding subdirectory to watcher", "path", path)
+			w.watcher.Add(path)
+		}
+		return nil
+	})
 
 	w.running.Store(true)
 
@@ -89,23 +109,28 @@ func (w *Watcher) Start(ctx context.Context, watchPath string) error {
 // Stop stops the file watcher
 func (w *Watcher) Stop() {
 	if !w.running.Load() {
+		slog.Debug("Watcher already stopped")
 		return
 	}
 
 	slog.Info("Stopping file watcher")
 	w.running.Store(false)
+	slog.Debug("Closing stop channel")
 	close(w.stopChan)
 
 	// Cancel any pending debounce timer
 	w.debounceMutex.Lock()
 	if w.debounceTimer != nil {
+		slog.Debug("Stopping debounce timer")
 		w.debounceTimer.Stop()
 		w.debounceTimer = nil
 	}
 	w.debounceMutex.Unlock()
 
+	slog.Debug("Closing fsnotify watcher")
 	w.watcher.Close()
 	w.watcher = nil
+	slog.Debug("Closing event channel")
 	close(w.eventChan)
 	w.eventChan = nil
 }
@@ -137,46 +162,52 @@ func (w *Watcher) watchLoop(ctx context.Context) {
 
 // handleEvent processes a single file system event
 func (w *Watcher) handleEvent(event fsnotify.Event) {
+	slog.Debug("Handling fsnotify event", "op", event.Op, "name", event.Name)
 	// Only process file creation events
-	if event.Op&fsnotify.Create != fsnotify.Create {
-		return
+	if event.Op&fsnotify.Create == fsnotify.Create {
+		if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
+			// Add all subdirectories recursively
+			filepath.WalkDir(event.Name, func(path string, d fs.DirEntry, err error) error {
+				if err != nil {
+					slog.Error("Error walking directory", "path", path, "error", err)
+					return err
+				}
+				if d.IsDir() && path != event.Name {
+					slog.Debug("Adding subdirectory to watcher", "path", path)
+					w.watcher.Add(path)
+				}
+				return nil
+			})
+			slog.Debug("Detected new directory, adding to watcher", "dir", event.Name)
+			w.watcher.Add(event.Name)
+		} else {
+			slog.Info("Detected new file", "file", event.Name)
+
+			// Start or reset the debounce timer
+			w.debounceMutex.Lock()
+			w.lastFile = event.Name
+			defer w.debounceMutex.Unlock()
+
+			if w.debounceTimer != nil {
+				w.debounceTimer.Stop()
+			}
+
+			w.debounceTimer = time.AfterFunc(time.Duration(debounceSeconds)*time.Second, func() {
+				w.emitDebounceEvent()
+			})
+		}
+	} else {
+		slog.Debug("Ignoring non-create event", "op", event.Op, "name", event.Name)
 	}
-
-	// Check if it's a supported audio file
-	if !w.isSupportedFile(event.Name) {
-		return
-	}
-
-	slog.Info("Detected new supported file", "file", event.Name)
-
-	// Start or reset the debounce timer
-	w.debounceMutex.Lock()
-	w.lastFile = event.Name
-	defer w.debounceMutex.Unlock()
-
-	if w.debounceTimer != nil {
-		w.debounceTimer.Stop()
-	}
-
-	w.debounceTimer = time.AfterFunc(time.Duration(debounceSeconds)*time.Second, func() {
-		w.emitDebounceEvent()
-	})
 }
 
-// isSupportedFile checks if the file is a supported audio format
-func (w *Watcher) isSupportedFile(filePath string) bool {
-	ext := strings.ToLower(filepath.Ext(filePath))
-	supportedExtensions := map[string]bool{
-		".mp3":  true,
-		".flac": true,
-	}
-	_, supported := supportedExtensions[ext]
-	return supported
-}
+
 
 // emitDebounceEvent emits a file event after debounce period
 func (w *Watcher) emitDebounceEvent() {
+	slog.Debug("Emitting debounced file event", "file", w.lastFile)
 	if !w.running.Load() {
+		slog.Debug("Watcher not running, skipping emit")
 		return
 	}
 	event := importing.FileEvent{
@@ -189,6 +220,6 @@ func (w *Watcher) emitDebounceEvent() {
 	case w.eventChan <- event:
 		slog.Info("Emitted file event after debounce", "path", event.Path)
 	default:
-		slog.Warn("Event channel full, dropping file event", "path", event.Path)
+		slog.Debug("Event channel full, dropping file event", "path", event.Path)
 	}
 }

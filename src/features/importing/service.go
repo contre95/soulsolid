@@ -123,7 +123,7 @@ func (s *Service) handleFileEvent(event FileEvent) {
 		slog.Info("Still waiting for jobs to finish")
 		time.Sleep(waitInterval)
 	}
-	jobID, err := s.ImportDirectory(context.Background(), s.config.Get().DownloadPath) 
+	jobID, err := s.ImportDirectory(context.Background(), s.config.Get().DownloadPath)
 	if err != nil {
 		slog.Error("Failed to start watch-triggered import job", "error", err)
 		return
@@ -137,17 +137,22 @@ func (s *Service) StartWatcher() error {
 		return fmt.Errorf("watcher is already running")
 	}
 
-	// Start event handler goroutine
-	go func() {
-		for event := range s.watcher.GetEventChan() {
-			s.handleFileEvent(event)
-		}
-	}()
-
 	downloadPath := s.config.Get().DownloadPath
 	if err := s.watcher.Start(context.Background(), downloadPath); err != nil {
 		return fmt.Errorf("failed to start watcher: %w", err)
 	}
+
+	// Start event handler goroutine
+	go func() {
+		for event := range s.watcher.GetEventChan() {
+			if event.EventType == FileCreated {
+				slog.Warn("File was create", "file", event.Path)
+				s.handleFileEvent(event)
+			} else {
+				slog.Warn("Another thing happened (temp log)", "file", event.Path, "event", event.EventType)
+			}
+		}
+	}()
 
 	slog.Info("File watcher started")
 	return nil
@@ -158,11 +163,9 @@ func (s *Service) StopWatcher() error {
 	if !s.watcher.IsRunning() {
 		return fmt.Errorf("watcher is not running")
 	}
-
 	if s.watcher != nil {
 		s.watcher.Stop()
 	}
-
 	slog.Info("File watcher stopped")
 	return nil
 }
@@ -232,7 +235,6 @@ func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *mus
 	if logger == nil {
 		logger = slog.Default()
 	}
-
 	// First organize the new file to library location
 	var newPath string
 	var err error
@@ -244,30 +246,24 @@ func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *mus
 	if err != nil {
 		return fmt.Errorf("could not organize replacement track: %w", err)
 	}
-
 	oldPath := existingTrack.Path
 	existingTrack.Path = newPath
 	existingTrack.Metadata = newTrack.Metadata
 	existingTrack.Title = newTrack.Title
 	existingTrack.TitleVersion = newTrack.TitleVersion
-
 	if err := s.populateTrackArtistsAndAlbum(ctx, newTrack, logger); err != nil {
 		return err
 	}
-
 	existingTrack.Artists = newTrack.Artists
 	existingTrack.Album = newTrack.Album
-
 	if err := existingTrack.Validate(); err != nil {
 		logger.Error("Service.replaceTrack: existing track validation failed after update", "error", err, "title", existingTrack.Title)
 		return fmt.Errorf("existing track validation failed: %w", err)
 	}
-
 	// Update the track in the database
 	if err := s.library.UpdateTrack(ctx, existingTrack); err != nil {
 		return fmt.Errorf("failed to update existing track for replacement: %w", err)
 	}
-
 	// Delete the old file if paths differ (to avoid lingering files)
 	if oldPath != newPath {
 		err := s.fileOrganizer.DeleteTrack(ctx, oldPath)
@@ -275,7 +271,6 @@ func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *mus
 			logger.Warn("failed deleting old path of replaced track", "track", newTrack, "newPath", newPath, "oldPath", oldPath)
 		}
 	}
-
 	return nil
 }
 
