@@ -21,4 +21,9 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	app.Post("/import/prune/download-path", handler.PruneDownloadPath)
 	app.Get("/import/queue/count", handler.QueueCount)
 
+	// Watcher endpoints
+	app.Post("/import/watcher/toggle", handler.ToggleWatcher)
+	app.Get("/import/watcher/status", handler.GetWatcherStatus)
+	app.Get("/import/watcher/toggle-state", handler.GetWatcherToggleState)
+
 }

@@ -31,6 +31,7 @@ import:
   move: false
   always_queue: false
   duplicates: queue
+  auto_start_watcher: false
   paths:
     compilations: "%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}"
     album:soundtrack: "%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}"

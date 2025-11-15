@@ -113,6 +113,63 @@ func (h *Handler) PruneDownloadPath(c *fiber.Ctx) error {
 	})
 }
 
+// ToggleWatcher toggles the file system watcher on/off
+func (h *Handler) ToggleWatcher(c *fiber.Ctx) error {
+	action := c.FormValue("action")
+	if action == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "action parameter required",
+		})
+	}
+
+	var err error
+	var msg string
+
+	switch action {
+	case "start":
+		err = h.service.StartWatcher()
+		msg = "File watcher started successfully"
+	case "stop":
+		err = h.service.StopWatcher()
+		msg = "File watcher stopped successfully"
+	default:
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid action",
+		})
+	}
+
+	if err != nil {
+		slog.Error("Failed to toggle watcher", "action", action, "error", err)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": "Failed to " + action + " file watcher",
+		})
+	}
+
+	c.Response().Header.Set("HX-Trigger", "watcherStatusChanged")
+	return c.Render("toast/toastOk", fiber.Map{
+		"Msg": msg,
+	})
+}
+
+// GetWatcherStatus returns the current status of the watcher
+func (h *Handler) GetWatcherStatus(c *fiber.Ctx) error {
+	running := h.service.GetWatcherStatus()
+	return c.Render("components/status_badge", fiber.Map{
+		"Running": running,
+	})
+}
+
+// GetWatcherToggleState returns the toggle input element with correct checked state
+func (h *Handler) GetWatcherToggleState(c *fiber.Ctx) error {
+	running := h.service.GetWatcherStatus()
+	return c.Render("components/toggle", fiber.Map{
+		"ID":       "watcher-toggle",
+		"Checked":  running,
+		"PostURL":  "/import/watcher/toggle",
+		"Vals":     "js:{action: event.target.checked ? 'start' : 'stop'}",
+	})
+}
+
 // UI Hanlders
 // GetDirectoryForm renders the directory import form
 func (h *Handler) GetDirectoryForm(c *fiber.Ctx) error {
