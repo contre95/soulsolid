@@ -47,7 +47,7 @@ metadata:
     musicbrainz:
       enabled: true
 sync:
-  enabled: false
+  enabled: true
   devices:
     - uuid: 8722-177E
       name: iPod
