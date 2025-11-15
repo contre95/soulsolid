@@ -121,7 +121,7 @@ func determineAction(track *music.Track, existingTrack *music.Track, config conf
 			return QueueTrack, Duplicate
 		}
 	}
-	logger.Info("Service.runDirectoryImport: Decided to import track", "reason", "track didn't exists in the library", "duplicate", "false", "title", track.Title, "artist", track.Artists[0].Artist.Name)
+	logger.Info("Service.runDirectoryImport: Decided to import track", "reason", "track didn't exists in the library", "duplicate", "false", "title", track.Title, "artist", track.Artists)
 	return ImportTrack, ""
 }
 

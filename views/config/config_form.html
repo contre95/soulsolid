@@ -76,17 +76,7 @@
            Downloaders
           </h2>
          <div class="space-y-3">
-           <!-- Tag File -->
-           <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
-             <div class="flex items-center">
-               <input type="checkbox" id="tag_file" {{if .Config.Downloaders.TagFile}}checked{{end}} disabled
-                      class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded">
-               <label for="tag_file" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Tag Files</label>
-             </div>
-             <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-               Whether to tag downloaded files with metadata.
-             </p>
-           </div>
+
            <!-- Plugin Downloaders -->
            <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
              <h4 class="text-sm font-medium text-gray-900 dark:text-gray-300 mb-3">Plugin Downloaders</h4>
@@ -288,7 +278,9 @@
                </div>
 
              </div>
-
+          <div class="text-sm text-yellow-600 dark:text-yellow-300 italic p-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
+            Changes require application restart
+          </div>
 
         </div>
       </div>

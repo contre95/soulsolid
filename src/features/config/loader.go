@@ -105,7 +105,6 @@ func createDefaultConfig() *Config {
 					Quality: 85,
 				},
 			},
-			TagFile: true,
 		},
 		Server: Server{
 			PrintRoutes: false,

@@ -72,7 +72,6 @@ type Telegram struct {
 type Downloaders struct {
 	Plugins []PluginConfig `yaml:"plugins"`
 	Artwork Artwork        `yaml:"artwork"`
-	TagFile bool           `yaml:"tag_file"`
 }
 
 // Metadata holds the configuration for metadata tagging providers
