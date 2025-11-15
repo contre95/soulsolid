@@ -132,20 +132,15 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *jobs.Jo
 	}
 
 	filePath := track.Path
-	cfg := e.service.configManager.Get()
-	if cfg.Downloaders.TagFile {
-		// Tag the file
-		slog.Debug("Tagging file", "trackID", track.ID, "filePath", filePath)
-		err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
-		if err != nil {
-			slog.Error("Failed to tag file", "trackID", track.ID, "error", err)
-			return nil, fmt.Errorf("failed to tag file: %w", err)
-		}
-
-		slog.Info("Track downloaded, tagged and artwork embedded", "trackID", track.ID, "filePath", filePath)
-	} else {
-		slog.Info("Track downloaded without tagging or artwork embedding", "trackID", track.ID, "filePath", filePath)
+	// Tag the file
+	slog.Debug("Tagging file", "trackID", track.ID, "filePath", filePath)
+	err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
+	if err != nil {
+		slog.Error("Failed to tag file", "trackID", track.ID, "error", err)
+		return nil, fmt.Errorf("failed to tag file: %w", err)
 	}
+
+	slog.Info("Track downloaded, tagged and artwork embedded", "trackID", track.ID, "filePath", filePath)
 	progressUpdater(100, "Track download completed")
 
 	return map[string]any{
@@ -227,31 +222,26 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *jobs.Jo
 		track.EnsureMetadataDefaults()
 		if err := track.ValidateRequiredMetadata(); err != nil {
 			slog.Error("Album track metadata validation failed", "trackID", track.ID, "error", err)
-			continue // Skip this track but continue with others
+			return nil, fmt.Errorf("album track metadata validation failed: %w", err)
 		}
 
-		cfg := e.service.configManager.Get()
-		if cfg.Downloaders.TagFile {
-			// Tag the file (artwork is already downloaded by plugin and set in track.Album.ArtworkData)
-			filePath := track.Path
-			slog.Debug("Tagging album track file", "trackID", track.ID, "filePath", filePath, "title", track.Title, "artist", track.Artists[0].Artist.Name)
+		// Tag the file (artwork is already downloaded by plugin and set in track.Album.ArtworkData)
+		filePath := track.Path
+		slog.Debug("Tagging album track file", "trackID", track.ID, "filePath", filePath, "title", track.Title, "artist", track.Artists[0].Artist.Name)
 
-			// Check if file exists
-			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				slog.Error("Track file does not exist for tagging", "trackID", track.ID, "filePath", filePath)
-				continue
-			}
-
-			err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
-			if err != nil {
-				slog.Error("Failed to tag album track file", "trackID", track.ID, "filePath", filePath, "error", err)
-				continue
-			}
-
-			slog.Info("Track processed successfully", "title", track.Title, "filePath", filePath)
-		} else {
-			slog.Info("Track downloaded without tagging or artwork embedding", "trackID", track.ID, "filePath", track.Path)
+		// Check if file exists
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			slog.Error("Track file does not exist for tagging", "trackID", track.ID, "filePath", filePath)
+			return nil, fmt.Errorf("track file does not exist for tagging: %s", filePath)
 		}
+
+		err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
+		if err != nil {
+			slog.Error("Failed to tag album track file", "trackID", track.ID, "filePath", filePath, "error", err)
+			return nil, fmt.Errorf("failed to tag album track file: %w", err)
+		}
+
+		slog.Info("Track processed successfully", "title", track.Title, "filePath", filePath)
 		downloadedTracks = append(downloadedTracks, track)
 		filePaths = append(filePaths, track.Path)
 	}
@@ -350,31 +340,26 @@ func (e *DownloadJobTask) executeArtistDownload(ctx context.Context, job *jobs.J
 		track.EnsureMetadataDefaults()
 		if err := track.ValidateRequiredMetadata(); err != nil {
 			slog.Error("Artist track metadata validation failed", "trackID", track.ID, "error", err)
-			continue // Skip this track but continue with others
+			return nil, fmt.Errorf("artist track metadata validation failed: %w", err)
 		}
 
-		cfg := e.service.configManager.Get()
-		if cfg.Downloaders.TagFile {
-			// Tag the file
-			filePath := track.Path
-			slog.Debug("Tagging artist track file", "trackID", track.ID, "filePath", filePath, "title", track.Title, "artist", track.Artists[0].Artist.Name)
+		// Tag the file
+		filePath := track.Path
+		slog.Debug("Tagging artist track file", "trackID", track.ID, "filePath", filePath, "title", track.Title, "artist", track.Artists[0].Artist.Name)
 
-			// Check if file exists
-			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				slog.Error("Track file does not exist for tagging", "trackID", track.ID, "filePath", filePath)
-				continue
-			}
-
-			err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
-			if err != nil {
-				slog.Error("Failed to tag artist track file", "trackID", track.ID, "filePath", filePath, "error", err)
-				continue
-			}
-
-			slog.Info("Track processed successfully", "title", track.Title, "filePath", filePath)
-		} else {
-			slog.Info("Track downloaded without tagging or artwork embedding", "trackID", track.ID, "filePath", track.Path)
+		// Check if file exists
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			slog.Error("Track file does not exist for tagging", "trackID", track.ID, "filePath", filePath)
+			return nil, fmt.Errorf("track file does not exist for tagging: %s", filePath)
 		}
+
+		err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
+		if err != nil {
+			slog.Error("Failed to tag artist track file", "trackID", track.ID, "filePath", filePath, "error", err)
+			return nil, fmt.Errorf("failed to tag artist track file: %w", err)
+		}
+
+		slog.Info("Track processed successfully", "title", track.Title, "filePath", filePath)
 
 		downloadedTracks = append(downloadedTracks, track)
 		filePaths = append(filePaths, track.Path)
@@ -469,27 +454,24 @@ func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *jobs.J
 		track.EnsureMetadataDefaults()
 		if err := track.ValidateRequiredMetadata(); err != nil {
 			slog.Error("Track metadata validation failed", "trackID", trackID, "error", err)
-			continue
+			return nil, fmt.Errorf("track metadata validation failed: %w", err)
 		}
 
-		cfg := e.service.configManager.Get()
-		if cfg.Downloaders.TagFile {
-			filePath := track.Path
-			slog.Debug("Tagging track file", "trackID", trackID, "filePath", filePath, "title", track.Title)
+		filePath := track.Path
+		slog.Debug("Tagging track file", "trackID", trackID, "filePath", filePath, "title", track.Title)
 
-			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				slog.Error("Track file does not exist for tagging", "trackID", trackID, "filePath", filePath)
-				continue
-			}
-
-			err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
-			if err != nil {
-				slog.Error("Failed to tag track file", "trackID", trackID, "filePath", filePath, "error", err)
-				continue
-			}
-
-			slog.Info("Track processed successfully", "title", track.Title, "filePath", filePath)
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			slog.Error("Track file does not exist for tagging", "trackID", trackID, "filePath", filePath)
+			return nil, fmt.Errorf("track file does not exist for tagging: %s", filePath)
 		}
+
+		err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
+		if err != nil {
+			slog.Error("Failed to tag track file", "trackID", trackID, "filePath", filePath, "error", err)
+			return nil, fmt.Errorf("failed to tag track file: %w", err)
+		}
+
+		slog.Info("Track processed successfully", "title", track.Title, "filePath", filePath)
 
 		downloadedTracks = append(downloadedTracks, track)
 		filePaths = append(filePaths, track.Path)
