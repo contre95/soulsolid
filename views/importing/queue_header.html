@@ -13,7 +13,7 @@
          {{.QueueCount}} items
        </span>
     </h2>
-    <div class="flex flex-col sm:flex-row gap-2">
+     <div class="flex flex-row gap-2 justify-center flex-1">
       <button
         hx-get="/ui/importing/queue/items"
         hx-target="#queue-content"
@@ -32,14 +32,14 @@
         class="inline-flex items-center px-5 py-2.5 backdrop-blur-sm hover:bg-red-200/80 bg-red-100/80 hover:dark:bg-red-800/30 dark:bg-red-900/30 border border-red-200/50 dark:border-red-700/50 text-sm text-red-800 dark:text-red-200 rounded-lg transition-colors font-medium text-center"
         title="Clear Queue">
         <i class="fas fa-trash-alt mr-2"></i>
-        Clear Queue
+        Clear
       </button>
     </div>
   </div>
 
   <!-- View toggle buttons row -->
   <div class="flex justify-center">
-    <div class="flex gap-1 bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-1 backdrop-blur-sm">
+     <div class="flex gap-2 bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-1 backdrop-blur-sm">
       <button
         id="view-individual"
         hx-get="/ui/importing/queue/items"
@@ -47,9 +47,9 @@
         hx-swap="innerHTML"
         hx-trigger="click, queueUpdated from:body, refreshImportQueueBadge from:body"
         hx-on:click="document.querySelectorAll('.view-toggle-btn').forEach(btn => { btn.classList.remove('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm'); btn.classList.add('text-gray-600', 'dark:text-gray-400'); }); this.classList.add('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm'); this.classList.remove('text-gray-600', 'dark:text-gray-400');"
-        class="view-toggle-btn active inline-flex items-center px-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ease-out-expo bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 shadow-sm hover:shadow-md"
+        class="view-toggle-btn active inline-flex mx-1 items-center px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 ease-out-expo bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 shadow-sm hover:shadow-md"
         title="Individual View">
-        <i class="fas fa-list mr-1.5"></i>
+        <i class="fas fa-list mr-1"></i>
         Individual
       </button>
       <button
@@ -59,9 +59,9 @@
         hx-swap="innerHTML"
         hx-trigger="click, queueUpdated from:body, refreshImportQueueBadge from:body"
         hx-on:click="document.querySelectorAll('.view-toggle-btn').forEach(btn => { btn.classList.remove('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm'); btn.classList.add('text-gray-600', 'dark:text-gray-400'); }); this.classList.add('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm'); this.classList.remove('text-gray-600', 'dark:text-gray-400');"
-        class="view-toggle-btn inline-flex items-center px-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ease-out-expo text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200"
+        class="view-toggle-btn inline-flex mx-1 items-center px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 ease-out-expo text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200"
         title="Group by Artist">
-        <i class="fas fa-user mr-1.5"></i>
+        <i class="fas fa-user mr-1"></i>
         By Artist
       </button>
       <button
@@ -71,9 +71,9 @@
         hx-swap="innerHTML"
         hx-trigger="click, queueUpdated from:body, refreshImportQueueBadge from:body"
         hx-on:click="document.querySelectorAll('.view-toggle-btn').forEach(btn => { btn.classList.remove('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm'); btn.classList.add('text-gray-600', 'dark:text-gray-400'); }); this.classList.add('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm'); this.classList.remove('text-gray-600', 'dark:text-gray-400');"
-        class="view-toggle-btn inline-flex items-center px-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ease-out-expo text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200"
+        class="view-toggle-btn inline-flex mx-1 items-center px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 ease-out-expo text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200"
         title="Group by Album">
-        <i class="fas fa-compact-disc mr-1.5"></i>
+        <i class="fas fa-compact-disc mr-1"></i>
         By Album
       </button>
     </div>
