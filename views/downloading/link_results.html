@@ -54,6 +54,20 @@
       <!-- Download All Button -->
       {{if .Tracks}}
       <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+        {{if $.PlaylistName}}
+        <button hx-post="/downloads/playlist?downloader={{$.Downloader}}"
+                hx-vals='{"trackIds": "{{range $index, $track := .Tracks}}{{if $index}},{{end}}{{$track.ID}}{{end}}", "playlistName": "{{$.PlaylistName}}"}'
+                hx-target="#toast-container"
+                hx-indicator="#links-download-indicator"
+                hx-disabled-elt="this"
+                hx-trigger="click delay:500ms"
+                class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-full transition-colors relative">
+          <span id="links-download-indicator" class="absolute inset-0 flex items-center justify-center opacity-0">
+            <div class="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin opacity-90"></div>
+          </span>
+          <span class="relative z-10">Download Playlist</span>
+        </button>
+        {{else}}
         <button hx-post="/downloads/tracks?downloader={{$.Downloader}}"
                 hx-vals='{"trackIds": "{{range $index, $track := .Tracks}}{{if $index}},{{end}}{{$track.ID}}{{end}}"}'
                 hx-target="#toast-container"
@@ -66,6 +80,7 @@
           </span>
           <span class="relative z-10">Download All</span>
         </button>
+        {{end}}
       </div>
       {{end}}
 

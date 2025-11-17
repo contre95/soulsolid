@@ -183,14 +183,20 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 			}
 			return h.renderArtistResults(c, artists, req.Downloader)
 		case "link":
-			tracks, err := h.service.SearchTracks(req.Downloader, req.Query, req.Limit)
+			result, err := h.service.SearchLinks(req.Downloader, req.Query, req.Limit)
 			if err != nil {
 				slog.Error("Failed to search links", "error", err)
 				return c.Render("toast/toastErr", fiber.Map{
 					"Msg": "Failed to search links",
 				})
 			}
-			return h.renderLinkResults(c, tracks, req.Downloader)
+			// Route to appropriate renderer based on result type
+			switch result.Type {
+			case "artist":
+				return h.renderArtistLinkResults(c, result.Artist, result.Albums, req.Downloader)
+			default:
+				return h.renderLinkResults(c, result.Tracks, req.Downloader)
+			}
 		default:
 			return c.Render("toast/toastErr", fiber.Map{
 				"Msg": "Invalid search type",
@@ -235,16 +241,14 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 			"artists": artists,
 		})
 	case "link":
-		tracks, err := h.service.SearchTracks(req.Downloader, req.Query, req.Limit)
+		result, err := h.service.SearchLinks(req.Downloader, req.Query, req.Limit)
 		if err != nil {
 			slog.Error("Failed to search links", "error", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Failed to search links",
 			})
 		}
-		return c.JSON(fiber.Map{
-			"tracks": tracks,
-		})
+		return c.JSON(result)
 	default:
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid search type",
@@ -270,8 +274,24 @@ func (h *Handler) renderTrackResults(c *fiber.Ctx, tracks []music.Track, downloa
 
 // renderLinkResults renders link search results as HTML for HTMX
 func (h *Handler) renderLinkResults(c *fiber.Ctx, tracks []music.Track, downloader string) error {
+	// Check if tracks belong to a playlist
+	playlistName := ""
+	if len(tracks) > 0 && tracks[0].Attributes != nil {
+		playlistName = tracks[0].Attributes["playlist_name"]
+	}
+
 	return c.Render("downloading/link_results", fiber.Map{
-		"Tracks":     tracks,
+		"Tracks":       tracks,
+		"Downloader":   downloader,
+		"PlaylistName": playlistName,
+	})
+}
+
+// renderArtistLinkResults renders artist link results (artist info + albums) as HTML for HTMX
+func (h *Handler) renderArtistLinkResults(c *fiber.Ctx, artist *music.Artist, albums []music.Album, downloader string) error {
+	return c.Render("downloading/artist_link_results", fiber.Map{
+		"Artist":     artist,
+		"Albums":     albums,
 		"Downloader": downloader,
 	})
 }
@@ -318,7 +338,7 @@ func (h *Handler) DownloadTrack(c *fiber.Ctx) error {
 	}
 
 	downloader := strings.Clone(c.Query("downloader", "dummy"))
-	slog.Info("DownloadTrack", "downloader", downloader, "trackID", req.TrackID, "raw_query", c.Request().URI().QueryString())
+	slog.Info("DownloadTrack", "downloader", downloader, "trackID", req.TrackID)
 
 	jobID, err := h.service.DownloadTrack(downloader, req.TrackID)
 	if err != nil {
@@ -514,6 +534,78 @@ func (h *Handler) DownloadTracks(c *fiber.Ctx) error {
 	if c.Get("HX-Request") == "true" {
 		return c.Render("toast/toastOk", fiber.Map{
 			"Msg": "Tracks download started",
+		})
+	}
+	return c.JSON(fiber.Map{
+		"jobId":   jobID,
+		"message": "Download started",
+	})
+}
+
+// DownloadPlaylist handles playlist download requests
+func (h *Handler) DownloadPlaylist(c *fiber.Ctx) error {
+	slog.Debug("DownloadPlaylist handler called")
+
+	var req struct {
+		TrackIDs     string `json:"trackIds" form:"trackIds"`
+		PlaylistName string `json:"playlistName" form:"playlistName"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		if c.Get("HX-Request") == "true" {
+			return c.Render("toast/toastErr", fiber.Map{
+				"Msg": "Invalid request body",
+			})
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	if req.TrackIDs == "" {
+		if c.Get("HX-Request") == "true" {
+			return c.Render("toast/toastErr", fiber.Map{
+				"Msg": "Track IDs are required",
+			})
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Track IDs are required",
+		})
+	}
+
+	if req.PlaylistName == "" {
+		if c.Get("HX-Request") == "true" {
+			return c.Render("toast/toastErr", fiber.Map{
+				"Msg": "Playlist name is required",
+			})
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Playlist name is required",
+		})
+	}
+
+	// Split comma-separated track IDs
+	trackIDs := strings.Split(req.TrackIDs, ",")
+	for i, id := range trackIDs {
+		trackIDs[i] = strings.TrimSpace(id)
+	}
+
+	downloader := strings.Clone(c.Query("downloader", "dummy"))
+	jobID, err := h.service.DownloadPlaylist(downloader, trackIDs, req.PlaylistName)
+	if err != nil {
+		slog.Error("Failed to start playlist download", "error", err)
+		if c.Get("HX-Request") == "true" {
+			return c.Render("toast/toastErr", fiber.Map{
+				"Msg": "Failed to start playlist download",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to start download",
+		})
+	}
+
+	if c.Get("HX-Request") == "true" {
+		return c.Render("toast/toastOk", fiber.Map{
+			"Msg": fmt.Sprintf("Playlist '%s' download started", req.PlaylistName),
 		})
 	}
 	return c.JSON(fiber.Map{

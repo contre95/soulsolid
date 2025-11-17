@@ -59,6 +59,8 @@ func (e *DownloadJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 		return e.executeArtistDownload(ctx, job, progressUpdater, downloadPath)
 	case "tracks":
 		return e.executeTracksDownload(ctx, job, progressUpdater, downloadPath)
+	case "playlist":
+		return e.executePlaylistDownload(ctx, job, progressUpdater, downloadPath)
 	default:
 		return nil, fmt.Errorf("unsupported download type: %s", jobType)
 	}
@@ -402,7 +404,7 @@ func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *jobs.J
 			trackIDs[i] = strings.TrimSpace(id)
 		}
 	} else {
-		return nil, fmt.Errorf("trackIDs not found in job metadata or invalid format")
+		return nil, fmt.Errorf("trackIDs not found in job metadata")
 	}
 
 	if len(trackIDs) == 0 {
@@ -482,6 +484,106 @@ func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *jobs.J
 		"trackIDs":   trackIDs,
 		"trackCount": len(downloadedTracks),
 		"filePaths":  filePaths,
+	}, nil
+}
+
+// executePlaylistDownload handles playlist download jobs
+func (e *DownloadJobTask) executePlaylistDownload(ctx context.Context, job *jobs.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
+	playlistName, ok := job.Metadata["playlistName"].(string)
+	if !ok {
+		return nil, fmt.Errorf("playlistName not found in job metadata")
+	}
+
+	downloaderName, ok := job.Metadata["downloader"].(string)
+	if !ok {
+		return nil, fmt.Errorf("downloader not found in job metadata")
+	}
+
+	downloader, exists := e.service.pluginManager.GetDownloader(downloaderName)
+	if !exists {
+		return nil, fmt.Errorf("downloader %s not found", downloaderName)
+	}
+
+	// Get trackIDs from metadata (stored as []string by the service)
+	trackIDs, ok := job.Metadata["trackIDs"].([]string)
+	if !ok {
+		return nil, fmt.Errorf("trackIDs not found in job metadata (expected []string, got %T)", job.Metadata["trackIDs"])
+	}
+
+	if len(trackIDs) == 0 {
+		return nil, fmt.Errorf("no track IDs provided")
+	}
+
+	// Create playlist-specific download path: Playlists/[PlaylistName]/
+	safePlaylistName := Sanitize(playlistName)
+	playlistDownloadPath := filepath.Join(downloadPath, "Playlists", safePlaylistName)
+
+	if err := os.MkdirAll(playlistDownloadPath, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create playlist directory: %w", err)
+	}
+
+	slog.Info("Starting playlist download", "playlist", playlistName, "trackCount", len(trackIDs), "path", playlistDownloadPath)
+	progressUpdater(5, fmt.Sprintf("Starting playlist download: %s (%d tracks)", playlistName, len(trackIDs)))
+
+	totalTracks := len(trackIDs)
+	var downloadedTracks []*music.Track
+	var filePaths []string
+
+	for i, trackID := range trackIDs {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		progress := 5 + (i * 90 / totalTracks)
+		progressUpdater(progress, fmt.Sprintf("Downloading track %d/%d from playlist '%s'...", i+1, totalTracks, playlistName))
+
+		slog.Debug("Downloading playlist track", "trackID", trackID, "playlist", playlistName, "downloader", downloaderName, "jobID", job.ID)
+
+		// Download the track directly to the playlist folder (flat structure)
+		track, err := downloader.DownloadTrack(trackID, playlistDownloadPath, func(downloaded, total int64) {
+			trackProgress := progress + int(downloaded*5/total)
+			progressUpdater(trackProgress, fmt.Sprintf("Downloading track %d/%d... (%d%%)", i+1, totalTracks, downloaded*100/total))
+		})
+		if err != nil {
+			slog.Error("Failed to download playlist track", "trackID", trackID, "playlist", playlistName, "error", err)
+			continue // Skip this track but continue with others
+		}
+
+		// Process the downloaded track
+		track.EnsureMetadataDefaults()
+		if err := track.ValidateRequiredMetadata(); err != nil {
+			slog.Error("Track metadata validation failed", "trackID", trackID, "error", err)
+			return nil, fmt.Errorf("track metadata validation failed: %w", err)
+		}
+
+		filePath := track.Path
+		slog.Debug("Tagging playlist track file", "trackID", trackID, "filePath", filePath, "title", track.Title)
+
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			slog.Error("Track file does not exist for tagging", "trackID", trackID, "filePath", filePath)
+			return nil, fmt.Errorf("track file does not exist for tagging: %s", filePath)
+		}
+
+		err = e.service.tagWriter.WriteFileTags(ctx, filePath, track)
+		if err != nil {
+			slog.Error("Failed to tag playlist track file", "trackID", trackID, "filePath", filePath, "error", err)
+			return nil, fmt.Errorf("failed to tag track file: %w", err)
+		}
+
+		slog.Info("Playlist track processed successfully", "playlist", playlistName, "title", track.Title, "filePath", filePath)
+
+		downloadedTracks = append(downloadedTracks, track)
+		filePaths = append(filePaths, track.Path)
+	}
+
+	progressUpdater(100, fmt.Sprintf("Playlist '%s' download completed - %d tracks processed", playlistName, len(downloadedTracks)))
+	return map[string]any{
+		"playlistName": playlistName,
+		"trackIDs":     trackIDs,
+		"trackCount":   len(downloadedTracks),
+		"filePaths":    filePaths,
 	}, nil
 }
 
