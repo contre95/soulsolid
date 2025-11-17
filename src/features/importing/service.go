@@ -388,6 +388,19 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 		return fmt.Errorf("track validation failed: %w", err)
 	}
 
+	// Check if track already exists
+	existingTrack, err := s.library.FindTrackByPath(ctx, track.Path)
+	if err != nil && err.Error() != "sql: no rows in result set" {
+		logger.Error("Service.importTrack: failed to check if track exists", "error", err, "path", track.Path)
+		return fmt.Errorf("failed to check if track exists: %w", err)
+	}
+
+	// If track already exists, treat as successfully imported
+	if existingTrack != nil {
+		logger.Info("Track already exists, skipping import", "path", track.Path, "title", track.Title)
+		return nil
+	}
+
 	// Add track to database
 	if err := s.library.AddTrack(ctx, track); err != nil {
 		logger.Error("Service.importTrack: failed to add track to database", "error", err, "title", track.Title)
