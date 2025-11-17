@@ -67,3 +67,72 @@ func (q *InMemoryQueue) Clear() error {
 	})
 	return nil
 }
+
+// GetGroupedByArtist returns items grouped by primary artist
+func (q *InMemoryQueue) GetGroupedByArtist() map[string][]importing.QueueItem {
+	groups := make(map[string][]importing.QueueItem)
+
+	q.items.Range(func(key, value any) bool {
+		if item, ok := value.(importing.QueueItem); ok {
+			if item.Track != nil && len(item.Track.Artists) > 0 {
+				artistName := item.Track.Artists[0].Artist.Name
+				groups[artistName] = append(groups[artistName], item)
+			} else {
+				// Fallback for tracks without artists
+				unknownArtist := "Unknown Artist"
+				groups[unknownArtist] = append(groups[unknownArtist], item)
+			}
+		}
+		return true
+	})
+
+	return groups
+}
+
+// GetGroupedByAlbum returns items grouped by album
+func (q *InMemoryQueue) GetGroupedByAlbum() map[string][]importing.QueueItem {
+	groups := make(map[string][]importing.QueueItem)
+
+	q.items.Range(func(key, value any) bool {
+		if item, ok := value.(importing.QueueItem); ok {
+			if item.Track != nil && item.Track.Album != nil {
+				albumKey := item.Track.Album.Title
+				if len(item.Track.Album.Artists) > 0 {
+					albumKey += " - " + item.Track.Album.Artists[0].Artist.Name
+				}
+				groups[albumKey] = append(groups[albumKey], item)
+			} else {
+				// Fallback for tracks without albums
+				unknownAlbum := "Unknown Album"
+				groups[unknownAlbum] = append(groups[unknownAlbum], item)
+			}
+		}
+		return true
+	})
+
+	return groups
+}
+
+// ProcessGroup processes all items in a group with the given action
+func (q *InMemoryQueue) ProcessGroup(groupKey string, groupType string, action string) error {
+	var groupItems []importing.QueueItem
+
+	// Get items for the specified group
+	if groupType == "artist" {
+		groups := q.GetGroupedByArtist()
+		groupItems = groups[groupKey]
+	} else if groupType == "album" {
+		groups := q.GetGroupedByAlbum()
+		groupItems = groups[groupKey]
+	} else {
+		return errors.New("invalid group type")
+	}
+
+	// Process each item in the group
+	for _, item := range groupItems {
+		// For now, just remove the items (simplified - actual processing will be done in service layer)
+		q.items.Delete(item.ID)
+	}
+
+	return nil
+}

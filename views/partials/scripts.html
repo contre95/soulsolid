@@ -52,7 +52,9 @@
    // Initialize on page load
    document.addEventListener('DOMContentLoaded', initSlimSelect);
 
-   // Re-initialize after HTMX swaps
-   document.addEventListener('htmx:afterSettle', initSlimSelect);
+    // Re-initialize after HTMX swaps
+    document.addEventListener('htmx:afterSettle', initSlimSelect);
+
+
  </script>
 {{end}}

@@ -43,4 +43,10 @@ type Queue interface {
 	Remove(id string) error
 	// Clear removes all items from the queue
 	Clear() error
+	// GetGroupedByArtist returns items grouped by primary artist
+	GetGroupedByArtist() map[string][]QueueItem
+	// GetGroupedByAlbum returns items grouped by album
+	GetGroupedByAlbum() map[string][]QueueItem
+	// ProcessGroup processes all items in a group with the given action
+	ProcessGroup(groupKey string, groupType string, action string) error
 }

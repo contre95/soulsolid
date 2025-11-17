@@ -3,6 +3,7 @@ package importing
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -217,5 +218,79 @@ func (h *Handler) GetQueueHeader(c *fiber.Ctx) error {
 
 	return c.Render("importing/queue_header", fiber.Map{
 		"QueueCount": queueCount,
+	})
+}
+
+// ProcessGroupAction handles bulk actions for queue item groups
+func (h *Handler) ProcessGroupAction(c *fiber.Ctx) error {
+	groupKey := c.Params("groupKey")
+	groupType := c.Params("groupType") // "artist" or "album"
+	action := c.Params("action")        // "import", "cancel", "delete", "replace"
+
+	// URL-decode the groupKey since it may contain encoded characters
+	decodedGroupKey, err := url.QueryUnescape(groupKey)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid groupKey encoding",
+		})
+	}
+
+	if groupType != "artist" && groupType != "album" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "groupType must be 'artist' or 'album'",
+		})
+	}
+
+	if action != "import" && action != "cancel" && action != "delete" && action != "replace" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "action must be 'import', 'cancel', 'delete', or 'replace'",
+		})
+	}
+
+	err = h.service.ProcessGroup(c.Context(), decodedGroupKey, groupType, action)
+	if err != nil {
+		slog.Error("Failed to process group", "error", err, "groupKey", decodedGroupKey, "groupType", groupType, "action", action)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": fmt.Sprintf("Failed to process group %s", decodedGroupKey),
+		})
+	}
+
+	actionMsg := "processed"
+	switch action {
+	case "import":
+		actionMsg = "imported"
+	case "replace":
+		actionMsg = "replaced"
+	case "cancel":
+		actionMsg = "skipped"
+	case "delete":
+		actionMsg = "deleted"
+	}
+
+	c.Response().Header.Set("HX-Trigger", "queueUpdated")
+	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
+	return c.Render("toast/toastOk", fiber.Map{
+		"Msg": fmt.Sprintf("Group '%s' %s successfully", decodedGroupKey, actionMsg),
+	})
+}
+
+// RenderGroupedQueueItems renders queue items grouped by artist or album
+func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
+	groupType := c.Query("type", "artist") // default to artist grouping
+
+	var groups map[string][]QueueItem
+	var templateName string
+
+	if groupType == "album" {
+		groups = h.service.GetGroupedByAlbum()
+		templateName = "importing/queue_items_grouped_album"
+	} else {
+		groups = h.service.GetGroupedByArtist()
+		templateName = "importing/queue_items_grouped_artist"
+	}
+
+	return c.Render(templateName, fiber.Map{
+		"Groups":    groups,
+		"GroupType": groupType,
 	})
 }
