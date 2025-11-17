@@ -4,10 +4,11 @@
     <td><h1>Soulsolid</h1></td>
   </tr>
 </table>
+
+[![Join Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/mHRjGAjEJz)
+
 A feature rich music organization app built for the music hoarder. Heavily under development, focused on ease of usage.
-
 ## Features
-
 - **Music Library Management**: Organize and browse albums, artists, and tracks
 - **Downloading**: Download tracks and albums. 
 - **Importing**: Import music from directories with automatic fingerprinting
