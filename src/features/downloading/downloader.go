@@ -12,7 +12,7 @@ type Downloader interface {
 	SearchAlbums(query string, limit int) ([]music.Album, error)
 	SearchTracks(query string, limit int) ([]music.Track, error)
 	SearchArtists(query string, limit int) ([]music.Artist, error)
-	SearchLinks(query string, limit int) (*LinkResult, error)
+	SearchLinks(query string, limit int) (*music.LinkResult, error)
 	// Navigation methods
 	GetAlbumTracks(albumID string) ([]music.Track, error)
 	GetArtistAlbums(artistID string) ([]music.Album, error)
@@ -48,14 +48,6 @@ type DownloaderCapabilities struct {
     SupportsArtistSearch bool `json:"supports_artist_search"`
 	SupportsDirectLinks bool `json:"supports_direct_links"`
 	SupportsChartTracks bool `json:"supports_chart_tracks"`
-}
-
-// LinkResult represents the result of a link search, which can be tracks, albums, or an artist
-type LinkResult struct {
-	Type   string          `json:"type"`   // "track", "album", "playlist", "artist"
-	Tracks []music.Track   `json:"tracks,omitempty"`
-	Albums []music.Album   `json:"albums,omitempty"`
-	Artist *music.Artist   `json:"artist,omitempty"`
 }
 
 // ErrMethodNotSupported is returned when a downloader does not support a requested method

@@ -268,3 +268,11 @@ type Metadata struct {
 	BPM            float64
 	Gain           float64
 }
+
+// LinkResult represents the result of a link search, which can be tracks, albums, or an artist
+type LinkResult struct {
+	Type   string   `json:"type"`   // "track", "album", "playlist", "artist"
+	Tracks []Track  `json:"tracks,omitempty"`
+	Albums []Album  `json:"albums,omitempty"`
+	Artist *Artist  `json:"artist,omitempty"`
+}

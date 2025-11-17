@@ -78,7 +78,7 @@ func (s *Service) SearchArtists(downloaderName, query string, limit int) ([]musi
 }
 
 // SearchLinks searches for content from a direct link/URL
-func (s *Service) SearchLinks(downloaderName, query string, limit int) (*LinkResult, error) {
+func (s *Service) SearchLinks(downloaderName, query string, limit int) (*music.LinkResult, error) {
 	downloader, exists := s.pluginManager.GetDownloader(downloaderName)
 	if !exists {
 		return nil, fmt.Errorf("downloader %s not found", downloaderName)
