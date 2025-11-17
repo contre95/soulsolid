@@ -90,6 +90,7 @@ func main() {
 	jobService.RegisterHandler("download_album", jobs.NewBaseTaskHandler(downloadTask))
 	jobService.RegisterHandler("download_artist", jobs.NewBaseTaskHandler(downloadTask))
 	jobService.RegisterHandler("download_tracks", jobs.NewBaseTaskHandler(downloadTask))
+	jobService.RegisterHandler("download_playlist", jobs.NewBaseTaskHandler(downloadTask))
 
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {
