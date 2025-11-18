@@ -37,8 +37,8 @@ func NewService(tagWriter downloading.TagWriter, tagReader importing.TagReader, 
 	}
 }
 
-// GetTrackForEditing retrieves a track with current tag data for editing
-func (s *Service) GetTrackForEditing(ctx context.Context, trackID string) (*music.Track, error) {
+// GetTrackFileTags retrieves a track with current tag data for editing
+func (s *Service) GetTrackFileTags(ctx context.Context, trackID string) (*music.Track, error) {
 	slog.Debug("Getting track for editing", "trackID", trackID)
 
 	// Get track from library
@@ -65,7 +65,6 @@ func (s *Service) GetTrackForEditing(ctx context.Context, trackID string) (*musi
 	}
 
 	// Merge file data with database relationships
-	// Keep database relationships (artists, album) but update metadata from file
 	result := *track                                // Copy the database track
 	result.Metadata = currentTrack.Metadata         // Use metadata from file
 	result.Title = currentTrack.Title               // Use title from file
@@ -361,8 +360,8 @@ func (s *Service) GetEnabledProviders() map[string]bool {
 	return enabled
 }
 
-// SearchTracksForTrack searches for tracks using current track metadata as search parameters
-func (s *Service) SearchTracksForTrack(ctx context.Context, trackID string, providerName string) ([]*music.Track, error) {
+// SearchTrackMetadata searches for metadat of a given track and an array of possible matches
+func (s *Service) SearchTrackMetadata(ctx context.Context, trackID string, providerName string) ([]*music.Track, error) {
 	track, err := s.libraryRepo.GetTrack(ctx, trackID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get track: %w", err)
@@ -420,18 +419,4 @@ func (s *Service) SearchTracksForTrack(ctx context.Context, trackID string, prov
 	}
 
 	return tracks, nil
-}
-
-// FetchMetadataForTrack fetches metadata for a track using its fingerprint (legacy method for backward compatibility)
-func (s *Service) FetchMetadataForTrack(ctx context.Context, trackID string) (*music.Track, error) {
-	// For legacy compatibility, use the first enabled provider with search
-	for _, provider := range s.metadataProviders {
-		if provider.IsEnabled() {
-			tracks, err := s.SearchTracksForTrack(ctx, trackID, provider.Name())
-			if err == nil && len(tracks) > 0 {
-				return tracks[0], nil
-			}
-		}
-	}
-	return nil, fmt.Errorf("no metadata found from enabled providers")
 }
