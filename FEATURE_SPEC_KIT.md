@@ -50,140 +50,65 @@ features/yourfeature/
 
 ### 1. Service Layer (`service.go`)
 
-The service layer contains business logic and follows this pattern:
+**Reference**: `src/features/downloading/service.go:21-35`
+- Service struct with dependencies injected via constructor
+- Business logic methods with structured logging
+- Clean separation from HTTP concerns
 
-```go
-package yourfeature
-
-import (
-    "log/slog"
-    "github.com/contre95/soulsolid/src/infra/database"
-)
-
-type Service struct {
-    db          *database.SqliteLibrary
-    configMgr   *config.Manager
-    // other dependencies
-}
-
-func NewService(db *database.SqliteLibrary, configMgr *config.Manager) *Service {
-    return &Service{
-        db:        db,
-        configMgr: configMgr,
-    }
-}
-
-func (s *Service) DoSomething(input InputType) (OutputType, error) {
-    slog.Debug("Doing something", "input", input)
-    
-    // Business logic here
-    
-    return result, nil
-}
-```
+**Example Pattern**: See `src/features/library/service.go:15-25` for service initialization
 
 ### 2. Handler Layer (`handlers.go`)
 
-Handlers manage HTTP requests and support both API (JSON) and UI (HTML) responses:
+**Reference**: `src/features/downloading/handlers.go:14-26`
+- Handler struct with service dependency
+- NewHandler constructor pattern
+- Dual response support (HTMX + JSON)
 
-```go
-package yourfeature
+**HTMX Detection Pattern**: `src/features/downloading/handlers.go:42-50`
+- Check `c.Get("HX-Request") == "true"` for HTMX requests
+- Return HTML partials for UI, JSON for API
+- Consistent error handling for both response types
 
-import (
-    "log/slog"
-    "github.com/gofiber/fiber/v2"
-)
-
-type Handler struct {
-    service *Service
-}
-
-func NewHandler(service *Service) *Handler {
-    return &Handler{service: service}
-}
-
-func (h *Handler) HandleAction(c *fiber.Ctx) error {
-    slog.Debug("HandleAction called")
-    
-    var req RequestType
-    if err := c.BodyParser(&req); err != nil {
-        // HTMX error response
-        if c.Get("HX-Request") == "true" {
-            return c.Render("toast/toastErr", fiber.Map{
-                "Msg": "Invalid request body",
-            })
-        }
-        // API error response
-        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-            "error": "Invalid request body",
-        })
-    }
-    
-    // Call service
-    result, err := h.service.DoSomething(req)
-    if err != nil {
-        slog.Error("Service failed", "error", err)
-        if c.Get("HX-Request") == "true" {
-            return c.Render("toast/toastErr", fiber.Map{
-                "Msg": "Operation failed",
-            })
-        }
-        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-            "error": "Operation failed",
-        })
-    }
-    
-    // HTMX success response
-    if c.Get("HX-Request") == "true" {
-        return c.Render("yourfeature/result_partial", fiber.Map{
-            "Result": result,
-        })
-    }
-    
-    // API success response
-    return c.JSON(result)
-}
-```
+**Error Response Pattern**: 
+- HTMX errors: `src/features/downloading/handlers.go:43-46`
+- API errors: `src/features/downloading/handlers.go:47-50`
 
 ### 3. Routes (`routes.go`)
 
-Route registration follows a consistent pattern:
-
-```go
-package yourfeature
-
-import (
-    "github.com/gofiber/fiber/v2"
-)
-
-func RegisterRoutes(app *fiber.App, service *Service) {
-    handler := NewHandler(service)
-    
-    // API routes
-    api := app.Group("/yourfeature")
-    api.Post("/action", handler.HandleAction)
-    api.Get("/items", handler.GetItems)
-    
-    // UI routes (for HTMX partials)
-    ui := app.Group("/ui")
-    ui.Get("/yourfeature/partial", handler.GetPartial)
-}
-```
+**Reference**: `src/features/downloading/routes.go:8-40`
+- RegisterRoutes function with app and service parameters
+- API routes grouped under feature prefix
+- UI routes under `/ui` group for HTMX partials
+- Handler instantiation pattern
 
 ## HTMX Integration Patterns
 
 ### 1. Detection and Dual Response Handling
 
-All handlers must check for HTMX requests and respond appropriately:
+**Reference**: `src/features/downloading/handlers.go:42-50`
+All handlers must check for HTMX requests and respond appropriately.
 
-```go
-if c.Get("HX-Request") == "true" {
-    // Return HTML partial for UI
-    return c.Render("partial_template", data)
-}
-// Return JSON for API
-return c.JSON(data)
-```
+### 2. Common HTMX Attributes Used
+
+**Reference**: `views/sections/download.html:7-10`
+- `hx-get` / `hx-post`: Make requests
+- `hx-target`: Target element for content swap
+- `hx-swap`: How to swap content (`innerHTML`, `outerHTML`, etc.)
+- `hx-trigger`: When to trigger request (`load`, `click`, etc.)
+- `hx-indicator`: Loading indicator element
+
+### 3. Loading States
+
+**Reference**: `views/downloading/album_results.html:14-21`
+Use consistent loading patterns with hx-indicator and spinner elements.
+
+### 4. Toast Notifications
+
+**Reference**: `src/features/downloading/handlers.go:57-60`
+Use the toast system for user feedback:
+- Success: `views/toast/toastOk.html`
+- Error: `views/toast/toastErr.html`
+- Info: `views/toast/toastInfo.html`
 
 ### 2. Common HTMX Attributes Used
 
@@ -231,17 +156,18 @@ return c.Render("toast/toastInfo", fiber.Map{
 
 ### 1. Main Layout (`views/partials/main.html`)
 
-The main template uses conditional rendering based on the `.Section` variable:
+**Reference**: `views/partials/main.html:21-40`
+The main template uses conditional rendering based on the `.Section` variable.
 
-```html
-<div id="contenido">
-    {{if eq .Section "dashboard"}}
-    {{template "sections/dashboard" .}}
-    {{else if eq .Section "yourfeature"}}
-    {{template "sections/yourfeature" .}}
-    {{end}}
-</div>
-```
+### 2. Feature Section Template (`views/sections/download.html`)
+
+**Reference**: `views/sections/download.html:1-10`
+Create a section template for your feature with proper HTMX loading triggers.
+
+### 3. Partial Templates (`views/downloading/`)
+
+**Reference**: `views/downloading/album_results.html:6-49`
+Create reusable partials for dynamic content with proper iteration and fallback handling.
 
 ### 2. Feature Section Template (`views/sections/yourfeature.html`)
 
@@ -280,15 +206,36 @@ Create reusable partials for dynamic content:
 
 ## Dependency Injection Pattern
 
-Dependencies are injected through the main.go file:
+**Reference**: `src/main.go:28-44`
+Dependencies are injected through the main.go file following this pattern:
+- Configuration manager loaded first
+- Infrastructure services created next
+- Feature services created with dependencies
+- Routes registered with services
 
-```go
-// In main.go
-yourFeatureService := yourfeature.NewService(db, cfgManager, otherDeps)
+## Configuration Management
 
-// Register routes
-yourfeature.RegisterRoutes(app, yourFeatureService)
-```
+### 1. Accessing Configuration
+
+**Reference**: `src/features/downloading/handlers.go:753-754`
+Access config via `cfgManager.Get()` and specific fields.
+
+### 2. Configuration Structure
+
+**Reference**: `src/features/config/config.go:15-95`
+Add your feature configuration to Config struct following the existing pattern.
+
+## Database Operations
+
+### 1. Using the Database Service
+
+**Reference**: `src/features/library/service.go:35-50`
+Follow the pattern for database operations with proper error handling and resource cleanup.
+
+### 2. Query Patterns
+
+**Reference**: `src/features/library/service.go:67-85`
+Use parameterized queries and proper row scanning patterns.
 
 ## Configuration Management
 
@@ -350,107 +297,46 @@ func (s *Service) GetItems() ([]Item, error) {
 
 For long-running operations, integrate with the job system:
 
-### 1. Create Job Task
+### 1. Job Task Creation
 
-```go
-package yourfeature
+**Reference**: `src/features/downloading/download_job.go:12-25`
+Create task structs that implement job execution logic.
 
-import (
-    "github.com/contre95/soulsolid/src/features/jobs"
-)
+### 2. Job Registration
 
-type YourFeatureTask struct {
-    service *Service
-}
+**Reference**: `src/main.go:56-66`
+Register job handlers in main.go following the existing pattern.
 
-func NewYourFeatureTask(service *Service) *YourFeatureTask {
-    return &YourFeatureTask{service: service}
-}
+### 3. Job Triggering
 
-func (t *YourFeatureTask) Execute(ctx jobs.JobContext) error {
-    // Long-running operation
-    ctx.UpdateProgress(50, "Processing...")
-    
-    result, err := t.service.ProcessLongOperation(ctx.Data)
-    if err != nil {
-        return err
-    }
-    
-    ctx.UpdateProgress(100, "Complete")
-    return nil
-}
-```
-
-### 2. Register Job Handler
-
-```go
-// In main.go
-yourFeatureTask := yourfeature.NewYourFeatureTask(yourFeatureService)
-jobService.RegisterHandler("yourfeature_task", jobs.NewBaseTaskHandler(yourFeatureTask))
-```
-
-### 3. Trigger Job from Handler
-
-```go
-func (h *Handler) StartLongOperation(c *fiber.Ctx) error {
-    jobID, err := h.jobService.EnqueueJob("yourfeature_task", jobData)
-    if err != nil {
-        return c.Render("toast/toastErr", fiber.Map{
-            "Msg": "Failed to start operation",
-        })
-    }
-    
-    return c.Render("toast/toastOk", fiber.Map{
-        "Msg": fmt.Sprintf("Operation started (Job: %s)", jobID),
-    })
-}
-```
+**Reference**: `src/features/downloading/handlers.go:343-354`
+Trigger jobs from handlers and return appropriate responses.
 
 ## Telegram Bot Integration (Optional)
 
 If your feature needs Telegram bot support:
 
-```go
-package yourfeature
-
-import (
-    "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-)
-
-func RegisterTelegramHandlers(bot *hosting.TelegramBot, service *Service) {
-    bot.HandleCommand("yourcommand", func(update tgbotapi.Update) error {
-        // Handle command
-        return nil
-    })
-}
-```
+**Reference**: `src/features/downloading/telegram.go:1-20`
+Follow the pattern for registering Telegram command handlers.
 
 ## Frontend Dependencies
 
 ### 1. Adding New Dependencies
 
-Edit `package.json` and run:
+**Reference**: `package.json:18-28`
+Edit package.json and use npm scripts to manage dependencies.
 
-```bash
-npm install new-package
-npm run copy:deps  # Copy to public directory
-```
+### 2. Asset Building
 
-### 2. CSS Customization
-
-Add custom styles to `public/css/input.css` and rebuild:
-
-```bash
-npm run build:css
-```
+**Reference**: `package.json:7-11`
+Use the provided npm scripts for building CSS and copying dependencies.
 
 ## Testing Your Feature
 
 ### 1. Development Setup
 
-```bash
-npm run dev  # Builds assets and starts Go server
-```
+**Reference**: `package.json:11`
+Use `npm run dev` for development with asset building.
 
 ### 2. Testing HTMX Interactions
 
@@ -460,153 +346,66 @@ npm run dev  # Builds assets and starts Go server
 
 ### 3. Testing API Endpoints
 
-```bash
-curl -X POST http://localhost:8080/yourfeature/action \
-  -H "Content-Type: application/json" \
-  -d '{"param": "value"}'
-```
+Use curl or similar tools to test JSON endpoints directly.
 
 ## Error Handling Patterns
 
 ### 1. Service Layer Errors
 
-```go
-var (
-    ErrItemNotFound = errors.New("item not found")
-    ErrInvalidInput = errors.New("invalid input")
-)
-
-func (s *Service) GetItem(id string) (*Item, error) {
-    // Validate input
-    if id == "" {
-        return nil, ErrInvalidInput
-    }
-    
-    // Query database
-    item, err := s.queryItem(id)
-    if err != nil {
-        if errors.Is(err, sql.ErrNoRows) {
-            return nil, ErrItemNotFound
-        }
-        return nil, err
-    }
-    
-    return item, nil
-}
-```
+**Reference**: `src/features/downloading/service.go:100-120`
+Define custom error types and handle them consistently.
 
 ### 2. Handler Error Responses
 
-```go
-item, err := h.service.GetItem(id)
-if err != nil {
-    if errors.Is(err, yourfeature.ErrItemNotFound) {
-        if c.Get("HX-Request") == "true" {
-            return c.Render("toast/toastErr", fiber.Map{
-                "Msg": "Item not found",
-            })
-        }
-        return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-            "error": "Item not found",
-        })
-    }
-    
-    // Log unexpected errors
-    slog.Error("Unexpected error", "error", err)
-    if c.Get("HX-Request") == "true" {
-        return c.Render("toast/toastErr", fiber.Map{
-            "Msg": "Internal server error",
-        })
-    }
-    return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-        "error": "Internal server error",
-    })
-}
-```
+**Reference**: `src/features/downloading/handlers.go:64-74`
+Handle different error types with appropriate HTTP status codes and user messages.
 
 ## Logging Best Practices
 
 ### 1. Structured Logging
 
-```go
-import "log/slog"
-
-slog.Debug("Processing request", "itemID", id, "userID", userID)
-slog.Info("Operation completed", "duration", time.Since(start))
-slog.Warn("Deprecated API used", "endpoint", "/old-endpoint")
-slog.Error("Database operation failed", "error", err, "query", query)
-```
+**Reference**: `src/features/downloading/handlers.go:38`
+Use slog with consistent field names and levels.
 
 ### 2. Context Information
 
-Include relevant context in log messages:
-
-- Request IDs
-- User identifiers
-- Resource IDs
-- Operation types
-- Durations
+**Reference**: `src/features/downloading/handlers.go:341`
+Include relevant context like IDs, operation types, and durations.
 
 ## Security Considerations
 
 ### 1. Input Validation
 
-```go
-func validateInput(input string) error {
-    if len(input) > 1000 {
-        return errors.New("input too long")
-    }
-    if strings.Contains(input, "<script>") {
-        return errors.New("invalid characters")
-    }
-    return nil
-}
-```
+**Reference**: `src/features/downloading/handlers.go:41-50`
+Validate all inputs and provide clear error messages.
 
 ### 2. SQL Injection Prevention
 
-Always use parameterized queries:
-
-```go
-// Good
-query := "SELECT * FROM items WHERE name = ?"
-rows, err := db.Query(query, name)
-
-// Bad
-query := fmt.Sprintf("SELECT * FROM items WHERE name = '%s'", name)
-```
+**Reference**: `src/features/library/service.go:70-75`
+Always use parameterized queries with proper variable binding.
 
 ## Performance Guidelines
 
 ### 1. Database Operations
 
-- Use transactions for multiple operations
-- Implement proper indexing
-- Consider pagination for large datasets
-- Use connection pooling
+**Reference**: `src/features/library/service.go:35-50`
+Use transactions, proper indexing, and connection pooling.
 
 ### 2. HTTP Responses
 
-- Stream large responses
-- Implement proper caching headers
-- Compress responses when appropriate
-- Use HTMX for partial updates
+**Reference**: `src/features/hosting/server.go:88-89`
+Configure appropriate body limits and response compression.
 
 ## Deployment Considerations
 
 ### 1. Configuration
 
-- All configuration should be externalized
-- Support environment variables
-- Provide sensible defaults
-- Document all configuration options
+**Reference**: `src/features/config/loader.go:15-30`
+Externalize all configuration with environment variable support.
 
 ### 2. Database Migrations
 
-- Version control schema changes
-- Provide upgrade and downgrade paths
-- Test migrations thoroughly
-- Backup before applying migrations
+Follow the existing database initialization patterns in `src/infra/database/sqlite.go`.
 
 ## Code Style Guidelines
 
@@ -620,24 +419,40 @@ query := fmt.Sprintf("SELECT * FROM items WHERE name = '%s'", name)
 
 ### 2. Template Code
 
+**Reference**: `views/downloading/album_results.html:10-48`
 - Use consistent indentation
 - Include proper HTML escaping
 - Follow semantic HTML structure
 - Include accessibility attributes
+
+## Middleware Patterns
+
+**Reference**: `src/features/hosting/middleware.go:1-25`
+Follow existing middleware patterns for logging, HTMX detection, and request handling.
+
+## Template Functions
+
+**Reference**: `src/features/hosting/server.go:32-77`
+Use existing template functions and add new ones following the same pattern.
+
+## Static Asset Management
+
+**Reference**: `src/features/hosting/server.go:113-114`
+Follow the pattern for serving static assets and node_modules.
 
 ## Checklist for New Features
 
 Before submitting a new feature, ensure:
 
 - [ ] Feature follows the standard directory structure
-- [ ] All handlers support both HTMX and API responses
-- [ ] Proper error handling is implemented
-- [ ] Logging is added for important operations
-- [ ] Configuration is externalized
-- [ ] Database operations use parameterized queries
-- [ ] Templates are responsive and accessible
-- [ ] Toast notifications are used for user feedback
-- [ ] Long operations use the job system
+- [ ] All handlers support both HTMX and API responses (`src/features/downloading/handlers.go:42-50`)
+- [ ] Proper error handling is implemented (`src/features/downloading/handlers.go:64-74`)
+- [ ] Logging is added for important operations (`src/features/downloading/handlers.go:38`)
+- [ ] Configuration is externalized (`src/features/config/config.go:15-95`)
+- [ ] Database operations use parameterized queries (`src/features/library/service.go:70-75`)
+- [ ] Templates are responsive and accessible (`views/downloading/album_results.html:10-48`)
+- [ ] Toast notifications are used for user feedback (`src/features/downloading/handlers.go:57-60`)
+- [ ] Long operations use the job system (`src/main.go:56-66`)
 - [ ] Code is properly documented
 - [ ] Tests are written for critical paths
 - [ ] Dependencies are updated in package.json
@@ -646,11 +461,11 @@ Before submitting a new feature, ensure:
 ## Example: Complete Feature Implementation
 
 See the `downloading` feature for a complete example that demonstrates:
-- Service layer with business logic
-- Handler layer with HTMX support
-- Job integration for long-running operations
-- Template structure
-- Configuration management
-- Error handling patterns
+- Service layer: `src/features/downloading/service.go:21-35`
+- Handler layer: `src/features/downloading/handlers.go:14-26`
+- HTMX integration: `src/features/downloading/handlers.go:42-50`
+- Job integration: `src/features/downloading/download_job.go:12-25`
+- Template structure: `views/downloading/album_results.html:6-49`
+- Route registration: `src/features/downloading/routes.go:8-40`
 
 This spec kit should be followed consistently when developing new features to maintain code quality, user experience consistency, and architectural coherence across the SoulSolid application.
