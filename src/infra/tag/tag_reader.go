@@ -3,6 +3,7 @@ package tag
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -135,10 +136,10 @@ func (r *TagReader) readAdditionalMetadata(tags tag.Metadata, track *music.Track
 
 	// Try to read lyrics from tags
 	if lyrics := r.readLyrics(tags); lyrics != "" {
-		fmt.Printf("DEBUG: Found lyrics in file %s: %s\n", track.Path, lyrics)
+		slog.Debug("Found lyrics in file", "path", track.Path, "lyrics", lyrics)
 		track.Metadata.Lyrics = lyrics
 	} else {
-		fmt.Printf("DEBUG: No lyrics found in file %s\n", track.Path)
+		slog.Debug("No lyrics found in file", "path", track.Path)
 	}
 
 	// Try to extract basic audio properties
@@ -149,12 +150,12 @@ func (r *TagReader) readAdditionalMetadata(tags tag.Metadata, track *music.Track
 func (r *TagReader) readLyrics(tags tag.Metadata) string {
 	// Try to read from raw tags for lyric fields
 	if rawTags := tags.Raw(); rawTags != nil {
-		fmt.Printf("DEBUG: Available raw tags: %v\n", getTagKeys(rawTags))
+		slog.Debug("Available raw tags", "tags", getTagKeys(rawTags))
 		// Check for common lyric field names in different formats
 		lyricFields := []string{"LYRICS", "UNSYNCEDLYRICS", "USLT", "USLT0", "USLT1", "Lyrics", "UnsyncedLyrics"}
 		for _, field := range lyricFields {
 			if value := rawTags[field]; value != nil {
-				fmt.Printf("DEBUG: Found lyric field %s\n", field)
+				slog.Debug("Found lyric field", "field", field)
 				if str, ok := value.(string); ok && str != "" {
 					return str
 				}
@@ -214,7 +215,7 @@ func (r *TagReader) findISRC(tags tag.Metadata) string {
 	for key, value := range rawTags {
 		if strings.Contains(strings.ToUpper(key), "ISRC") || strings.Contains(strings.ToUpper(key), "TSRC") {
 			if strValue, ok := value.(string); ok && strValue != "" {
-				fmt.Printf("DEBUG: Found potential ISRC field %s: %s (length: %d)\n", key, strValue, len(strValue))
+				slog.Debug("Found potential ISRC field", "key", key, "value", strValue, "length", len(strValue))
 			}
 		}
 	}
@@ -225,14 +226,14 @@ func (r *TagReader) findISRC(tags tag.Metadata) string {
 	for _, field := range isrcFields {
 		if value, ok := rawTags[field]; ok {
 			if strValue, ok := value.(string); ok && strValue != "" {
-				fmt.Printf("DEBUG: Processing ISRC field %s: %s\n", field, strValue)
+				slog.Debug("Processing ISRC field", "field", field, "value", strValue)
 				// Handle multiple ISRCs separated by "/" - take only the first one
 				if strings.Contains(strValue, "/") {
 					parts := strings.Split(strValue, "/")
 					if len(parts) > 0 {
 						firstISRC := strings.TrimSpace(parts[0])
 						if firstISRC != "" {
-							fmt.Printf("DEBUG: Returning first ISRC from slash-separated: %s\n", firstISRC)
+							slog.Debug("Returning first ISRC from slash-separated", "isrc", firstISRC)
 							return firstISRC
 						}
 					}
@@ -241,22 +242,22 @@ func (r *TagReader) findISRC(tags tag.Metadata) string {
 				strValue = strings.TrimSpace(strValue)
 				if len(strValue) > 12 && len(strValue)%12 == 0 {
 					result := strValue[:12]
-					fmt.Printf("DEBUG: Returning first 12 chars of concatenated ISRC: %s\n", result)
+					slog.Debug("Returning first 12 chars of concatenated ISRC", "isrc", result)
 					return result
 				}
 				// Handle any ISRC longer than 12 characters by taking the first 12
 				if len(strValue) > 12 {
 					result := strValue[:12]
-					fmt.Printf("DEBUG: Returning first 12 chars of long ISRC: %s\n", result)
+					slog.Debug("Returning first 12 chars of long ISRC", "isrc", result)
 					return result
 				}
-				fmt.Printf("DEBUG: Returning ISRC as-is: %s\n", strValue)
+				slog.Debug("Returning ISRC as-is", "isrc", strValue)
 				return strValue
 			}
 		}
 	}
 
-	fmt.Printf("DEBUG: No ISRC found in standard fields\n")
+	slog.Debug("No ISRC found in standard fields")
 	return ""
 }
 
@@ -267,7 +268,7 @@ func (r *TagReader) findBPM(tags tag.Metadata) float64 {
 	for key, value := range rawTags {
 		if strings.Contains(strings.ToUpper(key), "BPM") || strings.Contains(strings.ToUpper(key), "TBPM") {
 			if strValue, ok := value.(string); ok && strValue != "" {
-				fmt.Printf("DEBUG: Found potential BPM field %s: %s\n", key, strValue)
+				slog.Debug("Found potential BPM field", "key", key, "value", strValue)
 			}
 		}
 	}
@@ -278,18 +279,18 @@ func (r *TagReader) findBPM(tags tag.Metadata) float64 {
 	for _, field := range bpmFields {
 		if value, ok := rawTags[field]; ok {
 			if strValue, ok := value.(string); ok && strValue != "" {
-				fmt.Printf("DEBUG: Processing BPM field %s: %s\n", field, strValue)
+				slog.Debug("Processing BPM field", "field", field, "value", strValue)
 				// Parse as float64
 				if bpm, err := strconv.ParseFloat(strings.TrimSpace(strValue), 64); err == nil && bpm > 0 {
-					fmt.Printf("DEBUG: Returning BPM: %.2f\n", bpm)
+					slog.Debug("Returning BPM", "bpm", bpm)
 					return bpm
 				} else {
-					fmt.Printf("DEBUG: Failed to parse BPM '%s': %v\n", strValue, err)
+					slog.Debug("Failed to parse BPM", "value", strValue, "error", err)
 				}
 			}
 		}
 	}
 
-	fmt.Printf("DEBUG: No BPM found in standard fields\n")
+	slog.Debug("No BPM found in standard fields")
 	return 0
 }
