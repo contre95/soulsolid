@@ -1,58 +1,58 @@
 {{define "scripts"}}
-   <script>
-   function toggleDarkMode() {
-     console.log("toggleDarkMode called");
-     document.documentElement.classList.toggle("dark");
-     // Optional: Persist the theme preference
-     if (document.documentElement.classList.contains("dark")) {
-       localStorage.theme = "dark";
-       console.log("Switched to dark mode");
-     } else {
-       localStorage.theme = "light";
-       console.log("Switched to light mode");
-     }
-   }
-   if (
-     localStorage.theme === "dark" ||
-     (!("theme" in localStorage) &&
-       window.matchMedia("(prefers-color-scheme: dark)").matches)
-   ) {
-     document.documentElement.classList.add("dark");
-     console.log("Initial dark mode applied");
-   } else {
-     document.documentElement.classList.remove("dark");
-     console.log("Initial light mode applied");
-   }
+<script>
+  function toggleDarkMode() {
+    console.log("toggleDarkMode called");
+    document.documentElement.classList.toggle("dark");
+    // Optional: Persist the theme preference
+    if (document.documentElement.classList.contains("dark")) {
+      localStorage.theme = "dark";
+      console.log("Switched to dark mode");
+    } else {
+      localStorage.theme = "light";
+      console.log("Switched to light mode");
+    }
+  }
+  if (
+    localStorage.theme === "dark" ||
+    (!("theme" in localStorage) &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches)
+  ) {
+    document.documentElement.classList.add("dark");
+    console.log("Initial dark mode applied");
+  } else {
+    document.documentElement.classList.remove("dark");
+    console.log("Initial light mode applied");
+  }
 
-   // SlimSelect initialization for tag edit form
-   function initSlimSelect() {
-     // Destroy existing instances
-     if (window.albumSelect) window.albumSelect.destroy();
-     if (window.albumArtistSelect) window.albumArtistSelect.destroy();
-     if (window.artistSelect) window.artistSelect.destroy();
+  // SlimSelect initialization for tag edit form
+  function initSlimSelect() {
+    // Destroy existing instances
+    if (window.albumSelect) window.albumSelect.destroy();
+    if (window.albumArtistSelect) window.albumArtistSelect.destroy();
+    if (window.artistSelect) window.artistSelect.destroy();
 
-     // Initialize new instances
-     if (document.getElementById('album')) {
-       window.albumSelect = new SlimSelect({
-         select: '#album'
-       });
-     }
-     if (document.getElementById('album_artist')) {
-       window.albumArtistSelect = new SlimSelect({
-         select: '#album_artist'
-       });
-     }
-     if (document.getElementById('artist')) {
-       window.artistSelect = new SlimSelect({
-         select: '#artist'
-       });
-     }
-   }
+    // Initialize new instances
+    if (document.getElementById("album")) {
+      window.albumSelect = new SlimSelect({
+        select: "#album",
+      });
+    }
+    if (document.getElementById("album_artist")) {
+      window.albumArtistSelect = new SlimSelect({
+        select: "#album_artist",
+      });
+    }
+    if (document.getElementById("artist")) {
+      window.artistSelect = new SlimSelect({
+        select: "#artist",
+      });
+    }
+  }
 
-   // Initialize on page load
-   document.addEventListener('DOMContentLoaded', initSlimSelect);
+  // Initialize on page load
+  document.addEventListener("DOMContentLoaded", initSlimSelect);
 
-    // Re-initialize after HTMX swaps
-    document.addEventListener('htmx:afterSettle', initSlimSelect);
- </script>
+  // Re-initialize after HTMX swaps
+  document.addEventListener("htmx:afterSettle", initSlimSelect);
+</script>
 {{end}}
