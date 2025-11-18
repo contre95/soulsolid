@@ -52,7 +52,12 @@
    // Initialize on page load
    document.addEventListener('DOMContentLoaded', initSlimSelect);
 
-   // Re-initialize after HTMX swaps
-   document.addEventListener('htmx:afterSettle', initSlimSelect);
+// Re-initialize after HTMX swaps, but only for the main content area
+    document.addEventListener('htmx:afterSettle', function(event) {
+      // Only reinitialize if the target is the main content area
+      if (event.target && event.target.id === 'contenido') {
+        initSlimSelect();
+      }
+    });
  </script>
 {{end}}
