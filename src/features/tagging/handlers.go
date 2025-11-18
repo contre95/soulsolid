@@ -29,7 +29,7 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 	}
 
 	// Get track data for editing
-	track, err := h.service.GetTrackTags(c.Context(), trackID)
+	track, err := h.service.GetTrackFileTags(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to get track for editing", "error", err, "trackId", trackID)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
@@ -195,7 +195,7 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 	}
 
 	// Get current track data
-	track, err := h.service.GetTrackTags(c.Context(), trackID)
+	track, err := h.service.GetTrackFileTags(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to get track for editing", "error", err, "trackId", trackID)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
@@ -551,7 +551,7 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 	}
 
 	// Get current track data
-	currentTrack, err := h.service.GetTrackTags(c.Context(), trackID)
+	currentTrack, err := h.service.GetTrackFileTags(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to get current track", "error", err, "trackId", trackID)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get current track")

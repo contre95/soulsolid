@@ -37,8 +37,8 @@ func NewService(tagWriter downloading.TagWriter, tagReader importing.TagReader, 
 	}
 }
 
-// GetTrackTags retrieves a track with current tag data for editing
-func (s *Service) GetTrackTags(ctx context.Context, trackID string) (*music.Track, error) {
+// GetTrackFileTags retrieves a track with current tag data for editing
+func (s *Service) GetTrackFileTags(ctx context.Context, trackID string) (*music.Track, error) {
 	slog.Debug("Getting track for editing", "trackID", trackID)
 
 	// Get track from library
