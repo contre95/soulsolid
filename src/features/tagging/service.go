@@ -420,17 +420,3 @@ func (s *Service) SearchTrackMetadata(ctx context.Context, trackID string, provi
 
 	return tracks, nil
 }
-
-// FetchMetadataForTrack fetches metadata for a track using its fingerprint (legacy method for backward compatibility)
-func (s *Service) FetchMetadataForTrack(ctx context.Context, trackID string) (*music.Track, error) {
-	// For legacy compatibility, use the first enabled provider with search
-	for _, provider := range s.metadataProviders {
-		if provider.IsEnabled() {
-			tracks, err := s.SearchTrackMetadata(ctx, trackID, provider.Name())
-			if err == nil && len(tracks) > 0 {
-				return tracks[0], nil
-			}
-		}
-	}
-	return nil, fmt.Errorf("no metadata found from enabled providers")
-}
