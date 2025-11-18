@@ -222,14 +222,19 @@ func (h *Handler) HandleLatestJobs(c *fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) HandleActiveJobsCount(c *fiber.Ctx) error {
+func (h *Handler) HandleJobsCount(c *fiber.Ctx) error {
 	jobs := h.service.GetJobs()
+	filter := c.Query("filter", "active")
 	count := 0
+
 	for _, job := range jobs {
-		if job.Status == JobStatusRunning || job.Status == JobStatusPending {
+		if filter == "active" && (job.Status == JobStatusRunning || job.Status == JobStatusPending) {
+			count++
+		} else if filter == "all" {
 			count++
 		}
 	}
+
 	if count == 0 {
 		return c.SendString("")
 	}
