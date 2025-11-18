@@ -163,10 +163,10 @@ func (h *Handler) GetWatcherStatus(c *fiber.Ctx) error {
 func (h *Handler) GetWatcherToggleState(c *fiber.Ctx) error {
 	running := h.service.GetWatcherStatus()
 	return c.Render("components/toggle", fiber.Map{
-		"ID":       "watcher-toggle",
-		"Checked":  running,
-		"PostURL":  "/import/watcher/toggle",
-		"Vals":     "js:{action: event.target.checked ? 'start' : 'stop'}",
+		"ID":      "watcher-toggle",
+		"Checked": running,
+		"PostURL": "/import/watcher/toggle",
+		"Vals":    "js:{action: event.target.checked ? 'start' : 'stop'}",
 	})
 }
 
