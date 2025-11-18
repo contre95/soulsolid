@@ -47,6 +47,4 @@ type Queue interface {
 	GetGroupedByArtist() map[string][]QueueItem
 	// GetGroupedByAlbum returns items grouped by album
 	GetGroupedByAlbum() map[string][]QueueItem
-	// ProcessGroup processes all items in a group with the given action
-	ProcessGroup(groupKey string, groupType string, action string) error
 }

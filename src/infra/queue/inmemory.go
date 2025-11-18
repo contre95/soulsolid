@@ -112,27 +112,3 @@ func (q *InMemoryQueue) GetGroupedByAlbum() map[string][]importing.QueueItem {
 
 	return groups
 }
-
-// ProcessGroup processes all items in a group with the given action
-func (q *InMemoryQueue) ProcessGroup(groupKey string, groupType string, action string) error {
-	var groupItems []importing.QueueItem
-
-	// Get items for the specified group
-	if groupType == "artist" {
-		groups := q.GetGroupedByArtist()
-		groupItems = groups[groupKey]
-	} else if groupType == "album" {
-		groups := q.GetGroupedByAlbum()
-		groupItems = groups[groupKey]
-	} else {
-		return errors.New("invalid group type")
-	}
-
-	// Process each item in the group
-	for _, item := range groupItems {
-		// For now, just remove the items (simplified - actual processing will be done in service layer)
-		q.items.Delete(item.ID)
-	}
-
-	return nil
-}
