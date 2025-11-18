@@ -361,8 +361,8 @@ func (s *Service) GetEnabledProviders() map[string]bool {
 	return enabled
 }
 
-// SearchTracksForTrack searches for tracks using current track metadata as search parameters
-func (s *Service) SearchTracksForTrack(ctx context.Context, trackID string, providerName string) ([]*music.Track, error) {
+// SearchTrackMetadata searches for metadat of a given track and an array of possible matches
+func (s *Service) SearchTrackMetadata(ctx context.Context, trackID string, providerName string) ([]*music.Track, error) {
 	track, err := s.libraryRepo.GetTrack(ctx, trackID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get track: %w", err)
@@ -427,7 +427,7 @@ func (s *Service) FetchMetadataForTrack(ctx context.Context, trackID string) (*m
 	// For legacy compatibility, use the first enabled provider with search
 	for _, provider := range s.metadataProviders {
 		if provider.IsEnabled() {
-			tracks, err := s.SearchTracksForTrack(ctx, trackID, provider.Name())
+			tracks, err := s.SearchTrackMetadata(ctx, trackID, provider.Name())
 			if err == nil && len(tracks) > 0 {
 				return tracks[0], nil
 			}

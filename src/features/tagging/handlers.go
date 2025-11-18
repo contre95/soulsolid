@@ -470,7 +470,7 @@ func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
 	}
 
 	// Search for tracks
-	tracks, err := h.service.SearchTracksForTrack(c.Context(), trackID, providerName)
+	tracks, err := h.service.SearchTrackMetadata(c.Context(), trackID, providerName)
 	if err != nil {
 		slog.Error("Failed to search tracks", "error", err, "trackId", trackID, "provider", providerName)
 		return c.Render("toast/toastErr", fiber.Map{
@@ -501,7 +501,7 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 	}
 
 	// Get search results again (could be optimized with caching)
-	tracks, err := h.service.SearchTracksForTrack(c.Context(), trackID, providerName)
+	tracks, err := h.service.SearchTrackMetadata(c.Context(), trackID, providerName)
 	if err != nil {
 		slog.Error("Failed to get search results", "error", err, "trackId", trackID, "provider", providerName)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get search results")
