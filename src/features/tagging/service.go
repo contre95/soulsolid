@@ -65,7 +65,6 @@ func (s *Service) GetTrackFileTags(ctx context.Context, trackID string) (*music.
 	}
 
 	// Merge file data with database relationships
-	// Keep database relationships (artists, album) but update metadata from file
 	result := *track                                // Copy the database track
 	result.Metadata = currentTrack.Metadata         // Use metadata from file
 	result.Title = currentTrack.Title               // Use title from file
