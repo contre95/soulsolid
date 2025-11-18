@@ -29,7 +29,7 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 	}
 
 	// Get track data for editing
-	track, err := h.service.GetTrackForEditing(c.Context(), trackID)
+	track, err := h.service.GetTrackFileTags(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to get track for editing", "error", err, "trackId", trackID)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
@@ -83,19 +83,6 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 					artistMap[artistID] = true
 				}
 			}
-		}
-	}
-
-	// Check if this is a fetch metadata request
-	if c.Query("fetch") == "true" {
-		fetchedTrack, err := h.service.FetchMetadataForTrack(c.Context(), trackID)
-		if err != nil {
-			slog.Warn("Failed to fetch metadata, using existing data", "error", err)
-			// Continue with existing track data
-		} else {
-			// Merge fetched data with existing track (preserve file-specific data)
-			track = h.mergeFetchedData(track, fetchedTrack)
-			slog.Info("Metadata fetched successfully", "trackId", trackID)
 		}
 	}
 
@@ -195,7 +182,7 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 	}
 
 	// Get current track data
-	track, err := h.service.GetTrackForEditing(c.Context(), trackID)
+	track, err := h.service.GetTrackFileTags(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to get track for editing", "error", err, "trackId", trackID)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
@@ -264,8 +251,8 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 	slog.Debug("FetchFromProvider called", "trackId", trackID, "provider", providerName, "trackTitle", track.Title, "trackID", track.ID)
 
 	// Fetch metadata
-	fetchedTrack, err := h.service.FetchMetadataForTrack(c.Context(), trackID)
-	if err != nil {
+	tracks, err := h.service.SearchTrackMetadata(c.Context(), trackID, providerName)
+	if err != nil || len(tracks) == 0 {
 		slog.Warn("Failed to fetch metadata, using existing data", "error", err, "trackId", trackID, "provider", providerName)
 		// Determine selected album artist ID for template
 		selectedAlbumArtistID := ""
@@ -312,6 +299,9 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 			})
 		}
 	}
+
+	// Use the first track from search results
+	fetchedTrack := tracks[0]
 
 	// Match fetched album with existing albums
 	if fetchedTrack.Album != nil {
@@ -470,7 +460,7 @@ func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
 	}
 
 	// Search for tracks
-	tracks, err := h.service.SearchTracksForTrack(c.Context(), trackID, providerName)
+	tracks, err := h.service.SearchTrackMetadata(c.Context(), trackID, providerName)
 	if err != nil {
 		slog.Error("Failed to search tracks", "error", err, "trackId", trackID, "provider", providerName)
 		return c.Render("toast/toastErr", fiber.Map{
@@ -501,7 +491,7 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 	}
 
 	// Get search results again (could be optimized with caching)
-	tracks, err := h.service.SearchTracksForTrack(c.Context(), trackID, providerName)
+	tracks, err := h.service.SearchTrackMetadata(c.Context(), trackID, providerName)
 	if err != nil {
 		slog.Error("Failed to get search results", "error", err, "trackId", trackID, "provider", providerName)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get search results")
@@ -551,7 +541,7 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 	}
 
 	// Get current track data
-	currentTrack, err := h.service.GetTrackForEditing(c.Context(), trackID)
+	currentTrack, err := h.service.GetTrackFileTags(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to get current track", "error", err, "trackId", trackID)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get current track")
