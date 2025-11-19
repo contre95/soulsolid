@@ -23,6 +23,9 @@
                  class="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-md shadow-green-500/10 hover:shadow-green-500/20 hover:bg-green-500/20 dark:hover:bg-green-500/30">
                  <i class="fas fa-plus mr-2"></i>
                  Import All
+                 <span class="htmx-indicator ml-2">
+                   <i class="fas fa-spinner fa-spin"></i>
+                 </span>
              </button>
              <button
                  hx-post="/import/queue/group/artist/{{$groupKey | urlquery}}/cancel"
@@ -32,6 +35,9 @@
                  class="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-gray-500/10 backdrop-blur-md border border-gray-400/30 text-gray-600 dark:text-gray-300 shadow-md shadow-gray-500/10 hover:shadow-gray-500/20 hover:bg-gray-500/20 dark:hover:bg-gray-500/30">
                  <i class="fas fa-times mr-2"></i>
                  Skip All
+                 <span class="htmx-indicator ml-2">
+                   <i class="fas fa-spinner fa-spin"></i>
+                 </span>
              </button>
              <button
                  hx-post="/import/queue/group/artist/{{$groupKey | urlquery}}/delete"
@@ -41,6 +47,9 @@
                  class="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-md shadow-red-500/10 hover:shadow-red-500/20 hover:bg-red-500/20 dark:hover:bg-red-500/30">
                  <i class="fas fa-trash mr-2"></i>
                  Delete All
+                 <span class="htmx-indicator ml-2">
+                   <i class="fas fa-spinner fa-spin"></i>
+                 </span>
              </button>
         </div>
 
