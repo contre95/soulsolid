@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -99,6 +100,163 @@ func (h *TelegramHandler) HandleQueueClear(bot *tgbotapi.BotAPI, chatID int64) e
 	msg := tgbotapi.NewMessage(chatID, "🗑️ Queue cleared successfully")
 	bot.Send(msg)
 	return nil
+}
+
+// HandleQueueBulkArtist shows bulk processing options for artists
+func (h *TelegramHandler) HandleQueueBulkArtist(bot *tgbotapi.BotAPI, chatID int64) error {
+	groups := h.service.GetGroupedByArtist()
+
+	if len(groups) == 0 {
+		msg := tgbotapi.NewMessage(chatID, "📭 *Bulk Artist Processing*\n\nNo queued items to process")
+		msg.ParseMode = tgbotapi.ModeMarkdown
+		bot.Send(msg)
+		return nil
+	}
+
+	// Send header message
+	headerText := fmt.Sprintf("👥 *Bulk Artist Processing*\n\nFound %d artist(s) with queued tracks:", len(groups))
+	msg := tgbotapi.NewMessage(chatID, headerText)
+	msg.ParseMode = tgbotapi.ModeMarkdown
+	bot.Send(msg)
+
+	// Send each artist group with inline keyboard
+	for artistName, items := range groups {
+		h.sendBulkArtistGroup(bot, chatID, artistName, items)
+	}
+
+	return nil
+}
+
+// HandleQueueBulkAlbum shows bulk processing options for albums
+func (h *TelegramHandler) HandleQueueBulkAlbum(bot *tgbotapi.BotAPI, chatID int64) error {
+	groups := h.service.GetGroupedByAlbum()
+
+	if len(groups) == 0 {
+		msg := tgbotapi.NewMessage(chatID, "📭 *Bulk Album Processing*\n\nNo queued items to process")
+		msg.ParseMode = tgbotapi.ModeMarkdown
+		bot.Send(msg)
+		return nil
+	}
+
+	// Send header message
+	headerText := fmt.Sprintf("💿 *Bulk Album Processing*\n\nFound %d album(s) with queued tracks:", len(groups))
+	msg := tgbotapi.NewMessage(chatID, headerText)
+	msg.ParseMode = tgbotapi.ModeMarkdown
+	bot.Send(msg)
+
+	// Send each album group with inline keyboard
+	for albumName, items := range groups {
+		h.sendBulkAlbumGroup(bot, chatID, albumName, items)
+	}
+
+	return nil
+}
+
+// sendBulkArtistGroup sends a single artist group with inline keyboard
+func (h *TelegramHandler) sendBulkArtistGroup(bot *tgbotapi.BotAPI, chatID int64, artistName string, items []QueueItem) {
+	text := h.formatBulkArtistMessage(artistName, items)
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = tgbotapi.ModeMarkdown
+	msg.ReplyMarkup = h.createBulkArtistKeyboard(artistName, items)
+	bot.Send(msg)
+}
+
+// sendBulkAlbumGroup sends a single album group with inline keyboard
+func (h *TelegramHandler) sendBulkAlbumGroup(bot *tgbotapi.BotAPI, chatID int64, albumName string, items []QueueItem) {
+	text := h.formatBulkAlbumMessage(albumName, items)
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = tgbotapi.ModeMarkdown
+	msg.ReplyMarkup = h.createBulkAlbumKeyboard(albumName, items)
+	bot.Send(msg)
+}
+
+// formatBulkArtistMessage formats artist group information for Telegram
+func (h *TelegramHandler) formatBulkArtistMessage(artistName string, items []QueueItem) string {
+	escapedArtist := h.escapeMarkdown(artistName)
+	return fmt.Sprintf("👤 *%s*\n%d track(s) queued", escapedArtist, len(items))
+}
+
+// formatBulkAlbumMessage formats album group information for Telegram
+func (h *TelegramHandler) formatBulkAlbumMessage(albumName string, items []QueueItem) string {
+	escapedAlbum := h.escapeMarkdown(albumName)
+	return fmt.Sprintf("💿 *%s*\n%d track(s) queued", escapedAlbum, len(items))
+}
+
+// createBulkArtistKeyboard creates inline keyboard for artist bulk actions
+func (h *TelegramHandler) createBulkArtistKeyboard(artistName string, items []QueueItem) tgbotapi.InlineKeyboardMarkup {
+	// URL encode the artist name for callback data
+	encodedArtist := url.QueryEscape(artistName)
+
+	buttons := [][]tgbotapi.InlineKeyboardButton{
+		{
+			tgbotapi.NewInlineKeyboardButtonData("✅ Import All", fmt.Sprintf("queue_bulk_artist_import_%s", encodedArtist)),
+			tgbotapi.NewInlineKeyboardButtonData("⏭️ Skip All", fmt.Sprintf("queue_bulk_artist_cancel_%s", encodedArtist)),
+		},
+		{
+			tgbotapi.NewInlineKeyboardButtonData("🗑️ Delete All", fmt.Sprintf("queue_bulk_artist_delete_%s", encodedArtist)),
+		},
+	}
+
+	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
+}
+
+// createBulkAlbumKeyboard creates inline keyboard for album bulk actions
+func (h *TelegramHandler) createBulkAlbumKeyboard(albumName string, items []QueueItem) tgbotapi.InlineKeyboardMarkup {
+	// URL encode the album name for callback data
+	encodedAlbum := url.QueryEscape(albumName)
+
+	buttons := [][]tgbotapi.InlineKeyboardButton{
+		{
+			tgbotapi.NewInlineKeyboardButtonData("✅ Import All", fmt.Sprintf("queue_bulk_album_import_%s", encodedAlbum)),
+			tgbotapi.NewInlineKeyboardButtonData("⏭️ Skip All", fmt.Sprintf("queue_bulk_album_cancel_%s", encodedAlbum)),
+		},
+		{
+			tgbotapi.NewInlineKeyboardButtonData("🗑️ Delete All", fmt.Sprintf("queue_bulk_album_delete_%s", encodedAlbum)),
+		},
+	}
+
+	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
+}
+
+// HandleBulkGroupAction processes bulk group actions from callback queries
+func (h *TelegramHandler) HandleBulkGroupAction(bot *tgbotapi.BotAPI, chatID int64, groupType, action, encodedGroupKey string, callback *tgbotapi.CallbackQuery) {
+	// URL decode the group key
+	groupKey, err := url.QueryUnescape(encodedGroupKey)
+	if err != nil {
+		slog.Error("Failed to decode group key", "error", err, "encodedKey", encodedGroupKey)
+		msg := tgbotapi.NewMessage(chatID, "❌ Failed to process group action: invalid group key")
+		bot.Send(msg)
+		return
+	}
+
+	ctx := context.Background()
+	err = h.service.ProcessQueueGroup(ctx, groupKey, groupType, action)
+	if err != nil {
+		slog.Error("Failed to process group", "error", err, "groupKey", groupKey, "groupType", groupType, "action", action)
+		escapedError := h.escapeMarkdown(err.Error())
+		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("❌ Failed to process group '%s': %s", h.escapeMarkdown(groupKey), escapedError))
+		bot.Send(msg)
+		return
+	}
+
+	// Send success message
+	actionMsg := "processed"
+	switch action {
+	case "import":
+		actionMsg = "imported"
+	case "cancel":
+		actionMsg = "skipped"
+	case "delete":
+		actionMsg = "deleted"
+	}
+
+	groupTypeMsg := "artist"
+	if groupType == "album" {
+		groupTypeMsg = "album"
+	}
+
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("✅ All tracks by %s '%s' %s successfully", groupTypeMsg, h.escapeMarkdown(groupKey), actionMsg))
+	bot.Send(msg)
 }
 
 // sendQueueItem sends a queue item with inline keyboard
@@ -263,6 +421,10 @@ func (h *TelegramHandler) HandleCommand(bot *tgbotapi.BotAPI, chatID int64, comm
 		return h.HandleQueue(bot, chatID)
 	case "queue_clear":
 		return h.HandleQueueClear(bot, chatID)
+	case "queue_bulk_artist":
+		return h.HandleQueueBulkArtist(bot, chatID)
+	case "queue_bulk_album":
+		return h.HandleQueueBulkAlbum(bot, chatID)
 	default:
 		msg := tgbotapi.NewMessage(chatID, "❌ Unknown import command. Use /help for available commands")
 		bot.Send(msg)
@@ -302,9 +464,11 @@ func (h *TelegramHandler) handleImport(bot *tgbotapi.BotAPI, chatID int64, path 
 // GetCommands returns the available commands for importing
 func (h *TelegramHandler) GetCommands() map[string]string {
 	return map[string]string{
-		"import":      "Import music from directory (defaults to downloadPath)",
-		"queue":       "Show import queue and process items one by one",
-		"queue_clear": "Clear entire import queue",
+		"import":            "Import music from directory (defaults to downloadPath)",
+		"queue":             "Show import queue and process items one by one",
+		"queue_clear":       "Clear entire import queue",
+		"queue_bulk_artist": "Bulk process queued items grouped by artist",
+		"queue_bulk_album":  "Bulk process queued items grouped by album",
 	}
 }
 
@@ -324,12 +488,26 @@ func (h *TelegramHandler) HandleCallback(bot *tgbotapi.BotAPI, callback *tgbotap
 	}
 
 	action := parts[1]
+
+	// Handle bulk group actions
+	if strings.HasPrefix(data, "queue_bulk_artist_") || strings.HasPrefix(data, "queue_bulk_album_") {
+		if len(parts) < 4 {
+			return false
+		}
+		groupType := parts[2]                           // "artist" or "album"
+		bulkAction := parts[3]                          // "import", "cancel", or "delete"
+		encodedGroupKey := strings.Join(parts[4:], "_") // Rejoin remaining parts as they may contain underscores
+
+		h.HandleBulkGroupAction(bot, chatID, groupType, bulkAction, encodedGroupKey, callback)
+		return true
+	}
+
 	var itemID string
 	if len(parts) > 2 {
 		itemID = parts[2]
 	}
 
-	// Handle different actions
+	// Handle individual queue actions
 	switch action {
 	case "import", "replace", "delete":
 		h.HandleQueueAction(bot, chatID, itemID, action, callback)
