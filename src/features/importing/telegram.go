@@ -230,7 +230,7 @@ func (h *TelegramHandler) HandleBulkGroupAction(bot *tgbotapi.BotAPI, chatID int
 	}
 
 	ctx := context.Background()
-	err = h.service.ProcessGroup(ctx, groupKey, groupType, action)
+	err = h.service.ProcessQueueGroup(ctx, groupKey, groupType, action)
 	if err != nil {
 		slog.Error("Failed to process group", "error", err, "groupKey", groupKey, "groupType", groupType, "action", action)
 		escapedError := h.escapeMarkdown(err.Error())

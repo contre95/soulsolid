@@ -164,10 +164,10 @@ func (h *Handler) GetWatcherStatus(c *fiber.Ctx) error {
 func (h *Handler) GetWatcherToggleState(c *fiber.Ctx) error {
 	running := h.service.GetWatcherStatus()
 	return c.Render("components/toggle", fiber.Map{
-		"ID":       "watcher-toggle",
-		"Checked":  running,
-		"PostURL":  "/import/watcher/toggle",
-		"Vals":     "js:{action: event.target.checked ? 'start' : 'stop'}",
+		"ID":      "watcher-toggle",
+		"Checked": running,
+		"PostURL": "/import/watcher/toggle",
+		"Vals":    "js:{action: event.target.checked ? 'start' : 'stop'}",
 	})
 }
 
@@ -221,11 +221,11 @@ func (h *Handler) GetQueueHeader(c *fiber.Ctx) error {
 	})
 }
 
-// ProcessGroupAction handles bulk actions for queue item groups
-func (h *Handler) ProcessGroupAction(c *fiber.Ctx) error {
+// ProcessQueueGroup handles bulk actions for queue item groups
+func (h *Handler) ProcessQueueGroup(c *fiber.Ctx) error {
 	groupKey := c.Params("groupKey")
 	groupType := c.Params("groupType") // "artist" or "album"
-	action := c.Params("action")        // "import", "cancel", "delete", "replace"
+	action := c.Params("action")       // "import", "cancel", "delete", "replace"
 
 	// URL-decode the groupKey since it may contain encoded characters
 	decodedGroupKey, err := url.QueryUnescape(groupKey)
@@ -247,7 +247,7 @@ func (h *Handler) ProcessGroupAction(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.service.ProcessGroup(c.Context(), decodedGroupKey, groupType, action)
+	err = h.service.ProcessQueueGroup(c.Context(), decodedGroupKey, groupType, action)
 	if err != nil {
 		slog.Error("Failed to process group", "error", err, "groupKey", decodedGroupKey, "groupType", groupType, "action", action)
 		return c.Render("toast/toastErr", fiber.Map{

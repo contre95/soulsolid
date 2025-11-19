@@ -240,8 +240,8 @@ func (s *Service) GetGroupedByAlbum() map[string][]QueueItem {
 	return s.queue.GetGroupedByAlbum()
 }
 
-// ProcessGroup processes all items in a group with the given action
-func (s *Service) ProcessGroup(ctx context.Context, groupKey string, groupType string, action string) error {
+// ProcessQueueGroup processes all items in a group with the given action
+func (s *Service) ProcessQueueGroup(ctx context.Context, groupKey string, groupType string, action string) error {
 	// Get the group items first to process them individually
 	var groupItems []QueueItem
 
