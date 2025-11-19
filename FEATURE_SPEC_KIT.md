@@ -469,3 +469,4 @@ See the `downloading` feature for a complete example that demonstrates:
 - Route registration: `src/features/downloading/routes.go:8-40`
 
 This spec kit should be followed consistently when developing new features to maintain code quality, user experience consistency, and architectural coherence across the SoulSolid application.
+
