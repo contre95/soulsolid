@@ -1,0 +1,93 @@
+{{if .Groups}}
+{{range $groupKey, $items := .Groups}}
+<div class="w-full bg-white/90 dark:bg-gray-900/90 shadow-sm rounded-xl p-4 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 mb-4">
+    <div class="flex flex-col space-y-3">
+        <!-- Group header -->
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <i class="fas fa-compact-disc text-purple-500"></i>
+                {{$groupKey}} ({{len $items}} tracks)
+            </h3>
+            <div class="flex items-center space-x-2">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Group Actions</span>
+            </div>
+        </div>
+
+        <!-- Group actions -->
+        <div class="flex flex-wrap gap-2 justify-start">
+             <button
+                 hx-post="/import/queue/group/album/{{$groupKey | urlquery}}/import"
+                 hx-target="#toast-container"
+                 hx-swap="innerHTML"
+                 hx-confirm="Import all {{len $items}} tracks from '{{$groupKey}}'?"
+                 class="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-md shadow-green-500/10 hover:shadow-green-500/20 hover:bg-green-500/20 dark:hover:bg-green-500/30">
+                 <i class="fas fa-plus mr-2"></i>
+                 Import All
+             </button>
+             <button
+                 hx-post="/import/queue/group/album/{{$groupKey | urlquery}}/cancel"
+                 hx-target="#toast-container"
+                 hx-swap="innerHTML"
+                 hx-confirm="Skip all {{len $items}} tracks from '{{$groupKey}}'?"
+                 class="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-gray-500/10 backdrop-blur-md border border-gray-400/30 text-gray-600 dark:text-gray-300 shadow-md shadow-gray-500/10 hover:shadow-gray-500/20 hover:bg-gray-500/20 dark:hover:bg-gray-500/30">
+                 <i class="fas fa-times mr-2"></i>
+                 Skip All
+             </button>
+             <button
+                 hx-post="/import/queue/group/album/{{$groupKey | urlquery}}/delete"
+                 hx-target="#toast-container"
+                 hx-swap="innerHTML"
+                 hx-confirm="Delete all {{len $items}} tracks from '{{$groupKey}}' from import location?"
+                 class="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-md shadow-red-500/10 hover:shadow-red-500/20 hover:bg-red-500/20 dark:hover:bg-red-500/30">
+                 <i class="fas fa-trash mr-2"></i>
+                 Delete All
+             </button>
+        </div>
+
+        <!-- Individual tracks (collapsed by default) -->
+        <details class="group">
+            <summary class="cursor-pointer text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-2">
+                <i class="fas fa-chevron-right group-open:rotate-90 transition-transform"></i>
+                Show individual tracks
+            </summary>
+            <div class="mt-3 space-y-2 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
+                {{range $items}}
+                <div class="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg p-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <h4 class="text-sm font-medium text-gray-900 dark:text-white">{{.Track.Title}}</h4>
+                            <p class="text-xs text-gray-600 dark:text-gray-400">
+                                {{if .Track.Artists}}{{range $i, $ar := .Track.Artists}}{{if $i}}, {{end}}{{$ar.Artist.Name}}{{end}}{{end}}
+                            </p>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <span class="text-xs text-gray-500 dark:text-gray-400">{{.Timestamp.Format "Jan 2, 15:04"}}</span>
+                            {{if eq .Type "duplicate"}}
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-violet-500/10 border border-violet-400/30 text-violet-600 dark:text-violet-300">
+                                Duplicate
+                            </span>
+                            {{else}}
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 border border-blue-400/30 text-blue-600 dark:text-blue-300">
+                                Manual Review
+                            </span>
+                            {{end}}
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </details>
+    </div>
+</div>
+{{end}}
+{{else}}
+<div class="w-full bg-white/90 dark:bg-gray-900/90 shadow-sm rounded-xl p-8 text-center backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50">
+    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+    </svg>
+    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No queued items</h3>
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Tracks will appear here for manual review.
+    </p>
+</div>
+{{end}}

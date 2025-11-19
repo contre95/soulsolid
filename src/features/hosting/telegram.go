@@ -314,7 +314,7 @@ func (t *TelegramBot) handleMenuCallback(callback *tgbotapi.CallbackQuery) {
 		t.routeMenuCommand("dap", "", chatID)
 	case "menu_back":
 		t.handleHelp(chatID)
-	case "menu_lib_stats", "menu_lib_tree", "menu_import_queue", "menu_import_clear":
+	case "menu_lib_stats", "menu_lib_tree", "menu_import_queue", "menu_import_artists", "menu_import_albums", "menu_import_clear":
 		t.routeMenuCommand(data, "", chatID)
 	case "menu_import_dir":
 		t.promptForInput(chatID, "📁 *Import Directory*\n\nPlease reply with the directory path to import:\n\nLeave empty to use default download path, or specify a custom path like `/path/to/music`", "menu_import_dir")
@@ -443,13 +443,19 @@ func (t *TelegramBot) showImportMenu(chatID int64) {
 	text := `*📥 Import Menu*
 
 Choose an import action:
-• *Queue* - View and process import queue
+• *Tracks Queue* - View and process individual tracks
+• *Artists Queue* - Bulk process tracks by artist
+• *Albums Queue* - Bulk process tracks by album
 • *Import Dir* - Will prompt for directory path
 • *Clear Queue* - Remove all queued items`
 
 	buttons := [][]tgbotapi.InlineKeyboardButton{
 		{
-			tgbotapi.NewInlineKeyboardButtonData("📋 View Queue", "menu_import_queue"),
+			tgbotapi.NewInlineKeyboardButtonData("📋 View Tracks Queue", "menu_import_queue"),
+			tgbotapi.NewInlineKeyboardButtonData("👥 View Artists Queue", "menu_import_artists"),
+		},
+		{
+			tgbotapi.NewInlineKeyboardButtonData("💿 View Albums Queue", "menu_import_albums"),
 			tgbotapi.NewInlineKeyboardButtonData("📁 Import Directory", "menu_import_dir"),
 		},
 		{
@@ -467,26 +473,30 @@ Choose an import action:
 // routeMenuCommand routes menu selections to appropriate feature handlers
 func (t *TelegramBot) routeMenuCommand(command, args string, chatID int64) {
 	commandMap := map[string]string{
-		"jobs":              "jobs",
-		"config":            "config",
-		"dap":               "syncdap",
-		"menu_lib_stats":    "library",
-		"menu_lib_tree":     "library",
-		"menu_dl_search":    "downloading",
-		"menu_dl_download":  "downloading",
-		"menu_import_queue": "importing",
-		"menu_import_dir":   "importing",
-		"menu_import_clear": "importing",
+		"jobs":                "jobs",
+		"config":              "config",
+		"dap":                 "syncdap",
+		"menu_lib_stats":      "library",
+		"menu_lib_tree":       "library",
+		"menu_dl_search":      "downloading",
+		"menu_dl_download":    "downloading",
+		"menu_import_queue":   "importing",
+		"menu_import_artists": "importing",
+		"menu_import_albums":  "importing",
+		"menu_import_dir":     "importing",
+		"menu_import_clear":   "importing",
 	}
 
 	commandMapToCmd := map[string]string{
-		"menu_lib_stats":    "stats",
-		"menu_lib_tree":     "tree",
-		"menu_dl_search":    "search",
-		"menu_dl_download":  "download",
-		"menu_import_queue": "queue",
-		"menu_import_dir":   "import",
-		"menu_import_clear": "queue_clear",
+		"menu_lib_stats":      "stats",
+		"menu_lib_tree":       "tree",
+		"menu_dl_search":      "search",
+		"menu_dl_download":    "download",
+		"menu_import_queue":   "queue",
+		"menu_import_artists": "queue_bulk_artist",
+		"menu_import_albums":  "queue_bulk_album",
+		"menu_import_dir":     "import",
+		"menu_import_clear":   "queue_clear",
 	}
 
 	feature, exists := commandMap[command]

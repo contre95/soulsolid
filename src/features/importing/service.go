@@ -230,6 +230,46 @@ func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action st
 
 }
 
+// GetGroupedByArtist returns queue items grouped by artist
+func (s *Service) GetGroupedByArtist() map[string][]QueueItem {
+	return s.queue.GetGroupedByArtist()
+}
+
+// GetGroupedByAlbum returns queue items grouped by album
+func (s *Service) GetGroupedByAlbum() map[string][]QueueItem {
+	return s.queue.GetGroupedByAlbum()
+}
+
+// ProcessQueueGroup processes all items in a group with the given action
+func (s *Service) ProcessQueueGroup(ctx context.Context, groupKey string, groupType string, action string) error {
+	// Get the group items first to process them individually
+	var groupItems []QueueItem
+
+	if groupType == "artist" {
+		groups := s.GetGroupedByArtist()
+		groupItems = groups[groupKey]
+	} else if groupType == "album" {
+		groups := s.GetGroupedByAlbum()
+		groupItems = groups[groupKey]
+	} else {
+		return fmt.Errorf("invalid group type: %s", groupType)
+	}
+
+	if len(groupItems) == 0 {
+		return fmt.Errorf("no items found in group %s", groupKey)
+	}
+
+	// Process each item in the group
+	for _, item := range groupItems {
+		if err := s.ProcessQueueItem(ctx, item.ID, action); err != nil {
+			slog.Error("Failed to process queue item in group", "itemID", item.ID, "action", action, "error", err)
+			// Continue processing other items even if one fails
+		}
+	}
+
+	return nil
+}
+
 // replaceTrack handles replacing an existing track with a new one
 func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *music.Track, move bool, logger *slog.Logger) error {
 	if logger == nil {
@@ -346,6 +386,19 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 	if err := track.Validate(); err != nil {
 		logger.Error("Service.importTrack: track validation failed after population", "error", err, "title", track.Title)
 		return fmt.Errorf("track validation failed: %w", err)
+	}
+
+	// Check if track already exists
+	existingTrack, err := s.library.FindTrackByPath(ctx, track.Path)
+	if err != nil && err.Error() != "sql: no rows in result set" {
+		logger.Error("Service.importTrack: failed to check if track exists", "error", err, "path", track.Path)
+		return fmt.Errorf("failed to check if track exists: %w", err)
+	}
+
+	// If track already exists, treat as successfully imported
+	if existingTrack != nil {
+		logger.Info("Track already exists, skipping import", "path", track.Path, "title", track.Title)
+		return nil
 	}
 
 	// Add track to database
