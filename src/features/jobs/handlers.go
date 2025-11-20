@@ -29,12 +29,22 @@ func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
 
 	jobID, err := h.service.StartJob(jobType, name, nil)
 	if err != nil {
+		// Check if this is an HTMX request
+		if c.Get("HX-Request") == "true" {
+			return c.Status(500).SendString(fmt.Sprintf("Failed to start job: %s", err.Error()))
+		}
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// Trigger HTMX to refresh the badge immediately
 	c.Set("HX-Trigger", "refreshActiveJobsBadge")
 
+	// Check if this is an HTMX request
+	if c.Get("HX-Request") == "true" {
+		return c.Render("toast/toastOk", fiber.Map{
+			"Msg": fmt.Sprintf("Started %s job", jobType),
+		})
+	}
 	return c.JSON(fiber.Map{"job_id": jobID})
 }
 

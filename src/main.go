@@ -13,6 +13,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
 	"github.com/contre95/soulsolid/src/features/logging"
+	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/syncdap"
 	"github.com/contre95/soulsolid/src/features/tagging"
 	"github.com/contre95/soulsolid/src/infra/chroma"
@@ -41,6 +42,7 @@ func main() {
 		log.Fatalf("failed to create library: %v", err)
 	}
 	libraryService := library.NewService(db, cfgManager)
+	metricsService := metrics.NewService(db, cfgManager)
 	jobService := jobs.NewService(&cfgManager.Get().Jobs)
 
 	tagReader := tag.NewTagReader()
@@ -55,6 +57,9 @@ func main() {
 
 	directoryImportTask := importing.NewDirectoryImportTask(importingService)
 	jobService.RegisterHandler("directory_import", jobs.NewBaseTaskHandler(directoryImportTask))
+
+	metricsTask := metrics.NewMetricsCalculationTask(db)
+	jobService.RegisterHandler("calculate_metrics", jobs.NewBaseTaskHandler(metricsTask))
 
 	syncService := syncdap.NewService(cfgManager, jobService)
 	if cfgManager.Get().Sync.Enabled {
@@ -104,7 +109,7 @@ func main() {
 		}
 	}
 
-	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService)
+	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService, metricsService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped: %v", "error", err)

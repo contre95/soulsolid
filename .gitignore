@@ -51,6 +51,7 @@ pocs
 **/*.db
 **/*.db-journal
 downloads
+music
 soulsolid
 logs
 others
