@@ -60,9 +60,10 @@ features/yourfeature/
 ### 2. Handler Layer (`handlers.go`)
 
 **Reference**: `src/features/downloading/handlers.go:14-26`
-- Handler struct with service dependency
-- NewHandler constructor pattern
+- Handler struct with only feature-specific service dependencies
+- NewHandler constructor pattern with single service parameter
 - Dual response support (HTMX + JSON)
+- **Important**: Handlers should only receive services from their own feature, not cross-feature dependencies
 
 **HTMX Detection Pattern**: `src/features/downloading/handlers.go:42-50`
 - Check `c.Get("HX-Request") == "true"` for HTMX requests
@@ -76,10 +77,11 @@ features/yourfeature/
 ### 3. Routes (`routes.go`)
 
 **Reference**: `src/features/downloading/routes.go:8-40`
-- RegisterRoutes function with app and service parameters
+- RegisterRoutes function with app and feature-specific service parameters only
 - API routes grouped under feature prefix
 - UI routes under `/ui` group for HTMX partials
-- Handler instantiation pattern
+- Handler instantiation pattern with single service dependency
+- **Important**: Route registration should only pass the feature's own service to handlers
 
 ## HTMX Integration Patterns
 
@@ -211,7 +213,8 @@ Dependencies are injected through the main.go file following this pattern:
 - Configuration manager loaded first
 - Infrastructure services created next
 - Feature services created with dependencies
-- Routes registered with services
+- Routes registered with feature-specific services only
+- **Important**: Handlers should only receive services from their own feature to maintain clean architecture and avoid tight coupling between features
 
 ## Configuration Management
 
@@ -304,13 +307,21 @@ Create task structs that implement job execution logic.
 
 ### 2. Job Registration
 
-**Reference**: `src/main.go:56-66`
-Register job handlers in main.go following the existing pattern.
+**Reference**: `src/main.go:88-93`
+Register job handlers in main.go following the existing pattern:
+- Create task instances that implement job execution logic
+- Register handlers with jobService.RegisterHandler() for each job type
+- Multiple job types can share the same task handler (e.g., download_track, download_album all use DownloadJobTask)
+- Job types are strings that match the parameters used in service.StartJob() calls
 
 ### 3. Job Triggering
 
-**Reference**: `src/features/downloading/handlers.go:343-354`
-Trigger jobs from handlers and return appropriate responses.
+**Reference**: `src/features/downloading/service.go:106-114`
+Jobs are triggered through the service layer, not directly from handlers:
+- Service methods call `jobService.StartJob()` with job type, title, and parameters
+- Handlers call service methods, which return job IDs
+- Handlers return appropriate responses (HTMX toast or JSON with job ID)
+- **Important**: This maintains clean architecture where handlers don't directly access job services
 
 ## Telegram Bot Integration (Optional)
 
@@ -416,6 +427,7 @@ Follow the existing database initialization patterns in `src/infra/database/sqli
 - Keep functions small and focused
 - Add package documentation
 - Use interfaces for dependencies
+- **Important**: Handlers should only depend on services from their own feature to maintain loose coupling and clean architecture
 
 ### 2. Template Code
 
@@ -453,6 +465,7 @@ Before submitting a new feature, ensure:
 - [ ] Templates are responsive and accessible (`views/downloading/album_results.html:10-48`)
 - [ ] Toast notifications are used for user feedback (`src/features/downloading/handlers.go:57-60`)
 - [ ] Long operations use the job system (`src/main.go:56-66`)
+- [ ] **Handlers only depend on services from their own feature** (clean architecture)
 - [ ] Code is properly documented
 - [ ] Tests are written for critical paths
 - [ ] Dependencies are updated in package.json
@@ -462,11 +475,12 @@ Before submitting a new feature, ensure:
 
 See the `downloading` feature for a complete example that demonstrates:
 - Service layer: `src/features/downloading/service.go:21-35`
-- Handler layer: `src/features/downloading/handlers.go:14-26`
+- Handler layer: `src/features/downloading/handlers.go:14-26` (with single service dependency)
 - HTMX integration: `src/features/downloading/handlers.go:42-50`
 - Job integration: `src/features/downloading/download_job.go:12-25`
 - Template structure: `views/downloading/album_results.html:6-49`
-- Route registration: `src/features/downloading/routes.go:8-40`
+- Route registration: `src/features/downloading/routes.go:8-40` (with feature-specific service only)
+- Clean architecture: handlers only depend on their own feature's service
 
 This spec kit should be followed consistently when developing new features to maintain code quality, user experience consistency, and architectural coherence across the SoulSolid application.
 
