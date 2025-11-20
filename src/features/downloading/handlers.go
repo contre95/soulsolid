@@ -6,22 +6,19 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
 
 // Handler handles HTTP requests for downloading
 type Handler struct {
-	service    *Service
-	jobService jobs.JobService
+	service *Service
 }
 
 // NewHandler creates a new downloading handler
-func NewHandler(service *Service, jobService jobs.JobService) *Handler {
+func NewHandler(service *Service) *Handler {
 	return &Handler{
-		service:    service,
-		jobService: jobService,
+		service: service,
 	}
 }
 
@@ -304,7 +301,6 @@ func (h *Handler) renderArtistResults(c *fiber.Ctx, artists []music.Artist, down
 	})
 }
 
-
 // DownloadTrackRequest represents a download track request
 type DownloadTrackRequest struct {
 	TrackID string `json:"trackId" form:"trackId"`
@@ -483,7 +479,6 @@ func (h *Handler) DownloadArtist(c *fiber.Ctx) error {
 	})
 }
 
-
 // DownloadTracks handles multiple track download requests
 func (h *Handler) DownloadTracks(c *fiber.Ctx) error {
 	slog.Debug("DownloadTracks handler called")
@@ -612,31 +607,6 @@ func (h *Handler) DownloadPlaylist(c *fiber.Ctx) error {
 		"jobId":   jobID,
 		"message": "Download started",
 	})
-}
-
-// GetDownloadStatus returns the status of a download job
-func (h *Handler) GetDownloadStatus(c *fiber.Ctx) error {
-	jobID := c.Params("jobId")
-	slog.Debug("GetDownloadStatus handler called", "jobID", jobID)
-
-	job, exists := h.jobService.GetJob(jobID)
-	if !exists {
-		if c.Get("HX-Request") == "true" {
-			return c.Render("toast/toastErr", fiber.Map{
-				"Msg": "Job not found",
-			})
-		}
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Job not found",
-		})
-	}
-
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastInfo", fiber.Map{
-			"Msg": fmt.Sprintf("Job %s: %s", job.Status, job.Message),
-		})
-	}
-	return c.JSON(job)
 }
 
 // GetAlbumTracksRequest represents a request to get album tracks
