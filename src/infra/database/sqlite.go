@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
@@ -137,7 +138,16 @@ func createTables(db *sql.DB) error {
 			UNIQUE(artist_id, key) ON CONFLICT REPLACE,
 			FOREIGN KEY (artist_id) REFERENCES artists(id)
 		);
-		
+
+		CREATE TABLE IF NOT EXISTS library_metrics (
+			id INTEGER PRIMARY KEY,
+			metric_type TEXT NOT NULL,
+			metric_key TEXT,
+			metric_value INTEGER,
+			updated_at TEXT,
+			UNIQUE(metric_type, metric_key)
+		);
+
 		CREATE INDEX IF NOT EXISTS idx_track_artists_track ON track_artists(track_id);
 		CREATE INDEX IF NOT EXISTS idx_track_artists_artist ON track_artists(artist_id);
 		CREATE INDEX IF NOT EXISTS idx_album_artists_album ON album_artists(album_id);
@@ -418,7 +428,234 @@ func (d *SqliteLibrary) GetTrack(ctx context.Context, id string) (*music.Track, 
 		track.Attributes[key] = value
 	}
 
-	return track, tx.Commit()
+	return track, nil
+}
+
+// GetGenreDistribution returns the distribution of tracks by genre.
+func (d *SqliteLibrary) GetGenreDistribution(ctx context.Context) (map[string]int, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT COALESCE(genre, 'Unknown') as genre, COUNT(*) as count
+		FROM tracks
+		GROUP BY genre
+		ORDER BY count DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	distribution := make(map[string]int)
+	for rows.Next() {
+		var genre string
+		var count int
+		if err := rows.Scan(&genre, &count); err != nil {
+			return nil, err
+		}
+		distribution[genre] = count
+	}
+
+	return distribution, rows.Err()
+}
+
+// GetMetadataCompleteness returns statistics about metadata completeness.
+func (d *SqliteLibrary) GetMetadataCompleteness(ctx context.Context) (metrics.MetadataCompletenessStats, error) {
+	var stats metrics.MetadataCompletenessStats
+
+	// Count tracks with complete metadata (title, artist, album, genre, year)
+	err := d.db.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM tracks t
+		WHERE t.title != ''
+			AND EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = t.id)
+			AND EXISTS (SELECT 1 FROM track_albums ta2 WHERE ta2.track_id = t.id)
+			AND t.genre IS NOT NULL AND t.genre != ''
+			AND t.year > 0
+	`).Scan(&stats.Complete)
+	if err != nil {
+		return stats, err
+	}
+
+	// Count tracks missing genre
+	err = d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE genre IS NULL OR genre = ''").Scan(&stats.MissingGenre)
+	if err != nil {
+		return stats, err
+	}
+
+	// Count tracks missing year
+	err = d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE year IS NULL OR year = 0").Scan(&stats.MissingYear)
+	if err != nil {
+		return stats, err
+	}
+
+	// Count tracks missing lyrics
+	err = d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE lyrics IS NULL OR lyrics = ''").Scan(&stats.MissingLyrics)
+	if err != nil {
+		return stats, err
+	}
+
+	return stats, nil
+}
+
+// GetTotalTracks returns the total number of tracks in the library.
+func (d *SqliteLibrary) GetTotalTracks(ctx context.Context) (int, error) {
+	var count int
+	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks").Scan(&count)
+	return count, err
+}
+
+// GetTotalArtists returns the total number of artists in the library.
+func (d *SqliteLibrary) GetTotalArtists(ctx context.Context) (int, error) {
+	var count int
+	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM artists WHERE name != '' AND name IS NOT NULL").Scan(&count)
+	return count, err
+}
+
+// GetTotalAlbums returns the total number of albums in the library.
+func (d *SqliteLibrary) GetTotalAlbums(ctx context.Context) (int, error) {
+	var count int
+	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM albums").Scan(&count)
+	return count, err
+}
+
+// GetFormatDistribution returns the distribution of tracks by audio format.
+func (d *SqliteLibrary) GetFormatDistribution(ctx context.Context) (map[string]int, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT COALESCE(format, 'Unknown') as format, COUNT(*) as count
+		FROM tracks
+		GROUP BY format
+		ORDER BY count DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	distribution := make(map[string]int)
+	for rows.Next() {
+		var format string
+		var count int
+		if err := rows.Scan(&format, &count); err != nil {
+			return nil, err
+		}
+		distribution[format] = count
+	}
+
+	return distribution, rows.Err()
+}
+
+// GetYearDistribution returns the distribution of tracks by release year.
+func (d *SqliteLibrary) GetYearDistribution(ctx context.Context) (map[string]int, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT year, COUNT(*) as count
+		FROM tracks
+		WHERE year > 0
+		GROUP BY year
+		ORDER BY year DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	distribution := make(map[string]int)
+	for rows.Next() {
+		var year int
+		var count int
+		if err := rows.Scan(&year, &count); err != nil {
+			return nil, err
+		}
+		distribution[fmt.Sprintf("%d", year)] = count
+	}
+
+	return distribution, rows.Err()
+}
+
+// GetLyricsStats returns statistics about lyrics presence.
+func (d *SqliteLibrary) GetLyricsStats(ctx context.Context) (metrics.LyricsStats, error) {
+	var stats metrics.LyricsStats
+
+	// Count tracks with lyrics
+	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE lyrics IS NOT NULL AND lyrics != ''").Scan(&stats.WithLyrics)
+	if err != nil {
+		return stats, err
+	}
+
+	// Count tracks without lyrics
+	err = d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE lyrics IS NULL OR lyrics = ''").Scan(&stats.WithoutLyrics)
+	if err != nil {
+		return stats, err
+	}
+
+	return stats, nil
+}
+
+// GetTracksWithISRC returns the number of tracks that have an ISRC.
+func (d *SqliteLibrary) GetTracksWithISRC(ctx context.Context) (int, error) {
+	var count int
+	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE isrc IS NOT NULL AND isrc != ''").Scan(&count)
+	return count, err
+}
+
+// GetTracksWithValidBPM returns the number of tracks that have a BPM != 0.
+func (d *SqliteLibrary) GetTracksWithValidBPM(ctx context.Context) (int, error) {
+	var count int
+	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE bpm IS NOT NULL AND bpm != 0").Scan(&count)
+	return count, err
+}
+
+// GetTracksWithValidYear returns the number of tracks that have a valid year (>1000 <3000).
+func (d *SqliteLibrary) GetTracksWithValidYear(ctx context.Context) (int, error) {
+	var count int
+	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE year > 1000 AND year < 3000").Scan(&count)
+	return count, err
+}
+
+// GetTracksWithValidGenre returns the number of tracks that have a genre not Unknown and not empty.
+func (d *SqliteLibrary) GetTracksWithValidGenre(ctx context.Context) (int, error) {
+	var count int
+	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE genre IS NOT NULL AND genre != '' AND LOWER(genre) != 'unknown'").Scan(&count)
+	return count, err
+}
+
+// StoreMetric stores a metric in the database.
+func (d *SqliteLibrary) StoreMetric(ctx context.Context, metricType, key string, value int) error {
+	_, err := d.db.ExecContext(ctx, `
+		INSERT OR REPLACE INTO library_metrics (metric_type, metric_key, metric_value, updated_at)
+		VALUES (?, ?, ?, datetime('now'))
+	`, metricType, key, value)
+	return err
+}
+
+// GetStoredMetrics retrieves stored metrics of a specific type.
+func (d *SqliteLibrary) GetStoredMetrics(ctx context.Context, metricType string) ([]metrics.StoredMetric, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT metric_key, metric_value
+		FROM library_metrics
+		WHERE metric_type = ?
+		ORDER BY metric_value DESC
+	`, metricType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var storedMetrics []metrics.StoredMetric
+	for rows.Next() {
+		var m metrics.StoredMetric
+		m.Type = metricType
+		if err := rows.Scan(&m.Key, &m.Value); err != nil {
+			return nil, err
+		}
+		storedMetrics = append(storedMetrics, m)
+	}
+
+	return storedMetrics, rows.Err()
+}
+
+// ClearStoredMetrics removes all stored metrics.
+func (d *SqliteLibrary) ClearStoredMetrics(ctx context.Context) error {
+	_, err := d.db.ExecContext(ctx, "DELETE FROM library_metrics")
+	return err
 }
 
 // UpdateTrack updates a track in the database.

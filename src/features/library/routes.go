@@ -10,7 +10,6 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 
 	ui := app.Group("/ui")
 	ui.Get("/library/table", handler.GetLibraryTable)
-	ui.Get("/library/stats-cards", handler.GetStatsCards)
 
 	library := app.Group("/library")
 	library.Get("/artists/count", handler.GetArtistsCount)

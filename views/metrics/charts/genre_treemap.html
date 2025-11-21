@@ -1,0 +1,67 @@
+{{if .ChartData}}
+<div id="genreChart" style="width: 100%; height: 100%"></div>
+<script>
+  (function() {
+    // Convert data format for treemap and limit to top 12 genres
+    const treemapData = {{.ChartData.Labels}}.map((label, index) => ({
+      x: label,
+      y: {{.ChartData.Series}}[index]
+    }));
+
+    // Sort by track count (descending) and take top 12
+    treemapData.sort((a, b) => b.y - a.y);
+    const limitedData = treemapData.slice(0, 16);
+
+    const options = {
+      series: [{
+        data: limitedData
+      }],
+      legend: {
+        show: false
+      },
+      chart: {
+        height: '100%',
+        type: 'treemap',
+        toolbar: {
+          show: false
+        }
+      },
+      colors: [
+        '#3B93A5',
+        '#F7B844',
+        '#ADD8C7',
+        '#EC3C65',
+        '#CDD7B6',
+        '#C1F666',
+        '#D43F97',
+        '#1E5D8C',
+        '#421243',
+        '#7F94B0',
+        '#EF6537',
+        '#C0ADDB'
+      ],
+      plotOptions: {
+        treemap: {
+          distributed: true,
+          enableShades: false,
+          borderRadius: 0
+        }
+      },
+      tooltip: {
+        theme: 'light',
+        y: {
+          formatter: function (val) {
+            return val + " tracks"
+          }
+        }
+      }
+    };
+
+    new ApexCharts(document.getElementById('genreChart'), options).render();
+  })();
+</script>
+{{else}}
+<div class="flex items-center justify-center h-64 text-gray-500">
+  <p>No genre data available</p>
+</div>
+{{end}}

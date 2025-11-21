@@ -1,0 +1,92 @@
+{{if .ChartData}}
+<div id="metadataChart" style="width: 100%; height: 100%"></div>
+<script>
+  (function() {
+    // Round data to 2 decimals
+    const roundedData = {{.ChartData.Series}}.map(val => parseFloat(val.toFixed(2)));
+
+    const options = {
+      series: [{
+        name: 'Metadata',
+        data: roundedData
+      }],
+      chart: {
+        type: 'bar',
+        height: '100%',
+        toolbar: {
+          show: false
+        }
+      },
+      colors: {{.ChartData.Colors}},
+      plotOptions: {
+        bar: {
+          borderRadius: 2,
+          horizontal: true,
+          distributed: true,
+          dataLabels: {
+            enabled: true,
+            position: 'center',
+            formatter: function (val) {
+              return val + "%";
+            },
+            style: {
+              colors: ['#6E6E6E'],
+              fontSize: '12px'
+            }
+          }
+        }
+      },
+      xaxis: {
+        categories: {{.ChartData.Labels}},
+        title: {
+          text: 'Completeness',
+          style: {
+            color: '#6E6E6E'
+          }
+        },
+        labels: {
+          style: {
+            colors: '#6E6E6E'
+          },
+          formatter: function (val) {
+            return val
+          }
+        }
+      },
+      yaxis: {
+        title: {
+          text: '',
+          style: {
+            color: '#6E6E6E'
+          }
+        },
+        labels: {
+          style: {
+            colors: '#6E6E6E'
+          }
+        }
+      },
+      legend: {
+        show: false
+      },
+      fill: {
+        opacity: 1
+      },
+      tooltip: {
+        theme: 'light',
+        y: {
+          formatter: function (val) {
+            return val.toFixed(2) + "%"
+          }
+        }
+      }
+    };
+
+    new ApexCharts(document.getElementById('metadataChart'), options).render();
+  })();
+</script>
+{{else}}
+<div class="flex items-center justify-center h-64 text-gray-500">
+  <p>No metadata data available</p>
+</div>
+{{end}}

@@ -16,21 +16,6 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-// GetDeviceStatusCard returns a card with the current sync status of all devices
-func (h *Handler) GetDeviceStatusCard(c *fiber.Ctx) error {
-	slog.Debug("GetDeviceStatusCard handler called")
-
-	// Check if sync is enabled in config
-	if !h.service.configManager.Get().Sync.Enabled {
-		return c.SendString("") // Return empty if disabled
-	}
-
-	status := h.service.GetStatus()
-	return c.Render("cards/device_status_card", fiber.Map{
-		"Status": status,
-	})
-}
-
 // GetSyncStatus returns the current sync status of all devices
 func (h *Handler) GetSyncStatus(c *fiber.Ctx) error {
 	slog.Debug("GetSyncStatus handler called")

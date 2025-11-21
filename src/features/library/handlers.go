@@ -361,19 +361,3 @@ func (h *Handler) GetLibraryFileTree(c *fiber.Ctx) error {
 	}
 	return c.SendString(tree)
 }
-
-// GetStatsCards renders the dashboard cards with library statistics.
-func (h *Handler) GetStatsCards(c *fiber.Ctx) error {
-	slog.Debug("GetStatsCards handler called")
-
-	// Get library statistics
-	tracksCount, _ := h.service.GetTracksCount(c.Context())
-	artistsCount, _ := h.service.GetArtistsCount(c.Context())
-	albumsCount, _ := h.service.GetAlbumsCount(c.Context())
-
-	return c.Render("cards/dashboard_cards", fiber.Map{
-		"TracksCount":  tracksCount,
-		"ArtistsCount": artistsCount,
-		"AlbumsCount":  albumsCount,
-	})
-}
