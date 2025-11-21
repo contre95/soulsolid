@@ -178,7 +178,7 @@ func (h *Handler) GetGenreChartHTML(c *fiber.Ctx) error {
 	}
 
 	chartData := metrics.GenreChartData()
-	return c.Render("metrics/charts/genre_chart", fiber.Map{
+	return c.Render("metrics/charts/genre_treemap", fiber.Map{
 		"ChartData": chartData,
 	})
 }
@@ -194,7 +194,7 @@ func (h *Handler) GetYearChartHTML(c *fiber.Ctx) error {
 	}
 
 	chartData := metrics.YearBarData()
-	return c.Render("metrics/charts/year_chart", fiber.Map{
+	return c.Render("metrics/charts/year_vbars", fiber.Map{
 		"ChartData": chartData,
 	})
 }
@@ -210,7 +210,7 @@ func (h *Handler) GetFormatChartHTML(c *fiber.Ctx) error {
 	}
 
 	chartData := metrics.FormatBarData()
-	return c.Render("metrics/charts/format_chart", fiber.Map{
+	return c.Render("metrics/charts/format_pie", fiber.Map{
 		"ChartData": chartData,
 	})
 }
@@ -226,7 +226,7 @@ func (h *Handler) GetMetadataChartHTML(c *fiber.Ctx) error {
 	}
 
 	if totalTracks == 0 {
-		return c.Render("metrics/charts/metadata_chart", fiber.Map{
+		return c.Render("metrics/charts/metadata_hbars", fiber.Map{
 			"ChartData": nil,
 		})
 	}
@@ -274,7 +274,7 @@ func (h *Handler) GetMetadataChartHTML(c *fiber.Ctx) error {
 		Colors: []string{"#00E396", "#FEB019", "#FF4560", "#008FFB", "#775DD0"},
 	}
 
-	return c.Render("metrics/charts/metadata_chart", fiber.Map{
+	return c.Render("metrics/charts/metadata_hbars", fiber.Map{
 		"ChartData": chartData,
 	})
 }
