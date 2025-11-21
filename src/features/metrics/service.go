@@ -5,17 +5,16 @@ import (
 	"log/slog"
 
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/music"
 )
 
 // Service provides metrics functionality for the music library.
 type Service struct {
-	metrics       music.LibraryMetrics
+	metrics       LibraryMetrics
 	configManager *config.Manager
 }
 
 // NewService creates a new metrics service.
-func NewService(metrics music.LibraryMetrics, cfgManager *config.Manager) *Service {
+func NewService(metrics LibraryMetrics, cfgManager *config.Manager) *Service {
 	return &Service{
 		metrics:       metrics,
 		configManager: cfgManager,

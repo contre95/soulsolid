@@ -39,9 +39,10 @@ func (m *MetricsData) LyricsChartData() *ApexChartData {
 	series := []float64{0, 0}
 
 	for _, metric := range m.LyricsStats {
-		if metric.Key == "has_lyrics" {
+		switch metric.Key {
+		case "has_lyrics":
 			series[0] = float64(metric.Value)
-		} else if metric.Key == "no_lyrics" {
+		case "no_lyrics":
 			series[1] = float64(metric.Value)
 		}
 	}

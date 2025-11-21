@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
@@ -457,8 +458,8 @@ func (d *SqliteLibrary) GetGenreDistribution(ctx context.Context) (map[string]in
 }
 
 // GetMetadataCompleteness returns statistics about metadata completeness.
-func (d *SqliteLibrary) GetMetadataCompleteness(ctx context.Context) (music.MetadataCompletenessStats, error) {
-	var stats music.MetadataCompletenessStats
+func (d *SqliteLibrary) GetMetadataCompleteness(ctx context.Context) (metrics.MetadataCompletenessStats, error) {
+	var stats metrics.MetadataCompletenessStats
 
 	// Count tracks with complete metadata (title, artist, album, genre, year)
 	err := d.db.QueryRowContext(ctx, `
@@ -570,8 +571,8 @@ func (d *SqliteLibrary) GetYearDistribution(ctx context.Context) (map[string]int
 }
 
 // GetLyricsStats returns statistics about lyrics presence.
-func (d *SqliteLibrary) GetLyricsStats(ctx context.Context) (music.LyricsStats, error) {
-	var stats music.LyricsStats
+func (d *SqliteLibrary) GetLyricsStats(ctx context.Context) (metrics.LyricsStats, error) {
+	var stats metrics.LyricsStats
 
 	// Count tracks with lyrics
 	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE lyrics IS NOT NULL AND lyrics != ''").Scan(&stats.WithLyrics)
@@ -626,7 +627,7 @@ func (d *SqliteLibrary) StoreMetric(ctx context.Context, metricType, key string,
 }
 
 // GetStoredMetrics retrieves stored metrics of a specific type.
-func (d *SqliteLibrary) GetStoredMetrics(ctx context.Context, metricType string) ([]music.StoredMetric, error) {
+func (d *SqliteLibrary) GetStoredMetrics(ctx context.Context, metricType string) ([]metrics.StoredMetric, error) {
 	rows, err := d.db.QueryContext(ctx, `
 		SELECT metric_key, metric_value
 		FROM library_metrics
@@ -638,17 +639,17 @@ func (d *SqliteLibrary) GetStoredMetrics(ctx context.Context, metricType string)
 	}
 	defer rows.Close()
 
-	var metrics []music.StoredMetric
+	var storedMetrics []metrics.StoredMetric
 	for rows.Next() {
-		var m music.StoredMetric
+		var m metrics.StoredMetric
 		m.Type = metricType
 		if err := rows.Scan(&m.Key, &m.Value); err != nil {
 			return nil, err
 		}
-		metrics = append(metrics, m)
+		storedMetrics = append(storedMetrics, m)
 	}
 
-	return metrics, rows.Err()
+	return storedMetrics, rows.Err()
 }
 
 // ClearStoredMetrics removes all stored metrics.

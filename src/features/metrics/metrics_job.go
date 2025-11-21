@@ -6,16 +6,15 @@ import (
 	"log/slog"
 
 	"github.com/contre95/soulsolid/src/features/jobs"
-	"github.com/contre95/soulsolid/src/music"
 )
 
 // MetricsCalculationTask implements jobs.Task for calculating library metrics.
 type MetricsCalculationTask struct {
-	metrics music.LibraryMetrics
+	metrics LibraryMetrics
 }
 
 // NewMetricsCalculationTask creates a new metrics calculation task.
-func NewMetricsCalculationTask(metrics music.LibraryMetrics) *MetricsCalculationTask {
+func NewMetricsCalculationTask(metrics LibraryMetrics) *MetricsCalculationTask {
 	return &MetricsCalculationTask{
 		metrics: metrics,
 	}
