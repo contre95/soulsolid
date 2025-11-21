@@ -2,11 +2,11 @@
   <!-- Basic Statistics Cards -->
   <div class="lg:col-span-2">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="library-overview">
-      <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-2xl shadow-lg">
+      <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg">
         <div class="flex items-center">
           <div class="flex-shrink-0">
             <div
-              class="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:from-cyan-400 group-hover:to-blue-500 transition-colors"
+              class="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg group-hover:from-cyan-400 group-hover:to-blue-500 transition-colors"
             >
               <i
                 class="fa-solid fa-music text-2xl text-white drop-shadow-md group-hover:scale-110 transition-transform"
@@ -30,11 +30,11 @@
         </div>
       </div>
 
-      <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-2xl shadow-lg">
+      <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg">
         <div class="flex items-center">
           <div class="flex-shrink-0">
             <div
-              class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:from-indigo-400 group-hover:to-purple-500 transition-colors"
+              class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg group-hover:from-indigo-400 group-hover:to-purple-500 transition-colors"
             >
               <i
                 class="fa-solid fa-guitar text-2xl text-white drop-shadow-md group-hover:scale-110 transition-transform"
@@ -58,11 +58,11 @@
         </div>
       </div>
 
-      <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-2xl shadow-lg">
+      <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg">
         <div class="flex items-center">
           <div class="flex-shrink-0">
             <div
-              class="w-16 h-16 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:from-purple-400 group-hover:to-violet-500 transition-colors"
+              class="w-16 h-16 bg-gradient-to-br from-purple-500 to-violet-600 rounded-lg flex items-center justify-center shadow-lg group-hover:from-purple-400 group-hover:to-violet-500 transition-colors"
             >
               <i
                 class="fa-solid fa-compact-disc text-2xl text-white drop-shadow-md group-hover:scale-110 transition-transform"
@@ -91,25 +91,33 @@
 
 <!-- Charts Section -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-  <!-- Year Distribution Chart -->
+  <!-- Genre Distribution Chart -->
   <div
-    class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-2xl shadow-lg lg:col-span-3"
+    class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg lg:col-span-1"
     style="height: 300px"
   >
     <div id="genreChart" style="width: 100%; height: 100%"></div>
   </div>
 
-  <!-- Format Distribution Chart -->
+  <!-- Year Distribution Chart -->
   <div
-    class="bg-white/80 dark:bg-gray-900/70 p-3 rounded-2xl shadow-lg lg:col-span-1"
+    class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg lg:col-span-2"
     style="height: 300px"
   >
-    <div id="lyricsChart" style="width: 100%; height: 100%"></div>
+    <div id="yearChart" style="width: 100%; height: 100%"></div>
+  </div>
+
+  <!-- Format Distribution Chart -->
+  <div
+    class="bg-white/80 dark:bg-gray-900/70 p-3 rounded-lg shadow-lg lg:col-span-1"
+    style="height: 300px"
+  >
+    <div id="formatChart" style="width: 100%; height: 100%"></div>
   </div>
 
   <!-- Metadata Completeness Chart -->
   <div
-    class="bg-white/80 dark:bg-gray-900/70 p-3 rounded-2xl shadow-lg lg:col-span-2"
+    class="bg-white/80 dark:bg-gray-900/70 p-3 rounded-lg shadow-lg lg:col-span-2"
     style="height: 300px"
   >
     <div id="metadataChart" style="width: 100%; height: 100%"></div>
@@ -117,294 +125,368 @@
 </div>
 
 <script>
-  // Conditionally load ApexCharts to avoid SES issues
-  if (typeof ApexCharts === 'undefined') {
-    try {
-      const script = document.createElement('script');
-      script.src = '/js/apexcharts.min.js';
-      script.onload = function() {
-        initCharts();
-      };
-      script.onerror = function() {
-        console.warn('ApexCharts failed to load, using fallback');
+    // Conditionally load ApexCharts to avoid SES issues
+    if (typeof ApexCharts === 'undefined') {
+      try {
+        const script = document.createElement('script');
+        script.src = '/js/apexcharts.min.js';
+        script.onload = function() {
+          initCharts();
+        };
+        script.onerror = function() {
+          console.warn('ApexCharts failed to load, using fallback');
+          showChartFallbacks();
+        };
+        document.head.appendChild(script);
+      } catch (e) {
+        console.warn('ApexCharts loading failed:', e);
         showChartFallbacks();
-      };
-      document.head.appendChild(script);
-    } catch (e) {
-      console.warn('ApexCharts loading failed:', e);
-      showChartFallbacks();
-    }
-  } else {
-    initCharts();
-  }
-
-  function showChartFallbacks() {
-    // Fallback display when ApexCharts fails to load
-    const charts = ['genreChart', 'lyricsChart', 'metadataChart'];
-    charts.forEach(id => {
-      const element = document.getElementById(id);
-      if (element) {
-        element.parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><div class="text-center"><i class="fas fa-chart-bar text-4xl mb-2"></i><p>Charts unavailable</p><p class="text-sm">ApexCharts loading failed</p></div></div>';
       }
-    });
-  }
-
-  function initCharts() {
-    // Check if we have any metrics data
-    if ({{len .Metrics.GenreCounts}} === 0 && {{len .Metrics.LyricsStats}} === 0 && {{len .Metrics.MetadataCompleteness}} === 0) {
-      // No metrics available, show message
-      document.getElementById('genreChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><div class="text-center"><i class="fas fa-chart-bar text-4xl mb-2"></i><p>No metrics available.<br>Run metrics calculation first.</p></div></div>';
-      document.getElementById('lyricsChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><div class="text-center"><i class="fas fa-chart-bar text-4xl mb-2"></i><p>No metrics available.<br>Run metrics calculation first.</p></div></div>';
-      document.getElementById('metadataChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><div class="text-center"><i class="fas fa-chart-bar text-4xl mb-2"></i><p>No metrics available.<br>Run metrics calculation first.</p></div></div>';
-      return;
+    } else {
+      initCharts();
     }
 
-    // Year Chart
-    fetch('/api/metrics/year-chart')
-      .then(response => response.json())
-      .then(data => {
-        if (data.labels && data.labels.length > 0) {
-          // Group years by decades
-          const decadeData = {};
-          const currentYear = new Date().getFullYear();
-          const currentDecade = Math.floor(currentYear / 10) * 10;
+    function showChartFallbacks() {
+      // Fallback display when ApexCharts fails to load
+      const charts = ['genreChart', 'yearChart', 'formatChart', 'metadataChart'];
+      charts.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><div class="text-center"><i class="fas fa-chart-bar text-4xl mb-2"></i><p>Charts unavailable</p><p class="text-sm">ApexCharts loading failed</p></div></div>';
+        }
+      });
+    }
 
-          data.labels.forEach((year, index) => {
-            const yearNum = parseInt(year);
-            if (yearNum >= 1900) {
-              const decade = Math.floor(yearNum / 10) * 10;
-              const decadeLabel = decade === currentDecade ? `${decade}s` : `${decade}s`;
+    function initCharts() {
+      // Check if we have any metrics data
+      if ({{len .Metrics.GenreCounts}} === 0 && {{len .Metrics.LyricsStats}} === 0 && {{len .Metrics.MetadataCompleteness}} === 0) {
+        // No metrics available, show message
+        const charts = ['genreChart', 'yearChart', 'formatChart', 'metadataChart'];
+        charts.forEach(id => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><div class="text-center"><i class="fas fa-chart-bar text-4xl mb-2"></i><p>No metrics available.<br>Run metrics calculation first.</p></div></div>';
+          }
+        });
+        return;
+      }
 
-              if (!decadeData[decadeLabel]) {
-                decadeData[decadeLabel] = 0;
-              }
-              decadeData[decadeLabel] += data.series[index];
-            }
-          });
+      // Genre Chart
+      fetch('/api/metrics/genre-chart')
+        .then(response => response.json())
+        .then(data => {
+          if (data.labels && data.labels.length > 0) {
+            // Convert data format for treemap and limit to top 12 genres
+            const treemapData = data.labels.map((label, index) => ({
+              x: label,
+              y: data.series[index]
+            }));
 
-          // Sort decades chronologically
-          const sortedDecades = Object.keys(decadeData).sort((a, b) => {
-            const decadeA = parseInt(a);
-            const decadeB = parseInt(b);
-            return decadeA - decadeB;
-          });
+            // Sort by track count (descending) and take top 12
+            treemapData.sort((a, b) => b.y - a.y);
+            const limitedData = treemapData.slice(0, 16);
 
-          const colors = ['#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0', '#00D9FF', '#FF6B6B', '#4ECDC4'];
-
-          const options = {
-            series: [{
-              data: sortedDecades.map(decade => decadeData[decade])
-            }],
-            chart: {
-              height: '100%',
-              type: 'bar',
-              events: {
-                click: function(chart, w, e) {
-                  // console.log(chart, w, e)
-                }
-              }
-            },
-            toolbar: {
-              show: false
-            },
-            colors: colors,
-            plotOptions: {
-              bar: {
-                columnWidth: '45%',
-                distributed: true,
-                borderRadius: 4,
-              }
-            },
-            dataLabels: {
-              enabled: false
-            },
-            legend: {
-              show: false
-            },
-            xaxis: {
-              categories: sortedDecades,
-              labels: {
-                style: {
-                  colors: '#6E6E6E',
-                  fontSize: '12px'
-                }
-              }
-            },
-            yaxis: {
-              title: {
-                text: 'Number of Tracks',
-                style: {
-                  color: '#6E6E6E',
-                  fontWeight: 'bold'
+            const options = {
+              series: [{
+                data: limitedData
+              }],
+              legend: {
+                show: false
+              },
+              chart: {
+                height: '100%',
+                type: 'treemap',
+                toolbar: {
+                  show: false
                 }
               },
-              labels: {
-                style: {
-                  colors: '#6E6E6E'
+              colors: [
+                '#3B93A5',
+                '#F7B844',
+                '#ADD8C7',
+                '#EC3C65',
+                '#CDD7B6',
+                '#C1F666',
+                '#D43F97',
+                '#1E5D8C',
+                '#421243',
+                '#7F94B0',
+                '#EF6537',
+                '#C0ADDB'
+              ],
+              plotOptions: {
+                treemap: {
+                  distributed: true,
+                  enableShades: false,
+                  borderRadius: 0
                 }
-              }
-            },
-            tooltip: {
-              theme: 'light'
-            }
-          };
-
-          new ApexCharts(document.getElementById('genreChart'), options).render();
-        } else {
-          document.getElementById('genreChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><p>No year data available</p></div>';
-        }
-      })
-      .catch(err => {
-        console.error('Failed to load year chart:', err);
-        document.getElementById('genreChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-red-500"><p>Failed to load chart</p></div>';
-      });
-
-    // Format Chart
-    fetch('/api/metrics/format-chart')
-      .then(response => response.json())
-      .then(data => {
-        if (data.labels && data.labels.length > 0) {
-          const options = {
-            series: data.series,
-            chart: {
-              type: 'pie',
-              height: '100%',
-              toolbar: {
-                show: false
-              }
-            },
-            labels: data.labels,
-            colors: data.colors,
-            responsive: [{
-              breakpoint: 480,
-              options: {
-                chart: {
-                  width: 200
-                },
-                legend: {
-                  position: 'bottom'
-                }
-              }
-            }],
-            legend: {
-              position: 'bottom',
-              labels: {
-                colors: '#6E6E6E'
-              }
-            },
-            tooltip: {
-              theme: 'light',
-              y: {
-                formatter: function (val) {
-                  return val + " tracks"
-                }
-              }
-            }
-          };
-
-          new ApexCharts(document.getElementById('lyricsChart'), options).render();
-        } else {
-          document.getElementById('lyricsChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><p>No format data available</p></div>';
-        }
-      })
-      .catch(err => {
-        console.error('Failed to load format chart:', err);
-        document.getElementById('lyricsChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-red-500"><p>Failed to load chart</p></div>';
-      });
-
-    // Metadata Chart
-    fetch('/api/metrics/metadata-chart')
-      .then(response => response.json())
-      .then(data => {
-        if (data.labels && data.labels.length > 0) {
-          // Round data to 2 decimals
-          const roundedData = data.series.map(val => parseFloat(val.toFixed(2)));
-
-          const options = {
-            series: [{
-              name: 'Metadata',
-              data: roundedData
-            }],
-            chart: {
-              type: 'bar',
-              height: '100%',
-              toolbar: {
-                show: false
-              }
-            },
-            colors: data.colors,
-            plotOptions: {
-              bar: {
-                borderRadius: 2,
-                horizontal: true,
-                distributed: true,
-                dataLabels: {
-                  enabled: true,
-                  position: 'center',
+              },
+              tooltip: {
+                theme: 'light',
+                y: {
                   formatter: function (val) {
-                    return val + "sd";
-                  },
-                  style: {
-                    colors: ['#6E6E6E'],
-                    fontSize: '12px'
+                    return val + " tracks"
                   }
                 }
               }
-            },
-            xaxis: {
-              categories: data.labels,
-              title: {
-                text: 'Completeness',
-                style: {
-                  color: '#6E6E6E'
-                }
-              },
-              labels: {
-                style: {
-                  colors: '#6E6E6E'
-                },
-                formatter: function (val) {
-                  return val/2
-                }
-              }
-            },
-            yaxis: {
-              title: {
-                text: '',
-                style: {
-                  color: '#6E6E6E'
-                }
-              },
-              labels: {
-                style: {
-                  colors: '#6E6E6E'
-                }
-              }
-            },
-            legend: {
-              show: false
-            },
-            fill: {
-              opacity: 1
-            },
-            tooltip: {
-              theme: 'light',
-              y: {
-                formatter: function (val) {
-                  return val.toFixed(2) + "%"
-                }
-              }
-            }
-          };
+            };
 
-          new ApexCharts(document.getElementById('metadataChart'), options).render();
-        } else {
-          document.getElementById('metadataChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><p>No metadata data available</p></div>';
-        }
-      })
-      .catch(err => {
-        console.error('Failed to load metadata chart:', err);
-        document.getElementById('metadataChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-red-500"><p>Failed to load chart</p></div>';
-      });
-  }
+            new ApexCharts(document.getElementById('genreChart'), options).render();
+          } else {
+            document.getElementById('genreChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><p>No genre data available</p></div>';
+          }
+        })
+        .catch(err => {
+          console.error('Failed to load genre chart:', err);
+          document.getElementById('genreChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-red-500"><p>Failed to load chart</p></div>';
+        });
+
+      // Year Chart
+      fetch('/api/metrics/year-chart')
+        .then(response => response.json())
+        .then(data => {
+          if (data.labels && data.labels.length > 0) {
+            // Group years by decades
+            const decadeData = {};
+            const currentYear = new Date().getFullYear();
+            const currentDecade = Math.floor(currentYear / 10) * 10;
+
+            data.labels.forEach((year, index) => {
+              const yearNum = parseInt(year);
+              if (yearNum >= 1900) {
+                const decade = Math.floor(yearNum / 10) * 10;
+                const decadeLabel = decade === currentDecade ? `${decade}s` : `${decade}s`;
+
+                if (!decadeData[decadeLabel]) {
+                  decadeData[decadeLabel] = 0;
+                }
+                decadeData[decadeLabel] += data.series[index];
+              }
+            });
+
+            // Sort decades chronologically
+            const sortedDecades = Object.keys(decadeData).sort((a, b) => {
+              const decadeA = parseInt(a);
+              const decadeB = parseInt(b);
+              return decadeA - decadeB;
+            });
+
+            const colors = ['#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0', '#00D9FF', '#FF6B6B', '#4ECDC4'];
+
+            const options = {
+              series: [{
+                data: sortedDecades.map(decade => decadeData[decade])
+              }],
+              chart: {
+                height: '100%',
+                type: 'bar',
+                events: {
+                  click: function(chart, w, e) {
+                    // console.log(chart, w, e)
+                  }
+                }
+              },
+              toolbar: {
+                show: false
+              },
+              colors: colors,
+              plotOptions: {
+                bar: {
+                  columnWidth: '45%',
+                  distributed: true,
+                  borderRadius: 4,
+                }
+              },
+              dataLabels: {
+                enabled: false
+              },
+              legend: {
+                show: false
+              },
+              xaxis: {
+                categories: sortedDecades,
+                labels: {
+                  style: {
+                    colors: '#6E6E6E',
+                    fontSize: '12px'
+                  }
+                }
+              },
+              yaxis: {
+                title: {
+                  text: 'Number of Tracks',
+                  style: {
+                    color: '#6E6E6E',
+                    fontWeight: 'bold'
+                  }
+                },
+                labels: {
+                  style: {
+                    colors: '#6E6E6E'
+                  }
+                }
+              },
+              tooltip: {
+                theme: 'light'
+              }
+            };
+
+            new ApexCharts(document.getElementById('yearChart'), options).render();
+          } else {
+            document.getElementById('yearChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><p>No year data available</p></div>';
+          }
+        })
+        .catch(err => {
+          console.error('Failed to load year chart:', err);
+          document.getElementById('yearChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-red-500"><p>Failed to load chart</p></div>';
+        });
+
+      // Format Chart
+      fetch('/api/metrics/format-chart')
+        .then(response => response.json())
+        .then(data => {
+          if (data.labels && data.labels.length > 0) {
+            const options = {
+              series: data.series,
+              chart: {
+                type: 'pie',
+                height: '100%',
+                toolbar: {
+                  show: false
+                }
+              },
+              labels: data.labels,
+              colors: data.colors,
+              responsive: [{
+                breakpoint: 480,
+                options: {
+                  chart: {
+                    width: 200
+                  },
+                  legend: {
+                    position: 'bottom'
+                  }
+                }
+              }],
+              legend: {
+                position: 'bottom',
+                labels: {
+                  colors: '#6E6E6E'
+                }
+              },
+              tooltip: {
+                theme: 'light',
+                y: {
+                  formatter: function (val) {
+                    return val + " tracks"
+                  }
+                }
+              }
+            };
+
+            new ApexCharts(document.getElementById('formatChart'), options).render();
+  } else {
+            document.getElementById('formatChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><p>No format data available</p></div>';
+          }
+        })
+        .catch(err => {
+          console.error('Failed to load format chart:', err);
+          document.getElementById('formatChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-red-500"><p>Failed to load chart</p></div>';
+        });
+
+      // Metadata Chart
+      fetch('/api/metrics/metadata-chart')
+        .then(response => response.json())
+        .then(data => {
+          if (data.labels && data.labels.length > 0) {
+            // Round data to 2 decimals
+            const roundedData = data.series.map(val => parseFloat(val.toFixed(2)));
+
+            const options = {
+              series: [{
+                name: 'Metadata',
+                data: roundedData
+              }],
+              chart: {
+                type: 'bar',
+                height: '100%',
+                toolbar: {
+                  show: false
+                }
+              },
+              colors: data.colors,
+              plotOptions: {
+                bar: {
+                  borderRadius: 2,
+                  horizontal: true,
+                  distributed: true,
+                  dataLabels: {
+                    enabled: true,
+                    position: 'center',
+                    formatter: function (val) {
+                      return val + "sd";
+                    },
+                    style: {
+                      colors: ['#6E6E6E'],
+                      fontSize: '12px'
+                    }
+                  }
+                }
+              },
+              xaxis: {
+                categories: data.labels,
+                title: {
+                  text: 'Completeness',
+                  style: {
+                    color: '#6E6E6E'
+                  }
+                },
+                labels: {
+                  style: {
+                    colors: '#6E6E6E'
+                  },
+                  formatter: function (val) {
+                    return val/2
+                  }
+                }
+              },
+              yaxis: {
+                title: {
+                  text: '',
+                  style: {
+                    color: '#6E6E6E'
+                  }
+                },
+                labels: {
+                  style: {
+                    colors: '#6E6E6E'
+                  }
+                }
+              },
+              legend: {
+                show: false
+              },
+              fill: {
+                opacity: 1
+              },
+              tooltip: {
+                theme: 'light',
+                y: {
+                  formatter: function (val) {
+                    return val.toFixed(2) + "%"
+                  }
+                }
+              }
+            };
+
+            new ApexCharts(document.getElementById('metadataChart'), options).render();
+          } else {
+            document.getElementById('metadataChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><p>No metadata data available</p></div>';
+          }
+        })
+        .catch(err => {
+          console.error('Failed to load metadata chart:', err);
+          document.getElementById('metadataChart').parentElement.innerHTML = '<div class="flex items-center justify-center h-64 text-red-500"><p>Failed to load chart</p></div>';
+        });
+    }
 </script>
