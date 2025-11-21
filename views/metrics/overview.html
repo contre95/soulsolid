@@ -178,7 +178,7 @@
               if (!decadeData[decadeLabel]) {
                 decadeData[decadeLabel] = 0;
               }
-              decadeData[decadeLabel] += data.datasets[0].data[index];
+              decadeData[decadeLabel] += data.series[index];
             }
           });
 
@@ -264,11 +264,8 @@
       .then(response => response.json())
       .then(data => {
         if (data.labels && data.labels.length > 0) {
-          const seriesData = data.datasets[0].data;
-          const colors = ['#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0'];
-
           const options = {
-            series: seriesData,
+            series: data.series,
             chart: {
               type: 'pie',
               height: '100%',
@@ -277,7 +274,7 @@
               }
             },
             labels: data.labels,
-            colors: colors,
+            colors: data.colors,
             responsive: [{
               breakpoint: 480,
               options: {
@@ -321,8 +318,7 @@
       .then(data => {
         if (data.labels && data.labels.length > 0) {
           // Round data to 2 decimals
-          const roundedData = data.datasets[0].data.map(val => parseFloat(val.toFixed(2)));
-          const colors = ['#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0'];
+          const roundedData = data.series.map(val => parseFloat(val.toFixed(2)));
 
           const options = {
             series: [{
@@ -336,7 +332,7 @@
                 show: false
               }
             },
-            colors: colors,
+            colors: data.colors,
             plotOptions: {
               bar: {
                 borderRadius: 2,

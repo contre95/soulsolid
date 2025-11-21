@@ -85,9 +85,9 @@ func (h *Handler) GetMetadataChart(c *fiber.Ctx) error {
 	}
 
 	if totalTracks == 0 {
-		return c.JSON(&ChartData{
-			Labels:   []string{},
-			Datasets: []Dataset{},
+		return c.JSON(&ApexChartData{
+			Labels: []string{},
+			Series: []float64{},
 		})
 	}
 
@@ -128,13 +128,10 @@ func (h *Handler) GetMetadataChart(c *fiber.Ctx) error {
 	labels := []string{"ISRC", "BPM", "Year", "Genre", "Lyrics"}
 	data := []float64{isrcPct, bpmPct, yearPct, genrePct, lyricsPct}
 
-	return c.JSON(&ChartData{
+	return c.JSON(&ApexChartData{
 		Labels: labels,
-		Datasets: []Dataset{{
-			Label:           "Metadata Completeness (%)",
-			Data:            data,
-			BackgroundColor: []string{"#4BC0C0", "#FFCE56", "#FF6384", "#36A2EB", "#9966FF"},
-		}},
+		Series: data,
+		Colors: []string{"#00E396", "#FEB019", "#FF4560", "#008FFB", "#775DD0"},
 	})
 }
 
