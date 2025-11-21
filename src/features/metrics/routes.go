@@ -17,4 +17,10 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	// UI routes for HTMX partials
 	ui := app.Group("/ui/metrics")
 	ui.Get("/overview", handler.GetMetricsOverview)
+
+	// HTMX chart endpoints
+	ui.Get("/charts/genre", handler.GetGenreChartHTML)
+	ui.Get("/charts/year", handler.GetYearChartHTML)
+	ui.Get("/charts/format", handler.GetFormatChartHTML)
+	ui.Get("/charts/metadata", handler.GetMetadataChartHTML)
 }

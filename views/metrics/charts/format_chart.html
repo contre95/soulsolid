@@ -1,0 +1,50 @@
+{{if .ChartData}}
+<div id="formatChart" style="width: 100%; height: 100%"></div>
+<script>
+  (function() {
+    const options = {
+      series: {{.ChartData.Series}},
+      chart: {
+        type: 'pie',
+        height: '100%',
+        toolbar: {
+          show: false
+        }
+      },
+      labels: {{.ChartData.Labels}},
+      colors: {{.ChartData.Colors}},
+      responsive: [{
+        breakpoint: 480,
+        options: {
+          chart: {
+            width: 200
+          },
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }],
+      legend: {
+        position: 'bottom',
+        labels: {
+          colors: '#6E6E6E'
+        }
+      },
+      tooltip: {
+        theme: 'light',
+        y: {
+          formatter: function (val) {
+            return val + " tracks"
+          }
+        }
+      }
+    };
+
+    new ApexCharts(document.getElementById('formatChart'), options).render();
+  })();
+</script>
+{{else}}
+<div class="flex items-center justify-center h-64 text-gray-500">
+  <p>No format data available</p>
+</div>
+{{end}}
