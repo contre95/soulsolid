@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/contre95/soulsolid/src/features/importing"
 )
@@ -26,6 +27,7 @@ func NewFingerprintService() importing.FingerprintProvider {
 func (s *Service) GenerateFingerprint(ctx context.Context, filePath string) (string, error) {
 	ext := strings.ToLower(filepath.Ext(filePath))
 	// Return random string
+	time.Sleep(3 * time.Second)
 	r := rand.Text()
 	return r, nil
 	switch ext {
