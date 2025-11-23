@@ -78,7 +78,7 @@ func (s *Service) GetTrackFileTags(ctx context.Context, trackID string) (*music.
 	result.BitDepth = currentTrack.BitDepth
 	result.Channels = currentTrack.Channels
 	result.Bitrate = currentTrack.Bitrate
-
+	slog.Warn("chroma:", currentTrack.ChromaprintFingerprint)
 	// Ensure track artists have IDs by matching with database
 	result = *s.matchArtistsWithDatabase(ctx, &result)
 
@@ -285,7 +285,6 @@ func (s *Service) buildTrackFromFormData(ctx context.Context, originalTrack *mus
 	track.BitDepth = originalTrack.BitDepth
 	track.Channels = originalTrack.Channels
 	track.Bitrate = originalTrack.Bitrate
-
 	return track, nil
 }
 

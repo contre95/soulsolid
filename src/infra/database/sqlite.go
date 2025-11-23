@@ -326,7 +326,7 @@ func (d *SqliteLibrary) GetTrack(ctx context.Context, id string) (*music.Track, 
 	// Get track basic info
 	row := tx.QueryRowContext(ctx, `
     SELECT id, path, title, title_version, duration, track_number, disc_number,
-      isrc, bitrate, format, sample_rate, bit_depth, channels, explicit_content,
+      isrc, chromaprint_fingerprint, bitrate, format, sample_rate, bit_depth, channels, explicit_content,
       preview_url, composer, genre, year, original_year, lyrics, explicit_lyrics,
       bpm, gain, source, source_url, added_date, modified_date
     FROM tracks
@@ -339,7 +339,7 @@ func (d *SqliteLibrary) GetTrack(ctx context.Context, id string) (*music.Track, 
 
 	err = row.Scan(&track.ID, &track.Path, &track.Title, &track.TitleVersion, &track.Metadata.Duration,
 		&track.Metadata.TrackNumber, &track.Metadata.DiscNumber,
-		&track.ISRC, &track.Bitrate, &track.Format, &track.SampleRate, &track.BitDepth,
+		&track.ISRC, &track.ChromaprintFingerprint, &track.Bitrate, &track.Format, &track.SampleRate, &track.BitDepth,
 		&track.Channels, &track.ExplicitContent, &track.PreviewURL,
 		&track.Metadata.Composer, &track.Metadata.Genre, &track.Metadata.Year,
 		&track.Metadata.OriginalYear, &track.Metadata.Lyrics, &track.Metadata.ExplicitLyrics,
