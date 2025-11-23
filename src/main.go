@@ -47,6 +47,7 @@ func main() {
 
 	tagReader := tag.NewTagReader()
 	fingerprintReader := chroma.NewFingerprintService()
+	tagWriter := tag.NewTagWriter(cfgManager.Get().Downloaders.Artwork.Embedded)
 
 	importQueue := queue.NewInMemoryQueue()
 	dirWatcher, err := watcher.NewWatcher()
@@ -76,8 +77,6 @@ func main() {
 		slog.Error("Failed to load plugins", "error", err)
 		panic("Failed to load plugins")
 	}
-
-	tagWriter := tag.NewTagWriter(cfgManager.Get().Downloaders.Artwork.Embedded)
 
 	musicbrainzProvider := metadata.NewMusicBrainzProvider(cfgManager.Get().Metadata.Providers["musicbrainz"].Enabled)
 	discogsAPIKey := ""

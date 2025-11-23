@@ -155,6 +155,15 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 		tag.AddTextFrame("TIT3", id3v2.EncodingUTF8, track.TitleVersion)
 	}
 
+	// Chromaprint fingerprint
+	if track.ChromaprintFingerprint != "" {
+		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			Description: "CHROMAPRINT_FINGERPRINT",
+			Value:       track.ChromaprintFingerprint,
+		})
+	}
+
 	// Lyrics (using TXXX frame as fallback)
 	if track.Metadata.Lyrics != "" {
 		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
@@ -317,6 +326,10 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 	if track.TitleVersion != "" {
 		removeExistingFields(vorbisComment, "VERSION")
 		vorbisComment.Add("VERSION", track.TitleVersion)
+	}
+	if track.ChromaprintFingerprint != "" {
+		removeExistingFields(vorbisComment, "CHROMAPRINT_FINGERPRINT")
+		vorbisComment.Add("CHROMAPRINT_FINGERPRINT", track.ChromaprintFingerprint)
 	}
 	if track.Metadata.BPM > 0 {
 		removeExistingFields(vorbisComment, "BPM")

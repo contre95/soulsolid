@@ -304,8 +304,15 @@ func (s *Service) CalculateFingerprint(ctx context.Context, trackID string) erro
 	// Update track with new fingerprint
 	track.ChromaprintFingerprint = fingerprint
 
+	// Write fingerprint to file tags
+	if err := s.tagWriter.WriteFileTags(ctx, track.Path, track); err != nil {
+		slog.Warn("Failed to write fingerprint to file tags", "error", err, "trackId", trackID, "path", track.Path)
+		// Don't fail the operation, just log the warning
+	} else {
+		slog.Info("Successfully wrote fingerprint to file tags", "trackId", trackID, "path", track.Path, "fingerprint", fingerprint)
+	}
+
 	// Update track in database
-	slog.Warn("CHROMEAAAAAAAAAAAA", "chroma", track.ChromaprintFingerprint)
 	err = s.libraryRepo.UpdateTrack(ctx, track)
 	if err != nil {
 		return fmt.Errorf("failed to update track with fingerprint: %w", err)

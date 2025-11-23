@@ -142,6 +142,14 @@ func (r *TagReader) readAdditionalMetadata(tags tag.Metadata, track *music.Track
 		slog.Debug("No lyrics found in file", "path", track.Path)
 	}
 
+	// Try to read chromaprint fingerprint from tags
+	if fingerprint := r.readChromaprintFingerprint(tags); fingerprint != "" {
+		slog.Debug("Found chromaprint fingerprint in file", "path", track.Path, "fingerprint", fingerprint)
+		track.ChromaprintFingerprint = fingerprint
+	} else {
+		slog.Debug("No chromaprint fingerprint found in file", "path", track.Path)
+	}
+
 	// Try to extract basic audio properties
 	r.extractAudioProperties(track)
 }
@@ -156,6 +164,29 @@ func (r *TagReader) readLyrics(tags tag.Metadata) string {
 		for _, field := range lyricFields {
 			if value := rawTags[field]; value != nil {
 				slog.Debug("Found lyric field", "field", field)
+				if str, ok := value.(string); ok && str != "" {
+					return str
+				}
+				// Handle byte slices
+				if bytes, ok := value.([]byte); ok && len(bytes) > 0 {
+					return string(bytes)
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+// readChromaprintFingerprint attempts to read chromaprint fingerprint from various tag fields
+func (r *TagReader) readChromaprintFingerprint(tags tag.Metadata) string {
+	// Try to read from raw tags for chromaprint fingerprint fields
+	if rawTags := tags.Raw(); rawTags != nil {
+		// Check for common chromaprint fingerprint field names in different formats
+		fingerprintFields := []string{"CHROMAPRINT_FINGERPRINT", "CHROMAPRINT", "FINGERPRINT", "chromaprint_fingerprint", "chromaprint", "fingerprint"}
+		for _, field := range fingerprintFields {
+			if value := rawTags[field]; value != nil {
+				slog.Debug("Found chromaprint fingerprint field", "field", field)
 				if str, ok := value.(string); ok && str != "" {
 					return str
 				}
