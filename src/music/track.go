@@ -25,6 +25,7 @@ type Track struct {
 	Metadata               Metadata
 	ISRC                   string
 	ChromaprintFingerprint string
+	AcoustID               string
 	Bitrate                int
 	Format                 string
 	SampleRate             int
@@ -183,6 +184,9 @@ func (t *Track) Pretty() string {
 	builder.WriteString(fmt.Sprintf("%-30s : %.1f\n", "Gain", t.Metadata.Gain))
 	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "ISRC", t.ISRC))
 	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Chromaprint Fingerprint", t.ChromaprintFingerprint))
+	if t.AcoustID != "" {
+		builder.WriteString(fmt.Sprintf("%-30s : %s\n", "AcoustID", t.AcoustID))
+	}
 	builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Bitrate", t.Bitrate))
 	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Format", t.Format))
 	builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Sample Rate", t.SampleRate))

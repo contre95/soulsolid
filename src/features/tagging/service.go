@@ -11,6 +11,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/features/importing"
+	"github.com/contre95/soulsolid/src/infra/chroma"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/google/uuid"
 )
@@ -295,21 +296,36 @@ func (s *Service) CalculateFingerprint(ctx context.Context, trackID string) erro
 		return fmt.Errorf("failed to get track: %w", err)
 	}
 
-	// Generate fingerprint for the track file
-	fingerprint, err := s.fingerprintProvider.GenerateFingerprint(ctx, track.Path)
-	if err != nil {
-		return fmt.Errorf("failed to generate fingerprint: %w", err)
+	// Try to use the chroma service directly if it has AcoustID functionality
+	if chromaService, ok := s.fingerprintProvider.(*chroma.Service); ok {
+		// Generate fingerprint and lookup AcoustID
+		err := chromaService.UpdateTrackWithAcoustID(ctx, track)
+		if err != nil {
+			slog.Warn("Failed to update track with AcoustID, falling back to fingerprint only", "error", err, "trackId", trackID)
+			// Fallback to basic fingerprint generation
+			fingerprint, fallbackErr := s.fingerprintProvider.GenerateFingerprint(ctx, track.Path)
+			if fallbackErr != nil {
+				return fmt.Errorf("failed to generate fingerprint: %w", fallbackErr)
+			}
+			track.ChromaprintFingerprint = fingerprint
+		} else {
+			slog.Info("Successfully generated fingerprint and AcoustID", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint, "acoustid", track.AcoustID)
+		}
+	} else {
+		// Fallback to basic fingerprint generation
+		fingerprint, err := s.fingerprintProvider.GenerateFingerprint(ctx, track.Path)
+		if err != nil {
+			return fmt.Errorf("failed to generate fingerprint: %w", err)
+		}
+		track.ChromaprintFingerprint = fingerprint
 	}
-
-	// Update track with new fingerprint
-	track.ChromaprintFingerprint = fingerprint
 
 	// Write fingerprint to file tags
 	if err := s.tagWriter.WriteFileTags(ctx, track.Path, track); err != nil {
 		slog.Warn("Failed to write fingerprint to file tags", "error", err, "trackId", trackID, "path", track.Path)
 		// Don't fail the operation, just log the warning
 	} else {
-		slog.Info("Successfully wrote fingerprint to file tags", "trackId", trackID, "path", track.Path, "fingerprint", fingerprint)
+		slog.Info("Successfully wrote fingerprint and AcoustID to file tags", "trackId", trackID, "path", track.Path, "fingerprint", track.ChromaprintFingerprint, "acoustid", track.AcoustID)
 	}
 
 	// Update track in database
@@ -318,7 +334,7 @@ func (s *Service) CalculateFingerprint(ctx context.Context, trackID string) erro
 		return fmt.Errorf("failed to update track with fingerprint: %w", err)
 	}
 
-	slog.Info("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", fingerprint)
+	slog.Info("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint, "acoustid", track.AcoustID)
 	return nil
 }
 
@@ -481,6 +497,9 @@ func (s *Service) MergeFetchedData(existing, fetched *music.Track) *music.Track 
 	}
 	if fetched.ChromaprintFingerprint == "" && existing.ChromaprintFingerprint != "" {
 		result.ChromaprintFingerprint = existing.ChromaprintFingerprint
+	}
+	if fetched.AcoustID == "" && existing.AcoustID != "" {
+		result.AcoustID = existing.AcoustID
 	}
 	// Note: ExplicitContent is a boolean, so we don't merge it - we use the fetched value
 	// If we wanted to preserve existing explicit content, we would need to decide on the logic

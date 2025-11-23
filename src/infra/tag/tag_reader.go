@@ -150,6 +150,14 @@ func (r *TagReader) readAdditionalMetadata(tags tag.Metadata, track *music.Track
 		slog.Debug("No chromaprint fingerprint found in file", "path", track.Path)
 	}
 
+	// Try to read AcoustID from tags
+	if acoustID := r.readAcoustID(tags); acoustID != "" {
+		slog.Debug("Found AcoustID in file", "path", track.Path, "acoustID", acoustID)
+		track.AcoustID = acoustID
+	} else {
+		slog.Debug("No AcoustID found in file", "path", track.Path)
+	}
+
 	// Try to extract basic audio properties
 	r.extractAudioProperties(track)
 }
@@ -187,6 +195,29 @@ func (r *TagReader) readChromaprintFingerprint(tags tag.Metadata) string {
 		for _, field := range fingerprintFields {
 			if value := rawTags[field]; value != nil {
 				slog.Debug("Found chromaprint fingerprint field", "field", field)
+				if str, ok := value.(string); ok && str != "" {
+					return str
+				}
+				// Handle byte slices
+				if bytes, ok := value.([]byte); ok && len(bytes) > 0 {
+					return string(bytes)
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+// readAcoustID attempts to read AcoustID from various tag fields
+func (r *TagReader) readAcoustID(tags tag.Metadata) string {
+	// Try to read from raw tags for AcoustID fields
+	if rawTags := tags.Raw(); rawTags != nil {
+		// Check for common AcoustID field names in different formats
+		acoustIDFields := []string{"ACOUSTID_ID", "ACOUSTID", "acoustid_id", "acoustid"}
+		for _, field := range acoustIDFields {
+			if value := rawTags[field]; value != nil {
+				slog.Debug("Found AcoustID field", "field", field)
 				if str, ok := value.(string); ok && str != "" {
 					return str
 				}

@@ -276,9 +276,12 @@
                  <div>Bitrate: {{.Track.Bitrate}} kbps</div>
                  {{end}}
                   {{if .Track.ChromaprintFingerprint}}
-                  <div class="text-red-400">Fingerprint: {{.Track.ChromaprintFingerprint}}</div>
+                  <div class="text-red-400">Fingerprint: <a href="/tag/edit/{{.Track.ID}}/fingerprint/view" target="_blank" rel="noopener noreferrer" class="hover:underline">(open in new tab)</a></div>
                   {{end}}
-                 {{if .Track.Metadata.Duration}}
+                  {{if .Track.AcoustID}}
+                  <div class="text-blue-400">AcoustID: {{.Track.AcoustID}}</div>
+                  {{end}}
+                  {{if .Track.Metadata.Duration}}
                  <div>Duration: {{duration .Track.Metadata.Duration}}</div>
                  {{end}}
                 {{if .Track.Metadata.OriginalYear}}

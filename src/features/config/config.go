@@ -2,8 +2,8 @@ package config
 
 // Config holds the application configuration.
 type Config struct {
-	LibraryPath  string `yaml:"libraryPath" validate:"required"`
-	DownloadPath string `yaml:"downloadPath" validate:"required"`
+	LibraryPath  string      `yaml:"libraryPath" validate:"required"`
+	DownloadPath string      `yaml:"downloadPath" validate:"required"`
 	Telegram     Telegram    `yaml:"telegram"`
 	Logger       Logger      `yaml:"logger"`
 	Downloaders  Downloaders `yaml:"downloaders"`
@@ -11,6 +11,7 @@ type Config struct {
 	Database     Database    `yaml:"database"`
 	Import       Import      `yaml:"import"`
 	Metadata     Metadata    `yaml:"metadata"`
+	AcoustID     AcoustID    `yaml:"acoustid"`
 	Sync         Sync        `yaml:"sync"`
 	Jobs         Jobs        `yaml:"jobs"`
 }
@@ -83,6 +84,12 @@ type Metadata struct {
 type Provider struct {
 	Enabled bool    `yaml:"enabled"`
 	APIKey  *string `yaml:"api_key,omitempty"`
+}
+
+// AcoustID holds the configuration for AcoustID integration
+type AcoustID struct {
+	Enabled   bool   `yaml:"enabled"`
+	ClientKey string `yaml:"client_key"`
 }
 
 // Sync holds configuration for device synchronization

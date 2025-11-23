@@ -164,6 +164,15 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 		})
 	}
 
+	// AcoustID
+	if track.AcoustID != "" {
+		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			Description: "ACOUSTID_ID",
+			Value:       track.AcoustID,
+		})
+	}
+
 	// Lyrics (using TXXX frame as fallback)
 	if track.Metadata.Lyrics != "" {
 		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
@@ -330,6 +339,10 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 	if track.ChromaprintFingerprint != "" {
 		removeExistingFields(vorbisComment, "CHROMAPRINT_FINGERPRINT")
 		vorbisComment.Add("CHROMAPRINT_FINGERPRINT", track.ChromaprintFingerprint)
+	}
+	if track.AcoustID != "" {
+		removeExistingFields(vorbisComment, "ACOUSTID_ID")
+		vorbisComment.Add("ACOUSTID_ID", track.AcoustID)
 	}
 	if track.Metadata.BPM > 0 {
 		removeExistingFields(vorbisComment, "BPM")

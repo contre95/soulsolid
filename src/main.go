@@ -46,7 +46,7 @@ func main() {
 	jobService := jobs.NewService(&cfgManager.Get().Jobs)
 
 	tagReader := tag.NewTagReader()
-	fingerprintReader := chroma.NewFingerprintService()
+	fingerprintReader := chroma.NewFingerprintService(cfgManager)
 	tagWriter := tag.NewTagWriter(cfgManager.Get().Downloaders.Artwork.Embedded)
 
 	importQueue := queue.NewInMemoryQueue()

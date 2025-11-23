@@ -623,6 +623,30 @@ func (h *Handler) CalculateFingerprint(c *fiber.Ctx) error {
 	})
 }
 
+// ViewFingerprint handles viewing fingerprint
+func (h *Handler) ViewFingerprint(c *fiber.Ctx) error {
+	trackID := c.Params("trackId")
+	if trackID == "" || trackID == "0" {
+		slog.Error("Invalid track ID in ViewFingerprint", "trackId", trackID)
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid track ID")
+	}
+
+	// Get track from database
+	track, err := h.service.libraryRepo.GetTrack(c.Context(), trackID)
+	if err != nil || track == nil {
+		slog.Error("Failed to get track", "error", err, "trackId", trackID)
+		return c.Status(fiber.StatusNotFound).SendString("Track not found")
+	}
+
+	if track.ChromaprintFingerprint == "" {
+		return c.SendString("No fingerprint available for this track.")
+	}
+
+	// Return raw text
+	c.Set("Content-Type", "text/plain")
+	return c.SendString(track.ChromaprintFingerprint)
+}
+
 // UpdateTags handles the form submission to update track tags
 func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 	slog.Info("UpdateTags handler called", "trackId", c.Params("trackId"))
