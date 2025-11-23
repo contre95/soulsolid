@@ -78,7 +78,6 @@ func (s *Service) GetTrackFileTags(ctx context.Context, trackID string) (*music.
 	result.BitDepth = currentTrack.BitDepth
 	result.Channels = currentTrack.Channels
 	result.Bitrate = currentTrack.Bitrate
-	slog.Warn("chroma:", currentTrack.ChromaprintFingerprint)
 	// Ensure track artists have IDs by matching with database
 	result = *s.matchArtistsWithDatabase(ctx, &result)
 
@@ -286,6 +285,34 @@ func (s *Service) buildTrackFromFormData(ctx context.Context, originalTrack *mus
 	track.Channels = originalTrack.Channels
 	track.Bitrate = originalTrack.Bitrate
 	return track, nil
+}
+
+// CalculateFingerprint calculates and updates the fingerprint for a track
+func (s *Service) CalculateFingerprint(ctx context.Context, trackID string) error {
+	// Get current track data
+	track, err := s.libraryRepo.GetTrack(ctx, trackID)
+	if err != nil {
+		return fmt.Errorf("failed to get track: %w", err)
+	}
+
+	// Generate fingerprint for the track file
+	fingerprint, err := s.fingerprintProvider.GenerateFingerprint(ctx, track.Path)
+	if err != nil {
+		return fmt.Errorf("failed to generate fingerprint: %w", err)
+	}
+
+	// Update track with new fingerprint
+	track.ChromaprintFingerprint = fingerprint
+
+	// Update track in database
+	slog.Warn("CHROMEAAAAAAAAAAAA", "chroma", track.ChromaprintFingerprint)
+	err = s.libraryRepo.UpdateTrack(ctx, track)
+	if err != nil {
+		return fmt.Errorf("failed to update track with fingerprint: %w", err)
+	}
+
+	slog.Info("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", fingerprint)
+	return nil
 }
 
 // Helper functions for parsing form values

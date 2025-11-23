@@ -676,12 +676,12 @@ func (d *SqliteLibrary) UpdateTrack(ctx context.Context, track *music.Track) err
 	_, err = tx.ExecContext(ctx, `
     UPDATE tracks
     SET path = ?, title = ?, title_version = ?, duration = ?, track_number = ?, disc_number = ?,
-      isrc = ?, bitrate = ?, format = ?, sample_rate = ?, bit_depth = ?, channels = ?,
+      isrc = ?, bitrate = ?, format = ?, chromaprint_fingerprint = ?, sample_rate = ?, bit_depth = ?, channels = ?,
       explicit_content = ?, preview_url = ?, composer = ?, genre = ?, year = ?,
       original_year = ?, lyrics = ?, explicit_lyrics = ?, bpm = ?, gain = ?, source = ?, source_url = ?, modified_date = ?
     WHERE id = ?
   `, track.Path, track.Title, track.TitleVersion, track.Metadata.Duration, track.Metadata.TrackNumber, track.Metadata.DiscNumber,
-		track.ISRC, track.Bitrate, track.Format, track.SampleRate, track.BitDepth, track.Channels,
+		track.ISRC, track.Bitrate, track.Format, track.ChromaprintFingerprint, track.SampleRate, track.BitDepth, track.Channels,
 		track.ExplicitContent, track.PreviewURL, track.Metadata.Composer, track.Metadata.Genre, track.Metadata.Year,
 		track.Metadata.OriginalYear, track.Metadata.Lyrics, track.Metadata.ExplicitLyrics, track.Metadata.BPM, track.Metadata.Gain,
 		track.MetadataSource.Source, track.MetadataSource.MetadataSourceURL, track.ModifiedDate.Format(time.RFC3339), track.ID)
@@ -1397,14 +1397,6 @@ func (d *SqliteLibrary) FindTrackByMetadata(ctx context.Context, title, artistNa
 	}
 
 	return track, nil
-}
-
-// UpdateTrackFingerprint updates the fingerprint for a specific track
-func (d *SqliteLibrary) UpdateTrackFingerprint(ctx context.Context, trackID, fingerprint string) error {
-	_, err := d.db.ExecContext(ctx, `
-		UPDATE tracks SET chromaprint_fingerprint = ? WHERE id = ?
-	`, fingerprint, trackID)
-	return err
 }
 
 // FindTrackByPath finds a track by its file path
