@@ -453,3 +453,99 @@ func (s *Service) SearchTrackMetadata(ctx context.Context, trackID string, provi
 
 	return tracks, nil
 }
+
+// MergeFetchedData merges fetched metadata with existing track data
+// Prioritizes keeping the maximum amount of tags by preserving existing values when fetched values are empty
+func (s *Service) MergeFetchedData(existing, fetched *music.Track) *music.Track {
+	// Preserve database-specific data
+	result := *fetched
+	result.ID = existing.ID // Preserve the database track ID
+
+	// Preserve file-specific data
+	result.Path = existing.Path
+	result.Format = existing.Format
+	result.SampleRate = existing.SampleRate
+	result.BitDepth = existing.BitDepth
+	result.Channels = existing.Channels
+	result.Bitrate = existing.Bitrate
+
+	// Merge basic track info - preserve existing if fetched is empty
+	if fetched.Title == "" && existing.Title != "" {
+		result.Title = existing.Title
+	}
+	if fetched.ISRC == "" && existing.ISRC != "" {
+		result.ISRC = existing.ISRC
+	}
+	if fetched.TitleVersion == "" && existing.TitleVersion != "" {
+		result.TitleVersion = existing.TitleVersion
+	}
+	if fetched.ChromaprintFingerprint == "" && existing.ChromaprintFingerprint != "" {
+		result.ChromaprintFingerprint = existing.ChromaprintFingerprint
+	}
+	// Note: ExplicitContent is a boolean, so we don't merge it - we use the fetched value
+	// If we wanted to preserve existing explicit content, we would need to decide on the logic
+	// For now, we'll use the fetched value (default false if not provided)
+
+	// Merge metadata fields - preserve existing if fetched is empty
+	if fetched.Metadata.Year == 0 && existing.Metadata.Year != 0 {
+		result.Metadata.Year = existing.Metadata.Year
+	}
+	if fetched.Metadata.Genre == "" && existing.Metadata.Genre != "" {
+		result.Metadata.Genre = existing.Metadata.Genre
+	}
+	if fetched.Metadata.TrackNumber == 0 && existing.Metadata.TrackNumber != 0 {
+		result.Metadata.TrackNumber = existing.Metadata.TrackNumber
+	}
+	if fetched.Metadata.DiscNumber == 0 && existing.Metadata.DiscNumber != 0 {
+		result.Metadata.DiscNumber = existing.Metadata.DiscNumber
+	}
+	if fetched.Metadata.Composer == "" && existing.Metadata.Composer != "" {
+		result.Metadata.Composer = existing.Metadata.Composer
+	}
+	if fetched.Metadata.Lyrics == "" && existing.Metadata.Lyrics != "" {
+		result.Metadata.Lyrics = existing.Metadata.Lyrics
+	}
+	if fetched.Metadata.BPM == 0 && existing.Metadata.BPM != 0 {
+		result.Metadata.BPM = existing.Metadata.BPM
+	}
+	if fetched.Metadata.Gain == 0 && existing.Metadata.Gain != 0 {
+		result.Metadata.Gain = existing.Metadata.Gain
+	}
+	if fetched.Metadata.OriginalYear == 0 && existing.Metadata.OriginalYear != 0 {
+		result.Metadata.OriginalYear = existing.Metadata.OriginalYear
+	}
+	// Note: ExplicitLyrics is a boolean, so we don't merge it - we use the fetched value
+	// If we wanted to preserve existing explicit lyrics, we would need to decide on the logic
+	// For now, we'll use the fetched value (default false if not provided)
+
+	// Merge artists - if fetched has no artists, preserve existing ones
+	if len(result.Artists) == 0 && len(existing.Artists) > 0 {
+		result.Artists = existing.Artists
+	}
+
+	// Merge album data
+	if result.Album != nil {
+		// If fetched album has no title but existing has one, use existing
+		if result.Album.Title == "" && existing.Album != nil && existing.Album.Title != "" {
+			result.Album.Title = existing.Album.Title
+		}
+
+		// If fetched album has no artists but existing album has artists, preserve them
+		if len(result.Album.Artists) == 0 && existing.Album != nil && len(existing.Album.Artists) > 0 {
+			result.Album.Artists = existing.Album.Artists
+		}
+	} else if existing.Album != nil {
+		// If fetched has no album but existing has one, preserve the existing album
+		result.Album = existing.Album
+	}
+
+	// Merge metadata source - preserve existing if fetched is empty
+	if fetched.MetadataSource.Source == "" && existing.MetadataSource.Source != "" {
+		result.MetadataSource.Source = existing.MetadataSource.Source
+	}
+	if fetched.MetadataSource.MetadataSourceURL == "" && existing.MetadataSource.MetadataSourceURL != "" {
+		result.MetadataSource.MetadataSourceURL = existing.MetadataSource.MetadataSourceURL
+	}
+
+	return &result
+}
