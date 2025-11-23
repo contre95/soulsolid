@@ -14,6 +14,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	ui.Get("/tag/edit/:trackId/fetch/:provider", handler.FetchFromProvider)
 	ui.Get("/tag/edit/:trackId/search/:provider", handler.SearchTracksFromProvider)
 	ui.Get("/tag/edit/:trackId/select/:provider", handler.SelectTrackFromResults)
+	ui.Get("/tag/edit/:trackId/fingerprint", handler.CalculateFingerprint)
 
 	// API routes for data operations
 	tagGroup := app.Group("/tag")

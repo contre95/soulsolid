@@ -625,6 +625,32 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 	})
 }
 
+// CalculateFingerprint handles fingerprint calculation for a track
+func (h *Handler) CalculateFingerprint(c *fiber.Ctx) error {
+	trackID := c.Params("trackId")
+	if trackID == "" || trackID == "0" {
+		slog.Error("Invalid track ID in CalculateFingerprint", "trackId", trackID)
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid track ID")
+	}
+
+	// Calculate fingerprint
+	err := h.service.CalculateFingerprint(c.Context(), trackID)
+	if err != nil {
+		slog.Error("Failed to calculate fingerprint", "error", err, "trackId", trackID)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": fmt.Sprintf("Failed to calculate fingerprint: %v", err),
+		})
+	}
+
+	// Set HTMX header to refresh the edit form after successful calculation
+	c.Set("HX-Trigger", "refreshEditForm")
+
+	// Return success toast
+	return c.Render("toast/toastOk", fiber.Map{
+		"Msg": "Fingerprint calculated successfully!",
+	})
+}
+
 // UpdateTags handles the form submission to update track tags
 func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 	slog.Info("UpdateTags handler called", "trackId", c.Params("trackId"))

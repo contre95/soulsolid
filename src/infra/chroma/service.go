@@ -24,7 +24,7 @@ func NewFingerprintService() importing.FingerprintProvider {
 // GenerateFingerprint generates a fingerprint for an audio file
 func (s *Service) GenerateFingerprint(ctx context.Context, filePath string) (string, error) {
 	ext := strings.ToLower(filepath.Ext(filePath))
-
+	// Return random string
 	switch ext {
 	case ".mp3":
 		return s.generateMP3Fingerprint(filePath)
