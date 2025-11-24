@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,7 +25,7 @@ func NewHandler(service *Service) *Handler {
 }
 
 func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
-	jobType := c.Params("type")
+	jobType := strings.Clone(c.Params("type"))
 	name := c.Query("name", jobType)
 
 	jobID, err := h.service.StartJob(jobType, name, nil)

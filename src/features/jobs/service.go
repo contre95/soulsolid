@@ -172,9 +172,11 @@ func (s *Service) RegisterHandler(jobType string, handler TaskHandler) {
 }
 
 func (s *Service) StartJob(jobType string, name string, metadata map[string]any) (string, error) {
+	// Create a copy of jobType to prevent potential memory sharing issues
+	jobTypeCopy := strings.Clone(jobType)
 	job := &Job{
 		ID:        uuid.New().String(),
-		Type:      jobType,
+		Type:      jobTypeCopy,
 		Name:      name,
 		Status:    JobStatusPending,
 		Progress:  0,
