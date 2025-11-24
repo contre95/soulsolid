@@ -13,6 +13,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// Ensure Service implements TaggingService interface
+var _ music.TaggingService = (*Service)(nil)
+
 // Service provides tag editing functionality
 type Service struct {
 	tagWriter           TagWriter
@@ -287,8 +290,8 @@ func (s *Service) buildTrackFromFormData(ctx context.Context, originalTrack *mus
 	return track, nil
 }
 
-// CalculateFingerprint calculates and updates the fingerprint for a track
-func (s *Service) CalculateFingerprint(ctx context.Context, trackID string) error {
+// AddChromaprintAndAcoustID calculates and updates the fingerprint for a track
+func (s *Service) AddChromaprintAndAcoustID(ctx context.Context, trackID string) error {
 	// Get current track data
 	track, err := s.libraryRepo.GetTrack(ctx, trackID)
 	if err != nil {

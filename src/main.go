@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/contre95/soulsolid/src/features/analyze"
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/features/hosting"
@@ -89,6 +90,7 @@ func main() {
 	acoustIDService := metadata.NewAcoustIDService(cfgManager)
 
 	tagService := tagging.NewService(tagWriter, tagReader, db, []tagging.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, acoustIDService, cfgManager)
+	analyzeService := analyze.NewService(tagService, libraryService, jobService, cfgManager) // Now using interfaces
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
 
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)
@@ -97,6 +99,9 @@ func main() {
 	jobService.RegisterHandler("download_artist", jobs.NewBaseTaskHandler(downloadTask))
 	jobService.RegisterHandler("download_tracks", jobs.NewBaseTaskHandler(downloadTask))
 	jobService.RegisterHandler("download_playlist", jobs.NewBaseTaskHandler(downloadTask))
+
+	analyzeTask := analyze.NewAnalyzeJobTask(analyzeService)
+	jobService.RegisterHandler("analyze_acoustid", jobs.NewBaseTaskHandler(analyzeTask))
 
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {
@@ -110,7 +115,7 @@ func main() {
 		}
 	}
 
-	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService, metricsService)
+	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService, metricsService, analyzeService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped: %v", "error", err)

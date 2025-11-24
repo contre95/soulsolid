@@ -1,0 +1,73 @@
+<div id="contenido" class="animate__animated animate__fadeIn">
+    <div
+        id="app-status"
+        hx-get="/ui/jobs/active"
+        hx-trigger="load, every 5s"
+        hx-swap="innerHTML"
+        hx-swap-oob="true"
+    ></div>
+    <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">Analyze Library</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- AcoustID Analysis Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+            <div class="flex items-center mb-4">
+                <svg class="w-8 h-8 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+                </svg>
+                <h3 class="text-xl font-semibold text-slate-800 dark:text-white">AcoustID Analysis</h3>
+            </div>
+            <p class="text-slate-600 dark:text-slate-400 mb-4">
+                Generate acoustic fingerprints and AcoustID for tracks that don't have them. This helps with music identification and metadata matching.
+            </p>
+            <button
+                hx-post="/analyze/acoustid"
+                hx-target="#toast-container"
+                hx-swap="beforeend"
+                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+            >
+                Start AcoustID Analysis
+                <span class="htmx-indicator ml-2">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </span>
+            </button>
+        </div>
+
+        <!-- Future analysis types can be added here -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg opacity-50">
+            <div class="flex items-center mb-4">
+                <svg class="w-8 h-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                </svg>
+                <h3 class="text-xl font-semibold text-slate-800 dark:text-white">Lyrics Analysis</h3>
+            </div>
+            <p class="text-slate-600 dark:text-slate-400 mb-4">
+                Extract and analyze lyrics from audio files. Coming soon.
+            </p>
+            <button
+                disabled
+                class="w-full bg-gray-300 text-gray-500 font-medium py-2 px-4 rounded-md cursor-not-allowed"
+            >
+                Coming Soon
+            </button>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg opacity-50">
+            <div class="flex items-center mb-4">
+                <svg class="w-8 h-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <h3 class="text-xl font-semibold text-slate-800 dark:text-white">Metadata Enhancement</h3>
+            </div>
+            <p class="text-slate-600 dark:text-slate-400 mb-4">
+                Enhance track metadata using multiple sources. Coming soon.
+            </p>
+            <button
+                disabled
+                class="w-full bg-gray-300 text-gray-500 font-medium py-2 px-4 rounded-md cursor-not-allowed"
+            >
+                Coming Soon
+            </button>
+        </div>
+    </div>
+</div>

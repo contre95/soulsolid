@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/contre95/soulsolid/src/features/analyze"
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/features/importing"
@@ -27,7 +28,7 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server.
-func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, syncService *syncdap.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *tagging.Service, metricsService *metrics.Service) *Server {
+func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, syncService *syncdap.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *tagging.Service, metricsService *metrics.Service, analyzeService *analyze.Service) *Server {
 	engine := html.New("./views", ".html")
 	engine.Debug(cfg.Get().Logger.Level == "debug")
 	// Add custom template functions
@@ -118,6 +119,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	})
 
 	uiHandler := ui.NewHandler(cfg)
+	analyzeHandler := analyze.NewHandler(analyzeService)
 
 	importing.RegisterRoutes(app, importingService)
 	library.RegisterRoutes(app, libraryService)
@@ -131,6 +133,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	}
 	downloading.RegisterRoutes(app, downloadingService)
 	tagging.RegisterRoutes(app, tagService)
+	analyze.RegisterRoutes(app, analyzeHandler)
 
 	return &Server{app: app, port: cfg.Get().Server.Port}
 }

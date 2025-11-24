@@ -606,7 +606,7 @@ func (h *Handler) CalculateFingerprint(c *fiber.Ctx) error {
 	}
 
 	// Calculate fingerprint
-	err := h.service.CalculateFingerprint(c.Context(), trackID)
+	err := h.service.AddChromaprintAndAcoustID(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to calculate fingerprint", "error", err, "trackId", trackID)
 		return c.Render("toast/toastErr", fiber.Map{
