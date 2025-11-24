@@ -114,7 +114,7 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 			"Albums":                 albums,
 			"SelectedAlbumArtistID":  selectedAlbumArtistID,
 			"SelectedArtistIDs":      selectedArtistIDs,
-			"EnabledProviders":       h.service.GetEnabledProviders(),
+			"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
 			"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 		})
 	}
@@ -128,7 +128,7 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 		"Albums":                 albums,
 		"SelectedAlbumArtistID":  selectedAlbumArtistID,
 		"SelectedArtistIDs":      selectedArtistIDs,
-		"EnabledProviders":       h.service.GetEnabledProviders(),
+		"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
 		"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 	})
 }
@@ -319,7 +319,7 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 				"ProviderColors":         providerColors,
 				"SelectedAlbumArtistID":  selectedAlbumArtistID,
 				"SelectedArtistIDs":      selectedArtistIDs,
-				"EnabledProviders":       h.service.GetEnabledProviders(),
+				"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
 				"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 			})
 		} else {
@@ -333,7 +333,7 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 				"ProviderColors":         providerColors,
 				"SelectedAlbumArtistID":  selectedAlbumArtistID,
 				"SelectedArtistIDs":      selectedArtistIDs,
-				"EnabledProviders":       h.service.GetEnabledProviders(),
+				"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
 				"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 			})
 		}
@@ -435,7 +435,7 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 			"ProviderColors":         providerColors,
 			"SelectedAlbumArtistID":  selectedAlbumArtistID,
 			"SelectedArtistIDs":      selectedArtistIDs,
-			"EnabledProviders":       h.service.GetEnabledProviders(),
+			"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
 			"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 		})
 	} else {
@@ -449,7 +449,7 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 			"ProviderColors":         providerColors,
 			"SelectedAlbumArtistID":  selectedAlbumArtistID,
 			"SelectedArtistIDs":      selectedArtistIDs,
-			"EnabledProviders":       h.service.GetEnabledProviders(),
+			"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
 			"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 		})
 	}
@@ -662,7 +662,7 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 		"SelectedArtistIDs":      selectedArtistIDs,
 		"FromProvider":           providerName,
 		"ProviderColors":         providerColors,
-		"EnabledProviders":       h.service.GetEnabledProviders(),
+		"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
 		"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 	})
 }
@@ -774,7 +774,7 @@ func (h *Handler) FetchLyricsFromProvider(c *fiber.Ctx) error {
 		"SelectedArtistIDs":      selectedArtistIDs,
 		"FromLyricsProvider":     providerName,
 		"LyricsProviderColors":   providerColors,
-		"EnabledProviders":       h.service.GetEnabledProviders(),
+		"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
 		"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 	})
 }

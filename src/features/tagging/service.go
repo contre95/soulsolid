@@ -350,8 +350,8 @@ func (s *Service) matchArtistsWithDatabase(ctx context.Context, track *music.Tra
 	return track
 }
 
-// GetEnabledProviders returns a map of enabled metadata providers
-func (s *Service) GetEnabledProviders() map[string]bool {
+// GetEnabledMetadataProviders returns a map of enabled metadata providers
+func (s *Service) GetEnabledMetadataProviders() map[string]bool {
 	enabled := make(map[string]bool)
 	cfg := s.config.Get()
 	if cfg.Metadata.Providers != nil {
