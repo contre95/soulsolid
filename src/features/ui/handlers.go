@@ -145,3 +145,16 @@ func (h *Handler) RenderDownloadSection(c *fiber.Ctx) error {
 	}
 	return c.Render("sections/download", data)
 }
+
+// RenderAnalyzeSection renders the analyze page.
+func (h *Handler) RenderAnalyzeSection(c *fiber.Ctx) error {
+	slog.Debug("RenderAnalyzeSection handler called")
+	data := fiber.Map{
+		"Title": "Analyze",
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "analyze"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/analyze", data)
+}

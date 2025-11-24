@@ -9,32 +9,33 @@ import (
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/downloading"
-	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/google/uuid"
 )
 
+// Ensure Service implements TaggingService interface
+var _ music.TaggingService = (*Service)(nil)
+
 // Service provides tag editing functionality
 type Service struct {
-	tagWriter           downloading.TagWriter
-	tagReader           importing.TagReader
+	tagWriter           TagWriter
+	tagReader           TagReader
 	libraryRepo         music.Library
 	metadataProviders   []MetadataProvider
 	lyricsProviders     []LyricsProvider
-	fingerprintProvider importing.FingerprintProvider
+	chromaprintAcoustID ChromaprintAcoustID
 	config              *config.Manager
 }
 
 // NewService creates a new tag service
-func NewService(tagWriter downloading.TagWriter, tagReader importing.TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, lyricsProviders []LyricsProvider, fingerprintProvider importing.FingerprintProvider, config *config.Manager) *Service {
+func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, lyricsProviders []LyricsProvider, chromaprintAcoustID ChromaprintAcoustID, config *config.Manager) *Service {
 	return &Service{
 		tagWriter:           tagWriter,
 		tagReader:           tagReader,
 		libraryRepo:         libraryRepo,
 		metadataProviders:   metadataProviders,
 		lyricsProviders:     lyricsProviders,
-		fingerprintProvider: fingerprintProvider,
+		chromaprintAcoustID: chromaprintAcoustID,
 		config:              config,
 	}
 }
@@ -80,7 +81,6 @@ func (s *Service) GetTrackFileTags(ctx context.Context, trackID string) (*music.
 	result.BitDepth = currentTrack.BitDepth
 	result.Channels = currentTrack.Channels
 	result.Bitrate = currentTrack.Bitrate
-
 	// Ensure track artists have IDs by matching with database
 	result = *s.matchArtistsWithDatabase(ctx, &result)
 
@@ -287,8 +287,55 @@ func (s *Service) buildTrackFromFormData(ctx context.Context, originalTrack *mus
 	track.BitDepth = originalTrack.BitDepth
 	track.Channels = originalTrack.Channels
 	track.Bitrate = originalTrack.Bitrate
-
+	track.ChromaprintFingerprint = originalTrack.ChromaprintFingerprint
+	track.AcoustID = originalTrack.AcoustID
 	return track, nil
+}
+
+// AddChromaprintAndAcoustID calculates and updates the fingerprint for a track
+func (s *Service) AddChromaprintAndAcoustID(ctx context.Context, trackID string) error {
+	// Get current track data
+	track, err := s.libraryRepo.GetTrack(ctx, trackID)
+	if err != nil {
+		return fmt.Errorf("failed to get track: %w", err)
+	}
+
+	// Generate chromaprint and get duration
+	fingerprint, duration, err := s.chromaprintAcoustID.GenerateChromaprint(ctx, track.Path)
+	if err != nil {
+		return fmt.Errorf("failed to generate chromaprint: %w", err)
+	}
+	track.ChromaprintFingerprint = fingerprint
+
+	// Lookup AcoustID using the fingerprint and duration
+	acoustID, err := s.chromaprintAcoustID.LookupAcoustID(ctx, fingerprint, duration)
+	if err != nil {
+		slog.Warn("Failed to lookup AcoustID", "error", err, "trackId", trackID)
+		// Continue without AcoustID
+	} else if acoustID != "" {
+		track.AcoustID = acoustID
+		slog.Info("Successfully generated fingerprint and AcoustID", "trackId", trackID, "acoustid", acoustID)
+	} else {
+		slog.Info("Successfully generated fingerprint, no AcoustID found", "trackId", trackID)
+	}
+
+	// Write fingerprint to file tags
+	if err := s.tagWriter.WriteFileTags(ctx, track.Path, track); err != nil {
+		slog.Warn("Failed to write fingerprint to file tags", "error", err, "trackId", trackID, "path", track.Path)
+		// Don't fail the operation, just log the warning
+	} else {
+		slog.Info("Successfully wrote fingerprint and AcoustID to file tags")
+	}
+
+	// Update track in database
+	err = s.libraryRepo.UpdateTrack(ctx, track)
+	if err != nil {
+		return fmt.Errorf("failed to update track with fingerprint: %w", err)
+	}
+
+	slog.Info("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint[:15], "acoustid", track.AcoustID)
+	slog.Debug("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint, "acoustid", track.AcoustID)
+	return nil
 }
 
 // Helper functions for parsing form values
@@ -386,9 +433,10 @@ func (s *Service) SearchTrackMetadata(ctx context.Context, trackID string, provi
 
 	// Build search parameters from current track data
 	searchParams := SearchParams{
-		TrackID: track.ID,
-		Title:   track.Title,
-		Year:    track.Metadata.Year,
+		TrackID:  track.ID,
+		Title:    track.Title,
+		Year:     track.Metadata.Year,
+		AcoustID: track.AcoustID,
 	}
 
 	// Add album and album artist if available
@@ -483,4 +531,103 @@ func (s *Service) SearchLyrics(ctx context.Context, trackID string, providerName
 	}
 
 	return lyrics, nil
+}
+
+// MergeFetchedData merges fetched metadata with existing track data
+// Prioritizes keeping the maximum amount of tags by preserving existing values when fetched values are empty
+func (s *Service) MergeFetchedData(existing, fetched *music.Track) *music.Track {
+	// Preserve database-specific data
+	result := *fetched
+	result.ID = existing.ID // Preserve the database track ID
+
+	// Preserve file-specific data
+	result.Path = existing.Path
+	result.Format = existing.Format
+	result.SampleRate = existing.SampleRate
+	result.BitDepth = existing.BitDepth
+	result.Channels = existing.Channels
+	result.Bitrate = existing.Bitrate
+
+	// Merge basic track info - preserve existing if fetched is empty
+	if fetched.Title == "" && existing.Title != "" {
+		result.Title = existing.Title
+	}
+	if fetched.ISRC == "" && existing.ISRC != "" {
+		result.ISRC = existing.ISRC
+	}
+	if fetched.TitleVersion == "" && existing.TitleVersion != "" {
+		result.TitleVersion = existing.TitleVersion
+	}
+	if fetched.ChromaprintFingerprint == "" && existing.ChromaprintFingerprint != "" {
+		result.ChromaprintFingerprint = existing.ChromaprintFingerprint
+	}
+	if fetched.AcoustID == "" && existing.AcoustID != "" {
+		result.AcoustID = existing.AcoustID
+	}
+	// Note: ExplicitContent is a boolean, so we don't merge it - we use the fetched value
+	// If we wanted to preserve existing explicit content, we would need to decide on the logic
+	// For now, we'll use the fetched value (default false if not provided)
+
+	// Merge metadata fields - preserve existing if fetched is empty
+	if fetched.Metadata.Year == 0 && existing.Metadata.Year != 0 {
+		result.Metadata.Year = existing.Metadata.Year
+	}
+	if fetched.Metadata.Genre == "" && existing.Metadata.Genre != "" {
+		result.Metadata.Genre = existing.Metadata.Genre
+	}
+	if fetched.Metadata.TrackNumber == 0 && existing.Metadata.TrackNumber != 0 {
+		result.Metadata.TrackNumber = existing.Metadata.TrackNumber
+	}
+	if fetched.Metadata.DiscNumber == 0 && existing.Metadata.DiscNumber != 0 {
+		result.Metadata.DiscNumber = existing.Metadata.DiscNumber
+	}
+	if fetched.Metadata.Composer == "" && existing.Metadata.Composer != "" {
+		result.Metadata.Composer = existing.Metadata.Composer
+	}
+	if fetched.Metadata.Lyrics == "" && existing.Metadata.Lyrics != "" {
+		result.Metadata.Lyrics = existing.Metadata.Lyrics
+	}
+	if fetched.Metadata.BPM == 0 && existing.Metadata.BPM != 0 {
+		result.Metadata.BPM = existing.Metadata.BPM
+	}
+	if fetched.Metadata.Gain == 0 && existing.Metadata.Gain != 0 {
+		result.Metadata.Gain = existing.Metadata.Gain
+	}
+	if fetched.Metadata.OriginalYear == 0 && existing.Metadata.OriginalYear != 0 {
+		result.Metadata.OriginalYear = existing.Metadata.OriginalYear
+	}
+	// Note: ExplicitLyrics is a boolean, so we don't merge it - we use the fetched value
+	// If we wanted to preserve existing explicit lyrics, we would need to decide on the logic
+	// For now, we'll use the fetched value (default false if not provided)
+
+	// Merge artists - if fetched has no artists, preserve existing ones
+	if len(result.Artists) == 0 && len(existing.Artists) > 0 {
+		result.Artists = existing.Artists
+	}
+
+	// Merge album data
+	if result.Album != nil {
+		// If fetched album has no title but existing has one, use existing
+		if result.Album.Title == "" && existing.Album != nil && existing.Album.Title != "" {
+			result.Album.Title = existing.Album.Title
+		}
+
+		// If fetched album has no artists but existing album has artists, preserve them
+		if len(result.Album.Artists) == 0 && existing.Album != nil && len(existing.Album.Artists) > 0 {
+			result.Album.Artists = existing.Album.Artists
+		}
+	} else if existing.Album != nil {
+		// If fetched has no album but existing has one, preserve the existing album
+		result.Album = existing.Album
+	}
+
+	// Merge metadata source - preserve existing if fetched is empty
+	if fetched.MetadataSource.Source == "" && existing.MetadataSource.Source != "" {
+		result.MetadataSource.Source = existing.MetadataSource.Source
+	}
+	if fetched.MetadataSource.MetadataSourceURL == "" && existing.MetadataSource.MetadataSourceURL != "" {
+		result.MetadataSource.MetadataSourceURL = existing.MetadataSource.MetadataSourceURL
+	}
+
+	return &result
 }

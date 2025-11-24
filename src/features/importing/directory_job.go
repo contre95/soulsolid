@@ -253,7 +253,8 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 				processedFiles++
 				return nil
 			}
-			slog.Info("Generated fingerprint for track", "path", path, "track", trackToImport, "fingerprint", fingerprint)
+			slog.Info("Generated fingerprint for track", "path", path, "track", trackToImport, "fingerprint", fingerprint[:15])
+			slog.Debug("Generated fingerprint for track", "path", path, "track", trackToImport, "fingerprint", fingerprint)
 			trackToImport.ChromaprintFingerprint = fingerprint
 			trackToImport.ID = music.GenerateTrackID(fingerprint)
 			slog.Info("Generated track id", "id", trackToImport.ID)

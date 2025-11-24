@@ -37,6 +37,8 @@
                  {{template "sections/tag" .}}
                  {{else if .CurrentDownloader}}
                  {{template "sections/download" .}}
+                 {{else if eq .Section "analyze"}}
+                 {{template "sections/analyze" .}}
                  {{end}}
             </div>
            </div>

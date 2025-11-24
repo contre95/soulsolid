@@ -13,6 +13,7 @@ type SearchParams struct {
 	Album       string
 	Title       string
 	Year        int
+	AcoustID    string
 }
 
 // MetadataProvider defines the interface for fetching metadata from external services

@@ -17,7 +17,6 @@ import (
 
 	"github.com/bogem/id3v2/v2"
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/go-flac/flacpicture"
 	"github.com/go-flac/flacvorbis"
@@ -46,7 +45,7 @@ func (t *TagWriter) SetCover(tag *id3v2.Tag, imgData []byte, mimeType string) er
 }
 
 // NewTagWriter creates a new TagWriter.
-func NewTagWriter(artworkConfig config.EmbeddedArtwork) downloading.TagWriter {
+func NewTagWriter(artworkConfig config.EmbeddedArtwork) *TagWriter {
 	return &TagWriter{artworkConfig: artworkConfig}
 }
 
@@ -153,6 +152,24 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 	// Title version (subtitle)
 	if track.TitleVersion != "" {
 		tag.AddTextFrame("TIT3", id3v2.EncodingUTF8, track.TitleVersion)
+	}
+
+	// Chromaprint fingerprint
+	if track.ChromaprintFingerprint != "" {
+		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			Description: "CHROMAPRINT_FINGERPRINT",
+			Value:       track.ChromaprintFingerprint,
+		})
+	}
+
+	// AcoustID
+	if track.AcoustID != "" {
+		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			Description: "ACOUSTID_ID",
+			Value:       track.AcoustID,
+		})
 	}
 
 	// Lyrics (using TXXX frame as fallback)
@@ -317,6 +334,14 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 	if track.TitleVersion != "" {
 		removeExistingFields(vorbisComment, "VERSION")
 		vorbisComment.Add("VERSION", track.TitleVersion)
+	}
+	if track.ChromaprintFingerprint != "" {
+		removeExistingFields(vorbisComment, "CHROMAPRINT_FINGERPRINT")
+		vorbisComment.Add("CHROMAPRINT_FINGERPRINT", track.ChromaprintFingerprint)
+	}
+	if track.AcoustID != "" {
+		removeExistingFields(vorbisComment, "ACOUSTID_ID")
+		vorbisComment.Add("ACOUSTID_ID", track.AcoustID)
 	}
 	if track.Metadata.BPM > 0 {
 		removeExistingFields(vorbisComment, "BPM")

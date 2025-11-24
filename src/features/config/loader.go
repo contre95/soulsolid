@@ -24,6 +24,21 @@ func setProviderAPIKey(cfg *Config, providerName, envVar string) {
 	}
 }
 
+// setProviderClientKey sets the client key for a provider from an environment variable
+func setProviderClientKey(cfg *Config, providerName, envVar string) {
+	if key := os.Getenv(envVar); key != "" {
+		if cfg.Metadata.Providers == nil {
+			cfg.Metadata.Providers = make(map[string]Provider)
+		}
+		if provider, exists := cfg.Metadata.Providers[providerName]; exists {
+			provider.ClientKey = key
+			cfg.Metadata.Providers[providerName] = provider
+		} else {
+			cfg.Metadata.Providers[providerName] = Provider{Enabled: false, ClientKey: key}
+		}
+	}
+}
+
 // Load reads a YAML file from the given path and returns a new ConfigManager.
 // If the file doesn't exist, creates a default configuration.
 func Load(path string) (*Manager, error) {
@@ -69,6 +84,7 @@ func Load(path string) (*Manager, error) {
 	}
 
 	setProviderAPIKey(&cfg, "discogs", "DISCOGS_API_KEY")
+	setProviderClientKey(&cfg, "acoustid", "ACOUSTID_CLIENT_KEY")
 
 	manager := NewManager(&cfg)
 	if err := manager.EnsureDirectories(); err != nil {
@@ -135,6 +151,10 @@ func createDefaultConfig() *Config {
 				},
 				"musicbrainz": {
 					Enabled: false,
+				},
+				"acoustid": {
+					Enabled:   false,
+					ClientKey: "",
 				},
 			},
 		},

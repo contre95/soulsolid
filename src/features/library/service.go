@@ -11,6 +11,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// Ensure Service implements LibraryService interface
+var _ library.LibraryService = (*Service)(nil)
+
 // Service is the domain service for the library feature.
 type Service struct {
 	library       library.Library

@@ -365,7 +365,7 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 	}
 
 	// Merge and render
-	track = h.mergeFetchedData(track, fetchedTrack)
+	track = h.service.MergeFetchedData(track, fetchedTrack)
 	slog.Info("Metadata fetched successfully", "trackId", trackID, "provider", providerName, "fetchedTitle", fetchedTrack.Title)
 
 	// Ensure fetched track's artists are included in the dropdown
@@ -453,34 +453,6 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 			"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 		})
 	}
-}
-
-// mergeFetchedData merges fetched metadata with existing track data
-func (h *Handler) mergeFetchedData(existing, fetched *music.Track) *music.Track {
-	// Preserve database-specific data
-	result := *fetched
-	result.ID = existing.ID // Preserve the database track ID
-
-	// Preserve file-specific data
-	result.Path = existing.Path
-	result.Format = existing.Format
-	result.SampleRate = existing.SampleRate
-	result.BitDepth = existing.BitDepth
-	result.Channels = existing.Channels
-	result.Bitrate = existing.Bitrate
-
-	// Use fetched album artists (since we're fetching new metadata)
-	// Only preserve existing album artists if fetched album has no artists
-	if result.Album != nil && len(result.Album.Artists) == 0 && existing.Album != nil && len(existing.Album.Artists) > 0 {
-		result.Album.Artists = existing.Album.Artists
-	}
-
-	// Preserve existing lyrics if available (since they're stored in file, not DB)
-	if existing.Metadata.Lyrics != "" && result.Metadata.Lyrics == "" {
-		result.Metadata.Lyrics = existing.Metadata.Lyrics
-	}
-
-	return &result
 }
 
 // ModalData holds data for the search results modal
@@ -589,7 +561,7 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 	}
 
 	// Merge selected track data with current track (preserve file-specific data)
-	mergedTrack := h.mergeFetchedData(currentTrack, selectedTrack)
+	mergedTrack := h.service.MergeFetchedData(currentTrack, selectedTrack)
 
 	// Get all artists and albums for dropdowns
 	artists, err := h.service.libraryRepo.GetArtists(c.Context())
@@ -777,6 +749,56 @@ func (h *Handler) FetchLyricsFromProvider(c *fiber.Ctx) error {
 		"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
 		"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 	})
+}
+
+// CalculateFingerprint handles fingerprint calculation for a track
+func (h *Handler) CalculateFingerprint(c *fiber.Ctx) error {
+	trackID := c.Params("trackId")
+	if trackID == "" || trackID == "0" {
+		slog.Error("Invalid track ID in CalculateFingerprint", "trackId", trackID)
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid track ID")
+	}
+
+	// Calculate fingerprint
+	err := h.service.AddChromaprintAndAcoustID(c.Context(), trackID)
+	if err != nil {
+		slog.Error("Failed to calculate fingerprint", "error", err, "trackId", trackID)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": fmt.Sprintf("Failed to calculate fingerprint: %v", err),
+		})
+	}
+
+	// Set HTMX header to refresh the edit form after successful calculation
+	c.Set("HX-Trigger", "refreshEditForm")
+
+	// Return success toast
+	return c.Render("toast/toastOk", fiber.Map{
+		"Msg": "Fingerprint calculated successfully!",
+	})
+}
+
+// ViewFingerprint handles viewing fingerprint
+func (h *Handler) ViewFingerprint(c *fiber.Ctx) error {
+	trackID := c.Params("trackId")
+	if trackID == "" || trackID == "0" {
+		slog.Error("Invalid track ID in ViewFingerprint", "trackId", trackID)
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid track ID")
+	}
+
+	// Get track from database
+	track, err := h.service.libraryRepo.GetTrack(c.Context(), trackID)
+	if err != nil || track == nil {
+		slog.Error("Failed to get track", "error", err, "trackId", trackID)
+		return c.Status(fiber.StatusNotFound).SendString("Track not found")
+	}
+
+	if track.ChromaprintFingerprint == "" {
+		return c.SendString("No fingerprint available for this track.")
+	}
+
+	// Return raw text
+	c.Set("Content-Type", "text/plain")
+	return c.SendString(track.ChromaprintFingerprint)
 }
 
 // UpdateTags handles the form submission to update track tags

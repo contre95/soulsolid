@@ -16,8 +16,12 @@ import (
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/music"
 	"github.com/google/uuid"
 )
+
+// Ensure Service implements JobService interface
+var _ music.JobService = (*Service)(nil)
 
 type JobStatus string
 
