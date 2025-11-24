@@ -104,8 +104,11 @@ func main() {
 	jobService.RegisterHandler("download_tracks", jobs.NewBaseTaskHandler(downloadTask))
 	jobService.RegisterHandler("download_playlist", jobs.NewBaseTaskHandler(downloadTask))
 
-	analyzeTask := analyze.NewAnalyzeJobTask(analyzeService)
-	jobService.RegisterHandler("analyze_acoustid", jobs.NewBaseTaskHandler(analyzeTask))
+	acoustIDTask := analyze.NewAcoustIDJobTask(analyzeService)
+	jobService.RegisterHandler("analyze_acoustid", jobs.NewBaseTaskHandler(acoustIDTask))
+
+	lyricsTask := analyze.NewLyricsJobTask(analyzeService)
+	jobService.RegisterHandler("analyze_lyrics", jobs.NewBaseTaskHandler(lyricsTask))
 
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {

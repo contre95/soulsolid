@@ -8,35 +8,25 @@ import (
 	"github.com/contre95/soulsolid/src/features/jobs"
 )
 
-// AnalyzeJobTask handles analysis job execution
-type AnalyzeJobTask struct {
+// AcoustIDJobTask handles AcoustID analysis job execution
+type AcoustIDJobTask struct {
 	service *Service
 }
 
-// NewAnalyzeJobTask creates a new analyze job task
-func NewAnalyzeJobTask(service *Service) *AnalyzeJobTask {
-	return &AnalyzeJobTask{
+// NewAcoustIDJobTask creates a new AcoustID analysis job task
+func NewAcoustIDJobTask(service *Service) *AcoustIDJobTask {
+	return &AcoustIDJobTask{
 		service: service,
 	}
 }
 
-// MetadataKeys returns the required metadata keys for analyze jobs
-func (t *AnalyzeJobTask) MetadataKeys() []string {
+// MetadataKeys returns the required metadata keys for AcoustID analysis jobs
+func (t *AcoustIDJobTask) MetadataKeys() []string {
 	return []string{}
 }
 
-// Execute performs the analysis operation
-func (t *AnalyzeJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
-	switch job.Type {
-	case "analyze_acoustid":
-		return t.executeAcoustIDAnalysis(ctx, job, progressUpdater)
-	default:
-		return nil, fmt.Errorf("unsupported analysis type: %s", job.Type)
-	}
-}
-
-// executeAcoustIDAnalysis handles AcoustID analysis jobs
-func (t *AnalyzeJobTask) executeAcoustIDAnalysis(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
+// Execute performs the AcoustID analysis operation
+func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
 	slog.Info("Starting AcoustID analysis", "jobID", job.ID)
 
 	// Get all tracks from library
@@ -105,7 +95,7 @@ func (t *AnalyzeJobTask) executeAcoustIDAnalysis(ctx context.Context, job *jobs.
 }
 
 // Cleanup performs cleanup after job completion
-func (t *AnalyzeJobTask) Cleanup(job *jobs.Job) error {
-	slog.Debug("Cleaning up analyze job", "jobID", job.ID)
+func (t *AcoustIDJobTask) Cleanup(job *jobs.Job) error {
+	slog.Debug("Cleaning up AcoustID analysis job", "jobID", job.ID)
 	return nil
 }

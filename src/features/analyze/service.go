@@ -37,3 +37,14 @@ func (s *Service) StartAcoustIDAnalysis(ctx context.Context) (string, error) {
 	slog.Info("AcoustID analysis job started", "jobID", jobID)
 	return jobID, nil
 }
+
+// StartLyricsAnalysis starts a job to analyze all tracks for lyrics
+func (s *Service) StartLyricsAnalysis(ctx context.Context) (string, error) {
+	slog.Info("Starting lyrics analysis job")
+	jobID, err := s.jobService.StartJob("analyze_lyrics", "Analyze Lyrics for Library", map[string]any{})
+	if err != nil {
+		return "", fmt.Errorf("failed to start lyrics analysis job: %w", err)
+	}
+	slog.Info("Lyrics analysis job started", "jobID", jobID)
+	return jobID, nil
+}

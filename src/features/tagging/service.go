@@ -292,6 +292,113 @@ func (s *Service) buildTrackFromFormData(ctx context.Context, originalTrack *mus
 	return track, nil
 }
 
+// SetLyricsToNoLyrics sets the lyrics to "[No Lyrics]" for a track
+func (s *Service) SetLyricsToNoLyrics(ctx context.Context, trackID string) error {
+	// Get current track data
+	track, err := s.libraryRepo.GetTrack(ctx, trackID)
+	if err != nil {
+		return fmt.Errorf("failed to get track: %w", err)
+	}
+
+	// Set lyrics to [No Lyrics]
+	track.Metadata.Lyrics = "[No Lyrics]"
+	track.ModifiedDate = time.Now()
+
+	// Write lyrics to file tags
+	if err := s.tagWriter.WriteFileTags(ctx, track.Path, track); err != nil {
+		slog.Warn("Failed to write [No Lyrics] to file tags", "error", err, "trackID", trackID, "path", track.Path)
+		// Continue - we still want to update the database
+	}
+
+	// Update track in database
+	err = s.libraryRepo.UpdateTrack(ctx, track)
+	if err != nil {
+		return fmt.Errorf("failed to update track with [No Lyrics]: %w", err)
+	}
+
+	slog.Info("Successfully set [No Lyrics] for track", "trackID", trackID)
+	return nil
+}
+
+// AddLyrics searches for and adds lyrics to a track
+func (s *Service) AddLyrics(ctx context.Context, trackID string) error {
+	// Get current track data
+	track, err := s.libraryRepo.GetTrack(ctx, trackID)
+	if err != nil {
+		return fmt.Errorf("failed to get track: %w", err)
+	}
+
+	// Skip if lyrics already exist
+	if track.Metadata.Lyrics != "" {
+		slog.Debug("Track already has lyrics", "trackID", trackID)
+		return nil
+	}
+
+	// Build search parameters from current track data
+	searchParams := LyricsSearchParams{
+		TrackID: track.ID,
+		Title:   track.Title,
+	}
+
+	// Add artist if available
+	if len(track.Artists) > 0 && track.Artists[0].Artist != nil {
+		searchParams.Artist = track.Artists[0].Artist.Name
+	}
+
+	// Add album and album artist if available
+	if track.Album != nil {
+		searchParams.Album = track.Album.Title
+		if len(track.Album.Artists) > 0 && track.Album.Artists[0].Artist != nil {
+			searchParams.AlbumArtist = track.Album.Artists[0].Artist.Name
+		}
+	}
+
+	// Try each enabled lyrics provider
+	for _, provider := range s.lyricsProviders {
+		if !provider.IsEnabled() {
+			continue
+		}
+
+		slog.Debug("Trying lyrics provider", "provider", provider.Name(), "trackID", trackID, "title", searchParams.Title, "artist", searchParams.Artist)
+		lyrics, err := provider.SearchLyrics(ctx, searchParams)
+		if err != nil {
+			slog.Warn("Failed to search lyrics with provider", "provider", provider.Name(), "trackID", trackID, "title", searchParams.Title, "artist", searchParams.Artist, "error", err.Error())
+			continue
+		}
+
+		if lyrics != "" {
+			preview := lyrics
+			if len(preview) > 50 {
+				preview = preview[:50] + "..."
+			}
+			slog.Info("Found lyrics with provider", "provider", provider.Name(), "trackID", trackID, "lyricsLength", len(lyrics), "lyricsPreview", preview)
+			// Found lyrics, update the track
+			track.Metadata.Lyrics = lyrics
+			track.ModifiedDate = time.Now()
+
+			// Write lyrics to file tags
+			if err := s.tagWriter.WriteFileTags(ctx, track.Path, track); err != nil {
+				slog.Warn("Failed to write lyrics to file tags", "error", err, "trackID", trackID, "path", track.Path)
+				// Continue - we still want to update the database
+			}
+
+			// Update track in database
+			err = s.libraryRepo.UpdateTrack(ctx, track)
+			if err != nil {
+				return fmt.Errorf("failed to update track with lyrics: %w", err)
+			}
+
+			slog.Info("Successfully added lyrics for track", "trackID", trackID, "provider", provider.Name(), "lyricsLength", len(lyrics))
+			return nil
+		} else {
+			slog.Debug("Provider returned empty lyrics", "provider", provider.Name(), "trackID", trackID, "title", searchParams.Title, "artist", searchParams.Artist)
+		}
+	}
+
+	slog.Info("No lyrics found for track with any provider", "trackID", trackID, "title", track.Title, "artist", searchParams.Artist, "providers", len(s.lyricsProviders))
+	return nil // Not an error if no lyrics found, just return
+}
+
 // AddChromaprintAndAcoustID calculates and updates the fingerprint for a track
 func (s *Service) AddChromaprintAndAcoustID(ctx context.Context, trackID string) error {
 	// Get current track data

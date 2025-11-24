@@ -172,8 +172,18 @@ func (p *TekstowoProvider) fetchLyrics(ctx context.Context, songURL string) (str
 		}
 	}
 
+	html := string(htmlContent)
+
+	// Check for obvious error indicators
+	if strings.Contains(html, "404") ||
+		strings.Contains(html, "Page not found") ||
+		strings.Contains(html, "error") ||
+		len(html) < 500 { // Very short pages are likely errors
+		return "", fmt.Errorf("page appears to be an error or empty page")
+	}
+
 	// Extract lyrics from HTML
-	lyrics, err := p.extractLyricsFromHTML(string(htmlContent))
+	lyrics, err := p.extractLyricsFromHTML(html)
 	if err != nil {
 		return "", fmt.Errorf("failed to extract lyrics: %w", err)
 	}

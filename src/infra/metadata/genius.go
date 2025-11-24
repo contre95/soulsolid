@@ -115,7 +115,15 @@ func (p *GeniusProvider) fetchLyrics(ctx context.Context, songURL string) (strin
 
 	req.Header.Set("User-Agent", "SoulSolid/1.0")
 
-	client := &http.Client{}
+	client := &http.Client{
+		// Follow redirects but limit them
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch lyrics page: %w", err)
@@ -124,6 +132,12 @@ func (p *GeniusProvider) fetchLyrics(ctx context.Context, songURL string) (strin
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("lyrics page request failed with status %d", resp.StatusCode)
+	}
+
+	// Check if we were redirected to an error page
+	finalURL := resp.Request.URL.String()
+	if strings.Contains(finalURL, "404") || strings.Contains(finalURL, "error") {
+		return "", fmt.Errorf("redirected to error page: %s", finalURL)
 	}
 
 	// Read the HTML content
@@ -139,8 +153,18 @@ func (p *GeniusProvider) fetchLyrics(ctx context.Context, songURL string) (strin
 		}
 	}
 
+	html := string(htmlContent)
+
+	// Quick check for obvious error indicators
+	if strings.Contains(html, "34 ContributorsTranslations") ||
+		strings.Contains(html, "This page didn't load") ||
+		strings.Contains(html, "Page not found") ||
+		len(html) < 1000 { // Very short pages are likely errors
+		return "", fmt.Errorf("page appears to be an error or empty page")
+	}
+
 	// Extract lyrics from HTML
-	lyrics, err := p.extractLyricsFromHTML(string(htmlContent))
+	lyrics, err := p.extractLyricsFromHTML(html)
 	if err != nil {
 		return "", fmt.Errorf("failed to extract lyrics: %w", err)
 	}
@@ -149,6 +173,20 @@ func (p *GeniusProvider) fetchLyrics(ctx context.Context, songURL string) (strin
 }
 
 func (p *GeniusProvider) extractLyricsFromHTML(html string) (string, error) {
+	// First check if this looks like an error page or non-lyrics page
+	if strings.Contains(html, "34 ContributorsTranslations") ||
+		strings.Contains(html, "404") ||
+		strings.Contains(html, "Page not found") ||
+		strings.Contains(html, "error") ||
+		strings.Contains(html, "Error") {
+		return "", fmt.Errorf("page appears to be an error page or non-lyrics content")
+	}
+
+	// Check if the page has the expected Genius structure
+	if !strings.Contains(html, "genius.com") && !strings.Contains(html, "Genius") {
+		return "", fmt.Errorf("page does not appear to be a valid Genius page")
+	}
+
 	// Look for the lyrics container in the HTML
 	// Genius uses various classes, try multiple patterns
 	patterns := []string{
@@ -162,7 +200,7 @@ func (p *GeniusProvider) extractLyricsFromHTML(html string) (string, error) {
 
 	var allMatches [][]string
 	for _, pattern := range patterns {
-		re := regexp.MustCompile(pattern)
+		re := regexp.MustCompile(`(?s)` + pattern) // (?s) makes . match newlines
 		matches := re.FindAllStringSubmatch(html, -1)
 		if len(matches) > 0 {
 			allMatches = append(allMatches, matches...)
@@ -187,15 +225,18 @@ func (p *GeniusProvider) extractLyricsFromHTML(html string) (string, error) {
 		if len(match) > 1 {
 			// Clean up HTML tags
 			lyrics := p.cleanLyricsHTML(match[1])
-			// Only include if it looks like actual lyrics (not just HTML)
-			if len(lyrics) > 10 && !strings.Contains(lyrics, "<") && !strings.Contains(lyrics, ">") {
+			// Only include if it looks like actual lyrics (not just HTML or error content)
+			if len(lyrics) > 10 && !strings.Contains(lyrics, "<") && !strings.Contains(lyrics, ">") &&
+				!strings.Contains(lyrics, "ContributorsTranslations") &&
+				!strings.Contains(lyrics, "404") &&
+				!strings.Contains(lyrics, "error") {
 				lyricsParts = append(lyricsParts, lyrics)
 			}
 		}
 	}
 
 	if len(lyricsParts) == 0 {
-		return "", fmt.Errorf("no lyrics content extracted")
+		return "", fmt.Errorf("no valid lyrics content extracted")
 	}
 
 	return strings.Join(lyricsParts, "\n\n"), nil

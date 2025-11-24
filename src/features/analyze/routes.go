@@ -9,6 +9,7 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	// API routes for analysis operations
 	analyze := app.Group("/analyze")
 	analyze.Post("/acoustid", handler.StartAcoustIDAnalysis)
+	analyze.Post("/lyrics", handler.StartLyricsAnalysis)
 
 	// UI routes for the analyze section
 	ui := app.Group("/ui")

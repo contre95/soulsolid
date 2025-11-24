@@ -5,7 +5,7 @@ type AnalysisType string
 
 const (
 	AnalysisTypeAcoustID AnalysisType = "acoustid"
+	AnalysisTypeLyrics   AnalysisType = "lyrics"
 	// Future analysis types can be added here
-	// AnalysisTypeLyrics    AnalysisType = "lyrics"
 	// AnalysisTypeMetadata  AnalysisType = "metadata"
 )

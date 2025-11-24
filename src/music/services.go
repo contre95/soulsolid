@@ -5,6 +5,9 @@ import "context"
 // TaggingService defines the interface for tagging operations
 type TaggingService interface {
 	AddChromaprintAndAcoustID(ctx context.Context, trackID string) error
+	AddLyrics(ctx context.Context, trackID string) error
+	SetLyricsToNoLyrics(ctx context.Context, trackID string) error
+	GetEnabledLyricsProviders() map[string]bool
 	GetTrackFileTags(ctx context.Context, trackID string) (*Track, error)
 	UpdateTrackTags(ctx context.Context, trackID string, formData map[string]string) error
 }

@@ -33,22 +33,27 @@
             </button>
         </div>
 
-        <!-- Future analysis types can be added here -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg opacity-50">
+        <!-- Lyrics Analysis Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
             <div class="flex items-center mb-4">
-                <svg class="w-8 h-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-8 h-8 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                 </svg>
                 <h3 class="text-xl font-semibold text-slate-800 dark:text-white">Lyrics Analysis</h3>
             </div>
             <p class="text-slate-600 dark:text-slate-400 mb-4">
-                Extract and analyze lyrics from audio files. Coming soon.
+                Search for and add lyrics to tracks that don't have them. Uses configured lyrics providers to find matching lyrics.
             </p>
             <button
-                disabled
-                class="w-full bg-gray-300 text-gray-500 font-medium py-2 px-4 rounded-md cursor-not-allowed"
+                hx-post="/analyze/lyrics"
+                hx-target="#toast-container"
+                hx-swap="beforeend"
+                class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
             >
-                Coming Soon
+                Start Lyrics Analysis
+                <span class="htmx-indicator ml-2">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </span>
             </button>
         </div>
 

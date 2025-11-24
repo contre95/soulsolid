@@ -41,6 +41,29 @@ func (h *Handler) StartAcoustIDAnalysis(c *fiber.Ctx) error {
 	return c.Redirect("/ui/analyze")
 }
 
+// StartLyricsAnalysis handles starting the lyrics analysis job
+func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
+	slog.Info("Starting lyrics analysis via HTTP request")
+
+	jobID, err := h.service.StartLyricsAnalysis(c.Context())
+	if err != nil {
+		slog.Error("Failed to start lyrics analysis", "error", err)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": "Failed to start lyrics analysis: " + err.Error(),
+		})
+	}
+
+	slog.Info("Lyrics analysis job started successfully", "jobID", jobID)
+
+	if c.Get("HX-Request") == "true" {
+		return c.Render("toast/toastOk", fiber.Map{
+			"Msg": "Lyrics analysis started successfully",
+		})
+	}
+
+	return c.Redirect("/ui/analyze")
+}
+
 // RenderAnalyzeSection renders the analyze section page
 func (h *Handler) RenderAnalyzeSection(c *fiber.Ctx) error {
 	slog.Debug("Rendering analyze section")
