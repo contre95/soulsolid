@@ -11,7 +11,6 @@ type Config struct {
 	Database     Database    `yaml:"database"`
 	Import       Import      `yaml:"import"`
 	Metadata     Metadata    `yaml:"metadata"`
-	AcoustID     AcoustID    `yaml:"acoustid"`
 	Sync         Sync        `yaml:"sync"`
 	Jobs         Jobs        `yaml:"jobs"`
 }
@@ -82,14 +81,9 @@ type Metadata struct {
 
 // Provider holds configuration for individual tagging providers
 type Provider struct {
-	Enabled bool    `yaml:"enabled"`
-	APIKey  *string `yaml:"api_key,omitempty"`
-}
-
-// AcoustID holds the configuration for AcoustID integration
-type AcoustID struct {
-	Enabled   bool   `yaml:"enabled"`
-	ClientKey string `yaml:"client_key"`
+	Enabled   bool    `yaml:"enabled"`
+	APIKey    *string `yaml:"api_key,omitempty"`
+	ClientKey string  `yaml:"client_key,omitempty"`
 }
 
 // Sync holds configuration for device synchronization

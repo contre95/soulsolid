@@ -75,6 +75,10 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 				"deezer": {
 					Enabled: c.FormValue("metadata.providers.deezer.enabled") == "true",
 				},
+				"acoustid": {
+					Enabled:   c.FormValue("metadata.providers.acoustid.enabled") == "true",
+					ClientKey: c.FormValue("metadata.providers.acoustid.client_key"),
+				},
 			},
 		},
 		// Preserve server settings from current config, no sense to be changed on runtime

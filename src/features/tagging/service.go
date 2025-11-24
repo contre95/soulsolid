@@ -11,7 +11,6 @@ import (
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/features/importing"
-	"github.com/contre95/soulsolid/src/infra/chroma"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/google/uuid"
 )
@@ -22,18 +21,18 @@ type Service struct {
 	tagReader           importing.TagReader
 	libraryRepo         music.Library
 	metadataProviders   []MetadataProvider
-	fingerprintProvider importing.FingerprintProvider
+	chromaprintAcoustID ChromaprintAcoustID
 	config              *config.Manager
 }
 
 // NewService creates a new tag service
-func NewService(tagWriter downloading.TagWriter, tagReader importing.TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, fingerprintProvider importing.FingerprintProvider, config *config.Manager) *Service {
+func NewService(tagWriter downloading.TagWriter, tagReader importing.TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, chromaprintAcoustID ChromaprintAcoustID, config *config.Manager) *Service {
 	return &Service{
 		tagWriter:           tagWriter,
 		tagReader:           tagReader,
 		libraryRepo:         libraryRepo,
 		metadataProviders:   metadataProviders,
-		fingerprintProvider: fingerprintProvider,
+		chromaprintAcoustID: chromaprintAcoustID,
 		config:              config,
 	}
 }
@@ -285,6 +284,8 @@ func (s *Service) buildTrackFromFormData(ctx context.Context, originalTrack *mus
 	track.BitDepth = originalTrack.BitDepth
 	track.Channels = originalTrack.Channels
 	track.Bitrate = originalTrack.Bitrate
+	track.ChromaprintFingerprint = originalTrack.ChromaprintFingerprint
+	track.AcoustID = originalTrack.AcoustID
 	return track, nil
 }
 
@@ -296,28 +297,23 @@ func (s *Service) CalculateFingerprint(ctx context.Context, trackID string) erro
 		return fmt.Errorf("failed to get track: %w", err)
 	}
 
-	// Try to use the chroma service directly if it has AcoustID functionality
-	if chromaService, ok := s.fingerprintProvider.(*chroma.Service); ok {
-		// Generate fingerprint and lookup AcoustID
-		err := chromaService.UpdateTrackWithAcoustID(ctx, track)
-		if err != nil {
-			slog.Warn("Failed to update track with AcoustID, falling back to fingerprint only", "error", err, "trackId", trackID)
-			// Fallback to basic fingerprint generation
-			fingerprint, fallbackErr := s.fingerprintProvider.GenerateFingerprint(ctx, track.Path)
-			if fallbackErr != nil {
-				return fmt.Errorf("failed to generate fingerprint: %w", fallbackErr)
-			}
-			track.ChromaprintFingerprint = fingerprint
-		} else {
-			slog.Info("Successfully generated fingerprint and AcoustID", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint, "acoustid", track.AcoustID)
-		}
+	// Generate chromaprint and get duration
+	fingerprint, duration, err := s.chromaprintAcoustID.GenerateChromaprint(ctx, track.Path)
+	if err != nil {
+		return fmt.Errorf("failed to generate chromaprint: %w", err)
+	}
+	track.ChromaprintFingerprint = fingerprint
+
+	// Lookup AcoustID using the fingerprint and duration
+	acoustID, err := s.chromaprintAcoustID.LookupAcoustID(ctx, fingerprint, duration)
+	if err != nil {
+		slog.Warn("Failed to lookup AcoustID", "error", err, "trackId", trackID)
+		// Continue without AcoustID
+	} else if acoustID != "" {
+		track.AcoustID = acoustID
+		slog.Info("Successfully generated fingerprint and AcoustID", "trackId", trackID, "acoustid", acoustID)
 	} else {
-		// Fallback to basic fingerprint generation
-		fingerprint, err := s.fingerprintProvider.GenerateFingerprint(ctx, track.Path)
-		if err != nil {
-			return fmt.Errorf("failed to generate fingerprint: %w", err)
-		}
-		track.ChromaprintFingerprint = fingerprint
+		slog.Info("Successfully generated fingerprint, no AcoustID found", "trackId", trackID)
 	}
 
 	// Write fingerprint to file tags
@@ -325,7 +321,7 @@ func (s *Service) CalculateFingerprint(ctx context.Context, trackID string) erro
 		slog.Warn("Failed to write fingerprint to file tags", "error", err, "trackId", trackID, "path", track.Path)
 		// Don't fail the operation, just log the warning
 	} else {
-		slog.Info("Successfully wrote fingerprint and AcoustID to file tags", "trackId", trackID, "path", track.Path, "fingerprint", track.ChromaprintFingerprint, "acoustid", track.AcoustID)
+		slog.Info("Successfully wrote fingerprint and AcoustID to file tags")
 	}
 
 	// Update track in database
@@ -334,7 +330,8 @@ func (s *Service) CalculateFingerprint(ctx context.Context, trackID string) erro
 		return fmt.Errorf("failed to update track with fingerprint: %w", err)
 	}
 
-	slog.Info("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint, "acoustid", track.AcoustID)
+	slog.Info("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint[:15], "acoustid", track.AcoustID)
+	slog.Debug("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint, "acoustid", track.AcoustID)
 	return nil
 }
 

@@ -47,9 +47,9 @@ metadata:
       api_key: <discogs_token>
     musicbrainz:
       enabled: true
-acoustid:
-  enabled: true
-  client_key: <acoustid_client_key>
+    acoustid:
+      enabled: true
+      client_key: <acoustid_client_key>
 sync:
   enabled: true
   devices:

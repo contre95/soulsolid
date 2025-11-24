@@ -16,9 +16,9 @@ import (
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/syncdap"
 	"github.com/contre95/soulsolid/src/features/tagging"
-	"github.com/contre95/soulsolid/src/infra/chroma"
 	"github.com/contre95/soulsolid/src/infra/database"
 	"github.com/contre95/soulsolid/src/infra/files"
+	"github.com/contre95/soulsolid/src/infra/fingerprint"
 	"github.com/contre95/soulsolid/src/infra/metadata"
 	"github.com/contre95/soulsolid/src/infra/queue"
 	"github.com/contre95/soulsolid/src/infra/tag"
@@ -46,7 +46,7 @@ func main() {
 	jobService := jobs.NewService(&cfgManager.Get().Jobs)
 
 	tagReader := tag.NewTagReader()
-	fingerprintReader := chroma.NewFingerprintService(cfgManager)
+	fingerprintReader := fingerprint.NewFingerprintService(cfgManager)
 	tagWriter := tag.NewTagWriter(cfgManager.Get().Downloaders.Artwork.Embedded)
 
 	importQueue := queue.NewInMemoryQueue()
@@ -86,7 +86,9 @@ func main() {
 	discogsProvider := metadata.NewDiscogsProvider(cfgManager.Get().Metadata.Providers["discogs"].Enabled, discogsAPIKey)
 	deezerProvider := metadata.NewDeezerProvider(cfgManager.Get().Metadata.Providers["deezer"].Enabled)
 
-	tagService := tagging.NewService(tagWriter, tagReader, db, []tagging.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, fingerprintReader, cfgManager)
+	acoustIDService := metadata.NewAcoustIDService(cfgManager)
+
+	tagService := tagging.NewService(tagWriter, tagReader, db, []tagging.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, acoustIDService, cfgManager)
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
 
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)
