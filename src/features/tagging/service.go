@@ -416,9 +416,10 @@ func (s *Service) SearchTrackMetadata(ctx context.Context, trackID string, provi
 
 	// Build search parameters from current track data
 	searchParams := SearchParams{
-		TrackID: track.ID,
-		Title:   track.Title,
-		Year:    track.Metadata.Year,
+		TrackID:  track.ID,
+		Title:    track.Title,
+		Year:     track.Metadata.Year,
+		AcoustID: track.AcoustID,
 	}
 
 	// Add album and album artist if available

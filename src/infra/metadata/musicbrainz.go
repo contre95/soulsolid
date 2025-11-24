@@ -82,6 +82,9 @@ func (p *MusicBrainzProvider) SearchTracks(ctx context.Context, params tagging.S
 	if params.Year > 0 {
 		queryParts = append(queryParts, fmt.Sprintf("date:%d", params.Year))
 	}
+	if params.AcoustID != "" {
+		queryParts = append(queryParts, fmt.Sprintf("recording_acoustid:\"%s\"", params.AcoustID))
+	}
 
 	if len(queryParts) == 0 {
 		// Return empty results if no search parameters
