@@ -109,25 +109,27 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 	if c.Get("HX-Request") == "true" {
 		// Return just the section content for HTMX requests
 		return c.Render("sections/tag", fiber.Map{
-			"Track":                 track,
-			"Artists":               artists,
-			"Albums":                albums,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-			"EnabledProviders":      h.service.GetEnabledProviders(),
+			"Track":                  track,
+			"Artists":                artists,
+			"Albums":                 albums,
+			"SelectedAlbumArtistID":  selectedAlbumArtistID,
+			"SelectedArtistIDs":      selectedArtistIDs,
+			"EnabledProviders":       h.service.GetEnabledProviders(),
+			"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 		})
 	}
 
 	// Return full page for direct navigation
 	return c.Render("main", fiber.Map{
-		"Title":                 "Edit Tags",
-		"Track":                 track,
-		"IsTagEdit":             true,
-		"Artists":               artists,
-		"Albums":                albums,
-		"SelectedAlbumArtistID": selectedAlbumArtistID,
-		"SelectedArtistIDs":     selectedArtistIDs,
-		"EnabledProviders":      h.service.GetEnabledProviders(),
+		"Title":                  "Edit Tags",
+		"Track":                  track,
+		"IsTagEdit":              true,
+		"Artists":                artists,
+		"Albums":                 albums,
+		"SelectedAlbumArtistID":  selectedAlbumArtistID,
+		"SelectedArtistIDs":      selectedArtistIDs,
+		"EnabledProviders":       h.service.GetEnabledProviders(),
+		"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 	})
 }
 
@@ -162,6 +164,41 @@ func (h *Handler) getProviderColors(providerName string) map[string]string {
 			"border":    "border-orange-400 dark:border-orange-300",
 			"focusRing": "focus:ring-orange-500 focus:border-orange-500",
 			"text":      "text-violet-700 dark:text-violet-300",
+		}
+	}
+}
+
+// getLyricsProviderColors returns color classes for a given lyrics provider
+func (h *Handler) getLyricsProviderColors(providerName string) map[string]string {
+	switch providerName {
+	case "genius":
+		return map[string]string{
+			"label":     "text-yellow-600 dark:text-yellow-300",
+			"border":    "border-yellow-400 dark:border-yellow-300",
+			"focusRing": "focus:ring-yellow-500 focus:border-yellow-500",
+			"text":      "text-yellow-700 dark:text-yellow-300",
+		}
+	case "tekstowo":
+		return map[string]string{
+			"label":     "text-green-600 dark:text-green-300",
+			"border":    "border-green-400 dark:border-green-300",
+			"focusRing": "focus:ring-green-500 focus:border-green-500",
+			"text":      "text-green-700 dark:text-green-300",
+		}
+	case "lrclib":
+		return map[string]string{
+			"label":     "text-blue-600 dark:text-blue-300",
+			"border":    "border-blue-400 dark:border-blue-300",
+			"focusRing": "focus:ring-blue-500 focus:border-blue-500",
+			"text":      "text-blue-700 dark:text-blue-300",
+		}
+	default:
+		// Default to blue for unknown providers
+		return map[string]string{
+			"label":     "text-blue-600 dark:text-blue-300",
+			"border":    "border-blue-400 dark:border-blue-300",
+			"focusRing": "focus:ring-blue-500 focus:border-blue-500",
+			"text":      "text-blue-700 dark:text-blue-300",
 		}
 	}
 }
@@ -275,27 +312,29 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 		// Check if request is HTMX or full page
 		if c.Get("HX-Request") == "true" {
 			return c.Render("sections/tag", fiber.Map{
-				"Track":                 track,
-				"Artists":               artists,
-				"Albums":                albums,
-				"FetchError":            "err",
-				"ProviderColors":        providerColors,
-				"SelectedAlbumArtistID": selectedAlbumArtistID,
-				"SelectedArtistIDs":     selectedArtistIDs,
-				"EnabledProviders":      h.service.GetEnabledProviders(),
+				"Track":                  track,
+				"Artists":                artists,
+				"Albums":                 albums,
+				"FetchError":             "err",
+				"ProviderColors":         providerColors,
+				"SelectedAlbumArtistID":  selectedAlbumArtistID,
+				"SelectedArtistIDs":      selectedArtistIDs,
+				"EnabledProviders":       h.service.GetEnabledProviders(),
+				"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 			})
 		} else {
 			return c.Render("main", fiber.Map{
-				"Title":                 "Edit Tags",
-				"Track":                 track,
-				"IsTagEdit":             true,
-				"Artists":               artists,
-				"Albums":                albums,
-				"FetchError":            "err",
-				"ProviderColors":        providerColors,
-				"SelectedAlbumArtistID": selectedAlbumArtistID,
-				"SelectedArtistIDs":     selectedArtistIDs,
-				"EnabledProviders":      h.service.GetEnabledProviders(),
+				"Title":                  "Edit Tags",
+				"Track":                  track,
+				"IsTagEdit":              true,
+				"Artists":                artists,
+				"Albums":                 albums,
+				"FetchError":             "err",
+				"ProviderColors":         providerColors,
+				"SelectedAlbumArtistID":  selectedAlbumArtistID,
+				"SelectedArtistIDs":      selectedArtistIDs,
+				"EnabledProviders":       h.service.GetEnabledProviders(),
+				"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 			})
 		}
 	}
@@ -389,27 +428,29 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 	// Check if request is HTMX or full page
 	if c.Get("HX-Request") == "true" {
 		return c.Render("sections/tag", fiber.Map{
-			"Track":                 track,
-			"Artists":               artists,
-			"Albums":                albums,
-			"FromProvider":          providerName,
-			"ProviderColors":        providerColors,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-			"EnabledProviders":      h.service.GetEnabledProviders(),
+			"Track":                  track,
+			"Artists":                artists,
+			"Albums":                 albums,
+			"FromProvider":           providerName,
+			"ProviderColors":         providerColors,
+			"SelectedAlbumArtistID":  selectedAlbumArtistID,
+			"SelectedArtistIDs":      selectedArtistIDs,
+			"EnabledProviders":       h.service.GetEnabledProviders(),
+			"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 		})
 	} else {
 		return c.Render("main", fiber.Map{
-			"Title":                 "Edit Tags",
-			"Track":                 track,
-			"IsTagEdit":             true,
-			"Artists":               artists,
-			"Albums":                albums,
-			"FromProvider":          providerName,
-			"ProviderColors":        providerColors,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-			"EnabledProviders":      h.service.GetEnabledProviders(),
+			"Title":                  "Edit Tags",
+			"Track":                  track,
+			"IsTagEdit":              true,
+			"Artists":                artists,
+			"Albums":                 albums,
+			"FromProvider":           providerName,
+			"ProviderColors":         providerColors,
+			"SelectedAlbumArtistID":  selectedAlbumArtistID,
+			"SelectedArtistIDs":      selectedArtistIDs,
+			"EnabledProviders":       h.service.GetEnabledProviders(),
+			"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 		})
 	}
 }
@@ -614,14 +655,127 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 
 	// Render the updated form
 	return c.Render("sections/tag", fiber.Map{
-		"Track":                 mergedTrack,
-		"Artists":               artists,
-		"Albums":                albums,
-		"SelectedAlbumArtistID": selectedAlbumArtistID,
-		"SelectedArtistIDs":     selectedArtistIDs,
-		"FromProvider":          providerName,
-		"ProviderColors":        providerColors,
-		"EnabledProviders":      h.service.GetEnabledProviders(),
+		"Track":                  mergedTrack,
+		"Artists":                artists,
+		"Albums":                 albums,
+		"SelectedAlbumArtistID":  selectedAlbumArtistID,
+		"SelectedArtistIDs":      selectedArtistIDs,
+		"FromProvider":           providerName,
+		"ProviderColors":         providerColors,
+		"EnabledProviders":       h.service.GetEnabledProviders(),
+		"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
+	})
+}
+
+// FetchLyricsFromProvider handles fetching lyrics from any lyrics provider
+func (h *Handler) FetchLyricsFromProvider(c *fiber.Ctx) error {
+	trackID := c.Params("trackId")
+	providerName := c.Params("provider")
+
+	if trackID == "" || providerName == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Track ID and provider name are required")
+	}
+
+	// Fetch lyrics
+	lyrics, err := h.service.SearchLyrics(c.Context(), trackID, providerName)
+	if err != nil {
+		slog.Error("Failed to fetch lyrics", "error", err, "trackId", trackID, "provider", providerName)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": fmt.Sprintf("Failed to fetch lyrics: %v", err),
+		})
+	}
+
+	slog.Info("Lyrics fetched successfully", "trackId", trackID, "provider", providerName, "lyricsLength", len(lyrics))
+
+	// For HTMX requests, just return the lyrics content to replace the textarea
+	if c.Get("HX-Request") == "true" {
+		return c.SendString(lyrics)
+	}
+
+	// For regular requests, update the track and render the full form
+	// Get current track data
+	track, err := h.service.GetTrackFileTags(c.Context(), trackID)
+	if err != nil {
+		slog.Error("Failed to get track for lyrics update", "error", err, "trackId", trackID)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
+	}
+
+	// Update track lyrics
+	track.Metadata.Lyrics = lyrics
+
+	// Get all artists and albums for dropdowns
+	artists, err := h.service.libraryRepo.GetArtists(c.Context())
+	if err != nil {
+		artists = []*music.Artist{} // Continue with empty list
+	}
+
+	albums, err := h.service.libraryRepo.GetAlbums(c.Context())
+	if err != nil {
+		albums = []*music.Album{} // Continue with empty list
+	}
+
+	// Ensure track's artists are included in the dropdown
+	artistMap := make(map[string]bool)
+	for _, artist := range artists {
+		artistMap[artist.ID] = true
+	}
+	for _, artistRole := range track.Artists {
+		if artistRole.Artist != nil {
+			artistID := artistRole.Artist.ID
+			if artistID == "" {
+				artistID = "temp_" + artistRole.Artist.Name
+				artistRole.Artist.ID = artistID
+			}
+			if !artistMap[artistID] {
+				artists = append(artists, artistRole.Artist)
+				artistMap[artistID] = true
+			}
+		}
+	}
+	if track.Album != nil {
+		for _, artistRole := range track.Album.Artists {
+			if artistRole.Artist != nil {
+				artistID := artistRole.Artist.ID
+				if artistID == "" {
+					artistID = "temp_" + artistRole.Artist.Name
+					artistRole.Artist.ID = artistID
+				}
+				if !artistMap[artistID] {
+					artists = append(artists, artistRole.Artist)
+					artistMap[artistID] = true
+				}
+			}
+		}
+	}
+
+	// Create selected artist IDs map
+	selectedArtistIDs := make(map[string]bool)
+	for _, artistRole := range track.Artists {
+		if artistRole.Artist != nil && artistRole.Artist.ID != "" {
+			selectedArtistIDs[artistRole.Artist.ID] = true
+		}
+	}
+
+	// Determine selected album artist ID
+	selectedAlbumArtistID := ""
+	if track.Album != nil && len(track.Album.Artists) > 0 {
+		selectedAlbumArtistID = track.Album.Artists[0].Artist.ID
+	}
+
+	// Get provider colors
+	providerColors := h.getLyricsProviderColors(providerName)
+
+	// Render the updated form
+	return c.Render("sections/tag", fiber.Map{
+		"Track":                  track,
+		"Artists":                artists,
+		"Albums":                 albums,
+		"SelectedAlbumArtistID":  selectedAlbumArtistID,
+		"SelectedArtistIDs":      selectedArtistIDs,
+		"FromLyricsProvider":     providerName,
+		"LyricsProviderColors":   providerColors,
+		"EnabledProviders":       h.service.GetEnabledProviders(),
+		"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 	})
 }
 

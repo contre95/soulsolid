@@ -2,8 +2,8 @@ package config
 
 // Config holds the application configuration.
 type Config struct {
-	LibraryPath  string `yaml:"libraryPath" validate:"required"`
-	DownloadPath string `yaml:"downloadPath" validate:"required"`
+	LibraryPath  string      `yaml:"libraryPath" validate:"required"`
+	DownloadPath string      `yaml:"downloadPath" validate:"required"`
 	Telegram     Telegram    `yaml:"telegram"`
 	Logger       Logger      `yaml:"logger"`
 	Downloaders  Downloaders `yaml:"downloaders"`
@@ -11,6 +11,7 @@ type Config struct {
 	Database     Database    `yaml:"database"`
 	Import       Import      `yaml:"import"`
 	Metadata     Metadata    `yaml:"metadata"`
+	Lyrics       Lyrics      `yaml:"lyrics"`
 	Sync         Sync        `yaml:"sync"`
 	Jobs         Jobs        `yaml:"jobs"`
 }
@@ -76,6 +77,11 @@ type Downloaders struct {
 
 // Metadata holds the configuration for metadata tagging providers
 type Metadata struct {
+	Providers map[string]Provider `yaml:"providers"`
+}
+
+// Lyrics holds the configuration for lyrics providers
+type Lyrics struct {
 	Providers map[string]Provider `yaml:"providers"`
 }
 

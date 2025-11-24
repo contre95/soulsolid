@@ -9,8 +9,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-
-
 // setProviderAPIKey sets the API key for a provider from an environment variable
 func setProviderAPIKey(cfg *Config, providerName, envVar string) {
 	if key := os.Getenv(envVar); key != "" {
@@ -136,6 +134,19 @@ func createDefaultConfig() *Config {
 					APIKey:  nil,
 				},
 				"musicbrainz": {
+					Enabled: false,
+				},
+			},
+		},
+		Lyrics: Lyrics{
+			Providers: map[string]Provider{
+				"genius": {
+					Enabled: false,
+				},
+				"tekstowo": {
+					Enabled: false,
+				},
+				"lrclib": {
 					Enabled: false,
 				},
 			},

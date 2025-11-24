@@ -21,17 +21,19 @@ type Service struct {
 	tagReader           importing.TagReader
 	libraryRepo         music.Library
 	metadataProviders   []MetadataProvider
+	lyricsProviders     []LyricsProvider
 	fingerprintProvider importing.FingerprintProvider
 	config              *config.Manager
 }
 
 // NewService creates a new tag service
-func NewService(tagWriter downloading.TagWriter, tagReader importing.TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, fingerprintProvider importing.FingerprintProvider, config *config.Manager) *Service {
+func NewService(tagWriter downloading.TagWriter, tagReader importing.TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, lyricsProviders []LyricsProvider, fingerprintProvider importing.FingerprintProvider, config *config.Manager) *Service {
 	return &Service{
 		tagWriter:           tagWriter,
 		tagReader:           tagReader,
 		libraryRepo:         libraryRepo,
 		metadataProviders:   metadataProviders,
+		lyricsProviders:     lyricsProviders,
 		fingerprintProvider: fingerprintProvider,
 		config:              config,
 	}
@@ -360,6 +362,18 @@ func (s *Service) GetEnabledProviders() map[string]bool {
 	return enabled
 }
 
+// GetEnabledLyricsProviders returns a map of enabled lyrics providers
+func (s *Service) GetEnabledLyricsProviders() map[string]bool {
+	enabled := make(map[string]bool)
+	cfg := s.config.Get()
+	if cfg.Lyrics.Providers != nil {
+		for name, provider := range cfg.Lyrics.Providers {
+			enabled[name] = provider.Enabled
+		}
+	}
+	return enabled
+}
+
 // SearchTrackMetadata searches for metadat of a given track and an array of possible matches
 func (s *Service) SearchTrackMetadata(ctx context.Context, trackID string, providerName string) ([]*music.Track, error) {
 	track, err := s.libraryRepo.GetTrack(ctx, trackID)
@@ -419,4 +433,54 @@ func (s *Service) SearchTrackMetadata(ctx context.Context, trackID string, provi
 	}
 
 	return tracks, nil
+}
+
+// SearchLyrics searches for lyrics using a given track and lyrics provider
+func (s *Service) SearchLyrics(ctx context.Context, trackID string, providerName string) (string, error) {
+	track, err := s.libraryRepo.GetTrack(ctx, trackID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get track: %w", err)
+	}
+	if track == nil {
+		return "", fmt.Errorf("track not found: %s", trackID)
+	}
+
+	// Build search parameters from current track data
+	searchParams := LyricsSearchParams{
+		TrackID: track.ID,
+		Title:   track.Title,
+	}
+
+	// Add artist if available
+	if len(track.Artists) > 0 && track.Artists[0].Artist != nil {
+		searchParams.Artist = track.Artists[0].Artist.Name
+	}
+
+	// Add album and album artist if available
+	if track.Album != nil {
+		searchParams.Album = track.Album.Title
+		if len(track.Album.Artists) > 0 && track.Album.Artists[0].Artist != nil {
+			searchParams.AlbumArtist = track.Album.Artists[0].Artist.Name
+		}
+	}
+
+	// Find the specific provider
+	var targetProvider LyricsProvider
+	for _, provider := range s.lyricsProviders {
+		if provider.Name() == providerName && provider.IsEnabled() {
+			targetProvider = provider
+			break
+		}
+	}
+	if targetProvider == nil {
+		return "", fmt.Errorf("lyrics provider '%s' not found or not enabled", providerName)
+	}
+
+	// Search for lyrics
+	lyrics, err := targetProvider.SearchLyrics(ctx, searchParams)
+	if err != nil {
+		return "", fmt.Errorf("failed to search lyrics: %w", err)
+	}
+
+	return lyrics, nil
 }

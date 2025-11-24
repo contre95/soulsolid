@@ -87,7 +87,11 @@ func main() {
 	discogsProvider := metadata.NewDiscogsProvider(cfgManager.Get().Metadata.Providers["discogs"].Enabled, discogsAPIKey)
 	deezerProvider := metadata.NewDeezerProvider(cfgManager.Get().Metadata.Providers["deezer"].Enabled)
 
-	tagService := tagging.NewService(tagWriter, tagReader, db, []tagging.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, fingerprintReader, cfgManager)
+	geniusProvider := metadata.NewGeniusProvider(cfgManager.Get().Lyrics.Providers["genius"].Enabled)
+	tekstowoProvider := metadata.NewTekstowoProvider(cfgManager.Get().Lyrics.Providers["tekstowo"].Enabled)
+	lrclibProvider := metadata.NewLRCLibProvider(cfgManager.Get().Lyrics.Providers["lrclib"].Enabled)
+
+	tagService := tagging.NewService(tagWriter, tagReader, db, []tagging.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, []tagging.LyricsProvider{geniusProvider, tekstowoProvider, lrclibProvider}, fingerprintReader, cfgManager)
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
 
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)

@@ -47,6 +47,14 @@ metadata:
       api_key: <discogs_token>
     musicbrainz:
       enabled: true
+lyrics:
+  providers:
+    genius:
+      enabled: true
+    tekstowo:
+      enabled: true
+    lrclib:
+      enabled: true
 sync:
   enabled: true
   devices:
