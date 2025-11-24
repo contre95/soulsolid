@@ -9,16 +9,14 @@ import (
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/downloading"
-	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/google/uuid"
 )
 
 // Service provides tag editing functionality
 type Service struct {
-	tagWriter           downloading.TagWriter
-	tagReader           importing.TagReader
+	tagWriter           TagWriter
+	tagReader           TagReader
 	libraryRepo         music.Library
 	metadataProviders   []MetadataProvider
 	chromaprintAcoustID ChromaprintAcoustID
@@ -26,7 +24,7 @@ type Service struct {
 }
 
 // NewService creates a new tag service
-func NewService(tagWriter downloading.TagWriter, tagReader importing.TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, chromaprintAcoustID ChromaprintAcoustID, config *config.Manager) *Service {
+func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, chromaprintAcoustID ChromaprintAcoustID, config *config.Manager) *Service {
 	return &Service{
 		tagWriter:           tagWriter,
 		tagReader:           tagReader,

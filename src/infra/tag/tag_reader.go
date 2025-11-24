@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/dhowden/tag"
 )
@@ -18,7 +17,7 @@ import (
 type TagReader struct{}
 
 // NewTagReader creates a new TagReader
-func NewTagReader() importing.TagReader {
+func NewTagReader() *TagReader {
 	return &TagReader{}
 }
 

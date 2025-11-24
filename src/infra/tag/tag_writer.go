@@ -17,7 +17,6 @@ import (
 
 	"github.com/bogem/id3v2/v2"
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/go-flac/flacpicture"
 	"github.com/go-flac/flacvorbis"
@@ -46,7 +45,7 @@ func (t *TagWriter) SetCover(tag *id3v2.Tag, imgData []byte, mimeType string) er
 }
 
 // NewTagWriter creates a new TagWriter.
-func NewTagWriter(artworkConfig config.EmbeddedArtwork) downloading.TagWriter {
+func NewTagWriter(artworkConfig config.EmbeddedArtwork) *TagWriter {
 	return &TagWriter{artworkConfig: artworkConfig}
 }
 
