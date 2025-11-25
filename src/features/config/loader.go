@@ -112,6 +112,7 @@ func createDefaultConfig() *Config {
 			HTMXDebug: false,
 		},
 		Downloaders: Downloaders{
+			Plugins: []PluginConfig{},
 			Artwork: Artwork{
 				Embedded: EmbeddedArtwork{
 					Enabled: true,
@@ -129,9 +130,10 @@ func createDefaultConfig() *Config {
 		},
 
 		Import: Import{
-			Move:        false,
-			AlwaysQueue: false,
-			Duplicates:  "queue",
+			Move:             false,
+			AlwaysQueue:      false,
+			Duplicates:       "queue",
+			AutoStartWatcher: false,
 			PathOptions: Paths{
 				Compilations:    "%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}",
 				AlbumSoundtrack: "%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}",
