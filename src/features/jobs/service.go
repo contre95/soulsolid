@@ -200,7 +200,7 @@ func (s *Service) StartJob(jobType string, name string, metadata map[string]any)
 		if err != nil {
 			return "", fmt.Errorf("failed to open log file: %w", err)
 		}
-		job.Logger = slog.New(slog.NewTextHandler(logFile, nil))
+		job.Logger = slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{AddSource: false, Level: slog.LevelInfo}))
 		job.LogPath = logPath
 	} else {
 		// If logging is disabled, use a discard logger to prevent nil pointer errors

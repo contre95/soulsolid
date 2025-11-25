@@ -1,4 +1,4 @@
-package metadata
+package providers
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/tagging"
+	"github.com/contre95/soulsolid/src/features/metadata"
 )
 
 // LRCLib API response structures
@@ -34,7 +34,7 @@ func NewLRCLibProvider(enabled bool) *LRCLibProvider {
 	return &LRCLibProvider{enabled: enabled}
 }
 
-func (p *LRCLibProvider) SearchLyrics(ctx context.Context, params tagging.LyricsSearchParams) (string, error) {
+func (p *LRCLibProvider) SearchLyrics(ctx context.Context, params metadata.LyricsSearchParams) (string, error) {
 	// Build search query
 	var queryParts []string
 

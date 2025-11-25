@@ -1,4 +1,4 @@
-package tagging
+package metadata
 
 import (
 	"github.com/gofiber/fiber/v2"
@@ -14,7 +14,9 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	ui.Get("/tag/edit/:trackId/fetch/:provider", handler.FetchFromProvider)
 	ui.Get("/tag/edit/:trackId/search/:provider", handler.SearchTracksFromProvider)
 	ui.Get("/tag/edit/:trackId/select/:provider", handler.SelectTrackFromResults)
+	ui.Get("/tag/edit/:trackId/lyrics/best", handler.FetchBestLyrics)
 	ui.Get("/tag/edit/:trackId/lyrics/:provider", handler.FetchLyricsFromProvider)
+	ui.Post("/tag/edit/:trackId/lyrics/select/:provider", handler.SelectLyricsFromProvider)
 	ui.Get("/tag/edit/:trackId/fingerprint", handler.CalculateFingerprint)
 	ui.Get("/tag/edit/:trackId/fingerprint/view", handler.ViewFingerprint)
 
@@ -24,7 +26,9 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	tagGroup.Get("/tag/edit/:trackId/fetch/:provider", handler.FetchFromProvider)
 	tagGroup.Get("/tag/edit/:trackId/search/:provider", handler.SearchTracksFromProvider)
 	tagGroup.Get("/tag/edit/:trackId/select/:provider", handler.SelectTrackFromResults)
+	tagGroup.Get("/tag/edit/:trackId/lyrics/best", handler.FetchBestLyrics)
 	tagGroup.Get("/tag/edit/:trackId/lyrics/:provider", handler.FetchLyricsFromProvider)
+	tagGroup.Post("/tag/edit/:trackId/lyrics/select/:provider", handler.SelectLyricsFromProvider)
 	tagGroup.Get("/edit/:trackId/fetch/:provider", handler.FetchFromProvider)
 	tagGroup.Get("/edit/:trackId/search/:provider", handler.SearchTracksFromProvider)
 	tagGroup.Get("/edit/:trackId/select/:provider", handler.SelectTrackFromResults)

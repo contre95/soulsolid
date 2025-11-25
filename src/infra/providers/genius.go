@@ -1,4 +1,4 @@
-package metadata
+package providers
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/tagging"
+	"github.com/contre95/soulsolid/src/features/metadata"
 )
 
 // Genius API response structures
@@ -40,7 +40,7 @@ func NewGeniusProvider(enabled bool) *GeniusProvider {
 	return &GeniusProvider{enabled: enabled}
 }
 
-func (p *GeniusProvider) SearchLyrics(ctx context.Context, params tagging.LyricsSearchParams) (string, error) {
+func (p *GeniusProvider) SearchLyrics(ctx context.Context, params metadata.LyricsSearchParams) (string, error) {
 	// Build search query
 	var queryParts []string
 

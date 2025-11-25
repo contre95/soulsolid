@@ -27,8 +27,6 @@ func (t *AcoustIDJobTask) MetadataKeys() []string {
 
 // Execute performs the AcoustID analysis operation
 func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
-	slog.Info("Starting AcoustID analysis", "jobID", job.ID)
-
 	// Get all tracks from library
 	tracks, err := t.service.libraryService.GetTracks(ctx)
 	if err != nil {
@@ -37,7 +35,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 
 	totalTracks := len(tracks)
 	if totalTracks == 0 {
-		slog.Info("No tracks found in library")
+		job.Logger.Info("No tracks found in library")
 		return map[string]any{
 			"totalTracks": 0,
 			"processed":   0,
@@ -45,7 +43,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 		}, nil
 	}
 
-	slog.Info("Starting AcoustID analysis", "totalTracks", totalTracks)
+	job.Logger.Info("Starting AcoustID analysis", "totalTracks", totalTracks, "color=blue")
 	progressUpdater(0, fmt.Sprintf("Starting analysis of %d tracks", totalTracks))
 
 	processed := 0
@@ -55,7 +53,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 	for i, track := range tracks {
 		select {
 		case <-ctx.Done():
-			slog.Info("AcoustID analysis cancelled", "processed", processed, "updated", updated)
+			job.Logger.Info("AcoustID analysis cancelled", "processed", processed, "updated", updated)
 			return nil, ctx.Err()
 		default:
 		}
@@ -65,25 +63,26 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 
 		// Skip tracks that already have AcoustID
 		if track.AcoustID != "" {
-			slog.Debug("Skipping track with existing AcoustID", "trackID", track.ID, "acoustID", track.AcoustID)
+			job.Logger.Info("Skipping track with existing AcoustID", "trackID", track.ID, "title", track.Title, "acoustID", track.AcoustID, "color=orange")
 			skipped++
 			continue
 		}
 
 		// Call the existing AddChromaprintAndAcoustID method
+		job.Logger.Info("Analyzing track fingerprint", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "color=cyan")
 		err := t.service.taggingService.AddChromaprintAndAcoustID(ctx, track.ID)
 		if err != nil {
-			slog.Warn("Failed to add AcoustID for track", "trackID", track.ID, "title", track.Title, "error", err)
+			job.Logger.Warn("Failed to add AcoustID for track", "trackID", track.ID, "title", track.Title, "error", err, "color=orange")
 			// Continue with other tracks - don't fail the entire job
 		} else {
 			updated++
-			slog.Info("Successfully added AcoustID for track", "trackID", track.ID, "title", track.Title)
+			job.Logger.Info("Successfully added AcoustID for track", "trackID", track.ID, "title", track.Title, "color=green")
 		}
 
 		processed++
 	}
 
-	slog.Info("AcoustID analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped)
+	job.Logger.Info("AcoustID analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "color=green")
 	progressUpdater(100, fmt.Sprintf("Analysis completed - %d updated, %d skipped", updated, skipped))
 
 	return map[string]any{

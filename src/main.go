@@ -14,13 +14,13 @@ import (
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
 	"github.com/contre95/soulsolid/src/features/logging"
+	metadata1 "github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/syncdap"
-	"github.com/contre95/soulsolid/src/features/tagging"
 	"github.com/contre95/soulsolid/src/infra/database"
 	"github.com/contre95/soulsolid/src/infra/files"
 	"github.com/contre95/soulsolid/src/infra/fingerprint"
-	"github.com/contre95/soulsolid/src/infra/metadata"
+	"github.com/contre95/soulsolid/src/infra/providers"
 	"github.com/contre95/soulsolid/src/infra/queue"
 	"github.com/contre95/soulsolid/src/infra/tag"
 	"github.com/contre95/soulsolid/src/infra/watcher"
@@ -79,20 +79,20 @@ func main() {
 		panic("Failed to load plugins")
 	}
 
-	musicbrainzProvider := metadata.NewMusicBrainzProvider(cfgManager.Get().Metadata.Providers["musicbrainz"].Enabled)
+	musicbrainzProvider := providers.NewMusicBrainzProvider(cfgManager.Get().Metadata.Providers["musicbrainz"].Enabled)
 	discogsAPIKey := ""
 	if cfgManager.Get().Metadata.Providers["discogs"].APIKey != nil {
 		discogsAPIKey = *cfgManager.Get().Metadata.Providers["discogs"].APIKey
 	}
-	discogsProvider := metadata.NewDiscogsProvider(cfgManager.Get().Metadata.Providers["discogs"].Enabled, discogsAPIKey)
-	deezerProvider := metadata.NewDeezerProvider(cfgManager.Get().Metadata.Providers["deezer"].Enabled)
+	discogsProvider := providers.NewDiscogsProvider(cfgManager.Get().Metadata.Providers["discogs"].Enabled, discogsAPIKey)
+	deezerProvider := providers.NewDeezerProvider(cfgManager.Get().Metadata.Providers["deezer"].Enabled)
 
-	geniusProvider := metadata.NewGeniusProvider(cfgManager.Get().Lyrics.Providers["genius"].Enabled)
-	tekstowoProvider := metadata.NewTekstowoProvider(cfgManager.Get().Lyrics.Providers["tekstowo"].Enabled)
-	lrclibProvider := metadata.NewLRCLibProvider(cfgManager.Get().Lyrics.Providers["lrclib"].Enabled)
+	geniusProvider := providers.NewGeniusProvider(cfgManager.Get().Lyrics.Providers["genius"].Enabled)
+	tekstowoProvider := providers.NewTekstowoProvider(cfgManager.Get().Lyrics.Providers["tekstowo"].Enabled)
+	lrclibProvider := providers.NewLRCLibProvider(cfgManager.Get().Lyrics.Providers["lrclib"].Enabled)
 
-	acoustIDService := metadata.NewAcoustIDService(cfgManager)
-	tagService := tagging.NewService(tagWriter, tagReader, db, []tagging.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, []tagging.LyricsProvider{geniusProvider, tekstowoProvider, lrclibProvider}, acoustIDService, cfgManager)
+	acoustIDService := providers.NewAcoustIDService(cfgManager)
+	tagService := metadata1.NewService(tagWriter, tagReader, db, []metadata1.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, []metadata1.LyricsProvider{geniusProvider, tekstowoProvider, lrclibProvider}, acoustIDService, cfgManager)
 
 	analyzeService := analyze.NewService(tagService, libraryService, jobService, cfgManager) // Now using interfaces
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)

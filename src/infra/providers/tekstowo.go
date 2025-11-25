@@ -1,4 +1,4 @@
-package metadata
+package providers
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/tagging"
+	"github.com/contre95/soulsolid/src/features/metadata"
 )
 
 // TekstowoProvider implements LyricsProvider for Tekstowo.pl
@@ -21,7 +21,7 @@ func NewTekstowoProvider(enabled bool) *TekstowoProvider {
 	return &TekstowoProvider{enabled: enabled}
 }
 
-func (p *TekstowoProvider) SearchLyrics(ctx context.Context, params tagging.LyricsSearchParams) (string, error) {
+func (p *TekstowoProvider) SearchLyrics(ctx context.Context, params metadata.LyricsSearchParams) (string, error) {
 	// Build search query
 	var queryParts []string
 

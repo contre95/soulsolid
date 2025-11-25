@@ -83,6 +83,16 @@ type Metadata struct {
 // Lyrics holds the configuration for lyrics providers
 type Lyrics struct {
 	Providers map[string]Provider `yaml:"providers"`
+	Quality   LyricsQuality       `yaml:"quality"`
+}
+
+// LyricsQuality holds configuration for lyrics quality preferences
+type LyricsQuality struct {
+	MinLength          int     `yaml:"min_length"`          // Minimum lyrics length to consider
+	MinLines           int     `yaml:"min_lines"`           // Minimum number of lines
+	PreferStructured   bool    `yaml:"prefer_structured"`   // Prefer lyrics with verse/chorus markers
+	PenalizeRepetitive float64 `yaml:"penalize_repetitive"` // Penalty for repetitive content (0-1)
+	LanguageBonus      int     `yaml:"language_bonus"`      // Bonus for detected language
 }
 
 // Provider holds configuration for individual tagging providers

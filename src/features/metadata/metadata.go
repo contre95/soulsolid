@@ -1,4 +1,4 @@
-package tagging
+package metadata
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package tagging
+package metadata
 
 import (
 	"fmt"
@@ -191,6 +191,13 @@ func (h *Handler) getLyricsProviderColors(providerName string) map[string]string
 			"border":    "border-blue-400 dark:border-blue-300",
 			"focusRing": "focus:ring-blue-500 focus:border-blue-500",
 			"text":      "text-blue-700 dark:text-blue-300",
+		}
+	case "best":
+		return map[string]string{
+			"label":     "text-gradient-to-r from-yellow-600 via-green-600 to-blue-600 dark:from-yellow-300 dark:via-green-300 dark:to-blue-300",
+			"border":    "border-gradient-to-r from-yellow-400 via-green-400 to-blue-400 dark:from-yellow-300 dark:via-green-300 dark:to-blue-300",
+			"focusRing": "focus:ring-gradient-to-r focus:from-yellow-500 focus:via-green-500 focus:to-blue-500 focus:border-gradient-to-r focus:from-yellow-500 focus:via-green-500 focus:to-blue-500",
+			"text":      "text-gradient-to-r from-yellow-700 via-green-700 to-blue-700 dark:from-yellow-300 dark:via-green-300 dark:to-blue-300",
 		}
 	default:
 		// Default to blue for unknown providers
@@ -884,5 +891,147 @@ func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 	// Return success toast
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": "Tags updated successfully!",
+	})
+}
+
+// FetchBestLyrics handles fetching lyrics from all providers and shows them in a modal
+func (h *Handler) FetchBestLyrics(c *fiber.Ctx) error {
+	trackID := c.Params("trackId")
+
+	if trackID == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+	}
+
+	// Get current track data
+	track, err := h.service.GetTrackFileTags(c.Context(), trackID)
+	if err != nil {
+		slog.Error("Failed to get track for lyrics", "error", err, "trackId", trackID)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": fmt.Sprintf("Failed to get track: %v", err),
+		})
+	}
+
+	// Build search parameters
+	searchParams := LyricsSearchParams{
+		TrackID: track.ID,
+		Title:   track.Title,
+	}
+
+	if len(track.Artists) > 0 && track.Artists[0].Artist != nil {
+		searchParams.Artist = track.Artists[0].Artist.Name
+	}
+
+	if track.Album != nil {
+		searchParams.Album = track.Album.Title
+		if len(track.Album.Artists) > 0 && track.Album.Artists[0].Artist != nil {
+			searchParams.AlbumArtist = track.Album.Artists[0].Artist.Name
+		}
+	}
+
+	// Collect lyrics from all enabled providers
+	var results []*LyricsResult
+	for _, provider := range h.service.lyricsProviders {
+		if !provider.IsEnabled() {
+			continue
+		}
+
+		slog.Debug("Trying lyrics provider", "provider", provider.Name(), "trackID", trackID, "title", searchParams.Title, "artist", searchParams.Artist)
+		lyrics, err := provider.SearchLyrics(c.Context(), searchParams)
+		if err != nil {
+			slog.Warn("Failed to search lyrics with provider", "provider", provider.Name(), "trackID", trackID, "title", searchParams.Title, "artist", searchParams.Artist, "error", err.Error())
+			continue
+		}
+
+		if lyrics != "" {
+			quality, confidence := h.service.scoreLyrics(lyrics, searchParams)
+			result := &LyricsResult{
+				Lyrics:     lyrics,
+				Provider:   provider.Name(),
+				Quality:    quality,
+				Confidence: confidence,
+			}
+			results = append(results, result)
+
+			slog.Info("Found lyrics with provider", "provider", provider.Name(), "trackID", trackID, "quality", quality, "confidence", confidence, "lyricsLength", len(lyrics))
+		}
+	}
+
+	if len(results) == 0 {
+		slog.Info("No lyrics found for track with any provider", "trackId", trackID, "title", track.Title, "artist", searchParams.Artist, "providers", len(h.service.lyricsProviders))
+		return c.Render("toast/toastInfo", fiber.Map{
+			"Msg": "No lyrics found from any provider",
+		})
+	}
+
+	// Sort results by quality (highest first)
+	for i := 0; i < len(results)-1; i++ {
+		for j := i + 1; j < len(results); j++ {
+			if results[j].Quality > results[i].Quality ||
+				(results[j].Quality == results[i].Quality && results[j].Confidence > results[i].Confidence) {
+				results[i], results[j] = results[j], results[i]
+			}
+		}
+	}
+
+	slog.Info("Lyrics search completed", "trackId", trackID, "resultsCount", len(results))
+
+	// Render modal with lyrics results
+	return c.Render("tag/lyrics_results_modal", fiber.Map{
+		"Track":   track,
+		"Results": results,
+		"TrackID": trackID,
+	})
+}
+
+// SelectLyricsFromProvider handles selecting specific lyrics from modal results
+func (h *Handler) SelectLyricsFromProvider(c *fiber.Ctx) error {
+	trackID := c.Params("trackId")
+	providerName := c.Params("provider")
+
+	if trackID == "" || providerName == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Track ID and provider name are required")
+	}
+
+	// Get lyrics from specific provider
+	lyrics, err := h.service.SearchLyrics(c.Context(), trackID, providerName)
+	if err != nil {
+		slog.Error("Failed to fetch lyrics from provider", "error", err, "trackId", trackID, "provider", providerName)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": fmt.Sprintf("Failed to fetch lyrics: %v", err),
+		})
+	}
+
+	// Get current track data
+	track, err := h.service.GetTrackFileTags(c.Context(), trackID)
+	if err != nil {
+		slog.Error("Failed to get track for updating", "error", err, "trackId", trackID)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": fmt.Sprintf("Failed to get track: %v", err),
+		})
+	}
+
+	// Update track with selected lyrics
+	track.Metadata.Lyrics = lyrics
+
+	// Update track in database
+	err = h.service.libraryRepo.UpdateTrack(c.Context(), track)
+	if err != nil {
+		slog.Error("Failed to update track with lyrics", "error", err, "trackId", trackID)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": fmt.Sprintf("Failed to update track: %v", err),
+		})
+	}
+
+	// Write lyrics to file tags
+	if err := h.service.tagWriter.WriteFileTags(c.Context(), track.Path, track); err != nil {
+		slog.Warn("Failed to write lyrics to file tags", "error", err, "trackId", trackID, "path", track.Path)
+		// Continue - we still want to show success to user
+	}
+
+	slog.Info("Successfully selected lyrics from provider", "trackId", trackID, "provider", providerName, "lyricsLength", len(lyrics))
+
+	// Return success toast and close modal
+	return c.Render("toast/toastOk", fiber.Map{
+		"Msg": fmt.Sprintf("Lyrics from %s added successfully!", providerName),
 	})
 }

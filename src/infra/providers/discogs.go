@@ -1,4 +1,4 @@
-package metadata
+package providers
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/tagging"
+	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/music"
 )
 
@@ -74,7 +74,7 @@ func NewDiscogsProvider(enabled bool, apiKey string) *DiscogsProvider {
 	return &DiscogsProvider{enabled: enabled, apiKey: apiKey}
 }
 
-func (p *DiscogsProvider) SearchTracks(ctx context.Context, params tagging.SearchParams) ([]*music.Track, error) {
+func (p *DiscogsProvider) SearchTracks(ctx context.Context, params metadata.SearchParams) ([]*music.Track, error) {
 	// Build search query
 	query := url.Values{}
 	if params.Title != "" {
@@ -366,7 +366,7 @@ func (p *DiscogsProvider) fetchReleaseDetails(ctx context.Context, resourceURL s
 func (p *DiscogsProvider) FetchMetadata(ctx context.Context, fingerprint string) (*music.Track, error) {
 	// TODO: Implement full Discogs API integration
 	// For now, return realistic placeholder data that demonstrates the functionality
-	tracks, err := p.SearchTracks(ctx, tagging.SearchParams{})
+	tracks, err := p.SearchTracks(ctx, metadata.SearchParams{})
 	if err != nil || len(tracks) == 0 {
 		return nil, err
 	}

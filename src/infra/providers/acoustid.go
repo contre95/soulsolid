@@ -1,4 +1,4 @@
-package metadata
+package providers
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"os/exec"
 
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/tagging"
+	"github.com/contre95/soulsolid/src/features/metadata"
 )
 
 // AcoustIDResponse represents response from AcoustID API
@@ -46,7 +46,7 @@ type AcoustIDAPI struct {
 }
 
 // NewAcoustIDService creates a new AcoustID service
-func NewAcoustIDService(cfg *config.Manager) tagging.ChromaprintAcoustID {
+func NewAcoustIDService(cfg *config.Manager) metadata.ChromaprintAcoustID {
 	return &AcoustIDAPI{
 		config: cfg,
 	}

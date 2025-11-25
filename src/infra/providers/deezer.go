@@ -1,4 +1,4 @@
-package metadata
+package providers
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/tagging"
+	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/music"
 )
 
@@ -71,7 +71,7 @@ func NewDeezerProvider(enabled bool) *DeezerProvider {
 	return &DeezerProvider{enabled: enabled}
 }
 
-func (p *DeezerProvider) SearchTracks(ctx context.Context, params tagging.SearchParams) ([]*music.Track, error) {
+func (p *DeezerProvider) SearchTracks(ctx context.Context, params metadata.SearchParams) ([]*music.Track, error) {
 	// Build search query
 	var queryParts []string
 
@@ -237,7 +237,7 @@ func (p *DeezerProvider) convertDeezerTrackToTrack(deezerTrack deezerTrack, albu
 func (p *DeezerProvider) FetchMetadata(ctx context.Context, fingerprint string) (*music.Track, error) {
 	// TODO: Implement full Deezer API integration
 	// For now, return realistic placeholder data that demonstrates the functionality
-	tracks, err := p.SearchTracks(ctx, tagging.SearchParams{})
+	tracks, err := p.SearchTracks(ctx, metadata.SearchParams{})
 	if err != nil || len(tracks) == 0 {
 		return nil, err
 	}
