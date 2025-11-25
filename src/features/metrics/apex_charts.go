@@ -1,3 +1,4 @@
+// apex_chart.go is the file used by the handlers.go to render apex chart easily with htmx
 package metrics
 
 import "strconv"
