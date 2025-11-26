@@ -129,8 +129,8 @@ type EmbeddedArtwork struct {
 
 // PluginConfig holds configuration for a plugin downloader
 type PluginConfig struct {
-	Name   string                 `yaml:"name"`
-	Path   string                 `yaml:"path"`
-	Icon   string                 `yaml:"icon,omitempty"`
-	Config map[string]interface{} `yaml:"config"`
+	Name   string         `yaml:"name"`
+	Path   string         `yaml:"path"`
+	Icon   string         `yaml:"icon,omitempty"`
+	Config map[string]any `yaml:"config"`
 }

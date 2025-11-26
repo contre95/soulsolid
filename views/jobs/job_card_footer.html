@@ -8,7 +8,9 @@
 {{ if and (ne $job.Metadata nil) (index $job.Metadata "msg") }}
   {{ $stats := index $job.Metadata "stats" }}
   {{ $colorClass := "bg-red-50/80 dark:bg-red-900/30 border border-red-200/60 dark:border-red-800/60 text-red-700 dark:text-red-300" }}
-  {{ if eq $job.Status "cancelled" }}
+  {{ if eq $job.Type "analyze_lyrics" }}
+    {{ $colorClass = "bg-pink-50/80 dark:bg-pink-900/30 border border-pink-200/60 dark:border-pink-800/60 text-pink-700 dark:text-pink-300" }}
+  {{ else if eq $job.Status "cancelled" }}
     {{ $colorClass = "bg-gray-50/80 dark:bg-gray-900/30 border border-gray-200/60 dark:border-gray-800/60 text-gray-700 dark:text-gray-300" }}
   {{ else if and (eq $job.Status "completed") $stats (gt $stats.TracksImported 0) }}
     {{ $colorClass = "bg-green-50/80 dark:bg-green-900/30 border border-green-200/60 dark:border-green-800/60 text-green-700 dark:text-green-300" }}

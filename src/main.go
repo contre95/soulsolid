@@ -14,6 +14,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
 	"github.com/contre95/soulsolid/src/features/logging"
+	lyrics1 "github.com/contre95/soulsolid/src/features/lyrics"
 	metadata1 "github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/syncdap"
@@ -92,7 +93,8 @@ func main() {
 	lrclibProvider := providers.NewLRCLibProvider(cfgManager.Get().Lyrics.Providers["lrclib"].Enabled)
 
 	acoustIDService := providers.NewAcoustIDService(cfgManager)
-	tagService := metadata1.NewService(tagWriter, tagReader, db, []metadata1.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, []metadata1.LyricsProvider{geniusProvider, tekstowoProvider, lrclibProvider}, acoustIDService, cfgManager)
+	lyricsService := lyrics1.NewService(tagWriter, tagReader, db, []lyrics1.LyricsProvider{geniusProvider, tekstowoProvider, lrclibProvider}, cfgManager)
+	tagService := metadata1.NewService(tagWriter, tagReader, db, []metadata1.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, []lyrics1.LyricsProvider{geniusProvider, tekstowoProvider, lrclibProvider}, acoustIDService, cfgManager, lyricsService)
 
 	analyzeService := analyze.NewService(tagService, libraryService, jobService, cfgManager) // Now using interfaces
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)

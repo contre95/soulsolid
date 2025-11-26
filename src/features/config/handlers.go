@@ -119,18 +119,6 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	})
 }
 
-// Helper functions for parsing form values
-func parseInt(s string) int {
-	var result int
-	if s != "" {
-		_, err := fmt.Sscanf(s, "%d", &result)
-		if err != nil {
-			return 0
-		}
-	}
-	return result
-}
-
 func parseStringSlice(s string) []string {
 	if s == "" {
 		return []string{}

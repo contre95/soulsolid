@@ -12,9 +12,7 @@
         <!-- AcoustID Analysis Card -->
         <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
             <div class="flex items-center mb-4">
-                <svg class="w-8 h-8 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
-                </svg>
+                <img src="/svg/fingerprint.svg" class="w-8 h-8 mr-3" style="filter: invert(39%) sepia(93%) saturate(1473%) hue-rotate(207deg) brightness(101%) contrast(96%);">
                 <h3 class="text-xl font-semibold text-slate-800 dark:text-white">AcoustID Analysis</h3>
             </div>
             <p class="text-slate-600 dark:text-slate-400 mb-4">
@@ -36,9 +34,7 @@
         <!-- Lyrics Analysis Card -->
         <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
             <div class="flex items-center mb-4">
-                <svg class="w-8 h-8 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                </svg>
+                <img src="/svg/mic.svg" class="w-8 h-8 mr-3" style="filter: invert(67%) sepia(89%) saturate(7493%) hue-rotate(286deg) brightness(101%) contrast(107%);">
                 <h3 class="text-xl font-semibold text-slate-800 dark:text-white">Lyrics Analysis</h3>
             </div>
             <p class="text-slate-600 dark:text-slate-400 mb-4">
@@ -48,7 +44,7 @@
                 hx-post="/analyze/lyrics"
                 hx-target="#toast-container"
                 hx-swap="beforeend"
-                class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+                class="w-full bg-pink-500 hover:bg-pink-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
             >
                 Start Lyrics Analysis
                 <span class="htmx-indicator ml-2">

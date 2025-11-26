@@ -2,8 +2,17 @@ package music
 
 import "context"
 
-// TaggingService defines the interface for tagging operations
-type TaggingService interface {
+// LyricsSearchParams contains parameters for searching lyrics
+type LyricsSearchParams struct {
+	TrackID     string
+	AlbumArtist string
+	Album       string
+	Title       string
+	Artist      string
+}
+
+// MetadataService defines the interface for tagging operations
+type MetadataService interface {
 	AddChromaprintAndAcoustID(ctx context.Context, trackID string) error
 	AddLyrics(ctx context.Context, trackID string, providerName string) error
 	AddLyricsWithBestProvider(ctx context.Context, trackID string) error

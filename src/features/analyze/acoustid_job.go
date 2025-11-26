@@ -43,7 +43,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 		}, nil
 	}
 
-	job.Logger.Info("Starting AcoustID analysis", "totalTracks", totalTracks, "color=blue")
+	job.Logger.Info("Starting AcoustID analysis", "totalTracks", totalTracks, "color", "blue")
 	progressUpdater(0, fmt.Sprintf("Starting analysis of %d tracks", totalTracks))
 
 	processed := 0
@@ -63,26 +63,26 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 
 		// Skip tracks that already have AcoustID
 		if track.AcoustID != "" {
-			job.Logger.Info("Skipping track with existing AcoustID", "trackID", track.ID, "title", track.Title, "acoustID", track.AcoustID, "color=orange")
+			job.Logger.Info("Skipping track with existing AcoustID", "trackID", track.ID, "title", track.Title, "acoustID", track.AcoustID, "color", "orange")
 			skipped++
 			continue
 		}
 
 		// Call the existing AddChromaprintAndAcoustID method
-		job.Logger.Info("Analyzing track fingerprint", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "color=cyan")
+		job.Logger.Info("Analyzing track fingerprint", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "color", "cyan")
 		err := t.service.taggingService.AddChromaprintAndAcoustID(ctx, track.ID)
 		if err != nil {
-			job.Logger.Warn("Failed to add AcoustID for track", "trackID", track.ID, "title", track.Title, "error", err, "color=orange")
+			job.Logger.Warn("Failed to add AcoustID for track", "trackID", track.ID, "title", track.Title, "error", err, "color", "orange")
 			// Continue with other tracks - don't fail the entire job
 		} else {
 			updated++
-			job.Logger.Info("Successfully added AcoustID for track", "trackID", track.ID, "title", track.Title, "color=green")
+			job.Logger.Info("Successfully added AcoustID for track", "trackID", track.ID, "title", track.Title, "color", "green")
 		}
 
 		processed++
 	}
 
-	job.Logger.Info("AcoustID analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "color=green")
+	job.Logger.Info("AcoustID analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "color", "green")
 	progressUpdater(100, fmt.Sprintf("Analysis completed - %d updated, %d skipped", updated, skipped))
 
 	return map[string]any{

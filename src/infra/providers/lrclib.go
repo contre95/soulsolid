@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/metadata"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // LRCLib API response structures
@@ -34,7 +34,7 @@ func NewLRCLibProvider(enabled bool) *LRCLibProvider {
 	return &LRCLibProvider{enabled: enabled}
 }
 
-func (p *LRCLibProvider) SearchLyrics(ctx context.Context, params metadata.LyricsSearchParams) (string, error) {
+func (p *LRCLibProvider) SearchLyrics(ctx context.Context, params music.LyricsSearchParams) (string, error) {
 	// Build search query
 	var queryParts []string
 

@@ -7,8 +7,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-var debugPaths = []string{"/jobs/", "/ui/jobs/"}
-
 // HTMXMiddleware creates middleware for logging HTMX requests
 func HTMXMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {

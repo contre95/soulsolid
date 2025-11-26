@@ -28,7 +28,6 @@ func (t *LyricsJobTask) MetadataKeys() []string {
 // Execute performs the lyrics analysis operation
 func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
 	job.Logger.Info("EXECUTE STARTED: Lyrics job task is running", "color", "pink")
-	job.Logger.Info("SIMPLE TEST: Basic log without attributes")
 
 	// Check if any lyrics providers are enabled
 	enabledProviders := t.service.taggingService.GetEnabledLyricsProviders()
@@ -46,7 +45,6 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 	}
 
 	job.Logger.Info("Enabled lyrics providers", "providers", enabledProviders, "color", "blue")
-	job.Logger.Info("TEST: Enhanced logging is working", "color=green")
 
 	// Get all tracks from library
 	tracks, err := t.service.libraryService.GetTracks(ctx)
@@ -90,28 +88,28 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 		}
 
 		// Try to fetch lyrics for this track
-		job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "color=cyan")
+		job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "color", "cyan")
 		err := t.service.taggingService.AddLyricsWithBestProvider(ctx, track.ID)
 		if err != nil {
-			job.Logger.Warn("Failed to add lyrics for track, setting to [No Lyrics]", "trackID", track.ID, "title", track.Title, "error", err.Error(), "color=orange")
+			job.Logger.Warn("Failed to add lyrics for track, setting to [No Lyrics]", "trackID", track.ID, "title", track.Title, "error", err.Error(), "color", "orange")
 			// Set lyrics to [No Lyrics] when fetching fails
 			err = t.service.taggingService.SetLyricsToNoLyrics(ctx, track.ID)
 			if err != nil {
 				job.Logger.Error("Failed to set [No Lyrics] for track", "trackID", track.ID, "title", track.Title, "error", err.Error())
 			} else {
 				updated++
-				job.Logger.Info("Set [No Lyrics] for track", "trackID", track.ID, "title", track.Title, "color=violet")
+				job.Logger.Info("Set [No Lyrics] for track", "trackID", track.ID, "title", track.Title, "color", "violet")
 			}
 			// Continue with other tracks - don't fail the entire job
 		} else {
 			updated++
-			job.Logger.Info("Successfully added lyrics for track", "trackID", track.ID, "title", track.Title, "color=green")
+			job.Logger.Info("Successfully added lyrics for track", "trackID", track.ID, "title", track.Title, "color", "green")
 		}
 
 		processed++
 	}
 
-	job.Logger.Info("Lyrics analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "color=green")
+	job.Logger.Info("Lyrics analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "color", "green")
 
 	// Create completion message for job tagging
 	finalMessage := fmt.Sprintf("Lyrics analysis finished. Processed %d tracks (%d updated, %d skipped, %d errors).",
