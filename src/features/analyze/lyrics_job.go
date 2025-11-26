@@ -30,7 +30,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 	job.Logger.Info("EXECUTE STARTED: Lyrics job task is running", "color", "pink")
 
 	// Check if any lyrics providers are enabled
-	enabledProviders := t.service.taggingService.GetEnabledLyricsProviders()
+	enabledProviders := t.service.lyricsService.GetEnabledLyricsProviders()
 	hasEnabledProviders := false
 	for _, enabled := range enabledProviders {
 		if enabled {
@@ -89,11 +89,11 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 
 		// Try to fetch lyrics for this track
 		job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "color", "cyan")
-		err := t.service.taggingService.AddLyricsWithBestProvider(ctx, track.ID)
+		err := t.service.lyricsService.AddLyricsWithBestProvider(ctx, track.ID)
 		if err != nil {
 			job.Logger.Warn("Failed to add lyrics for track, setting to [No Lyrics]", "trackID", track.ID, "title", track.Title, "error", err.Error(), "color", "orange")
 			// Set lyrics to [No Lyrics] when fetching fails
-			err = t.service.taggingService.SetLyricsToNoLyrics(ctx, track.ID)
+			err = t.service.lyricsService.SetLyricsToNoLyrics(ctx, track.ID)
 			if err != nil {
 				job.Logger.Error("Failed to set [No Lyrics] for track", "trackID", track.ID, "title", track.Title, "error", err.Error())
 			} else {

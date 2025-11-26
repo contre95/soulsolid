@@ -14,12 +14,17 @@ type LyricsSearchParams struct {
 // MetadataService defines the interface for tagging operations
 type MetadataService interface {
 	AddChromaprintAndAcoustID(ctx context.Context, trackID string) error
+	GetTrackFileTags(ctx context.Context, trackID string) (*Track, error)
+	UpdateTrackTags(ctx context.Context, trackID string, formData map[string]string) error
+}
+
+// LyricsService defines the interface for lyrics operations
+type LyricsService interface {
 	AddLyrics(ctx context.Context, trackID string, providerName string) error
 	AddLyricsWithBestProvider(ctx context.Context, trackID string) error
 	SetLyricsToNoLyrics(ctx context.Context, trackID string) error
 	GetEnabledLyricsProviders() map[string]bool
-	GetTrackFileTags(ctx context.Context, trackID string) (*Track, error)
-	UpdateTrackTags(ctx context.Context, trackID string, formData map[string]string) error
+	SearchLyrics(ctx context.Context, trackID string, providerName string) (string, error)
 }
 
 // LibraryService defines the interface for library operations

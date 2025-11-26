@@ -13,7 +13,7 @@ RUN go build -o /app/soulsolid src/main.go
 FROM golang:bookworm
 ARG IMAGE_TAG
 ENV CGO_ENABLED=2
-RUN apt-get update && apt-get install -y git tree
+RUN apt-get update && apt-get install -y git tree libchromaprint-tools
 RUN mkdir -p /app/plugins
 WORKDIR /app
 ENV IMAGE_TAG=$IMAGE_TAG

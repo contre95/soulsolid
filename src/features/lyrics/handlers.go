@@ -18,7 +18,9 @@ type Handler struct {
 // MetadataService interface for accessing metadata functionality needed by lyrics handlers
 type MetadataService interface {
 	GetTrackFileTags(ctx context.Context, trackID string) (*music.Track, error)
-	GetEnabledLyricsProviders() map[string]bool
+	GetArtists(ctx context.Context) ([]*music.Artist, error)
+	GetAlbums(ctx context.Context) ([]*music.Album, error)
+	GetEnabledMetadataProviders() map[string]bool
 }
 
 // NewHandler creates a new lyrics handler
@@ -107,10 +109,97 @@ func (h *Handler) FetchLyricsFromProvider(c *fiber.Ctx) error {
 	// Update track lyrics
 	track.Metadata.Lyrics = lyrics
 
-	// Render the updated form - this would need to be handled by metadata feature
-	// For now, return success
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": fmt.Sprintf("Lyrics from %s loaded successfully!", providerName),
+	// Get all artists and albums for dropdowns
+	artists, err := h.metadataService.GetArtists(c.Context())
+	if err != nil {
+		artists = []*music.Artist{} // Continue with empty list
+	}
+
+	albums, err := h.metadataService.GetAlbums(c.Context())
+	if err != nil {
+		albums = []*music.Album{} // Continue with empty list
+	}
+
+	// Ensure track's artists are included in the dropdown
+	artistMap := make(map[string]bool)
+	for _, artist := range artists {
+		artistMap[artist.ID] = true
+	}
+	for _, artistRole := range track.Artists {
+		if artistRole.Artist != nil {
+			artistID := artistRole.Artist.ID
+			if artistID == "" {
+				artistID = "temp_" + artistRole.Artist.Name
+				artistRole.Artist.ID = artistID
+			}
+			if !artistMap[artistID] {
+				artists = append(artists, artistRole.Artist)
+				artistMap[artistID] = true
+			}
+		}
+	}
+	if track.Album != nil {
+		for _, artistRole := range track.Album.Artists {
+			if artistRole.Artist != nil {
+				artistID := artistRole.Artist.ID
+				if artistID == "" {
+					artistID = "temp_" + artistRole.Artist.Name
+					artistRole.Artist.ID = artistID
+				}
+				if !artistMap[artistID] {
+					artists = append(artists, artistRole.Artist)
+					artistMap[artistID] = true
+				}
+			}
+		}
+	}
+
+	// Create selected artist IDs map
+	selectedArtistIDs := make(map[string]bool)
+	for _, artistRole := range track.Artists {
+		if artistRole.Artist != nil && artistRole.Artist.ID != "" {
+			selectedArtistIDs[artistRole.Artist.ID] = true
+		}
+	}
+
+	// Determine selected album artist ID
+	selectedAlbumArtistID := ""
+	if track.Album != nil && len(track.Album.Artists) > 0 {
+		selectedAlbumArtistID = track.Album.Artists[0].Artist.ID
+	}
+
+	// Get provider colors
+	providerColors := h.getLyricsProviderColors(providerName)
+
+	// Check if request is HTMX or full page
+	if c.Get("HX-Request") == "true" {
+		// Return just the section content for HTMX requests
+		return c.Render("sections/tag", fiber.Map{
+			"Track":                  track,
+			"Artists":                artists,
+			"Albums":                 albums,
+			"SelectedAlbumArtistID":  selectedAlbumArtistID,
+			"SelectedArtistIDs":      selectedArtistIDs,
+			"FromLyricsProvider":     providerName,
+			"LyricsProviderColors":   providerColors,
+			"EnabledProviders":       h.metadataService.GetEnabledMetadataProviders(),
+			"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
+		})
+	}
+
+	// Return full page for direct navigation
+	return c.Render("main", fiber.Map{
+		"Title":                  "Edit Tags",
+		"Track":                  track,
+		"IsTagEdit":              true,
+		"Artists":                artists,
+		"Albums":                 albums,
+		"SelectedAlbumArtistID":  selectedAlbumArtistID,
+		"SelectedArtistIDs":      selectedArtistIDs,
+		"FromLyricsProvider":     providerName,
+		"LyricsProviderColors":   providerColors,
+		"EnabledProviders":       h.metadataService.GetEnabledMetadataProviders(),
+		"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 	})
 }
 

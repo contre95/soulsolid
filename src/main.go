@@ -14,8 +14,8 @@ import (
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
 	"github.com/contre95/soulsolid/src/features/logging"
-	lyrics1 "github.com/contre95/soulsolid/src/features/lyrics"
-	metadata1 "github.com/contre95/soulsolid/src/features/metadata"
+	"github.com/contre95/soulsolid/src/features/lyrics"
+	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/syncdap"
 	"github.com/contre95/soulsolid/src/infra/database"
@@ -93,10 +93,10 @@ func main() {
 	lrclibProvider := providers.NewLRCLibProvider(cfgManager.Get().Lyrics.Providers["lrclib"].Enabled)
 
 	acoustIDService := providers.NewAcoustIDService(cfgManager)
-	lyricsService := lyrics1.NewService(tagWriter, tagReader, db, []lyrics1.LyricsProvider{geniusProvider, tekstowoProvider, lrclibProvider}, cfgManager)
-	tagService := metadata1.NewService(tagWriter, tagReader, db, []metadata1.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, []lyrics1.LyricsProvider{geniusProvider, tekstowoProvider, lrclibProvider}, acoustIDService, cfgManager, lyricsService)
+	lyricsService := lyrics.NewService(tagWriter, tagReader, db, []lyrics.LyricsProvider{geniusProvider, tekstowoProvider, lrclibProvider}, cfgManager)
+	tagService := metadata.NewService(tagWriter, tagReader, db, []metadata.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, acoustIDService, cfgManager)
 
-	analyzeService := analyze.NewService(tagService, libraryService, jobService, cfgManager) // Now using interfaces
+	analyzeService := analyze.NewService(tagService, lyricsService, libraryService, jobService, cfgManager) // Now using interfaces
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
 
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)
@@ -124,7 +124,7 @@ func main() {
 		}
 	}
 
-	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService, metricsService, analyzeService)
+	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService, lyricsService, metricsService, analyzeService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped: %v", "error", err)

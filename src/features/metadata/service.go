@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
-	lyrics1 "github.com/contre95/soulsolid/src/features/lyrics"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/google/uuid"
 )
@@ -23,32 +22,19 @@ type Service struct {
 	tagReader           TagReader
 	libraryRepo         music.Library
 	metadataProviders   []MetadataProvider
-	lyricsProviders     []lyrics1.LyricsProvider // Keep for backward compatibility with handlers
 	chromaprintAcoustID ChromaprintAcoustID
 	config              *config.Manager
-	lyricsService       LyricsService
-}
-
-// LyricsService interface for delegating lyrics operations
-type LyricsService interface {
-	SetLyricsToNoLyrics(ctx context.Context, trackID string) error
-	AddLyrics(ctx context.Context, trackID string, providerName string) error
-	AddLyricsWithBestProvider(ctx context.Context, trackID string) error
-	GetEnabledLyricsProviders() map[string]bool
-	SearchLyrics(ctx context.Context, trackID string, providerName string) (string, error)
 }
 
 // NewService creates a new tag service
-func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, lyricsProviders []lyrics1.LyricsProvider, chromaprintAcoustID ChromaprintAcoustID, config *config.Manager, lyricsService LyricsService) *Service {
+func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, chromaprintAcoustID ChromaprintAcoustID, config *config.Manager) *Service {
 	return &Service{
 		tagWriter:           tagWriter,
 		tagReader:           tagReader,
 		libraryRepo:         libraryRepo,
 		metadataProviders:   metadataProviders,
-		lyricsProviders:     lyricsProviders,
 		chromaprintAcoustID: chromaprintAcoustID,
 		config:              config,
-		lyricsService:       lyricsService,
 	}
 }
 
@@ -582,42 +568,12 @@ func (s *Service) MergeFetchedData(existing, fetched *music.Track) *music.Track 
 	return &result
 }
 
-// SetLyricsToNoLyrics delegates to lyrics service
-func (s *Service) SetLyricsToNoLyrics(ctx context.Context, trackID string) error {
-	if s.lyricsService == nil {
-		return fmt.Errorf("lyrics service not available")
-	}
-	return s.lyricsService.SetLyricsToNoLyrics(ctx, trackID)
+// GetArtists returns all artists from the library
+func (s *Service) GetArtists(ctx context.Context) ([]*music.Artist, error) {
+	return s.libraryRepo.GetArtists(ctx)
 }
 
-// AddLyrics delegates to lyrics service
-func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName string) error {
-	if s.lyricsService == nil {
-		return fmt.Errorf("lyrics service not available")
-	}
-	return s.lyricsService.AddLyrics(ctx, trackID, providerName)
-}
-
-// AddLyricsWithBestProvider delegates to lyrics service
-func (s *Service) AddLyricsWithBestProvider(ctx context.Context, trackID string) error {
-	if s.lyricsService == nil {
-		return fmt.Errorf("lyrics service not available")
-	}
-	return s.lyricsService.AddLyricsWithBestProvider(ctx, trackID)
-}
-
-// GetEnabledLyricsProviders delegates to lyrics service
-func (s *Service) GetEnabledLyricsProviders() map[string]bool {
-	if s.lyricsService == nil {
-		return make(map[string]bool)
-	}
-	return s.lyricsService.GetEnabledLyricsProviders()
-}
-
-// SearchLyrics delegates to lyrics service
-func (s *Service) SearchLyrics(ctx context.Context, trackID string, providerName string) (string, error) {
-	if s.lyricsService == nil {
-		return "", fmt.Errorf("lyrics service not available")
-	}
-	return s.lyricsService.SearchLyrics(ctx, trackID, providerName)
+// GetAlbums returns all albums from the library
+func (s *Service) GetAlbums(ctx context.Context) ([]*music.Album, error) {
+	return s.libraryRepo.GetAlbums(ctx)
 }
