@@ -68,8 +68,8 @@ func Load(path string) (*Manager, error) {
 		cfg.Telegram.Token = token
 	}
 
-	setProviderSecret(&cfg, "discogs", "DISCOGS_API_KEY")
-	setProviderSecret(&cfg, "acoustid", "ACOUSTID_CLIENT_KEY")
+	setProviderSecret(&cfg, "discogs", "DISCOGS_API_KEY")      // NOTE: Add this to the docs
+	setProviderSecret(&cfg, "acoustid", "ACOUSTID_CLIENT_KEY") // NOTE: Add this to the docs
 
 	manager := NewManager(&cfg)
 	if err := manager.EnsureDirectories(); err != nil {
@@ -145,7 +145,7 @@ func createDefaultConfig() *Config {
 				},
 			},
 		},
-		Lyrics: Lyrics{
+		Lyrics: Lyrics{ // NOTE: Add this to the documentation
 			Providers: map[string]Provider{
 				"genius": {
 					Enabled: true,

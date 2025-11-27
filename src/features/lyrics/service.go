@@ -167,14 +167,7 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 
 // GetEnabledLyricsProviders returns a map of enabled lyrics providers
 func (s *Service) GetEnabledLyricsProviders() map[string]bool {
-	enabled := make(map[string]bool)
-	cfg := s.config.Get()
-	if cfg.Lyrics.Providers != nil {
-		for name, provider := range cfg.Lyrics.Providers {
-			enabled[name] = provider.Enabled
-		}
-	}
-	return enabled
+	return s.config.GetEnabledLyricsProviders()
 }
 
 // SearchLyrics searches for lyrics using a given track and lyrics provider

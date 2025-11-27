@@ -720,7 +720,6 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
 	downloader := strings.Clone(c.Query("downloader", "dummy"))
 	userInfo := h.service.GetUserInfo(downloader)
-	config := h.service.configManager.Get()
 	statuses := h.service.GetDownloaderStatuses()
 
 	// Get the downloader name and use it for status lookup
@@ -743,7 +742,6 @@ func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
 	if c.Get("HX-Request") == "true" {
 		return c.Render("downloading/user_info", fiber.Map{
 			"UserInfo":          userInfo,
-			"Config":            config,
 			"Statuses":          statuses,
 			"DownloaderName":    downloaderName,
 			"DownloaderStatus":  downloaderStatus,

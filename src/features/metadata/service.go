@@ -14,7 +14,7 @@ import (
 )
 
 // Ensure Service implements TaggingService interface
-// var _ music.MetadataService = (*Service)(nil) // TODO: re-enable after adding lyrics methods
+var _ music.MetadataService = (*Service)(nil)
 
 // Service provides tag editing functionality
 type Service struct {
@@ -23,18 +23,18 @@ type Service struct {
 	libraryRepo         music.Library
 	metadataProviders   []MetadataProvider
 	chromaprintAcoustID ChromaprintAcoustID
-	config              *config.Manager
+	configManager       *config.Manager
 }
 
 // NewService creates a new tag service
-func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, chromaprintAcoustID ChromaprintAcoustID, config *config.Manager) *Service {
+func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, chromaprintAcoustID ChromaprintAcoustID, cfgManager *config.Manager) *Service {
 	return &Service{
+		configManager:       cfgManager,
 		tagWriter:           tagWriter,
 		tagReader:           tagReader,
 		libraryRepo:         libraryRepo,
 		metadataProviders:   metadataProviders,
 		chromaprintAcoustID: chromaprintAcoustID,
-		config:              config,
 	}
 }
 
@@ -397,14 +397,12 @@ func (s *Service) matchArtistsWithDatabase(ctx context.Context, track *music.Tra
 
 // GetEnabledMetadataProviders returns a map of enabled metadata providers
 func (s *Service) GetEnabledMetadataProviders() map[string]bool {
-	enabled := make(map[string]bool)
-	cfg := s.config.Get()
-	if cfg.Metadata.Providers != nil {
-		for name, provider := range cfg.Metadata.Providers {
-			enabled[name] = provider.Enabled
-		}
-	}
-	return enabled
+	return s.configManager.GetEnabledMetadataProviders()
+}
+
+// GetEnabledLyricsProviders returns a map of enabled lyrics providers
+func (s *Service) GetEnabledLyricsProviders() map[string]bool {
+	return s.configManager.GetEnabledLyricsProviders()
 }
 
 // SearchTrackMetadata searches for metadat of a given track and an array of possible matches

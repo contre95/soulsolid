@@ -109,25 +109,27 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 	if c.Get("HX-Request") == "true" {
 		// Return just the section content for HTMX requests
 		return c.Render("sections/tag", fiber.Map{
-			"Track":                 track,
-			"Artists":               artists,
-			"Albums":                albums,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-			"EnabledProviders":      h.service.GetEnabledMetadataProviders(),
+			"Track":                  track,
+			"Artists":                artists,
+			"Albums":                 albums,
+			"SelectedAlbumArtistID":  selectedAlbumArtistID,
+			"SelectedArtistIDs":      selectedArtistIDs,
+			"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
+			"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 		})
 	}
 
 	// Return full page for direct navigation
 	return c.Render("main", fiber.Map{
-		"Title":                 "Edit Tags",
-		"Track":                 track,
-		"IsTagEdit":             true,
-		"Artists":               artists,
-		"Albums":                albums,
-		"SelectedAlbumArtistID": selectedAlbumArtistID,
-		"SelectedArtistIDs":     selectedArtistIDs,
-		"EnabledProviders":      h.service.GetEnabledMetadataProviders(),
+		"Title":                  "Edit Tags",
+		"Track":                  track,
+		"IsTagEdit":              true,
+		"Artists":                artists,
+		"Albums":                 albums,
+		"SelectedAlbumArtistID":  selectedAlbumArtistID,
+		"SelectedArtistIDs":      selectedArtistIDs,
+		"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
+		"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 	})
 }
 
@@ -275,27 +277,29 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 		// Check if request is HTMX or full page
 		if c.Get("HX-Request") == "true" {
 			return c.Render("sections/tag", fiber.Map{
-				"Track":                 track,
-				"Artists":               artists,
-				"Albums":                albums,
-				"FetchError":            "err",
-				"ProviderColors":        providerColors,
-				"SelectedAlbumArtistID": selectedAlbumArtistID,
-				"SelectedArtistIDs":     selectedArtistIDs,
-				"EnabledProviders":      h.service.GetEnabledMetadataProviders(),
+				"Track":                  track,
+				"Artists":                artists,
+				"Albums":                 albums,
+				"FetchError":             "err",
+				"ProviderColors":         providerColors,
+				"SelectedAlbumArtistID":  selectedAlbumArtistID,
+				"SelectedArtistIDs":      selectedArtistIDs,
+				"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
+				"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 			})
 		} else {
 			return c.Render("main", fiber.Map{
-				"Title":                 "Edit Tags",
-				"Track":                 track,
-				"IsTagEdit":             true,
-				"Artists":               artists,
-				"Albums":                albums,
-				"FetchError":            "err",
-				"ProviderColors":        providerColors,
-				"SelectedAlbumArtistID": selectedAlbumArtistID,
-				"SelectedArtistIDs":     selectedArtistIDs,
-				"EnabledProviders":      h.service.GetEnabledMetadataProviders(),
+				"Title":                  "Edit Tags",
+				"Track":                  track,
+				"IsTagEdit":              true,
+				"Artists":                artists,
+				"Albums":                 albums,
+				"FetchError":             "err",
+				"ProviderColors":         providerColors,
+				"SelectedAlbumArtistID":  selectedAlbumArtistID,
+				"SelectedArtistIDs":      selectedArtistIDs,
+				"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
+				"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 			})
 		}
 	}
@@ -389,27 +393,29 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 	// Check if request is HTMX or full page
 	if c.Get("HX-Request") == "true" {
 		return c.Render("sections/tag", fiber.Map{
-			"Track":                 track,
-			"Artists":               artists,
-			"Albums":                albums,
-			"FromProvider":          providerName,
-			"ProviderColors":        providerColors,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-			"EnabledProviders":      h.service.GetEnabledMetadataProviders(),
+			"Track":                  track,
+			"Artists":                artists,
+			"Albums":                 albums,
+			"FromProvider":           providerName,
+			"ProviderColors":         providerColors,
+			"SelectedAlbumArtistID":  selectedAlbumArtistID,
+			"SelectedArtistIDs":      selectedArtistIDs,
+			"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
+			"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 		})
 	} else {
 		return c.Render("main", fiber.Map{
-			"Title":                 "Edit Tags",
-			"Track":                 track,
-			"IsTagEdit":             true,
-			"Artists":               artists,
-			"Albums":                albums,
-			"FromProvider":          providerName,
-			"ProviderColors":        providerColors,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-			"EnabledProviders":      h.service.GetEnabledMetadataProviders(),
+			"Title":                  "Edit Tags",
+			"Track":                  track,
+			"IsTagEdit":              true,
+			"Artists":                artists,
+			"Albums":                 albums,
+			"FromProvider":           providerName,
+			"ProviderColors":         providerColors,
+			"SelectedAlbumArtistID":  selectedAlbumArtistID,
+			"SelectedArtistIDs":      selectedArtistIDs,
+			"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
+			"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 		})
 	}
 }
@@ -586,14 +592,15 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 
 	// Render the updated form
 	return c.Render("sections/tag", fiber.Map{
-		"Track":                 mergedTrack,
-		"Artists":               artists,
-		"Albums":                albums,
-		"SelectedAlbumArtistID": selectedAlbumArtistID,
-		"SelectedArtistIDs":     selectedArtistIDs,
-		"FromProvider":          providerName,
-		"ProviderColors":        providerColors,
-		"EnabledProviders":      h.service.GetEnabledMetadataProviders(),
+		"Track":                  mergedTrack,
+		"Artists":                artists,
+		"Albums":                 albums,
+		"SelectedAlbumArtistID":  selectedAlbumArtistID,
+		"SelectedArtistIDs":      selectedArtistIDs,
+		"FromProvider":           providerName,
+		"ProviderColors":         providerColors,
+		"EnabledProviders":       h.service.GetEnabledMetadataProviders(),
+		"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
 	})
 }
 

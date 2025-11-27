@@ -121,3 +121,29 @@ func (m *Manager) GetYAML() string {
 	}
 	return string(yamlBytes)
 }
+
+// GetEnabledMetadataProviders returns a map of enabled metadata providers
+func (m *Manager) GetEnabledMetadataProviders() map[string]bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	enabled := make(map[string]bool)
+	if m.config.Metadata.Providers != nil {
+		for name, provider := range m.config.Metadata.Providers {
+			enabled[name] = provider.Enabled
+		}
+	}
+	return enabled
+}
+
+// GetEnabledLyricsProviders returns a map of enabled lyrics providers
+func (m *Manager) GetEnabledLyricsProviders() map[string]bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	enabled := make(map[string]bool)
+	if m.config.Lyrics.Providers != nil {
+		for name, provider := range m.config.Lyrics.Providers {
+			enabled[name] = provider.Enabled
+		}
+	}
+	return enabled
+}
