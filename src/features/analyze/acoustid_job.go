@@ -64,8 +64,12 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 		progressUpdater(progress, fmt.Sprintf("Processing track %d/%d: %s", i+1, totalTracks, track.Title))
 
 		// Skip tracks that already have AcoustID
-		if track.AcoustID != "" {
-			job.Logger.Info("Skipping track with existing AcoustID", "trackID", track.ID, "title", track.Title, "acoustID", track.AcoustID, "color", "orange")
+		acoustID := ""
+		if track.Attributes != nil {
+			acoustID = track.Attributes["acoustid"]
+		}
+		if acoustID != "" {
+			job.Logger.Info("Skipping track with existing AcoustID", "trackID", track.ID, "title", track.Title, "acoustID", acoustID, "color", "orange")
 			skipped++
 			continue
 		}

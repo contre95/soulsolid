@@ -164,11 +164,15 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 	}
 
 	// AcoustID
-	if track.AcoustID != "" {
+	acoustID := ""
+	if track.Attributes != nil {
+		acoustID = track.Attributes["acoustid"]
+	}
+	if acoustID != "" {
 		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
 			Encoding:    id3v2.EncodingUTF8,
 			Description: "ACOUSTID_ID",
-			Value:       track.AcoustID,
+			Value:       acoustID,
 		})
 	}
 
@@ -244,6 +248,12 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	// Get AcoustID from attributes
+	acoustID := ""
+	if track.Attributes != nil {
+		acoustID = track.Attributes["acoustid"]
+	}
 
 	// Parse the FLAC file
 	f, err := goflac.ParseFile(filePath)
@@ -339,9 +349,9 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 		removeExistingFields(vorbisComment, "CHROMAPRINT_FINGERPRINT")
 		vorbisComment.Add("CHROMAPRINT_FINGERPRINT", track.ChromaprintFingerprint)
 	}
-	if track.AcoustID != "" {
+	if acoustID != "" {
 		removeExistingFields(vorbisComment, "ACOUSTID_ID")
-		vorbisComment.Add("ACOUSTID_ID", track.AcoustID)
+		vorbisComment.Add("ACOUSTID_ID", acoustID)
 	}
 	if track.Metadata.BPM > 0 {
 		removeExistingFields(vorbisComment, "BPM")

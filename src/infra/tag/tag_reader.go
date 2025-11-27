@@ -152,7 +152,10 @@ func (r *TagReader) readAdditionalMetadata(tags tag.Metadata, track *music.Track
 	// Try to read AcoustID from tags
 	if acoustID := r.readAcoustID(tags); acoustID != "" {
 		slog.Debug("Found AcoustID in file", "path", track.Path, "acoustID", acoustID)
-		track.AcoustID = acoustID
+		if track.Attributes == nil {
+			track.Attributes = make(map[string]string)
+		}
+		track.Attributes["acoustid"] = acoustID
 	} else {
 		slog.Debug("No AcoustID found in file", "path", track.Path)
 	}

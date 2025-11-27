@@ -286,7 +286,13 @@ func (s *Service) buildTrackFromFormData(ctx context.Context, originalTrack *mus
 	track.Channels = originalTrack.Channels
 	track.Bitrate = originalTrack.Bitrate
 	track.ChromaprintFingerprint = originalTrack.ChromaprintFingerprint
-	track.AcoustID = originalTrack.AcoustID
+	// Copy attributes including AcoustID
+	if originalTrack.Attributes != nil {
+		track.Attributes = make(map[string]string)
+		for k, v := range originalTrack.Attributes {
+			track.Attributes[k] = v
+		}
+	}
 	return track, nil
 }
 
@@ -311,7 +317,10 @@ func (s *Service) AddChromaprintAndAcoustID(ctx context.Context, trackID string)
 		slog.Warn("Failed to lookup AcoustID", "error", err, "trackId", trackID)
 		// Continue without AcoustID
 	} else if acoustID != "" {
-		track.AcoustID = acoustID
+		if track.Attributes == nil {
+			track.Attributes = make(map[string]string)
+		}
+		track.Attributes["acoustid"] = acoustID
 		slog.Info("Successfully generated fingerprint and AcoustID", "trackId", trackID, "acoustid", acoustID)
 	} else {
 		slog.Info("Successfully generated fingerprint, no AcoustID found", "trackId", trackID)
@@ -331,8 +340,11 @@ func (s *Service) AddChromaprintAndAcoustID(ctx context.Context, trackID string)
 		return fmt.Errorf("failed to update track with fingerprint: %w", err)
 	}
 
-	slog.Info("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint[:15], "acoustid", track.AcoustID)
-	slog.Debug("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint, "acoustid", track.AcoustID)
+	if track.Attributes != nil {
+		acoustID = track.Attributes["acoustid"]
+	}
+	slog.Info("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint[:15], "acoustid", acoustID)
+	slog.Debug("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint, "acoustid", acoustID)
 	return nil
 }
 
@@ -416,11 +428,15 @@ func (s *Service) SearchTrackMetadata(ctx context.Context, trackID string, provi
 	}
 
 	// Build search parameters from current track data
+	acoustID := ""
+	if track.Attributes != nil {
+		acoustID = track.Attributes["acoustid"]
+	}
 	searchParams := SearchParams{
 		TrackID:  track.ID,
 		Title:    track.Title,
 		Year:     track.Metadata.Year,
-		AcoustID: track.AcoustID,
+		AcoustID: acoustID,
 	}
 
 	// Add album and album artist if available
@@ -495,8 +511,19 @@ func (s *Service) MergeFetchedData(existing, fetched *music.Track) *music.Track 
 	if fetched.ChromaprintFingerprint == "" && existing.ChromaprintFingerprint != "" {
 		result.ChromaprintFingerprint = existing.ChromaprintFingerprint
 	}
-	if fetched.AcoustID == "" && existing.AcoustID != "" {
-		result.AcoustID = existing.AcoustID
+	// Merge attributes, preserving existing AcoustID if fetched doesn't have it
+	result.Attributes = make(map[string]string)
+	if existing.Attributes != nil {
+		for k, v := range existing.Attributes {
+			result.Attributes[k] = v
+		}
+	}
+	if fetched.Attributes != nil {
+		for k, v := range fetched.Attributes {
+			if v != "" { // Only overwrite if fetched has a non-empty value
+				result.Attributes[k] = v
+			}
+		}
 	}
 	// Note: ExplicitContent is a boolean, so we don't merge it - we use the fetched value
 	// If we wanted to preserve existing explicit content, we would need to decide on the logic

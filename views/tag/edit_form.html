@@ -281,8 +281,8 @@
                   {{if .Track.ChromaprintFingerprint}}
                   <div class="text-red-400">Fingerprint: <a href="/tag/edit/{{.Track.ID}}/fingerprint/view" target="_blank" rel="noopener noreferrer" class="hover:underline">(open in new tab)</a></div>
                   {{end}}
-                  {{if .Track.AcoustID}}
-                  <div class="text-blue-400">AcoustID: {{.Track.AcoustID}}</div>
+                  {{if index .Track.Attributes "acoustid"}}
+                  <div class="text-blue-400">AcoustID: {{index .Track.Attributes "acoustid"}}</div>
                   {{end}}
                   {{if .Track.Metadata.Duration}}
                  <div>Duration: {{duration .Track.Metadata.Duration}}</div>
