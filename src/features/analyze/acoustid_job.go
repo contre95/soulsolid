@@ -27,8 +27,10 @@ func (t *AcoustIDJobTask) MetadataKeys() []string {
 
 // Execute performs the AcoustID analysis operation
 func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
-	// Get all tracks from library
-	tracks, err := t.service.libraryService.GetTracks(ctx)
+	tracks, err := t.service.libraryService.GetTracks(ctx) // TODO: loading all tracks into memory could be problematic for large music libraries
+	// 1. **Use pagination**: Replace `GetTracks` with `GetTracksPaginated` to process tracks in batches
+	// 2. **Channel-based streaming**: Modify the interface to return a channel that yields tracks incrementally
+	// 3. **Iterator pattern**: Implement an iterator that fetches tracks on-demand
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tracks: %w", err)
 	}
