@@ -2,7 +2,6 @@ package lyrics
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/contre95/soulsolid/src/music"
@@ -73,8 +72,8 @@ func (h *Handler) getLyricsProviderColors(providerName string) map[string]string
 	}
 }
 
-// FetchLyricsFromProvider handles fetching lyrics from any lyrics provider
-func (h *Handler) FetchLyricsFromProvider(c *fiber.Ctx) error {
+// GetLyricsText returns plain lyrics text for HTMX to set in textarea
+func (h *Handler) GetLyricsText(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	providerName := c.Params("provider")
 
@@ -86,246 +85,11 @@ func (h *Handler) FetchLyricsFromProvider(c *fiber.Ctx) error {
 	lyrics, err := h.service.SearchLyrics(c.Context(), trackID, providerName)
 	if err != nil {
 		slog.Error("Failed to fetch lyrics", "error", err, "trackId", trackID, "provider", providerName)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to fetch lyrics: %v", err),
-		})
+		return c.SendString("") // Return empty string on error for HTMX
 	}
 
 	slog.Info("Lyrics fetched successfully", "trackId", trackID, "provider", providerName, "lyricsLength", len(lyrics))
 
-	// For HTMX requests, just return the lyrics content to replace the textarea
-	if c.Get("HX-Request") == "true" {
-		return c.SendString(lyrics)
-	}
-
-	// For regular requests, update the track and render the full form
-	// Get current track data
-	track, err := h.metadataService.GetTrackFileTags(c.Context(), trackID)
-	if err != nil {
-		slog.Error("Failed to get track for lyrics update", "error", err, "trackId", trackID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
-	}
-
-	// Update track lyrics
-	track.Metadata.Lyrics = lyrics
-
-	// Get all artists and albums for dropdowns
-	artists, err := h.metadataService.GetArtists(c.Context())
-	if err != nil {
-		artists = []*music.Artist{} // Continue with empty list
-	}
-
-	albums, err := h.metadataService.GetAlbums(c.Context())
-	if err != nil {
-		albums = []*music.Album{} // Continue with empty list
-	}
-
-	// Ensure track's artists are included in the dropdown
-	artistMap := make(map[string]bool)
-	for _, artist := range artists {
-		artistMap[artist.ID] = true
-	}
-	for _, artistRole := range track.Artists {
-		if artistRole.Artist != nil {
-			artistID := artistRole.Artist.ID
-			if artistID == "" {
-				artistID = "temp_" + artistRole.Artist.Name
-				artistRole.Artist.ID = artistID
-			}
-			if !artistMap[artistID] {
-				artists = append(artists, artistRole.Artist)
-				artistMap[artistID] = true
-			}
-		}
-	}
-	if track.Album != nil {
-		for _, artistRole := range track.Album.Artists {
-			if artistRole.Artist != nil {
-				artistID := artistRole.Artist.ID
-				if artistID == "" {
-					artistID = "temp_" + artistRole.Artist.Name
-					artistRole.Artist.ID = artistID
-				}
-				if !artistMap[artistID] {
-					artists = append(artists, artistRole.Artist)
-					artistMap[artistID] = true
-				}
-			}
-		}
-	}
-
-	// Create selected artist IDs map
-	selectedArtistIDs := make(map[string]bool)
-	for _, artistRole := range track.Artists {
-		if artistRole.Artist != nil && artistRole.Artist.ID != "" {
-			selectedArtistIDs[artistRole.Artist.ID] = true
-		}
-	}
-
-	// Determine selected album artist ID
-	selectedAlbumArtistID := ""
-	if track.Album != nil && len(track.Album.Artists) > 0 {
-		selectedAlbumArtistID = track.Album.Artists[0].Artist.ID
-	}
-
-	// Get provider colors
-	providerColors := h.getLyricsProviderColors(providerName)
-
-	// Check if request is HTMX or full page
-	if c.Get("HX-Request") == "true" {
-		// Return just the section content for HTMX requests
-		return c.Render("sections/tag", fiber.Map{
-			"Track":                  track,
-			"Artists":                artists,
-			"Albums":                 albums,
-			"SelectedAlbumArtistID":  selectedAlbumArtistID,
-			"SelectedArtistIDs":      selectedArtistIDs,
-			"FromLyricsProvider":     providerName,
-			"LyricsProviderColors":   providerColors,
-			"EnabledProviders":       h.metadataService.GetEnabledMetadataProviders(),
-			"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
-		})
-	}
-
-	// Return full page for direct navigation
-	return c.Render("main", fiber.Map{
-		"Title":                  "Edit Tags",
-		"Track":                  track,
-		"IsTagEdit":              true,
-		"Artists":                artists,
-		"Albums":                 albums,
-		"SelectedAlbumArtistID":  selectedAlbumArtistID,
-		"SelectedArtistIDs":      selectedArtistIDs,
-		"FromLyricsProvider":     providerName,
-		"LyricsProviderColors":   providerColors,
-		"EnabledProviders":       h.metadataService.GetEnabledMetadataProviders(),
-		"EnabledLyricsProviders": h.service.GetEnabledLyricsProviders(),
-	})
-}
-
-// FetchBestLyrics handles fetching lyrics from all providers and shows them in a modal
-func (h *Handler) FetchBestLyrics(c *fiber.Ctx) error {
-	trackID := c.Params("trackId")
-
-	if trackID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
-	}
-
-	// Get current track data
-	track, err := h.metadataService.GetTrackFileTags(c.Context(), trackID)
-	if err != nil {
-		slog.Error("Failed to get track for lyrics", "error", err, "trackId", trackID)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to get track: %v", err),
-		})
-	}
-
-	// Build search parameters
-	searchParams := music.LyricsSearchParams{
-		TrackID: track.ID,
-		Title:   track.Title,
-	}
-
-	if len(track.Artists) > 0 && track.Artists[0].Artist != nil {
-		searchParams.Artist = track.Artists[0].Artist.Name
-	}
-
-	if track.Album != nil {
-		searchParams.Album = track.Album.Title
-		if len(track.Album.Artists) > 0 && track.Album.Artists[0].Artist != nil {
-			searchParams.AlbumArtist = track.Album.Artists[0].Artist.Name
-		}
-	}
-
-	// Collect lyrics from all enabled providers
-	var results []*LyricsResult
-	for _, provider := range h.service.lyricsProviders {
-		if !provider.IsEnabled() {
-			continue
-		}
-
-		slog.Debug("Trying lyrics provider", "provider", provider.Name(), "trackID", trackID, "title", searchParams.Title, "artist", searchParams.Artist)
-		lyrics, err := provider.SearchLyrics(c.Context(), searchParams)
-		if err != nil {
-			slog.Warn("Failed to search lyrics with provider", "provider", provider.Name(), "trackID", trackID, "title", searchParams.Title, "artist", searchParams.Artist, "error", err.Error())
-			continue
-		}
-
-		if lyrics != "" {
-			quality, confidence := h.service.scoreLyrics(lyrics, searchParams)
-			result := &LyricsResult{
-				Lyrics:     lyrics,
-				Provider:   provider.Name(),
-				Quality:    quality,
-				Confidence: confidence,
-			}
-			results = append(results, result)
-
-			slog.Info("Found lyrics with provider", "provider", provider.Name(), "trackID", trackID, "quality", quality, "confidence", confidence, "lyricsLength", len(lyrics))
-		}
-	}
-
-	if len(results) == 0 {
-		slog.Info("No lyrics found for track with any provider", "trackId", trackID, "title", track.Title, "artist", searchParams.Artist, "providers", len(h.service.lyricsProviders))
-		return c.Render("toast/toastInfo", fiber.Map{
-			"Msg": "No lyrics found from any provider",
-		})
-	}
-
-	// Sort results by quality (highest first)
-	for i := 0; i < len(results)-1; i++ {
-		for j := i + 1; j < len(results); j++ {
-			if results[j].Quality > results[i].Quality ||
-				(results[j].Quality == results[i].Quality && results[j].Confidence > results[i].Confidence) {
-				results[i], results[j] = results[j], results[i]
-			}
-		}
-	}
-
-	slog.Info("Lyrics search completed", "trackId", trackID, "resultsCount", len(results))
-
-	// Render modal with lyrics results - this would need to be handled by metadata feature
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": fmt.Sprintf("Found lyrics from %d providers", len(results)),
-	})
-}
-
-// SelectLyricsFromProvider handles selecting specific lyrics from modal results
-func (h *Handler) SelectLyricsFromProvider(c *fiber.Ctx) error {
-	trackID := c.Params("trackId")
-	providerName := c.Params("provider")
-
-	if trackID == "" || providerName == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Track ID and provider name are required")
-	}
-
-	// Get lyrics from specific provider
-	lyrics, err := h.service.SearchLyrics(c.Context(), trackID, providerName)
-	if err != nil {
-		slog.Error("Failed to fetch lyrics from provider", "error", err, "trackId", trackID, "provider", providerName)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to fetch lyrics: %v", err),
-		})
-	}
-
-	// Get current track data
-	track, err := h.metadataService.GetTrackFileTags(c.Context(), trackID)
-	if err != nil {
-		slog.Error("Failed to get track for updating", "error", err, "trackId", trackID)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to get track: %v", err),
-		})
-	}
-
-	// Update track with selected lyrics
-	track.Metadata.Lyrics = lyrics
-
-	// Update track in database - this would need access to library repo
-	// For now, just return success
-	slog.Info("Successfully selected lyrics from provider", "trackId", trackID, "provider", providerName, "lyricsLength", len(lyrics))
-
-	// Return success toast and close modal
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": fmt.Sprintf("Lyrics from %s added successfully!", providerName),
-	})
+	// Return plain lyrics text for HTMX to set in textarea
+	return c.SendString(lyrics)
 }
