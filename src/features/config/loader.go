@@ -86,9 +86,9 @@ func createDefaultConfig() *Config {
 		DownloadPath: "./downloads",
 		Telegram: Telegram{
 			Enabled:      false,
-			Token:        "",
-			AllowedUsers: []string{},
-			BotHandle:    "@SoulsolidDemoBot",
+			Token:        "",                  // Can be obtained with https://t.me/BotFather
+			AllowedUsers: []string{"user1"},   // No @
+			BotHandle:    "@SoulsolidDemoBot", // With @
 		},
 		Logger: Logger{
 			Enabled:   true,
@@ -130,14 +130,14 @@ func createDefaultConfig() *Config {
 		Metadata: Metadata{
 			Providers: map[string]Provider{
 				"deezer": {
-					Enabled: false,
+					Enabled: true,
 				},
 				"discogs": {
 					Enabled: false,
 					Secret:  nil,
 				},
 				"musicbrainz": {
-					Enabled: false,
+					Enabled: true,
 				},
 				"acoustid": {
 					Enabled: false,
@@ -148,13 +148,13 @@ func createDefaultConfig() *Config {
 		Lyrics: Lyrics{
 			Providers: map[string]Provider{
 				"genius": {
-					Enabled: false,
+					Enabled: true,
 				},
 				"tekstowo": {
-					Enabled: false,
+					Enabled: true,
 				},
 				"lrclib": {
-					Enabled: false,
+					Enabled: true,
 				},
 			},
 		},
