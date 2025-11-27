@@ -20,6 +20,7 @@ type MetadataService interface {
 	GetArtists(ctx context.Context) ([]*music.Artist, error)
 	GetAlbums(ctx context.Context) ([]*music.Album, error)
 	GetEnabledMetadataProviders() map[string]bool
+	GetEnabledLyricsProviders() map[string]bool
 }
 
 // NewHandler creates a new lyrics handler
@@ -28,6 +29,26 @@ func NewHandler(service *Service, metadataService MetadataService) *Handler {
 		service:         service,
 		metadataService: metadataService,
 	}
+}
+
+// RenderLyricsButtons renders the lyrics provider buttons for a track
+func (h *Handler) RenderLyricsButtons(c *fiber.Ctx) error {
+	trackID := c.Params("trackId")
+	if trackID == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+	}
+
+	// Get track data for button context
+	track, err := h.metadataService.GetTrackFileTags(c.Context(), trackID)
+	if err != nil {
+		slog.Error("Failed to get track for lyrics buttons", "error", err, "trackId", trackID)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
+	}
+
+	return c.Render("tag/lyrics_buttons", fiber.Map{
+		"Track":                  track,
+		"EnabledLyricsProviders": h.metadataService.GetEnabledLyricsProviders(),
+	})
 }
 
 // GetLyricsText returns plain lyrics text for HTMX to set in textarea

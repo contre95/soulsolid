@@ -12,4 +12,5 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 
 	// Lyrics routes - these are accessed from the metadata/tag UI
 	tagGroup.Get("/edit/:trackId/lyrics/text/:provider", handler.GetLyricsText)
+	tagGroup.Get("/buttons/lyrics/:trackId", handler.RenderLyricsButtons)
 }
