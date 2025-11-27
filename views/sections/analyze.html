@@ -8,7 +8,8 @@
     ></div>
     <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">Analyze Library</h1>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
         <!-- AcoustID Analysis Card -->
         <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
             <div class="flex items-center mb-4">
@@ -71,4 +72,16 @@
             </button>
         </div>
     </div>
+
+    <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-6">Analysis Jobs</h2>
+
+    <div id="analyze-job-list-container"
+         hx-get="/ui/jobs/list?prefix=analyze_"
+         hx-trigger="load, refreshJobList from:body"
+         hx-swap="innerHTML">
+     <!-- Loading state -->
+     <div class="text-center py-8">
+       <p class="text-sm text-gray-500 dark:text-gray-400">Loading analysis jobs...</p>
+     </div>
+   </div>
 </div>
