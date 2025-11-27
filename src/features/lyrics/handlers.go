@@ -72,3 +72,17 @@ func (h *Handler) GetLyricsText(c *fiber.Ctx) error {
 	// Return plain lyrics text for HTMX to set in textarea
 	return c.SendString(lyrics)
 }
+
+// GetTrackLyrics returns the lyrics of a track in plain text.
+func (h *Handler) GetTrackLyrics(c *fiber.Ctx) error {
+	slog.Debug("GetTrackLyrics handler called", "id", c.Params("id"))
+	track, err := h.service.libraryRepo.GetTrack(c.Context(), c.Params("id"))
+	if err != nil {
+		slog.Error("Error loading track", "error", err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Error loading track")
+	}
+	if track == nil {
+		return c.Status(fiber.StatusNotFound).SendString("Track not found")
+	}
+	return c.SendString(track.Metadata.Lyrics)
+}

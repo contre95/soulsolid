@@ -260,7 +260,7 @@
                 </div>
                 <div>
                   <label for="tag.providers.discogs.api_key" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
-                    <input type="password" id="metadata.providers.discogs.api_key" name="metadata.providers.discogs.api_key" value="{{.Config.Metadata.Providers.discogs.APIKey}}"
+                     <input type="password" id="metadata.providers.discogs.api_key" name="metadata.providers.discogs.secret" value="{{if .Config.Metadata.Providers.discogs.Secret}}{{.Config.Metadata.Providers.discogs.Secret}}{{end}}"
                          class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
                          placeholder="API key">
                 </div>
@@ -291,7 +291,7 @@
                 </div>
                 <div>
                   <label for="metadata.providers.acoustid.client_key" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Client Key</label>
-                    <input type="password" id="metadata.providers.acoustid.client_key" name="metadata.providers.acoustid.client_key" value="{{.Config.Metadata.Providers.acoustid.ClientKey}}"
+                     <input type="password" id="metadata.providers.acoustid.client_key" name="metadata.providers.acoustid.secret" value="{{if .Config.Metadata.Providers.acoustid.Secret}}{{.Config.Metadata.Providers.acoustid.Secret}}{{end}}"
                          class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
                          placeholder="Client key">
                 </div>

@@ -87,6 +87,7 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 				},
 			},
 		},
+		Lyrics: currentConfig.Lyrics,
 		// Preserve server settings from current config, no sense to be changed on runtime
 		Server: Server{
 			Port:        currentConfig.Server.Port,
