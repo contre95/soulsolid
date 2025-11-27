@@ -81,11 +81,11 @@ func main() {
 	}
 
 	musicbrainzProvider := providers.NewMusicBrainzProvider(cfgManager.Get().Metadata.Providers["musicbrainz"].Enabled)
-	discogsAPIKey := ""
-	if cfgManager.Get().Metadata.Providers["discogs"].APIKey != nil {
-		discogsAPIKey = *cfgManager.Get().Metadata.Providers["discogs"].APIKey
+	discogsSecret := ""
+	if cfgManager.Get().Metadata.Providers["discogs"].Secret != nil {
+		discogsSecret = *cfgManager.Get().Metadata.Providers["discogs"].Secret
 	}
-	discogsProvider := providers.NewDiscogsProvider(cfgManager.Get().Metadata.Providers["discogs"].Enabled, discogsAPIKey)
+	discogsProvider := providers.NewDiscogsProvider(cfgManager.Get().Metadata.Providers["discogs"].Enabled, discogsSecret)
 	deezerProvider := providers.NewDeezerProvider(cfgManager.Get().Metadata.Providers["deezer"].Enabled)
 
 	geniusProvider := providers.NewGeniusProvider(cfgManager.Get().Lyrics.Providers["genius"].Enabled)

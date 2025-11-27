@@ -64,10 +64,10 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 				},
 				"discogs": {
 					Enabled: c.FormValue("metadata.providers.discogs.enabled") == "true",
-					APIKey: func() *string {
-						apiKey := c.FormValue("metadata.providers.discogs.api_key")
-						if apiKey != "" {
-							return &apiKey
+					Secret: func() *string {
+						secret := c.FormValue("metadata.providers.discogs.secret")
+						if secret != "" {
+							return &secret
 						}
 						return nil
 					}(),
@@ -76,8 +76,14 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 					Enabled: c.FormValue("metadata.providers.deezer.enabled") == "true",
 				},
 				"acoustid": {
-					Enabled:   c.FormValue("metadata.providers.acoustid.enabled") == "true",
-					ClientKey: c.FormValue("metadata.providers.acoustid.client_key"),
+					Enabled: c.FormValue("metadata.providers.acoustid.enabled") == "true",
+					Secret: func() *string {
+						secret := c.FormValue("metadata.providers.acoustid.secret")
+						if secret != "" {
+							return &secret
+						}
+						return nil
+					}(),
 				},
 			},
 		},

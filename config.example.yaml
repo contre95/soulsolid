@@ -44,12 +44,12 @@ metadata:
       enabled: true
     discogs:
       enabled: true
-      api_key: <discogs_token>
+      secret: <discogs_token>
     musicbrainz:
       enabled: true
     acoustid:
       enabled: true
-      client_key: <acoustid_client_key>
+      secret: <acoustid_client_key>
 lyrics:
   providers:
     genius:

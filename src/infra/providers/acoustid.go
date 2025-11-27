@@ -62,14 +62,14 @@ func (s *AcoustIDAPI) LookupAcoustID(ctx context.Context, chromaprint string, du
 		return "", fmt.Errorf("AcoustID lookup is disabled in configuration")
 	}
 
-	if acoustidProvider.ClientKey == "" {
-		return "", fmt.Errorf("AcoustID client key not configured")
+	if acoustidProvider.Secret == nil || *acoustidProvider.Secret == "" {
+		return "", fmt.Errorf("AcoustID secret not configured")
 	}
 
 	// Prepare API request
 	baseURL := "https://api.acoustid.org/v2/lookup"
 	params := url.Values{}
-	params.Add("client", acoustidProvider.ClientKey)
+	params.Add("client", *acoustidProvider.Secret)
 	params.Add("meta", "recordings+sources")
 	params.Add("duration", fmt.Sprintf("%d", duration))
 	params.Add("fingerprint", chromaprint)

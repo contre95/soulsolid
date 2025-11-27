@@ -97,9 +97,8 @@ type LyricsQuality struct {
 
 // Provider holds configuration for individual tagging providers
 type Provider struct {
-	Enabled   bool    `yaml:"enabled"`
-	APIKey    *string `yaml:"api_key,omitempty"`
-	ClientKey string  `yaml:"client_key,omitempty"`
+	Enabled bool    `yaml:"enabled"`
+	Secret  *string `yaml:"secret,omitempty"`
 }
 
 // Sync holds configuration for device synchronization
