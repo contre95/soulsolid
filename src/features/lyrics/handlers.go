@@ -30,48 +30,6 @@ func NewHandler(service *Service, metadataService MetadataService) *Handler {
 	}
 }
 
-// getLyricsProviderColors returns color classes for a given lyrics provider
-func (h *Handler) getLyricsProviderColors(providerName string) map[string]string {
-	switch providerName {
-	case "genius":
-		return map[string]string{
-			"label":     "text-yellow-600 dark:text-yellow-300",
-			"border":    "border-yellow-400 dark:border-yellow-300",
-			"focusRing": "focus:ring-yellow-500 focus:border-yellow-500",
-			"text":      "text-yellow-700 dark:text-yellow-300",
-		}
-	case "tekstowo":
-		return map[string]string{
-			"label":     "text-green-600 dark:text-green-300",
-			"border":    "border-green-400 dark:border-green-300",
-			"focusRing": "focus:ring-green-500 focus:border-green-500",
-			"text":      "text-green-700 dark:text-green-300",
-		}
-	case "lrclib":
-		return map[string]string{
-			"label":     "text-blue-600 dark:text-blue-300",
-			"border":    "border-blue-400 dark:border-blue-300",
-			"focusRing": "focus:ring-blue-500 focus:border-blue-500",
-			"text":      "text-blue-700 dark:text-blue-300",
-		}
-	case "best":
-		return map[string]string{
-			"label":     "text-gradient-to-r from-yellow-600 via-green-600 to-blue-600 dark:from-yellow-300 dark:via-green-300 dark:to-blue-300",
-			"border":    "border-gradient-to-r from-yellow-400 via-green-400 to-blue-400 dark:from-yellow-300 dark:via-green-300 dark:to-blue-300",
-			"focusRing": "focus:ring-gradient-to-r focus:from-yellow-500 focus:via-green-500 focus:to-blue-500 focus:border-gradient-to-r focus:from-yellow-500 focus:via-green-500 focus:to-blue-500",
-			"text":      "text-gradient-to-r from-yellow-700 via-green-700 to-blue-700 dark:from-yellow-300 dark:via-green-300 dark:to-blue-300",
-		}
-	default:
-		// Default to blue for unknown providers
-		return map[string]string{
-			"label":     "text-blue-600 dark:text-blue-300",
-			"border":    "border-blue-400 dark:border-blue-300",
-			"focusRing": "focus:ring-blue-500 focus:border-blue-500",
-			"text":      "text-blue-700 dark:text-blue-300",
-		}
-	}
-}
-
 // GetLyricsText returns plain lyrics text for HTMX to set in textarea
 func (h *Handler) GetLyricsText(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
