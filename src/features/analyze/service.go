@@ -6,21 +6,20 @@ import (
 	"log/slog"
 
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/lyrics"
 	"github.com/contre95/soulsolid/src/music"
 )
 
 // Service provides analysis functionality for batch operations on the library
 type Service struct {
 	taggingService music.MetadataService
-	lyricsService  *lyrics.Service
+	lyricsService  music.LyricsService
 	libraryService music.LibraryService
 	jobService     music.JobService
 	config         *config.Manager
 }
 
 // NewService creates a new analyze service
-func NewService(taggingService music.MetadataService, lyricsService *lyrics.Service, libraryService music.LibraryService, jobService music.JobService, config *config.Manager) *Service {
+func NewService(taggingService music.MetadataService, lyricsService music.LyricsService, libraryService music.LibraryService, jobService music.JobService, config *config.Manager) *Service {
 	return &Service{
 		taggingService: taggingService,
 		lyricsService:  lyricsService,
