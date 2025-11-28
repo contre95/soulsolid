@@ -88,15 +88,11 @@ func main() {
 	discogsProvider := providers.NewDiscogsProvider(cfgManager.Get().Metadata.Providers["discogs"].Enabled, discogsSecret)
 	deezerProvider := providers.NewDeezerProvider(cfgManager.Get().Metadata.Providers["deezer"].Enabled)
 
-	geniusProvider := providers.NewGeniusProvider(cfgManager.Get().Lyrics.Providers["genius"].Enabled)
-	tekstowoProvider := providers.NewTekstowoProvider(cfgManager.Get().Lyrics.Providers["tekstowo"].Enabled)
 	lrclibProvider := providers.NewLRCLibProvider(cfgManager.Get().Lyrics.Providers["lrclib"].Enabled)
 
 	acoustIDService := providers.NewAcoustIDService(cfgManager)
 	lyricsService := lyrics.NewService(tagWriter, tagReader, db, map[string]lyrics.LyricsProvider{
-		"genius":   geniusProvider,
-		"tekstowo": tekstowoProvider,
-		"lrclib":   lrclibProvider,
+		"lrclib": lrclibProvider,
 	}, cfgManager)
 	tagService := metadata.NewService(tagWriter, tagReader, db, map[string]metadata.MetadataProvider{
 		"musicbrainz": musicbrainzProvider,

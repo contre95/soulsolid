@@ -54,12 +54,6 @@
                     >
                         <option value="">Select a provider...</option>
                         {{if .EnabledLyricsProviders}}
-                        {{if index .EnabledLyricsProviders "genius"}}
-                        <option value="genius">Genius</option>
-                        {{end}}
-                        {{if index .EnabledLyricsProviders "tekstowo"}}
-                        <option value="tekstowo">Tekstowo</option>
-                        {{end}}
                         {{if index .EnabledLyricsProviders "lrclib"}}
                         <option value="lrclib">LRCLib</option>
                         {{end}}

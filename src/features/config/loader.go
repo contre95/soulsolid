@@ -147,12 +147,6 @@ func createDefaultConfig() *Config {
 		},
 		Lyrics: Lyrics{ // NOTE: Add this to the documentation
 			Providers: map[string]Provider{
-				"genius": {
-					Enabled: true,
-				},
-				"tekstowo": {
-					Enabled: true,
-				},
 				"lrclib": {
 					Enabled: true,
 				},

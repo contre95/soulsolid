@@ -52,10 +52,6 @@ metadata:
       secret: <acoustid_client_key>
 lyrics:
   providers:
-    genius:
-      enabled: true
-    tekstowo:
-      enabled: true
     lrclib:
       enabled: true
 sync:
