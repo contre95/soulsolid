@@ -46,13 +46,12 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 
 	job.Logger.Info("Enabled lyrics providers", "providers", enabledProviders, "color", "blue")
 
-	// Get all tracks from library
-	tracks, err := t.service.libraryService.GetTracks(ctx)
+	// Get total track count for progress reporting
+	totalTracks, err := t.service.libraryService.GetTracksCount(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get tracks: %w", err)
+		return nil, fmt.Errorf("failed to get tracks count: %w", err)
 	}
 
-	totalTracks := len(tracks)
 	if totalTracks == 0 {
 		job.Logger.Info("No tracks found in library")
 		return map[string]any{
@@ -63,13 +62,15 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 	}
 
 	job.Logger.Info("Starting lyrics analysis", "totalTracks", totalTracks, "color", "blue")
-	progressUpdater(0, fmt.Sprintf("Starting lyrics analysis of %d tracks", totalTracks))
+	progressUpdater(0, fmt.Sprintf("Starting analysis of %d tracks", totalTracks))
 
 	processed := 0
 	updated := 0
 	skipped := 0
 
-	for i, track := range tracks {
+	// Process tracks in batches to avoid loading all into memory
+	batchSize := 100
+	for offset := 0; offset < totalTracks; offset += batchSize {
 		select {
 		case <-ctx.Done():
 			job.Logger.Info("Lyrics analysis cancelled", "processed", processed, "updated", updated)
@@ -77,36 +78,51 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 		default:
 		}
 
-		progress := (i * 100) / totalTracks
-		progressUpdater(progress, fmt.Sprintf("Processing track %d/%d: %s", i+1, totalTracks, track.Title))
-
-		// Skip tracks that already have lyrics
-		if track.Metadata.Lyrics != "" {
-			job.Logger.Info("Skipping track with existing lyrics", "trackID", track.ID, "title", track.Title, "lyricsLength", len(track.Metadata.Lyrics), "color", "orange")
-			skipped++
-			continue
+		// Get next batch of tracks
+		tracks, err := t.service.libraryService.GetTracksPaginated(ctx, batchSize, offset)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get tracks batch (offset %d): %w", offset, err)
 		}
 
-		// Try to fetch lyrics for this track
-		job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "color", "cyan")
-		err := t.service.lyricsService.AddLyricsWithBestProvider(ctx, track.ID)
-		if err != nil {
-			job.Logger.Warn("Failed to add lyrics for track, setting to [No Lyrics]", "trackID", track.ID, "title", track.Title, "error", err.Error(), "color", "orange")
-			// Set lyrics to [No Lyrics] when fetching fails
-			err = t.service.lyricsService.SetLyricsToNoLyrics(ctx, track.ID)
+		for _, track := range tracks {
+			select {
+			case <-ctx.Done():
+				job.Logger.Info("Lyrics analysis cancelled", "processed", processed, "updated", updated)
+				return nil, ctx.Err()
+			default:
+			}
+
+			progress := (processed * 100) / totalTracks
+			progressUpdater(progress, fmt.Sprintf("Processing track %d/%d: %s", processed+1, totalTracks, track.Title))
+
+			// Skip tracks that already have lyrics
+			if track.Metadata.Lyrics != "" {
+				job.Logger.Info("Skipping track with existing lyrics", "trackID", track.ID, "title", track.Title, "lyricsLength", len(track.Metadata.Lyrics), "color", "orange")
+				skipped++
+				continue
+			}
+
+			// Try to fetch lyrics for this track
+			job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "color", "cyan")
+			err := t.service.lyricsService.AddLyricsWithBestProvider(ctx, track.ID)
 			if err != nil {
-				job.Logger.Error("Failed to set [No Lyrics] for track", "trackID", track.ID, "title", track.Title, "error", err.Error())
+				job.Logger.Warn("Failed to add lyrics for track, setting to [No Lyrics]", "trackID", track.ID, "title", track.Title, "error", err.Error(), "color", "orange")
+				// Set lyrics to [No Lyrics] when fetching fails
+				err = t.service.lyricsService.SetLyricsToNoLyrics(ctx, track.ID)
+				if err != nil {
+					job.Logger.Error("Failed to set [No Lyrics] for track", "trackID", track.ID, "title", track.Title, "error", err.Error())
+				} else {
+					updated++
+					job.Logger.Info("Set [No Lyrics] for track", "trackID", track.ID, "title", track.Title, "color", "violet")
+				}
+				// Continue with other tracks - don't fail the entire job
 			} else {
 				updated++
-				job.Logger.Info("Set [No Lyrics] for track", "trackID", track.ID, "title", track.Title, "color", "violet")
+				job.Logger.Info("Successfully added lyrics for track", "trackID", track.ID, "title", track.Title, "color", "green")
 			}
-			// Continue with other tracks - don't fail the entire job
-		} else {
-			updated++
-			job.Logger.Info("Successfully added lyrics for track", "trackID", track.ID, "title", track.Title, "color", "green")
-		}
 
-		processed++
+			processed++
+		}
 	}
 
 	job.Logger.Info("Lyrics analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "color", "green")

@@ -21,13 +21,13 @@ type Service struct {
 	tagWriter           TagWriter
 	tagReader           TagReader
 	libraryRepo         music.Library
-	metadataProviders   []MetadataProvider
+	metadataProviders   map[string]MetadataProvider
 	chromaprintAcoustID ChromaprintAcoustID
 	configManager       *config.Manager
 }
 
 // NewService creates a new tag service
-func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, metadataProviders []MetadataProvider, chromaprintAcoustID ChromaprintAcoustID, cfgManager *config.Manager) *Service {
+func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, metadataProviders map[string]MetadataProvider, chromaprintAcoustID ChromaprintAcoustID, cfgManager *config.Manager) *Service {
 	return &Service{
 		configManager:       cfgManager,
 		tagWriter:           tagWriter,
@@ -448,14 +448,8 @@ func (s *Service) SearchTrackMetadata(ctx context.Context, trackID string, provi
 	}
 
 	// Find the specific provider
-	var targetProvider MetadataProvider
-	for _, provider := range s.metadataProviders {
-		if provider.Name() == providerName && provider.IsEnabled() {
-			targetProvider = provider
-			break
-		}
-	}
-	if targetProvider == nil {
+	targetProvider, exists := s.metadataProviders[providerName]
+	if !exists || targetProvider == nil || !targetProvider.IsEnabled() {
 		return nil, fmt.Errorf("provider '%s' not found or not enabled", providerName)
 	}
 

@@ -93,8 +93,16 @@ func main() {
 	lrclibProvider := providers.NewLRCLibProvider(cfgManager.Get().Lyrics.Providers["lrclib"].Enabled)
 
 	acoustIDService := providers.NewAcoustIDService(cfgManager)
-	lyricsService := lyrics.NewService(tagWriter, tagReader, db, []lyrics.LyricsProvider{geniusProvider, tekstowoProvider, lrclibProvider}, cfgManager)
-	tagService := metadata.NewService(tagWriter, tagReader, db, []metadata.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, acoustIDService, cfgManager)
+	lyricsService := lyrics.NewService(tagWriter, tagReader, db, map[string]lyrics.LyricsProvider{
+		"genius":   geniusProvider,
+		"tekstowo": tekstowoProvider,
+		"lrclib":   lrclibProvider,
+	}, cfgManager)
+	tagService := metadata.NewService(tagWriter, tagReader, db, map[string]metadata.MetadataProvider{
+		"musicbrainz": musicbrainzProvider,
+		"discogs":     discogsProvider,
+		"deezer":      deezerProvider,
+	}, acoustIDService, cfgManager)
 
 	analyzeService := analyze.NewService(tagService, lyricsService, libraryService, jobService, cfgManager) // Now using interfaces
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)

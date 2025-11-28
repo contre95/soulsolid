@@ -25,7 +25,7 @@ type Service struct {
 	tagWriter       TagWriter
 	tagReader       TagReader
 	libraryRepo     music.Library
-	lyricsProviders []LyricsProvider
+	lyricsProviders map[string]LyricsProvider
 	config          *config.Manager
 }
 
@@ -40,7 +40,7 @@ type TagReader interface {
 }
 
 // NewService creates a new lyrics service
-func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, lyricsProviders []LyricsProvider, config *config.Manager) *Service {
+func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, lyricsProviders map[string]LyricsProvider, config *config.Manager) *Service {
 	return &Service{
 		tagWriter:       tagWriter,
 		tagReader:       tagReader,
@@ -85,24 +85,21 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 	if err != nil {
 		return fmt.Errorf("failed to get track: %w", err)
 	}
-
 	// Skip if lyrics already exist
 	if track.Metadata.Lyrics != "" {
 		slog.Debug("Track already has lyrics", "trackID", trackID)
 		return nil
 	}
-
 	// Build search parameters from current track data
 	searchParams := music.LyricsSearchParams{
 		TrackID: track.ID,
 		Title:   track.Title,
 	}
-
 	// Add artist if available
+	// NOTE: Do we really need to check for Artists and Album?
 	if len(track.Artists) > 0 && track.Artists[0].Artist != nil {
 		searchParams.Artist = track.Artists[0].Artist.Name
 	}
-
 	// Add album and album artist if available
 	if track.Album != nil {
 		searchParams.Album = track.Album.Title
@@ -110,16 +107,9 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 			searchParams.AlbumArtist = track.Album.Artists[0].Artist.Name
 		}
 	}
-
 	// Find the specific provider
-	var targetProvider LyricsProvider
-	for _, provider := range s.lyricsProviders {
-		if provider.Name() == providerName && provider.IsEnabled() {
-			targetProvider = provider
-			break
-		}
-	}
-	if targetProvider == nil {
+	targetProvider, exists := s.lyricsProviders[providerName]
+	if !exists || targetProvider == nil || !targetProvider.IsEnabled() {
 		return fmt.Errorf("lyrics provider '%s' not found or not enabled", providerName)
 	}
 
@@ -200,14 +190,8 @@ func (s *Service) SearchLyrics(ctx context.Context, trackID string, providerName
 	}
 
 	// Find the specific provider
-	var targetProvider LyricsProvider
-	for _, provider := range s.lyricsProviders {
-		if provider.Name() == providerName && provider.IsEnabled() {
-			targetProvider = provider
-			break
-		}
-	}
-	if targetProvider == nil {
+	targetProvider, exists := s.lyricsProviders[providerName]
+	if !exists || targetProvider == nil || !targetProvider.IsEnabled() {
 		return "", fmt.Errorf("lyrics provider '%s' not found or not enabled", providerName)
 	}
 

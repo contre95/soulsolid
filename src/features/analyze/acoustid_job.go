@@ -27,15 +27,12 @@ func (t *AcoustIDJobTask) MetadataKeys() []string {
 
 // Execute performs the AcoustID analysis operation
 func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
-	tracks, err := t.service.libraryService.GetTracks(ctx) // TODO: loading all tracks into memory could be problematic for large music libraries
-	// 1. **Use pagination**: Replace `GetTracks` with `GetTracksPaginated` to process tracks in batches
-	// 2. **Channel-based streaming**: Modify the interface to return a channel that yields tracks incrementally
-	// 3. **Iterator pattern**: Implement an iterator that fetches tracks on-demand
+	// Get total track count for progress reporting
+	totalTracks, err := t.service.libraryService.GetTracksCount(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get tracks: %w", err)
+		return nil, fmt.Errorf("failed to get tracks count: %w", err)
 	}
 
-	totalTracks := len(tracks)
 	if totalTracks == 0 {
 		job.Logger.Info("No tracks found in library")
 		return map[string]any{
@@ -52,7 +49,9 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 	updated := 0
 	skipped := 0
 
-	for i, track := range tracks {
+	// Process tracks in batches to avoid loading all into memory
+	batchSize := 100
+	for offset := 0; offset < totalTracks; offset += batchSize {
 		select {
 		case <-ctx.Done():
 			job.Logger.Info("AcoustID analysis cancelled", "processed", processed, "updated", updated)
@@ -60,32 +59,47 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 		default:
 		}
 
-		progress := (i * 100) / totalTracks
-		progressUpdater(progress, fmt.Sprintf("Processing track %d/%d: %s", i+1, totalTracks, track.Title))
-
-		// Skip tracks that already have AcoustID
-		acoustID := ""
-		if track.Attributes != nil {
-			acoustID = track.Attributes["acoustid"]
-		}
-		if acoustID != "" {
-			job.Logger.Info("Skipping track with existing AcoustID", "trackID", track.ID, "title", track.Title, "acoustID", acoustID, "color", "orange")
-			skipped++
-			continue
-		}
-
-		// Call the existing AddChromaprintAndAcoustID method
-		job.Logger.Info("Analyzing track fingerprint", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "color", "cyan")
-		err := t.service.taggingService.AddChromaprintAndAcoustID(ctx, track.ID)
+		// Get next batch of tracks
+		tracks, err := t.service.libraryService.GetTracksPaginated(ctx, batchSize, offset)
 		if err != nil {
-			job.Logger.Warn("Failed to add AcoustID for track", "trackID", track.ID, "title", track.Title, "error", err, "color", "orange")
-			// Continue with other tracks - don't fail the entire job
-		} else {
-			updated++
-			job.Logger.Info("Successfully added AcoustID for track", "trackID", track.ID, "title", track.Title, "color", "green")
+			return nil, fmt.Errorf("failed to get tracks batch (offset %d): %w", offset, err)
 		}
 
-		processed++
+		for _, track := range tracks {
+			select {
+			case <-ctx.Done():
+				job.Logger.Info("AcoustID analysis cancelled", "processed", processed, "updated", updated)
+				return nil, ctx.Err()
+			default:
+			}
+
+			progress := (processed * 100) / totalTracks
+			progressUpdater(progress, fmt.Sprintf("Processing track %d/%d: %s", processed+1, totalTracks, track.Title))
+
+			// Skip tracks that already have AcoustID
+			acoustID := ""
+			if track.Attributes != nil {
+				acoustID = track.Attributes["acoustid"]
+			}
+			if acoustID != "" {
+				job.Logger.Info("Skipping track with existing AcoustID", "trackID", track.ID, "title", track.Title, "acoustID", acoustID, "color", "orange")
+				skipped++
+				continue
+			}
+
+			// Call the existing AddChromaprintAndAcoustID method
+			job.Logger.Info("Analyzing track fingerprint", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "color", "cyan")
+			err := t.service.taggingService.AddChromaprintAndAcoustID(ctx, track.ID)
+			if err != nil {
+				job.Logger.Warn("Failed to add AcoustID for track", "trackID", track.ID, "title", track.Title, "error", err, "color", "orange")
+				// Continue with other tracks - don't fail the entire job
+			} else {
+				updated++
+				job.Logger.Info("Successfully added AcoustID for track", "trackID", track.ID, "title", track.Title, "color", "green")
+			}
+
+			processed++
+		}
 	}
 
 	job.Logger.Info("AcoustID analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "color", "green")

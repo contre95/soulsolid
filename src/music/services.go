@@ -30,6 +30,8 @@ type LyricsService interface {
 // LibraryService defines the interface for library operations
 type LibraryService interface {
 	GetTracks(ctx context.Context) ([]*Track, error)
+	GetTracksPaginated(ctx context.Context, limit, offset int) ([]*Track, error)
+	GetTracksCount(ctx context.Context) (int, error)
 	GetTrack(ctx context.Context, trackID string) (*Track, error)
 	UpdateTrack(ctx context.Context, track *Track) error
 }
