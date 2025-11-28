@@ -9,6 +9,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	handler := NewHandler(service)
 
 	ui := app.Group("/ui")
+	ui.Get("/library", handler.RenderLibrarySection)
 	ui.Get("/library/table", handler.GetLibraryTable)
 	ui.Get("/library/tag/edit/:trackId", handler.RenderTagEditForm)
 

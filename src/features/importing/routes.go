@@ -10,6 +10,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 
 	ui := app.Group("/ui")
 	// UI endpoints
+	ui.Get("/import", handler.RenderImportSection)
 	ui.Get("/importing/directory/form", handler.GetDirectoryForm)
 	ui.Get("/importing/queue/items", handler.RenderQueueItems)
 	ui.Get("/importing/queue/items/grouped", handler.RenderGroupedQueueItems)

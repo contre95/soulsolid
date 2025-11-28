@@ -50,34 +50,6 @@ func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Libr
 	}
 }
 
-// SetLyricsToNoLyrics sets the lyrics to "[No Lyrics]" for a track
-func (s *Service) SetLyricsToNoLyrics(ctx context.Context, trackID string) error {
-	// Get current track data
-	track, err := s.libraryRepo.GetTrack(ctx, trackID)
-	if err != nil {
-		return fmt.Errorf("failed to get track: %w", err)
-	}
-
-	// Set lyrics to [No Lyrics]
-	track.Metadata.Lyrics = "[No Lyrics]"
-	track.ModifiedDate = time.Now()
-
-	// Write lyrics to file tags
-	if err := s.tagWriter.WriteFileTags(ctx, track.Path, track); err != nil {
-		slog.Warn("Failed to write [No Lyrics] to file tags", "error", err, "trackID", trackID, "path", track.Path)
-		// Continue - we still want to update the database
-	}
-
-	// Update track in database
-	err = s.libraryRepo.UpdateTrack(ctx, track)
-	if err != nil {
-		return fmt.Errorf("failed to update track with [No Lyrics]: %w", err)
-	}
-
-	slog.Info("Successfully set [No Lyrics] for track", "trackID", trackID)
-	return nil
-}
-
 // AddLyrics searches for and adds lyrics to a track using a specific provider
 func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName string) error {
 	// Get current track data

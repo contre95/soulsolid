@@ -21,6 +21,19 @@ func NewHandler(configManager *Manager) *Handler {
 	}
 }
 
+// RenderSettingsSection renders the settings form with current configuration values.
+func (h *Handler) RenderSettingsSection(c *fiber.Ctx) error {
+	slog.Debug("RenderSettings handler called")
+	data := fiber.Map{
+		"Title": "Settings",
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "settings"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/settings", data)
+}
+
 // UpdateSettings handles the form submission to update configuration.
 func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	slog.Info("Configuration update requested")

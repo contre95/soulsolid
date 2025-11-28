@@ -24,6 +24,18 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+// RenderJobsSection renders the jobs page.
+func (h *Handler) RenderJobsSection(c *fiber.Ctx) error {
+	data := fiber.Map{
+		"Title": "Jobs",
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "jobs"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/jobs", data)
+}
+
 func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
 	jobType := strings.Clone(c.Params("type"))
 	name := c.Query("name", jobType)

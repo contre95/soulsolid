@@ -39,19 +39,43 @@
                 <h3 class="text-xl font-semibold text-slate-800 dark:text-white">Lyrics Analysis</h3>
             </div>
             <p class="text-slate-600 dark:text-slate-400 mb-4">
-                Search for and add lyrics to tracks that don't have them. Uses configured lyrics providers to find matching lyrics.
+                Search for and add lyrics to tracks that don't have them. Choose a lyrics provider to use for all tracks.
             </p>
-            <button
-                hx-post="/analyze/lyrics"
-                hx-target="#toast-container"
-                hx-swap="beforeend"
-                class="w-full bg-pink-500 hover:bg-pink-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
-            >
-                Start Lyrics Analysis
-                <span class="htmx-indicator ml-2">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </span>
-            </button>
+            <form hx-post="/analyze/lyrics" hx-target="#toast-container" hx-swap="beforeend">
+                <div class="mb-4">
+                    <label for="lyrics-provider" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Lyrics Provider
+                    </label>
+                    <select
+                        id="lyrics-provider"
+                        name="provider"
+                        required
+                        class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 dark:bg-gray-700 dark:text-white"
+                    >
+                        <option value="">Select a provider...</option>
+                        {{if .EnabledLyricsProviders}}
+                        {{if index .EnabledLyricsProviders "genius"}}
+                        <option value="genius">Genius</option>
+                        {{end}}
+                        {{if index .EnabledLyricsProviders "tekstowo"}}
+                        <option value="tekstowo">Tekstowo</option>
+                        {{end}}
+                        {{if index .EnabledLyricsProviders "lrclib"}}
+                        <option value="lrclib">LRCLib</option>
+                        {{end}}
+                        {{end}}
+                    </select>
+                </div>
+                <button
+                    type="submit"
+                    class="w-full bg-pink-500 hover:bg-pink-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+                >
+                    Start Lyrics Analysis
+                    <span class="htmx-indicator ml-2">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+            </form>
         </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg opacity-50">

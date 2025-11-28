@@ -22,7 +22,6 @@ type MetadataService interface {
 type LyricsService interface {
 	AddLyrics(ctx context.Context, trackID string, providerName string) error
 	AddLyricsWithBestProvider(ctx context.Context, trackID string) error
-	SetLyricsToNoLyrics(ctx context.Context, trackID string) error
 	GetEnabledLyricsProviders() map[string]bool
 	SearchLyrics(ctx context.Context, trackID string, providerName string) (string, error)
 }

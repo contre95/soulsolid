@@ -20,6 +20,20 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+// RenderLibrarySection renders the library page.
+func (h *Handler) RenderLibrarySection(c *fiber.Ctx) error {
+	slog.Debug("RenderLibrary handler called")
+	data := fiber.Map{
+		"Title":               "Library",
+		"DefaultDownloadPath": h.service.configManager.Get().DownloadPath,
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "library"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/library", data)
+}
+
 // Pagination represents pagination information
 type Pagination struct {
 	Page       int

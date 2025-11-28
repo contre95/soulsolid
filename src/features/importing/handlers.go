@@ -18,6 +18,19 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+// RenderImportSection renders the import page.
+func (h *Handler) RenderImportSection(c *fiber.Ctx) error {
+	slog.Debug("RenderImport handler called")
+	data := fiber.Map{
+		"Title": "Import",
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "import"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/import", data)
+}
+
 // ImportDirectory is the handler for importing a directory.
 func (h *Handler) ImportDirectory(c *fiber.Ctx) error {
 	type ImportPathRequest struct {

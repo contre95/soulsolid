@@ -11,6 +11,7 @@ func RegisterRoutes(app *fiber.App, configManager *Manager) {
 
 	/// UI
 	ui := app.Group("/ui")
+	ui.Get("/settings", handler.RenderSettingsSection)
 	ui.Get("/config/form", handler.GetConfigForm)
 
 	// APP

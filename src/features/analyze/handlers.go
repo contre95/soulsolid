@@ -48,7 +48,15 @@ func (h *Handler) StartAcoustIDAnalysis(c *fiber.Ctx) error {
 func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 	slog.Info("Starting lyrics analysis via HTTP request")
 
-	jobID, err := h.service.StartLyricsAnalysis(c.Context())
+	// Get provider from form data
+	provider := c.FormValue("provider")
+	if provider == "" {
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": "Please select a lyrics provider",
+		})
+	}
+
+	jobID, err := h.service.StartLyricsAnalysis(c.Context(), provider)
 	if err != nil {
 		slog.Error("Failed to start lyrics analysis", "error", err)
 		return c.Render("toast/toastErr", fiber.Map{
@@ -56,7 +64,7 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 		})
 	}
 
-	slog.Info("Lyrics analysis job started successfully", "jobID", jobID)
+	slog.Info("Lyrics analysis job started successfully", "jobID", jobID, "provider", provider)
 
 	// Trigger HTMX to refresh the job list
 	c.Set("HX-Trigger", "refreshJobList")
@@ -77,6 +85,10 @@ func (h *Handler) RenderAnalyzeSection(c *fiber.Ctx) error {
 	data := fiber.Map{
 		"Title": "Analyze",
 	}
+
+	// Get enabled lyrics providers for the UI
+	enabledLyricsProviders := h.service.lyricsService.GetEnabledLyricsProviders()
+	data["EnabledLyricsProviders"] = enabledLyricsProviders
 
 	if c.Get("HX-Request") != "true" {
 		data["Section"] = "analyze"

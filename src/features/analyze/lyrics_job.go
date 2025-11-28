@@ -67,6 +67,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 	processed := 0
 	updated := 0
 	skipped := 0
+	errors := 0
 
 	// Process tracks in batches to avoid loading all into memory
 	batchSize := 100
@@ -102,23 +103,23 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 				continue
 			}
 
-			// Try to fetch lyrics for this track
-			job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "color", "cyan")
-			err := t.service.lyricsService.AddLyricsWithBestProvider(ctx, track.ID)
+			// Get the specified provider from job metadata
+			provider, ok := job.Metadata["provider"].(string)
+			if !ok || provider == "" {
+				job.Logger.Error("No provider specified in job metadata")
+				return nil, fmt.Errorf("no lyrics provider specified in job metadata")
+			}
+
+			// Try to fetch lyrics for this track using the specified provider
+			job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "provider", provider, "color", "cyan")
+			err := t.service.lyricsService.AddLyrics(ctx, track.ID, provider)
 			if err != nil {
-				job.Logger.Warn("Failed to add lyrics for track, setting to [No Lyrics]", "trackID", track.ID, "title", track.Title, "error", err.Error(), "color", "orange")
-				// Set lyrics to [No Lyrics] when fetching fails
-				err = t.service.lyricsService.SetLyricsToNoLyrics(ctx, track.ID)
-				if err != nil {
-					job.Logger.Error("Failed to set [No Lyrics] for track", "trackID", track.ID, "title", track.Title, "error", err.Error())
-				} else {
-					updated++
-					job.Logger.Info("Set [No Lyrics] for track", "trackID", track.ID, "title", track.Title, "color", "violet")
-				}
+				job.Logger.Warn("Failed to add lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "error", err.Error(), "color", "orange")
+				errors++
 				// Continue with other tracks - don't fail the entire job
 			} else {
 				updated++
-				job.Logger.Info("Successfully added lyrics for track", "trackID", track.ID, "title", track.Title, "color", "green")
+				job.Logger.Info("Successfully added lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "green")
 			}
 
 			processed++
@@ -129,17 +130,17 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 
 	// Create completion message for job tagging
 	finalMessage := fmt.Sprintf("Lyrics analysis finished. Processed %d tracks (%d updated, %d skipped, %d errors).",
-		totalTracks, updated, skipped, 0)
+		totalTracks, updated, skipped, errors)
 	job.Logger.Info(finalMessage)
 
-	progressUpdater(100, fmt.Sprintf("Lyrics analysis completed - totalTracks=%d processed=%d updated=%d skipped=%d", totalTracks, processed, updated, skipped))
+	progressUpdater(100, fmt.Sprintf("Lyrics analysis completed - totalTracks=%d processed=%d updated=%d skipped=%d errors=%d", totalTracks, processed, updated, skipped, errors))
 
 	return map[string]any{
 		"totalTracks": totalTracks,
 		"processed":   processed,
 		"updated":     updated,
 		"skipped":     skipped,
-		"errors":      0,
+		"errors":      errors,
 		"msg":         finalMessage,
 	}, nil
 }

@@ -10,6 +10,8 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 
 	// UI routes - use existing /ui group
 	ui := app.Group("/ui")
+	ui.Get("/sync", handler.RenderSyncSection)
+	ui.Get("/sync-status", handler.RenderSyncStatus)
 	ui.Get("/sync/status", handler.GetSyncStatus)
 
 	// Sync API routes
