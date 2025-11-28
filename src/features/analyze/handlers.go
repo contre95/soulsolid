@@ -86,9 +86,8 @@ func (h *Handler) RenderAnalyzeSection(c *fiber.Ctx) error {
 		"Title": "Analyze",
 	}
 
-	// Get enabled lyrics providers for the UI
-	enabledLyricsProviders := h.service.lyricsService.GetEnabledLyricsProviders()
-	data["EnabledLyricsProviders"] = enabledLyricsProviders
+	// Get lyrics providers info for the UI (same as tag section)
+	data["LyricsProviders"] = h.service.lyricsService.GetLyricsProvidersInfo()
 
 	if c.Get("HX-Request") != "true" {
 		data["Section"] = "analyze"

@@ -116,5 +116,6 @@ func (p *LRCLibProvider) extractPlainLyricsFromSynced(syncedLyrics string) strin
 	return strings.Join(plainLines, "\n")
 }
 
-func (p *LRCLibProvider) Name() string    { return "lrclib" }
-func (p *LRCLibProvider) IsEnabled() bool { return p.enabled }
+func (p *LRCLibProvider) Name() string        { return "lrclib" }
+func (p *LRCLibProvider) DisplayName() string { return "LRCLib" }
+func (p *LRCLibProvider) IsEnabled() bool     { return p.enabled }

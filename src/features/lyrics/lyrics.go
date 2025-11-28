@@ -14,6 +14,9 @@ type LyricsProvider interface {
 	// Name returns the provider name
 	Name() string
 
+	// DisplayName returns the human-readable display name for the UI
+	DisplayName() string
+
 	// IsEnabled returns whether the provider is enabled
 	IsEnabled() bool
 }

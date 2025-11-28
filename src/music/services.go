@@ -11,6 +11,13 @@ type LyricsSearchParams struct {
 	Artist      string
 }
 
+// LyricsProviderInfo contains information about a lyrics provider for the UI
+type LyricsProviderInfo struct {
+	Name        string
+	DisplayName string
+	Enabled     bool
+}
+
 // MetadataService defines the interface for tagging operations
 type MetadataService interface {
 	AddChromaprintAndAcoustID(ctx context.Context, trackID string) error
@@ -21,8 +28,8 @@ type MetadataService interface {
 // LyricsService defines the interface for lyrics operations
 type LyricsService interface {
 	AddLyrics(ctx context.Context, trackID string, providerName string) error
-	AddLyricsWithBestProvider(ctx context.Context, trackID string) error
 	GetEnabledLyricsProviders() map[string]bool
+	GetLyricsProvidersInfo() []LyricsProviderInfo
 	SearchLyrics(ctx context.Context, trackID string, providerName string) (string, error)
 }
 

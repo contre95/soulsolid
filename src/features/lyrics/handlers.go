@@ -46,8 +46,8 @@ func (h *Handler) RenderLyricsButtons(c *fiber.Ctx) error {
 	}
 
 	return c.Render("tag/lyrics_buttons", fiber.Map{
-		"Track":                  track,
-		"EnabledLyricsProviders": h.metadataService.GetEnabledLyricsProviders(),
+		"Track":           track,
+		"LyricsProviders": h.service.GetLyricsProvidersInfo(),
 	})
 }
 
