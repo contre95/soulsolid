@@ -24,6 +24,18 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+// RenderJobsSection renders the jobs page.
+func (h *Handler) RenderJobsSection(c *fiber.Ctx) error {
+	data := fiber.Map{
+		"Title": "Jobs",
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "jobs"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/jobs", data)
+}
+
 func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
 	jobType := strings.Clone(c.Params("type"))
 	name := c.Query("name", jobType)
@@ -215,6 +227,19 @@ func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
 
 func (h *Handler) HandleAllJobsList(c *fiber.Ctx) error {
 	jobs := h.service.GetJobs()
+
+	// Filter jobs by type if specified
+	jobTypeFilter := c.Query("prefix")
+	if jobTypeFilter != "" {
+		filteredJobs := make([]*Job, 0)
+		for _, job := range jobs {
+			if strings.HasPrefix(job.Type, jobTypeFilter) {
+				filteredJobs = append(filteredJobs, job)
+			}
+		}
+		jobs = filteredJobs
+	}
+
 	return c.Render("jobs/job_list", fiber.Map{
 		"Jobs": jobs,
 	})

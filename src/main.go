@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/contre95/soulsolid/src/features/analyze"
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/features/hosting"
@@ -13,13 +14,14 @@ import (
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
 	"github.com/contre95/soulsolid/src/features/logging"
+	"github.com/contre95/soulsolid/src/features/lyrics"
+	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/syncdap"
-	"github.com/contre95/soulsolid/src/features/tagging"
-	"github.com/contre95/soulsolid/src/infra/chroma"
 	"github.com/contre95/soulsolid/src/infra/database"
 	"github.com/contre95/soulsolid/src/infra/files"
-	"github.com/contre95/soulsolid/src/infra/metadata"
+	"github.com/contre95/soulsolid/src/infra/fingerprint"
+	"github.com/contre95/soulsolid/src/infra/providers"
 	"github.com/contre95/soulsolid/src/infra/queue"
 	"github.com/contre95/soulsolid/src/infra/tag"
 	"github.com/contre95/soulsolid/src/infra/watcher"
@@ -46,7 +48,8 @@ func main() {
 	jobService := jobs.NewService(&cfgManager.Get().Jobs)
 
 	tagReader := tag.NewTagReader()
-	fingerprintReader := chroma.NewFingerprintService()
+	fingerprintReader := fingerprint.NewFingerprintService(cfgManager)
+	tagWriter := tag.NewTagWriter(cfgManager.Get().Downloaders.Artwork.Embedded)
 
 	importQueue := queue.NewInMemoryQueue()
 	dirWatcher, err := watcher.NewWatcher()
@@ -77,17 +80,27 @@ func main() {
 		panic("Failed to load plugins")
 	}
 
-	tagWriter := tag.NewTagWriter(cfgManager.Get().Downloaders.Artwork.Embedded)
-
-	musicbrainzProvider := metadata.NewMusicBrainzProvider(cfgManager.Get().Metadata.Providers["musicbrainz"].Enabled)
-	discogsAPIKey := ""
-	if cfgManager.Get().Metadata.Providers["discogs"].APIKey != nil {
-		discogsAPIKey = *cfgManager.Get().Metadata.Providers["discogs"].APIKey
+	musicbrainzProvider := providers.NewMusicBrainzProvider(cfgManager.Get().Metadata.Providers["musicbrainz"].Enabled)
+	discogsSecret := ""
+	if cfgManager.Get().Metadata.Providers["discogs"].Secret != nil {
+		discogsSecret = *cfgManager.Get().Metadata.Providers["discogs"].Secret
 	}
-	discogsProvider := metadata.NewDiscogsProvider(cfgManager.Get().Metadata.Providers["discogs"].Enabled, discogsAPIKey)
-	deezerProvider := metadata.NewDeezerProvider(cfgManager.Get().Metadata.Providers["deezer"].Enabled)
+	discogsProvider := providers.NewDiscogsProvider(cfgManager.Get().Metadata.Providers["discogs"].Enabled, discogsSecret)
+	deezerProvider := providers.NewDeezerProvider(cfgManager.Get().Metadata.Providers["deezer"].Enabled)
 
-	tagService := tagging.NewService(tagWriter, tagReader, db, []tagging.MetadataProvider{musicbrainzProvider, discogsProvider, deezerProvider}, fingerprintReader, cfgManager)
+	lrclibProvider := providers.NewLRCLibProvider(cfgManager.Get().Lyrics.Providers["lrclib"].Enabled)
+
+	acoustIDService := providers.NewAcoustIDService(cfgManager)
+	lyricsService := lyrics.NewService(tagWriter, tagReader, db, map[string]lyrics.LyricsProvider{
+		"lrclib": lrclibProvider,
+	}, cfgManager)
+	tagService := metadata.NewService(tagWriter, tagReader, db, map[string]metadata.MetadataProvider{
+		"musicbrainz": musicbrainzProvider,
+		"discogs":     discogsProvider,
+		"deezer":      deezerProvider,
+	}, acoustIDService, cfgManager)
+
+	analyzeService := analyze.NewService(tagService, lyricsService, libraryService, jobService, cfgManager) // Now using interfaces
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
 
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)
@@ -96,6 +109,12 @@ func main() {
 	jobService.RegisterHandler("download_artist", jobs.NewBaseTaskHandler(downloadTask))
 	jobService.RegisterHandler("download_tracks", jobs.NewBaseTaskHandler(downloadTask))
 	jobService.RegisterHandler("download_playlist", jobs.NewBaseTaskHandler(downloadTask))
+
+	acoustIDTask := analyze.NewAcoustIDJobTask(analyzeService)
+	jobService.RegisterHandler("analyze_acoustid", jobs.NewBaseTaskHandler(acoustIDTask))
+
+	lyricsTask := analyze.NewLyricsJobTask(analyzeService)
+	jobService.RegisterHandler("analyze_lyrics", jobs.NewBaseTaskHandler(lyricsTask))
 
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {
@@ -109,7 +128,7 @@ func main() {
 		}
 	}
 
-	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService, metricsService)
+	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService, lyricsService, metricsService, analyzeService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped: %v", "error", err)

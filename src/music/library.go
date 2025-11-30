@@ -16,7 +16,6 @@ type Library interface {
 	GetTracksCount(ctx context.Context) (int, error)
 	FindTrackByMetadata(ctx context.Context, title, artistName, albumTitle string) (*Track, error)
 	FindTrackByPath(ctx context.Context, path string) (*Track, error)
-	UpdateTrackFingerprint(ctx context.Context, trackID, fingerprint string) error
 
 	// Album methods
 	AddAlbum(ctx context.Context, album *Album) error

@@ -1,4 +1,4 @@
-package metadata
+package providers
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/tagging"
+	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/music"
 )
 
@@ -66,7 +66,7 @@ func NewMusicBrainzProvider(enabled bool) *MusicBrainzProvider {
 	return &MusicBrainzProvider{enabled: enabled}
 }
 
-func (p *MusicBrainzProvider) SearchTracks(ctx context.Context, params tagging.SearchParams) ([]*music.Track, error) {
+func (p *MusicBrainzProvider) SearchTracks(ctx context.Context, params metadata.SearchParams) ([]*music.Track, error) {
 	// Build search query using Lucene syntax
 	var queryParts []string
 
@@ -81,6 +81,9 @@ func (p *MusicBrainzProvider) SearchTracks(ctx context.Context, params tagging.S
 	}
 	if params.Year > 0 {
 		queryParts = append(queryParts, fmt.Sprintf("date:%d", params.Year))
+	}
+	if params.AcoustID != "" {
+		queryParts = append(queryParts, fmt.Sprintf("recording_acoustid:\"%s\"", params.AcoustID))
 	}
 
 	if len(queryParts) == 0 {
@@ -207,7 +210,7 @@ func (p *MusicBrainzProvider) convertMBRecordingToTrack(recording mbRecording) *
 
 // Legacy method for backward compatibility
 func (p *MusicBrainzProvider) FetchMetadata(ctx context.Context, fingerprint string) (*music.Track, error) {
-	tracks, err := p.SearchTracks(ctx, tagging.SearchParams{})
+	tracks, err := p.SearchTracks(ctx, metadata.SearchParams{})
 	if err != nil || len(tracks) == 0 {
 		return nil, err
 	}

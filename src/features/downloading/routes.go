@@ -34,5 +34,6 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	api.Get("/user/info", handler.GetUserInfo)
 
 	ui := app.Group("/ui")
+	ui.Get("/download", handler.RenderDownloadSection)
 	ui.Get("/downloading/chart/tracks", handler.GetChartTracks)
 }

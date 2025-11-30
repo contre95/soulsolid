@@ -22,6 +22,27 @@ func NewHandler(service *Service) *Handler {
 	}
 }
 
+// RenderDownloadSection renders the download page.
+func (h *Handler) RenderDownloadSection(c *fiber.Ctx) error {
+	slog.Debug("RenderDownloadSection handler called")
+	downloader := c.Query("downloader", "")
+	if downloader == "" {
+		cfg := h.service.configManager.Get()
+		if len(cfg.Downloaders.Plugins) > 0 {
+			downloader = cfg.Downloaders.Plugins[0].Name
+		}
+	}
+	data := fiber.Map{
+		"Title":             "Download",
+		"CurrentDownloader": downloader,
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "download"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/download", data)
+}
+
 // SearchRequest represents a search request
 type SearchRequest struct {
 	Query      string `json:"query" form:"query"`
@@ -720,7 +741,6 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
 	downloader := strings.Clone(c.Query("downloader", "dummy"))
 	userInfo := h.service.GetUserInfo(downloader)
-	config := h.service.configManager.Get()
 	statuses := h.service.GetDownloaderStatuses()
 
 	// Get the downloader name and use it for status lookup
@@ -743,7 +763,6 @@ func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
 	if c.Get("HX-Request") == "true" {
 		return c.Render("downloading/user_info", fiber.Map{
 			"UserInfo":          userInfo,
-			"Config":            config,
 			"Statuses":          statuses,
 			"DownloaderName":    downloaderName,
 			"DownloaderStatus":  downloaderStatus,

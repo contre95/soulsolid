@@ -6,14 +6,16 @@ import (
 	"os"
 	"strings"
 
+	"github.com/contre95/soulsolid/src/features/analyze"
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
+	"github.com/contre95/soulsolid/src/features/lyrics"
+	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/syncdap"
-	"github.com/contre95/soulsolid/src/features/tagging"
 	"github.com/contre95/soulsolid/src/features/ui"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
@@ -27,7 +29,7 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server.
-func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, syncService *syncdap.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *tagging.Service, metricsService *metrics.Service) *Server {
+func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, syncService *syncdap.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, analyzeService *analyze.Service) *Server {
 	engine := html.New("./views", ".html")
 	engine.Debug(cfg.Get().Logger.Level == "debug")
 	// Add custom template functions
@@ -118,6 +120,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	})
 
 	uiHandler := ui.NewHandler(cfg)
+	analyzeHandler := analyze.NewHandler(analyzeService)
 
 	importing.RegisterRoutes(app, importingService)
 	library.RegisterRoutes(app, libraryService)
@@ -130,7 +133,10 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 		syncdap.RegisterRoutes(app, syncService)
 	}
 	downloading.RegisterRoutes(app, downloadingService)
-	tagging.RegisterRoutes(app, tagService)
+	metadata.RegisterRoutes(app, tagService)
+	lyricsHandler := lyrics.NewHandler(lyricsService, tagService)
+	lyrics.RegisterRoutes(app, lyricsHandler)
+	analyze.RegisterRoutes(app, analyzeHandler)
 
 	return &Server{app: app, port: cfg.Get().Server.Port}
 }

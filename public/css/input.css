@@ -7,6 +7,14 @@
   button {
     cursor: pointer;
   }
+
+  a:link, a:visited {
+    color: #93c5fd !important;
+  }
+
+  a:hover, a:active {
+    color: #60a5fa !important;
+  }
 }
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
@@ -34,6 +42,39 @@ body:where(.dark, .dark *), aside:where(.dark, .dark *) {
 
   .htmx-request.htmx-indicator {
     display: inline-block;
+  }
+
+  /* Log color classes */
+  .log-error {
+    color: #ef4444;
+  }
+  
+  .log-warning {
+    color: #f59e0b;
+  }
+  
+  .log-green {
+    color: #22c55e;
+  }
+  
+  .log-blue {
+    color: #3b82f6;
+  }
+  
+  .log-orange {
+    color: #fb923c;
+  }
+  
+  .log-violet {
+    color: #a78bfa;
+  }
+  
+  .log-cyan {
+    color: #06b6d4;
+  }
+  
+  .log-pink {
+    color: #ec4899;
   }
 }
 

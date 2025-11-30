@@ -17,7 +17,6 @@ import (
 
 	"github.com/bogem/id3v2/v2"
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/go-flac/flacpicture"
 	"github.com/go-flac/flacvorbis"
@@ -46,7 +45,7 @@ func (t *TagWriter) SetCover(tag *id3v2.Tag, imgData []byte, mimeType string) er
 }
 
 // NewTagWriter creates a new TagWriter.
-func NewTagWriter(artworkConfig config.EmbeddedArtwork) downloading.TagWriter {
+func NewTagWriter(artworkConfig config.EmbeddedArtwork) *TagWriter {
 	return &TagWriter{artworkConfig: artworkConfig}
 }
 
@@ -155,6 +154,28 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 		tag.AddTextFrame("TIT3", id3v2.EncodingUTF8, track.TitleVersion)
 	}
 
+	// Chromaprint fingerprint
+	if track.ChromaprintFingerprint != "" {
+		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			Description: "CHROMAPRINT_FINGERPRINT",
+			Value:       track.ChromaprintFingerprint,
+		})
+	}
+
+	// AcoustID
+	acoustID := ""
+	if track.Attributes != nil {
+		acoustID = track.Attributes["acoustid"]
+	}
+	if acoustID != "" {
+		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			Description: "ACOUSTID_ID",
+			Value:       acoustID,
+		})
+	}
+
 	// Lyrics (using TXXX frame as fallback)
 	if track.Metadata.Lyrics != "" {
 		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
@@ -227,6 +248,12 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	// Get AcoustID from attributes
+	acoustID := ""
+	if track.Attributes != nil {
+		acoustID = track.Attributes["acoustid"]
+	}
 
 	// Parse the FLAC file
 	f, err := goflac.ParseFile(filePath)
@@ -317,6 +344,14 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 	if track.TitleVersion != "" {
 		removeExistingFields(vorbisComment, "VERSION")
 		vorbisComment.Add("VERSION", track.TitleVersion)
+	}
+	if track.ChromaprintFingerprint != "" {
+		removeExistingFields(vorbisComment, "CHROMAPRINT_FINGERPRINT")
+		vorbisComment.Add("CHROMAPRINT_FINGERPRINT", track.ChromaprintFingerprint)
+	}
+	if acoustID != "" {
+		removeExistingFields(vorbisComment, "ACOUSTID_ID")
+		vorbisComment.Add("ACOUSTID_ID", acoustID)
 	}
 	if track.Metadata.BPM > 0 {
 		removeExistingFields(vorbisComment, "BPM")

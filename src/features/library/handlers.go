@@ -6,6 +6,7 @@ import (
 
 	"strings"
 
+	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -17,6 +18,20 @@ type Handler struct {
 // NewHandler creates a new handler for the library feature.
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
+}
+
+// RenderLibrarySection renders the library page.
+func (h *Handler) RenderLibrarySection(c *fiber.Ctx) error {
+	slog.Debug("RenderLibrary handler called")
+	data := fiber.Map{
+		"Title":               "Library",
+		"DefaultDownloadPath": h.service.configManager.Get().DownloadPath,
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "library"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/library", data)
 }
 
 // Pagination represents pagination information
@@ -360,4 +375,113 @@ func (h *Handler) GetLibraryFileTree(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get library file tree")
 	}
 	return c.SendString(tree)
+}
+
+// RenderTagEditForm renders the tag edit form for a track
+func (h *Handler) RenderTagEditForm(c *fiber.Ctx) error {
+	slog.Debug("RenderTagEditForm handler called", "trackId", c.Params("trackId"))
+
+	trackID := c.Params("trackId")
+	if trackID == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+	}
+
+	// Get track data for editing
+	track, err := h.service.GetTrack(c.Context(), trackID)
+	if err != nil || track == nil {
+		slog.Error("Failed to get track for editing", "error", err, "trackId", trackID)
+		return c.Status(fiber.StatusNotFound).SendString("Track not found")
+	}
+
+	// Fetch all artists and albums for dropdowns
+	artists, err := h.service.GetArtists(c.Context())
+	if err != nil {
+		slog.Error("Failed to get artists for dropdown", "error", err)
+		artists = []*music.Artist{} // Continue with empty list
+	}
+
+	albums, err := h.service.GetAlbums(c.Context())
+	if err != nil {
+		slog.Error("Failed to get albums for dropdown", "error", err)
+		albums = []*music.Album{} // Continue with empty list
+	}
+
+	// Ensure track's artists are included in the dropdown, even if missing from main query
+	artistMap := make(map[string]bool)
+	for _, artist := range artists {
+		artistMap[artist.ID] = true
+	}
+	// Add track artists (include those without IDs for fetched data)
+	for _, artistRole := range track.Artists {
+		if artistRole.Artist != nil {
+			artistID := artistRole.Artist.ID
+			if artistID == "" {
+				// Generate a temporary ID for artists without database IDs (for dropdown display)
+				artistID = "temp_" + artistRole.Artist.Name
+				artistRole.Artist.ID = artistID
+			}
+			if !artistMap[artistID] {
+				artists = append(artists, artistRole.Artist)
+				artistMap[artistID] = true
+			}
+		}
+	}
+	// Add album artists (include those without IDs for fetched data)
+	if track.Album != nil {
+		for _, artistRole := range track.Album.Artists {
+			if artistRole.Artist != nil {
+				artistID := artistRole.Artist.ID
+				if artistID == "" {
+					// Generate a temporary ID for artists without database IDs (for dropdown display)
+					artistID = "temp_" + artistRole.Artist.Name
+					artistRole.Artist.ID = artistID
+				}
+				if !artistMap[artistID] {
+					artists = append(artists, artistRole.Artist)
+					artistMap[artistID] = true
+				}
+			}
+		}
+	}
+
+	// Ensure track has valid ID for template
+	if track.ID == "" {
+		track.ID = trackID
+	}
+
+	// Determine selected album artist ID for template
+	selectedAlbumArtistID := ""
+	if track.Album != nil && len(track.Album.Artists) > 0 {
+		selectedAlbumArtistID = track.Album.Artists[0].Artist.ID
+	}
+
+	// Create map of selected artist IDs for template
+	selectedArtistIDs := make(map[string]bool)
+	for _, artistRole := range track.Artists {
+		if artistRole.Artist != nil && artistRole.Artist.ID != "" {
+			selectedArtistIDs[artistRole.Artist.ID] = true
+		}
+	}
+
+	// Check if request is HTMX or full page
+	if c.Get("HX-Request") == "true" {
+		// Return the full tag section with button loading HTMX for HTMX requests
+		return c.Render("sections/tag", fiber.Map{
+			"Track":                 track,
+			"Artists":               artists,
+			"Albums":                albums,
+			"SelectedAlbumArtistID": selectedAlbumArtistID,
+			"SelectedArtistIDs":     selectedArtistIDs,
+		})
+	}
+
+	// Return full page for direct navigation
+	return c.Render("main", fiber.Map{
+		"Track":                 track,
+		"IsTagEdit":             true,
+		"Artists":               artists,
+		"Albums":                albums,
+		"SelectedAlbumArtistID": selectedAlbumArtistID,
+		"SelectedArtistIDs":     selectedArtistIDs,
+	})
 }

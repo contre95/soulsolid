@@ -16,6 +16,28 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+// RenderSyncSection renders the sync page.
+func (h *Handler) RenderSyncSection(c *fiber.Ctx) error {
+	slog.Debug("RenderSyncPage handler called")
+	data := fiber.Map{
+		"Title":       "Sync",
+		"SyncEnabled": h.service.configManager.Get().Sync.Enabled,
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "sync"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/sync", data)
+}
+
+// RenderSyncStatus renders the sync status page.
+func (h *Handler) RenderSyncStatus(c *fiber.Ctx) error {
+	slog.Debug("RenderSyncStatus handler called")
+	return c.Render("sync/sync_status", fiber.Map{
+		"Title": "Sync Status",
+	})
+}
+
 // GetSyncStatus returns the current sync status of all devices
 func (h *Handler) GetSyncStatus(c *fiber.Ctx) error {
 	slog.Debug("GetSyncStatus handler called")

@@ -2,8 +2,8 @@ package config
 
 // Config holds the application configuration.
 type Config struct {
-	LibraryPath  string `yaml:"libraryPath" validate:"required"`
-	DownloadPath string `yaml:"downloadPath" validate:"required"`
+	LibraryPath  string      `yaml:"libraryPath" validate:"required"`
+	DownloadPath string      `yaml:"downloadPath" validate:"required"`
 	Telegram     Telegram    `yaml:"telegram"`
 	Logger       Logger      `yaml:"logger"`
 	Downloaders  Downloaders `yaml:"downloaders"`
@@ -11,6 +11,7 @@ type Config struct {
 	Database     Database    `yaml:"database"`
 	Import       Import      `yaml:"import"`
 	Metadata     Metadata    `yaml:"metadata"`
+	Lyrics       Lyrics      `yaml:"lyrics"`
 	Sync         Sync        `yaml:"sync"`
 	Jobs         Jobs        `yaml:"jobs"`
 }
@@ -79,10 +80,15 @@ type Metadata struct {
 	Providers map[string]Provider `yaml:"providers"`
 }
 
+// Lyrics holds the configuration for lyrics providers
+type Lyrics struct {
+	Providers map[string]Provider `yaml:"providers"`
+}
+
 // Provider holds configuration for individual tagging providers
 type Provider struct {
 	Enabled bool    `yaml:"enabled"`
-	APIKey  *string `yaml:"api_key,omitempty"`
+	Secret  *string `yaml:"secret,omitempty"`
 }
 
 // Sync holds configuration for device synchronization
@@ -112,8 +118,8 @@ type EmbeddedArtwork struct {
 
 // PluginConfig holds configuration for a plugin downloader
 type PluginConfig struct {
-	Name   string                 `yaml:"name"`
-	Path   string                 `yaml:"path"`
-	Icon   string                 `yaml:"icon,omitempty"`
-	Config map[string]interface{} `yaml:"config"`
+	Name   string         `yaml:"name"`
+	Path   string         `yaml:"path"`
+	Icon   string         `yaml:"icon,omitempty"`
+	Config map[string]any `yaml:"config"`
 }

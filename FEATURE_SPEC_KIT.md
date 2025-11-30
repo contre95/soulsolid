@@ -44,7 +44,7 @@ features/yourfeature/
 ├── handlers.go       # HTTP request handlers
 ├── routes.go         # Route registration
 ├── service.go        # Business logic layer
-├── models.go         # Feature-specific data structures
+├── <some_name>.go    # Feature-specific data structures
 └── telegram.go       # (Optional) Telegram bot integration
 ```
 
@@ -227,6 +227,45 @@ Access config via `cfgManager.Get()` and specific fields.
 
 **Reference**: `src/features/config/config.go:15-95`
 Add your feature configuration to Config struct following the existing pattern.
+
+### 3. Adding New Configuration Options
+
+When adding new configuration options that are **not configurable from the config_form UI**, follow these guidelines:
+
+#### Configuration Structure
+Add your configuration fields to the appropriate struct in `src/features/config/config.go`:
+
+```go
+type YourFeature struct {
+    NewOption bool `yaml:"new_option"`
+    // other fields...
+}
+```
+
+#### Default Values
+**Reference**: `src/features/config/loader.go:97-188`
+All new configuration options **must** be added with their default values in the `createDefaultConfig()` function. This ensures that when no `config.yaml` is provided, the application starts with sensible defaults:
+
+```go
+YourFeature: YourFeature{
+    NewOption: false,  // Default value
+    // other fields with defaults...
+},
+```
+
+#### Examples of Non-UI Configuration
+These configuration options are examples of settings that are not configurable from the UI form and should be handled this way:
+
+- `auto_start_watcher` (Import section) - Controls automatic file system watching
+- Internal service configurations
+- Advanced debugging options
+- Performance tuning parameters
+
+#### Important Notes
+- **Do not remove or override** existing configuration options that can't be changed at runtime.
+- Always provide sensible default values in `createDefaultConfig()`
+- Document the purpose and default value in comments
+- Consider whether the option truly needs UI access or is better left as an advanced configuration
 
 ## Database Operations
 

@@ -9,19 +9,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-
-
-// setProviderAPIKey sets the API key for a provider from an environment variable
-func setProviderAPIKey(cfg *Config, providerName, envVar string) {
+// setProviderSecret sets the secret for a provider from an environment variable
+func setProviderSecret(cfg *Config, providerName, envVar string) {
 	if key := os.Getenv(envVar); key != "" {
 		if cfg.Metadata.Providers == nil {
 			cfg.Metadata.Providers = make(map[string]Provider)
 		}
 		if provider, exists := cfg.Metadata.Providers[providerName]; exists {
-			provider.APIKey = &key
+			provider.Secret = &key
 			cfg.Metadata.Providers[providerName] = provider
 		} else {
-			cfg.Metadata.Providers[providerName] = Provider{Enabled: false, APIKey: &key}
+			cfg.Metadata.Providers[providerName] = Provider{Enabled: false, Secret: &key}
 		}
 	}
 }
@@ -70,7 +68,8 @@ func Load(path string) (*Manager, error) {
 		cfg.Telegram.Token = token
 	}
 
-	setProviderAPIKey(&cfg, "discogs", "DISCOGS_API_KEY")
+	setProviderSecret(&cfg, "discogs", "DISCOGS_API_KEY")      // NOTE: Add this to the docs
+	setProviderSecret(&cfg, "acoustid", "ACOUSTID_CLIENT_KEY") // NOTE: Add this to the docs
 
 	manager := NewManager(&cfg)
 	if err := manager.EnsureDirectories(); err != nil {
@@ -87,9 +86,9 @@ func createDefaultConfig() *Config {
 		DownloadPath: "./downloads",
 		Telegram: Telegram{
 			Enabled:      false,
-			Token:        "",
-			AllowedUsers: []string{},
-			BotHandle:    "@SoulsolidDemoBot",
+			Token:        "",                  // Can be obtained with https://t.me/BotFather
+			AllowedUsers: []string{"user1"},   // No @
+			BotHandle:    "@SoulsolidDemoBot", // With @
 		},
 		Logger: Logger{
 			Enabled:   true,
@@ -98,6 +97,7 @@ func createDefaultConfig() *Config {
 			HTMXDebug: false,
 		},
 		Downloaders: Downloaders{
+			Plugins: []PluginConfig{},
 			Artwork: Artwork{
 				Embedded: EmbeddedArtwork{
 					Enabled: true,
@@ -115,9 +115,10 @@ func createDefaultConfig() *Config {
 		},
 
 		Import: Import{
-			Move:        false,
-			AlwaysQueue: false,
-			Duplicates:  "queue",
+			Move:             false,
+			AlwaysQueue:      false,
+			Duplicates:       "queue",
+			AutoStartWatcher: false,
 			PathOptions: Paths{
 				Compilations:    "%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}",
 				AlbumSoundtrack: "%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}",
@@ -129,14 +130,25 @@ func createDefaultConfig() *Config {
 		Metadata: Metadata{
 			Providers: map[string]Provider{
 				"deezer": {
-					Enabled: false,
+					Enabled: true,
 				},
 				"discogs": {
 					Enabled: false,
-					APIKey:  nil,
+					Secret:  nil,
 				},
 				"musicbrainz": {
+					Enabled: true,
+				},
+				"acoustid": {
 					Enabled: false,
+					Secret:  nil,
+				},
+			},
+		},
+		Lyrics: Lyrics{ // NOTE: Add this to the documentation
+			Providers: map[string]Provider{
+				"lrclib": {
+					Enabled: true,
 				},
 			},
 		},

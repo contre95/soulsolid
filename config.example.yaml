@@ -1,11 +1,11 @@
 libraryPath: ./music
 downloadPath: ./downloads
 telegram:
-  enabled: true
-  token: <telegram_bot_token>
+  enabled: false
+  token: <token>
   allowedUsers:
-    - contre95
-  bot_handle: SoulsolidExampleBot
+    - <your telegram username>
+  bot_handle: SoulsolidExampleBot # Without the @
 logger:
   enabled: true
   level: info
@@ -16,7 +16,7 @@ downloaders:
     - name: dummy
       path: ../soulsolid-dummy-plugin/plugin.so
       icon: https://demo2.contre.io/img/galaxy.png
-      config: {}
+      config: {} # Plugin specific config. See https://git.sr.ht/~canuslector/soulsolid-deemix-plugin
   artwork:
     embedded:
       enabled: true
@@ -26,26 +26,33 @@ server:
   show_routes: false
   port: 3535
 database:
-  path: ./library.db
+  path: ./library.db # Path to the SQLite Database
 import:
-  move: false
-  always_queue: false
-  duplicates: queue
-  auto_start_watcher: false
+  move: false # If false tracks will be kepts in the folder where you are importing them from and copied from it to your 'libraryPath:'
+  always_queue: false # When true, it will queue every single imported track for manual review.
+  duplicates: queue # queue | skip | replace
   paths:
-    compilations: "%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}"
-    album:soundtrack: "%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}"
-    album:single: "%asciify{$albumartist}/%asciify{$album} [Single] (%if{$original_year,$original_year,$year})/%asciify{$track $title}"
-    album:ep: "%asciify{$albumartist}/%asciify{$album} [EP] (%if{$original_year,$original_year,$year})/%asciify{$track $title}"
-    default_path: "%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}"
+    compilations: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    album:soundtrack: '%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    album:single: '%asciify{$albumartist}/%asciify{$album} [Single] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    album:ep: '%asciify{$albumartist}/%asciify{$album} [EP] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    default_path: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+  auto_start_watcher: false
 metadata:
   providers:
+    acoustid:
+      enabled: true
+      secret: <acoust_id_token> # You can login with Musicbrainz -> https://acoustid.org/new-application
     deezer:
       enabled: true
     discogs:
       enabled: true
-      api_key: <discogs_token>
+      secret: <discogs_token> # You can get it here -> https://www.discogs.com/settings/developers
     musicbrainz:
+      enabled: true
+lyrics:
+  providers:
+    lrclib:
       enabled: true
 sync:
   enabled: true

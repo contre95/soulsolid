@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/importing"
+	"github.com/bogem/id3v2/v2"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/dhowden/tag"
 )
@@ -18,7 +18,7 @@ import (
 type TagReader struct{}
 
 // NewTagReader creates a new TagReader
-func NewTagReader() importing.TagReader {
+func NewTagReader() *TagReader {
 	return &TagReader{}
 }
 
@@ -92,7 +92,6 @@ func (r *TagReader) ReadFileTags(ctx context.Context, filePath string) (*music.T
 			TrackNumber: trackNumber,
 			DiscNumber:  discNumber,
 			Composer:    tags.Composer(),
-			Lyrics:      tags.Lyrics(),
 		},
 	}
 
@@ -117,13 +116,13 @@ func (r *TagReader) ReadFileTags(ctx context.Context, filePath string) (*music.T
 	track.Format = strings.TrimPrefix(ext, ".")
 
 	// Try to read additional metadata from raw tags
-	r.readAdditionalMetadata(tags, track)
+	r.readAdditionalMetadata(tags, track, filePath)
 
 	return track, nil
 }
 
 // readAdditionalMetadata attempts to read additional metadata fields from tags
-func (r *TagReader) readAdditionalMetadata(tags tag.Metadata, track *music.Track) {
+func (r *TagReader) readAdditionalMetadata(tags tag.Metadata, track *music.Track, filePath string) {
 	// Try to read ISRC from various tag fields
 	if isrc := r.findISRC(tags); isrc != "" {
 		track.ISRC = isrc
@@ -135,11 +134,30 @@ func (r *TagReader) readAdditionalMetadata(tags tag.Metadata, track *music.Track
 	}
 
 	// Try to read lyrics from tags
-	if lyrics := r.readLyrics(tags); lyrics != "" {
+	if lyrics := r.readLyrics(tags, filePath); lyrics != "" {
 		slog.Debug("Found lyrics in file", "path", track.Path, "lyrics", lyrics)
 		track.Metadata.Lyrics = lyrics
 	} else {
 		slog.Debug("No lyrics found in file", "path", track.Path)
+	}
+
+	// Try to read chromaprint fingerprint from tags
+	if fingerprint := r.readChromaprintFingerprint(tags); fingerprint != "" {
+		slog.Debug("Found chromaprint fingerprint in file", "path", track.Path, "fingerprint", fingerprint)
+		track.ChromaprintFingerprint = fingerprint
+	} else {
+		slog.Debug("No chromaprint fingerprint found in file", "path", track.Path)
+	}
+
+	// Try to read AcoustID from tags
+	if acoustID := r.readAcoustID(tags); acoustID != "" {
+		slog.Debug("Found AcoustID in file", "path", track.Path, "acoustID", acoustID)
+		if track.Attributes == nil {
+			track.Attributes = make(map[string]string)
+		}
+		track.Attributes["acoustid"] = acoustID
+	} else {
+		slog.Debug("No AcoustID found in file", "path", track.Path)
 	}
 
 	// Try to extract basic audio properties
@@ -147,7 +165,22 @@ func (r *TagReader) readAdditionalMetadata(tags tag.Metadata, track *music.Track
 }
 
 // readLyrics attempts to read lyrics from various tag fields
-func (r *TagReader) readLyrics(tags tag.Metadata) string {
+func (r *TagReader) readLyrics(tags tag.Metadata, filePath string) string {
+	// Check file extension
+	ext := strings.ToLower(filepath.Ext(filePath))
+
+	// For MP3 files, try to read TXXX frames directly using id3v2 library
+	if ext == ".mp3" {
+		if lyrics := r.readLyricsFromMP3(filePath); lyrics != "" {
+			return lyrics
+		}
+	}
+
+	// First try the standard library method
+	if lyrics := tags.Lyrics(); lyrics != "" {
+		return lyrics
+	}
+
 	// Try to read from raw tags for lyric fields
 	if rawTags := tags.Raw(); rawTags != nil {
 		slog.Debug("Available raw tags", "tags", getTagKeys(rawTags))
@@ -156,6 +189,103 @@ func (r *TagReader) readLyrics(tags tag.Metadata) string {
 		for _, field := range lyricFields {
 			if value := rawTags[field]; value != nil {
 				slog.Debug("Found lyric field", "field", field)
+				if str, ok := value.(string); ok && str != "" {
+					return str
+				}
+				// Handle byte slices
+				if bytes, ok := value.([]byte); ok && len(bytes) > 0 {
+					return string(bytes)
+				}
+			}
+		}
+
+		// Check for TXXX frames (user-defined text frames in ID3v2)
+		// TXXX frames might be stored as a map or array
+		if txxxValue := rawTags["TXXX"]; txxxValue != nil {
+			slog.Debug("Found TXXX field", "value", txxxValue)
+			// TXXX might be a slice of frames or a single frame
+			if frames, ok := txxxValue.([]any); ok {
+				for _, frame := range frames {
+					if frameMap, ok := frame.(map[string]any); ok {
+						if desc, ok := frameMap["Description"].(string); ok && desc == "LYRICS" {
+							if value, ok := frameMap["Value"].(string); ok && value != "" {
+								slog.Debug("Found lyrics in TXXX frame", "description", desc, "value", value)
+								return value
+							}
+						}
+					}
+				}
+			}
+			// TXXX might be a map with description as key
+			if txxxMap, ok := txxxValue.(map[string]any); ok {
+				if lyrics, ok := txxxMap["LYRICS"]; ok {
+					if str, ok := lyrics.(string); ok && str != "" {
+						slog.Debug("Found lyrics in TXXX map", "value", str)
+						return str
+					}
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+// readLyricsFromMP3 reads lyrics from MP3 TXXX frames using id3v2 library
+func (r *TagReader) readLyricsFromMP3(filePath string) string {
+	tag, err := id3v2.Open(filePath, id3v2.Options{Parse: true})
+	if err != nil {
+		slog.Debug("Failed to open MP3 file for lyrics reading", "error", err)
+		return ""
+	}
+	defer tag.Close()
+
+	// Get TXXX frames (user-defined text frames)
+	frames := tag.GetFrames("TXXX")
+	for _, f := range frames {
+		if userFrame, ok := f.(id3v2.UserDefinedTextFrame); ok {
+			if userFrame.Description == "LYRICS" && userFrame.Value != "" {
+				slog.Debug("Found lyrics in MP3 TXXX frame", "value", userFrame.Value)
+				return userFrame.Value
+			}
+		}
+	}
+
+	return ""
+}
+
+// readChromaprintFingerprint attempts to read chromaprint fingerprint from various tag fields
+func (r *TagReader) readChromaprintFingerprint(tags tag.Metadata) string {
+	// Try to read from raw tags for chromaprint fingerprint fields
+	if rawTags := tags.Raw(); rawTags != nil {
+		// Check for common chromaprint fingerprint field names in different formats
+		fingerprintFields := []string{"CHROMAPRINT_FINGERPRINT", "CHROMAPRINT", "FINGERPRINT", "chromaprint_fingerprint", "chromaprint", "fingerprint"}
+		for _, field := range fingerprintFields {
+			if value := rawTags[field]; value != nil {
+				slog.Debug("Found chromaprint fingerprint field", "field", field)
+				if str, ok := value.(string); ok && str != "" {
+					return str
+				}
+				// Handle byte slices
+				if bytes, ok := value.([]byte); ok && len(bytes) > 0 {
+					return string(bytes)
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+// readAcoustID attempts to read AcoustID from various tag fields
+func (r *TagReader) readAcoustID(tags tag.Metadata) string {
+	// Try to read from raw tags for AcoustID fields
+	if rawTags := tags.Raw(); rawTags != nil {
+		// Check for common AcoustID field names in different formats
+		acoustIDFields := []string{"ACOUSTID_ID", "ACOUSTID", "acoustid_id", "acoustid"}
+		for _, field := range acoustIDFields {
+			if value := rawTags[field]; value != nil {
+				slog.Debug("Found AcoustID field", "field", field)
 				if str, ok := value.(string); ok && str != "" {
 					return str
 				}

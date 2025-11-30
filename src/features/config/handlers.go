@@ -21,6 +21,19 @@ func NewHandler(configManager *Manager) *Handler {
 	}
 }
 
+// RenderSettingsSection renders the settings form with current configuration values.
+func (h *Handler) RenderSettingsSection(c *fiber.Ctx) error {
+	slog.Debug("RenderSettings handler called")
+	data := fiber.Map{
+		"Title": "Settings",
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "settings"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/settings", data)
+}
+
 // UpdateSettings handles the form submission to update configuration.
 func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	slog.Info("Configuration update requested")
@@ -64,10 +77,10 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 				},
 				"discogs": {
 					Enabled: c.FormValue("metadata.providers.discogs.enabled") == "true",
-					APIKey: func() *string {
-						apiKey := c.FormValue("metadata.providers.discogs.api_key")
-						if apiKey != "" {
-							return &apiKey
+					Secret: func() *string {
+						secret := c.FormValue("metadata.providers.discogs.secret")
+						if secret != "" {
+							return &secret
 						}
 						return nil
 					}(),
@@ -75,8 +88,19 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 				"deezer": {
 					Enabled: c.FormValue("metadata.providers.deezer.enabled") == "true",
 				},
+				"acoustid": {
+					Enabled: c.FormValue("metadata.providers.acoustid.enabled") == "true",
+					Secret: func() *string {
+						secret := c.FormValue("metadata.providers.acoustid.secret")
+						if secret != "" {
+							return &secret
+						}
+						return nil
+					}(),
+				},
 			},
 		},
+		Lyrics: currentConfig.Lyrics,
 		// Preserve server settings from current config, no sense to be changed on runtime
 		Server: Server{
 			Port:        currentConfig.Server.Port,
@@ -113,18 +137,6 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": "Configuration updated successfully!",
 	})
-}
-
-// Helper functions for parsing form values
-func parseInt(s string) int {
-	var result int
-	if s != "" {
-		_, err := fmt.Sscanf(s, "%d", &result)
-		if err != nil {
-			return 0
-		}
-	}
-	return result
 }
 
 func parseStringSlice(s string) []string {
