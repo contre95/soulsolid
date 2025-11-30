@@ -7,6 +7,14 @@
   button {
     cursor: pointer;
   }
+
+  a:link, a:visited {
+    color: #93c5fd !important;
+  }
+
+  a:hover, a:active {
+    color: #60a5fa !important;
+  }
 }
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));

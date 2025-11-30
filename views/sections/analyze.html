@@ -17,7 +17,7 @@
                 <h3 class="text-xl font-semibold text-slate-800 dark:text-white">AcoustID Analysis</h3>
             </div>
             <p class="text-slate-600 dark:text-slate-400 mb-4">
-                Generate acoustic fingerprints and AcoustID for tracks that don't have them. This helps with music identification and metadata matching.
+          Generate acoustic fingerprints and <a href="https://acoustid.org/" target="_blank"> AcoustID</a>  for tracks that don't have them. This helps with music identification and metadata matching.
             </p>
             <button
                 hx-post="/analyze/acoustid"
@@ -52,7 +52,6 @@
                         required
                         class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 dark:bg-gray-700 dark:text-white"
                     >
-                        <option value="">Select a provider...</option>
                         {{range .LyricsProviders}}
                         {{if .Enabled}}
                         <option value="{{.Name}}">{{.DisplayName}}</option>
