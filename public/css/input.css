@@ -69,13 +69,17 @@ body:where(.dark, .dark *), aside:where(.dark, .dark *) {
     color: #a78bfa;
   }
   
-  .log-cyan {
-    color: #06b6d4;
-  }
-  
-  .log-pink {
-    color: #ec4899;
-  }
+   .log-cyan {
+     color: #06b6d4;
+   }
+
+   .log-yellow {
+     color: #eab308;
+   }
+
+   .log-pink {
+     color: #ec4899;
+   }
 }
 
 /* Hyperscript */
