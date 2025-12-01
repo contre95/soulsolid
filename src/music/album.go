@@ -47,6 +47,7 @@ type Album struct {
 	ImageXL     string
 	ArtworkData []byte
 	Genre       string
+	Genres      []string
 }
 
 // Validate validates the album fields.
@@ -92,3 +93,4 @@ func (a *Album) Validate() error {
 	}
 	return nil
 }
+

@@ -121,6 +121,10 @@ func (p *TemplatePathParser) renderValues(template string, track *music.Track) (
 			val = fmt.Sprintf("%02d", track.Metadata.TrackNumber)
 		case "title":
 			val = track.Title
+		case "format":
+			val = track.Format
+		case "genre":
+			val = track.Metadata.Genre
 		default:
 			return raw // Unknown placeholder
 		}
