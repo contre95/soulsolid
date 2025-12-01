@@ -43,6 +43,8 @@ func ParseAndColorLogContent(content string) string {
 				coloredLine = fmt.Sprintf(`<span class="log-cyan">%s</span>`, line)
 			} else if strings.Contains(line, `color=pink`) {
 				coloredLine = fmt.Sprintf(`<span class="log-pink">%s</span>`, line)
+			} else if strings.Contains(line, `color=yellow`) {
+				coloredLine = fmt.Sprintf(`<span class="log-yellow">%s</span>`, line)
 			}
 			// Other INFO logs remain white (no span)
 		default:
