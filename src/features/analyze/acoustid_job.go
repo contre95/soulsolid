@@ -36,9 +36,11 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 	if totalTracks == 0 {
 		job.Logger.Info("No tracks found in library")
 		return map[string]any{
-			"totalTracks": 0,
-			"processed":   0,
-			"updated":     0,
+			"totalTracks":       0,
+			"processed":         0,
+			"acoustidsAdded":    0,
+			"fingerprintsAdded": 0,
+			"skipped":           0,
 		}, nil
 	}
 
@@ -47,6 +49,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 
 	processed := 0
 	updated := 0
+	fingerprintsAdded := 0
 	skipped := 0
 
 	// Process tracks in batches to avoid loading all into memory
@@ -54,7 +57,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 	for offset := 0; offset < totalTracks; offset += batchSize {
 		select {
 		case <-ctx.Done():
-			job.Logger.Info("AcoustID analysis cancelled", "processed", processed, "updated", updated)
+			job.Logger.Info("AcoustID analysis cancelled", "processed", processed, "acoustidsAdded", updated, "fingerprintsAdded", fingerprintsAdded)
 			return nil, ctx.Err()
 		default:
 		}
@@ -68,7 +71,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 		for _, track := range tracks {
 			select {
 			case <-ctx.Done():
-				job.Logger.Info("AcoustID analysis cancelled", "processed", processed, "updated", updated)
+				job.Logger.Info("AcoustID analysis cancelled", "processed", processed, "acoustidsAdded", updated, "fingerprintsAdded", fingerprintsAdded)
 				return nil, ctx.Err()
 			default:
 			}
@@ -91,25 +94,42 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 			job.Logger.Info("Analyzing track fingerprint", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "color", "cyan")
 			err := t.service.taggingService.AddChromaprintAndAcoustID(ctx, track.ID)
 			if err != nil {
-				job.Logger.Warn("Failed to add AcoustID for track", "trackID", track.ID, "title", track.Title, "error", err, "color", "orange")
+				job.Logger.Warn("Failed to add fingerprint and AcoustID for track", "trackID", track.ID, "title", track.Title, "error", err, "color", "orange")
 				// Continue with other tracks - don't fail the entire job
 			} else {
-				updated++
-				job.Logger.Info("Successfully added AcoustID for track", "trackID", track.ID, "title", track.Title, "color", "green")
+				// Check if AcoustID was actually added
+				updatedTrack, err := t.service.libraryService.GetTrack(ctx, track.ID)
+				if err != nil {
+					job.Logger.Warn("Failed to verify AcoustID addition for track", "trackID", track.ID, "title", track.Title, "error", err, "color", "orange")
+					fingerprintsAdded++ // Assume fingerprint was added
+				} else {
+					acoustID := ""
+					if updatedTrack.Attributes != nil {
+						acoustID = updatedTrack.Attributes["acoustid"]
+					}
+					if acoustID != "" {
+						updated++
+						job.Logger.Info("Successfully added AcoustID for track", "trackID", track.ID, "title", track.Title, "color", "green")
+					} else {
+						fingerprintsAdded++
+						job.Logger.Info("Added fingerprint for track, AcoustID lookup failed or not configured", "trackID", track.ID, "title", track.Title, "color", "yellow")
+					}
+				}
 			}
 
 			processed++
 		}
 	}
 
-	job.Logger.Info("AcoustID analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "color", "green")
-	progressUpdater(100, fmt.Sprintf("Analysis completed - %d updated, %d skipped", updated, skipped))
+	job.Logger.Info("AcoustID analysis completed", "totalTracks", totalTracks, "processed", processed, "acoustidsAdded", updated, "fingerprintsAdded", fingerprintsAdded, "skipped", skipped, "color", "green")
+	progressUpdater(100, fmt.Sprintf("Analysis completed - %d AcoustIDs added, %d fingerprints added, %d skipped", updated, fingerprintsAdded, skipped))
 
 	return map[string]any{
-		"totalTracks": totalTracks,
-		"processed":   processed,
-		"updated":     updated,
-		"skipped":     skipped,
+		"totalTracks":       totalTracks,
+		"processed":         processed,
+		"acoustidsAdded":    updated,
+		"fingerprintsAdded": fingerprintsAdded,
+		"skipped":           skipped,
 	}, nil
 }
 
