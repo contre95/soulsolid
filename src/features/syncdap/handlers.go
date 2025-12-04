@@ -71,6 +71,7 @@ func (h *Handler) TriggerSync(c *fiber.Ctx) error {
 	}
 	slog.Info("TriggerSync: sync job started", "jobID", jobID)
 	c.Response().Header.Set("HX-Trigger", "jobStarted")
+	c.Set("HX-Trigger", "refreshJobList")
 	return c.Render("toast/toastInfo", fiber.Map{
 		"Msg": "Sync job started!",
 	})

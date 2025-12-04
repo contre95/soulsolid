@@ -1,5 +1,4 @@
 <div id="contenido" class="animate__animated animate__fadeIn">
-   <div id="contenido">
         <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-4">
             Digital Audio Player Sync
             {{if .SyncEnabled}}
@@ -23,6 +22,7 @@
             <button
                 hx-get="/ui/sync/status"
                 hx-target="#sync-status"
+                hx-trigger="click, load"
                 hx-swap="outerHTML"
                 class="px-4 py-2 backdrop-blur-sm hover:bg-blue-200/80 bg-blue-100/80 hover:dark:bg-blue-800/30 dark:bg-blue-900/30 border border-blue-200/50 dark:border-blue-700/50 text-sm text-blue-800 dark:text-blue-200 rounded-lg transition-colors"
             >
@@ -31,7 +31,7 @@
         </div>
         {{end}}
            
-       <div id="sync-status" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+       <div id="sync-status" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-2">
                {{range .Status}}
                <div class="bg-white/80 dark:bg-gray-900/70 p-6 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
                    <div class="flex items-center justify-between mb-4">
@@ -86,5 +86,16 @@
                </div>
                {{end}}
           </div>
-    </div>
+    <h2 class="text-2xl font-bold text-slate-800 dark:text-white my-4">DAP Jobs</h2>
+
+    <div id="analyze-job-list-container"
+         hx-get="/ui/jobs/list?prefix=dap_"
+         hx-trigger="load, refreshJobList from:body"
+         hx-swap="innerHTML">
+     <!-- Loading state -->
+     <div class="text-center py-8">
+       <p class="text-sm text-gray-500 dark:text-gray-400">Loading dap jobs...</p>
+     </div>
+   </div>
+
 </div>

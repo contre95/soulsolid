@@ -32,7 +32,6 @@ func (h *Handler) StartAcoustIDAnalysis(c *fiber.Ctx) error {
 
 	slog.Info("AcoustID analysis job started successfully", "jobID", jobID)
 
-	// // Trigger HTMX to refresh the job list
 	c.Set("HX-Trigger", "refreshJobList")
 
 	if c.Get("HX-Request") == "true" {
@@ -66,7 +65,6 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 
 	slog.Info("Lyrics analysis job started successfully", "jobID", jobID, "provider", provider)
 
-	// Trigger HTMX to refresh the job list
 	c.Set("HX-Trigger", "refreshJobList")
 
 	if c.Get("HX-Request") == "true" {

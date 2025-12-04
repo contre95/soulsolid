@@ -2,7 +2,6 @@ package syncdap
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -191,38 +190,35 @@ func (e *SyncDapTask) Execute(ctx context.Context, job *jobs.Job, progressUpdate
 
 	cmd := exec.CommandContext(ctx, "rsync", rsyncArgs...)
 
-	// Capture stdout to parse progress
-	stdout, pipeErr := cmd.StdoutPipe()
+	// Capture stderr to parse progress and stats
+	stderrPipe, pipeErr := cmd.StderrPipe()
 	if pipeErr != nil {
-		return nil, fmt.Errorf("failed to create stdout pipe: %w", pipeErr)
+		return nil, fmt.Errorf("failed to create stderr pipe: %w", pipeErr)
 	}
-
-	// Capture stderr for error details
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
 
 	// Start command
 	if startErr := cmd.Start(); startErr != nil {
 		return nil, fmt.Errorf("failed to start rsync: %w", startErr)
 	}
 
-	// Parse rsync output for progress
-	go e.parseRsyncOutput(job, stdout, progressUpdater)
+	// Parse rsync output for progress and stats
+	var stats SyncStats
+	go e.parseRsyncOutput(job, stderrPipe, progressUpdater, &stats)
 
 	// Wait for command to complete
 	waitErr := cmd.Wait()
+
 	if waitErr != nil {
 		if ctx.Err() == context.Canceled {
 			return nil, ctx.Err()
 		}
-		stderrOutput := stderr.String()
-		if stderrOutput != "" {
-			return nil, fmt.Errorf("rsync failed: %v - %s", waitErr, strings.TrimSpace(stderrOutput))
-		}
 		return nil, fmt.Errorf("rsync failed: %w", waitErr)
 	}
 
-	return nil, nil
+	finalMessage := fmt.Sprintf("Sync completed successfully. %s", stats.Summary)
+	job.Logger.Info(finalMessage)
+
+	return map[string]any{"stats": stats, "msg": finalMessage}, nil
 }
 
 // Cleanup does nothing for syncdap.
@@ -230,14 +226,48 @@ func (e *SyncDapTask) Cleanup(job *jobs.Job) error {
 	return nil
 }
 
-// parseRsyncOutput parses rsync progress output and updates status
-func (e *SyncDapTask) parseRsyncOutput(job *jobs.Job, stdout io.Reader, progressUpdater func(int, string)) {
-	scanner := bufio.NewScanner(stdout)
+// SyncStats represents the statistics from a sync operation
+type SyncStats struct {
+	FilesTransferred int
+	FilesTotal       int
+	DataTransferred  string
+	DataTotal        string
+	Summary          string
+}
+
+// parseRsyncOutput parses rsync stderr output for progress and stats
+func (e *SyncDapTask) parseRsyncOutput(job *jobs.Job, reader io.Reader, progressUpdater func(int, string), stats *SyncStats) {
+	scanner := bufio.NewScanner(reader)
 	fileRegex := regexp.MustCompile(`^(\S+)$`)
 	progressRegex := regexp.MustCompile(`^\s*(\d+)\s+(\d+)%\s+([\d.]+\w+/s).*$`)
 
 	for scanner.Scan() {
 		line := scanner.Text()
+		lineTrim := strings.TrimSpace(line)
+
+		// Check if it's a stats line (contains ":")
+		if strings.Contains(lineTrim, ":") {
+			parts := strings.SplitN(lineTrim, ":", 2)
+			if len(parts) == 2 {
+				key := strings.TrimSpace(parts[0])
+				value := strings.TrimSpace(parts[1])
+				switch key {
+				case "Number of files":
+					if val, err := strconv.Atoi(value); err == nil {
+						stats.FilesTotal = val
+					}
+				case "Number of files transferred", "Number of regular files transferred":
+					if val, err := strconv.Atoi(value); err == nil {
+						stats.FilesTransferred = val
+					}
+				case "Total file size":
+					stats.DataTotal = value
+				case "Total transferred file size":
+					stats.DataTransferred = value
+				}
+			}
+			continue
+		}
 
 		// Check if it's a file transfer line (filename on its own line)
 		if matches := fileRegex.FindStringSubmatch(line); len(matches) > 1 && !strings.Contains(line, "%") {
@@ -257,5 +287,12 @@ func (e *SyncDapTask) parseRsyncOutput(job *jobs.Job, stdout io.Reader, progress
 				progressUpdater(progress, message)
 			}
 		}
+	}
+
+	// Build summary after parsing
+	if stats.FilesTransferred > 0 {
+		stats.Summary = fmt.Sprintf("Transferred %d files (%s)", stats.FilesTransferred, stats.DataTransferred)
+	} else {
+		stats.Summary = "No files needed to be transferred"
 	}
 }
