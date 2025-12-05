@@ -53,8 +53,17 @@ func (s *Service) generateFingerprintWithFpcalc(ctx context.Context, filePath st
 
 	// Run fpcalc to generate fingerprint
 	cmd := exec.CommandContext(ctx, "fpcalc", "-json", filePath)
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
+		// Try to parse output anyway in case fpcalc produced valid JSON despite errors
+		var result struct {
+			Fingerprint string  `json:"fingerprint"`
+			Duration    float64 `json:"duration"`
+		}
+		if parseErr := json.Unmarshal(output, &result); parseErr == nil && result.Fingerprint != "" {
+			// Successfully parsed fingerprint despite command error
+			return result.Fingerprint, nil
+		}
 		return "", fmt.Errorf("failed to generate fingerprint with fpcalc: %w", err)
 	}
 

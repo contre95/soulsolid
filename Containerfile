@@ -1,7 +1,7 @@
-FROM golang:bookworm AS app-builder
+FROM golang:1.25-alpine AS app-builder
 ARG IMAGE_TAG
 ENV CGO_ENABLED=2
-RUN apt-get update && apt-get install -y gcc libc-dev libsqlite3-dev nodejs npm git
+RUN apk add --no-cache go gcc libc-dev sqlite-dev nodejs npm git
 WORKDIR /app
 # Copy your source code here - adjust the path as needed
 ADD . .
@@ -10,10 +10,10 @@ RUN go mod tidy
 # Build without static linking for plugin compatibility
 RUN go build -o /app/soulsolid src/main.go
 
-FROM golang:bookworm
+FROM golang:1.25-alpine
 ARG IMAGE_TAG
 ENV CGO_ENABLED=2
-RUN apt-get update && apt-get install -y git tree libchromaprint-tools
+RUN apk add --no-cache git tree chromaprint
 RUN mkdir -p /app/plugins
 WORKDIR /app
 ENV IMAGE_TAG=$IMAGE_TAG
