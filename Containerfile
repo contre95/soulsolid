@@ -14,6 +14,7 @@ FROM golang:1.25-alpine
 ARG IMAGE_TAG
 ENV CGO_ENABLED=2
 RUN apk add --no-cache git tree chromaprint
+RUN apk add --no-cache gcc libc-dev
 RUN mkdir -p /app/plugins
 WORKDIR /app
 ENV IMAGE_TAG=$IMAGE_TAG
