@@ -71,6 +71,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 				"acoustidsAdded":    0,
 				"fingerprintsAdded": 0,
 				"skipped":           0,
+				"msg":               "AcoustID analysis completed - no tracks found in library",
 			}, nil
 		}
 
@@ -208,7 +209,12 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 	}
 
 	job.Logger.Info("AcoustID analysis completed", "totalTracks", totalTracks, "processed", processed, "acoustidsAdded", updated, "fingerprintsAdded", fingerprintsAdded, "skipped", skipped, "color", "green")
-	progressUpdater(100, fmt.Sprintf("Analysis completed - %d AcoustIDs added, %d fingerprints added, %d skipped", updated, fingerprintsAdded, skipped))
+
+	// Create completion message for job summary
+	finalMessage := fmt.Sprintf("AcoustID analysis completed - %d AcoustIDs added, %d fingerprints added, %d skipped", updated, fingerprintsAdded, skipped)
+	job.Logger.Info(finalMessage)
+
+	progressUpdater(100, finalMessage)
 
 	return map[string]any{
 		"totalTracks":       totalTracks,
@@ -216,6 +222,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 		"acoustidsAdded":    updated,
 		"fingerprintsAdded": fingerprintsAdded,
 		"skipped":           skipped,
+		"msg":               finalMessage,
 	}, nil
 }
 
