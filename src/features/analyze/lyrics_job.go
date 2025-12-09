@@ -88,6 +88,9 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 				"totalTracks": 0,
 				"processed":   0,
 				"updated":     0,
+				"skipped":     0,
+				"errors":      0,
+				"msg":         "Lyrics analysis completed - no tracks found in library",
 			}, nil
 		}
 
