@@ -9,6 +9,7 @@ SoulSolid follows a modular, feature-based architecture with clear separation of
 ```
 src/
 ├── features/           # Feature modules (business logic)
+│   ├── analyze/       # Batch analysis operations (AcoustID, lyrics)
 │   ├── config/        # Configuration management
 │   ├── downloading/   # Music download functionality
 │   ├── importing/     # Library import/processing
@@ -512,7 +513,9 @@ Before submitting a new feature, ensure:
 
 ## Example: Complete Feature Implementation
 
-See the `downloading` feature for a complete example that demonstrates:
+See the `downloading` and `analyze` features for complete examples that demonstrate:
+
+### Downloading Feature
 - Service layer: `src/features/downloading/service.go:21-35`
 - Handler layer: `src/features/downloading/handlers.go:14-26` (with single service dependency)
 - HTMX integration: `src/features/downloading/handlers.go:42-50`
@@ -520,6 +523,18 @@ See the `downloading` feature for a complete example that demonstrates:
 - Template structure: `views/downloading/album_results.html:6-49`
 - Route registration: `src/features/downloading/routes.go:8-40` (with feature-specific service only)
 - Clean architecture: handlers only depend on their own feature's service
+
+### Analyze Feature
+The `analyze` feature demonstrates batch processing operations on the entire library:
+- **Service layer**: `src/features/analyze/service.go:21-30` - Injects multiple services (tagging, lyrics, library, jobs)
+- **Handler layer**: `src/features/analyze/handlers.go:14-19` - Single service dependency pattern
+- **Job integration**: Multiple job types (`analyze_acoustid`, `analyze_lyrics`) with progress tracking
+  - AcoustID analysis: `src/features/analyze/acoustid_job.go:28-134` - Batch fingerprinting and AcoustID lookup
+  - Lyrics analysis: `src/features/analyze/lyrics_job.go:29-146` - Batch lyrics fetching with provider selection
+- **HTMX integration**: `src/features/analyze/handlers.go:38-45` - Dual response support with toast notifications
+- **Template structure**: `views/sections/analyze.html:1-98` - Card-based UI with provider selection
+- **Route registration**: `src/features/analyze/routes.go:8-17` - API and UI routes with feature-specific handler
+- **Clean architecture**: Maintains separation by only accessing cross-feature services through the service layer
 
 This spec kit should be followed consistently when developing new features to maintain code quality, user experience consistency, and architectural coherence across the SoulSolid application.
 
