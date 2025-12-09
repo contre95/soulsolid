@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/contre95/soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // LyricsJobTask handles lyrics analysis job execution
@@ -46,46 +47,62 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 
 	job.Logger.Info("Enabled lyrics providers", "providers", enabledProviders, "color", "blue")
 
-	// Get total track count for progress reporting
-	totalTracks, err := t.service.libraryService.GetTracksCount(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get tracks count: %w", err)
-	}
+	var tracksToProcess []*music.Track
+	var totalTracks int
 
-	if totalTracks == 0 {
-		job.Logger.Info("No tracks found in library")
-		return map[string]any{
-			"totalTracks": 0,
-			"processed":   0,
-			"updated":     0,
-		}, nil
-	}
+	// Check if specific track IDs are provided
+	if trackIDs, ok := job.Metadata["track_ids"].([]interface{}); ok && len(trackIDs) > 0 {
+		// Process specific tracks
+		job.Logger.Info("Starting lyrics analysis for specific tracks", "trackCount", len(trackIDs), "color", "blue")
+		progressUpdater(0, fmt.Sprintf("Starting analysis of %d tracks", len(trackIDs)))
 
-	job.Logger.Info("Starting lyrics analysis", "totalTracks", totalTracks, "color", "blue")
-	progressUpdater(0, fmt.Sprintf("Starting analysis of %d tracks", totalTracks))
+		// Convert interface{} to string slice
+		trackIDStrings := make([]string, len(trackIDs))
+		for i, id := range trackIDs {
+			if idStr, ok := id.(string); ok {
+				trackIDStrings[i] = idStr
+			}
+		}
+
+		// Get tracks by IDs
+		for _, trackID := range trackIDStrings {
+			track, err := t.service.libraryService.GetTrack(ctx, trackID)
+			if err != nil {
+				job.Logger.Warn("Failed to get track for analysis", "trackID", trackID, "error", err)
+				continue
+			}
+			tracksToProcess = append(tracksToProcess, track)
+		}
+		totalTracks = len(tracksToProcess)
+	} else {
+		// Process all tracks in library
+		var err error
+		totalTracks, err = t.service.libraryService.GetTracksCount(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get tracks count: %w", err)
+		}
+
+		if totalTracks == 0 {
+			job.Logger.Info("No tracks found in library")
+			return map[string]any{
+				"totalTracks": 0,
+				"processed":   0,
+				"updated":     0,
+			}, nil
+		}
+
+		job.Logger.Info("Starting lyrics analysis", "totalTracks", totalTracks, "color", "blue")
+		progressUpdater(0, fmt.Sprintf("Starting analysis of %d tracks", totalTracks))
+	}
 
 	processed := 0
 	updated := 0
 	skipped := 0
 	errors := 0
 
-	// Process tracks in batches to avoid loading all into memory
-	batchSize := 100
-	for offset := 0; offset < totalTracks; offset += batchSize {
-		select {
-		case <-ctx.Done():
-			job.Logger.Info("Lyrics analysis cancelled", "processed", processed, "updated", updated)
-			return nil, ctx.Err()
-		default:
-		}
-
-		// Get next batch of tracks
-		tracks, err := t.service.libraryService.GetTracksPaginated(ctx, batchSize, offset)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get tracks batch (offset %d): %w", offset, err)
-		}
-
-		for _, track := range tracks {
+	if len(tracksToProcess) > 0 {
+		// Process specific tracks
+		for _, track := range tracksToProcess {
 			select {
 			case <-ctx.Done():
 				job.Logger.Info("Lyrics analysis cancelled", "processed", processed, "updated", updated)
@@ -123,6 +140,63 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 			}
 
 			processed++
+		}
+	} else {
+		// Process tracks in batches to avoid loading all into memory
+		batchSize := 100
+		for offset := 0; offset < totalTracks; offset += batchSize {
+			select {
+			case <-ctx.Done():
+				job.Logger.Info("Lyrics analysis cancelled", "processed", processed, "updated", updated)
+				return nil, ctx.Err()
+			default:
+			}
+
+			// Get next batch of tracks
+			tracks, err := t.service.libraryService.GetTracksPaginated(ctx, batchSize, offset)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get tracks batch (offset %d): %w", offset, err)
+			}
+
+			for _, track := range tracks {
+				select {
+				case <-ctx.Done():
+					job.Logger.Info("Lyrics analysis cancelled", "processed", processed, "updated", updated)
+					return nil, ctx.Err()
+				default:
+				}
+
+				progress := (processed * 100) / totalTracks
+				progressUpdater(progress, fmt.Sprintf("Processing track %d/%d: %s", processed+1, totalTracks, track.Title))
+
+				// Skip tracks that already have lyrics
+				if track.Metadata.Lyrics != "" {
+					job.Logger.Info("Skipping track with existing lyrics", "trackID", track.ID, "title", track.Title, "lyricsLength", len(track.Metadata.Lyrics), "color", "orange")
+					skipped++
+					continue
+				}
+
+				// Get the specified provider from job metadata
+				provider, ok := job.Metadata["provider"].(string)
+				if !ok || provider == "" {
+					job.Logger.Error("No provider specified in job metadata")
+					return nil, fmt.Errorf("no lyrics provider specified in job metadata")
+				}
+
+				// Try to fetch lyrics for this track using the specified provider
+				job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "provider", provider, "color", "cyan")
+				err := t.service.lyricsService.AddLyrics(ctx, track.ID, provider)
+				if err != nil {
+					job.Logger.Error("Failed to add lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "error", err.Error(), "manual_fix", "<a href='/ui/library/tag/edit/"+track.ID+"' target='_blank'>track</a>")
+					errors++
+					// Continue with other tracks - don't fail the entire job
+				} else {
+					updated++
+					job.Logger.Info("Successfully added lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "green")
+				}
+
+				processed++
+			}
 		}
 	}
 

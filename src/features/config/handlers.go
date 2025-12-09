@@ -52,6 +52,16 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 			Move:             c.FormValue("import.move") == "true",
 			AlwaysQueue:      c.FormValue("import.always_queue") == "true",
 			Duplicates:       c.FormValue("import.duplicates"),
+			AutoAnalyze: func() []string {
+				var autoAnalyze []string
+				if c.FormValue("import.auto_analyze.acoustid") == "true" {
+					autoAnalyze = append(autoAnalyze, "acoustid")
+				}
+				if c.FormValue("import.auto_analyze.lyrics") == "true" {
+					autoAnalyze = append(autoAnalyze, "lyrics")
+				}
+				return autoAnalyze
+			}(),
 			PathOptions: Paths{
 				DefaultPath:     c.FormValue("import.paths.default_path"),
 				Compilations:    c.FormValue("import.paths.compilations"),

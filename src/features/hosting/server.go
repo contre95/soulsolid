@@ -48,6 +48,15 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 		remainingSeconds := seconds % 60
 		return fmt.Sprintf("%d:%02d", minutes, remainingSeconds)
 	})
+
+	engine.AddFunc("contains", func(slice []string, item string) bool {
+		for _, s := range slice {
+			if s == item {
+				return true
+			}
+		}
+		return false
+	})
 	engine.AddFunc("formatDuration", func(seconds int) string {
 		if seconds == 0 {
 			return "0 min"

@@ -215,16 +215,38 @@
                       class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                <label for="import.always_queue" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Always queue tracks for review.</label>
              </div>
-             <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
-               <label for="import.duplicates" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Duplicate Handling</label>
-                 <select id="import.duplicates" name="import.duplicates"
-                         class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm">
-                   <option value="replace" {{if eq .Config.Import.Duplicates "replace"}}selected{{end}}>DUP. REPLACE - Overwrite existing files</option>
-                   <option value="skip" {{if eq .Config.Import.Duplicates "skip"}}selected{{end}}>DUP. SKIP - Keep both files</option>
-                   <option value="queue" {{if eq .Config.Import.Duplicates "queue"}}selected{{end}}>DUP. QUEUE - Add to review queue</option>
-                 </select>
-             </div>
-         </div>
+              <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+                <label for="import.duplicates" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Duplicate Handling</label>
+                  <select id="import.duplicates" name="import.duplicates"
+                          class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm">
+                    <option value="replace" {{if eq .Config.Import.Duplicates "replace"}}selected{{end}}>DUP. REPLACE - Overwrite existing files</option>
+                    <option value="skip" {{if eq .Config.Import.Duplicates "skip"}}selected{{end}}>DUP. SKIP - Keep both files</option>
+                    <option value="queue" {{if eq .Config.Import.Duplicates "queue"}}selected{{end}}>DUP. QUEUE - Add to review queue</option>
+                  </select>
+              </div>
+              <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Auto Analyze New Tracks</label>
+                <div class="space-y-2">
+                  <div class="flex items-center">
+                    <input type="checkbox" id="import.auto_analyze.acoustid" name="import.auto_analyze.acoustid" value="true" {{if contains .Config.Import.AutoAnalyze "acoustid"}}checked{{end}}
+                           class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                    <label for="import.auto_analyze.acoustid" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                      <i class="fas fa-fingerprint text-purple-500 mr-2"></i>
+                      AcoustID Analysis
+                    </label>
+                  </div>
+                  <div class="flex items-center">
+                    <input type="checkbox" id="import.auto_analyze.lyrics" name="import.auto_analyze.lyrics" value="true" {{if contains .Config.Import.AutoAnalyze "lyrics"}}checked{{end}}
+                           class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                    <label for="import.auto_analyze.lyrics" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                      <i class="fas fa-music text-green-500 mr-2"></i>
+                      Lyrics Analysis
+                    </label>
+                  </div>
+                </div>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Automatically run analysis jobs on newly imported tracks</p>
+              </div>
+          </div>
        </div>
 
 
