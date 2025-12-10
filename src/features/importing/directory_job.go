@@ -57,25 +57,28 @@ func (e *DirectoryImportTask) Execute(ctx context.Context, job *jobs.Job, progre
 	totalProcessed := stats.TracksImported + stats.Skipped + stats.Queued + stats.Errors
 	finalMessage := fmt.Sprintf("Directory import finished. Processed %d tracks (%d imported, %d queued, %d skipped, %d errors).",
 		totalProcessed, stats.TracksImported, stats.Queued, stats.Skipped, stats.Errors)
-	job.Logger.Info(finalMessage)
 
 	// Determine job status - consider skips and queued as successful
 	if stats.TracksImported == 0 && stats.Skipped == 0 && stats.Queued == 0 && stats.Errors > 0 {
 		// Complete failure - no tracks processed successfully
 		slog.Warn("No tracks were successfully processed", "stats", stats)
+		job.Logger.Info(finalMessage)
 		return map[string]any{"stats": stats, "msg": finalMessage}, errors.New("No tracks were successfully processed")
 	} else if stats.Errors > 0 {
 		// Partial success - some failures occurred
-		slog.Warn("Some tracks failed to process", "stats", stats)
-		return map[string]any{"stats": stats, "msg": finalMessage}, errors.New("Some tracks failed to process")
+		partialMessage := fmt.Sprintf("Partial import: %d tracks imported, %d errors occurred.", stats.TracksImported, stats.Errors)
+		job.Logger.Info(partialMessage, "color", "orange")
+		return map[string]any{"stats": stats, "msg": partialMessage}, fmt.Errorf("partial import: %d tracks imported, %d errors", stats.TracksImported, stats.Errors)
 	}
+
+	// Full success - all tracks processed without errors (including skips)
+	job.Logger.Info(finalMessage, "color", "green")
 
 	// Start analyze jobs for newly imported tracks if configured
 	if len(importedTrackIDs) > 0 {
 		e.startAnalyzeJobsForImportedTracks(ctx, importedTrackIDs, job.Logger)
 	}
 
-	// Full success - all tracks processed without errors (including skips)
 	return map[string]any{"stats": stats, "msg": finalMessage}, nil
 }
 
@@ -364,10 +367,7 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 			// Update progress after processing each file
 			processedFiles++
 			if progressUpdater != nil && totalFiles > 0 {
-				progress := (processedFiles * 100) / totalFiles
-				if progress > 100 {
-					progress = 100
-				}
+				progress := min((processedFiles*100)/totalFiles, 100)
 				progressUpdater(progress, fmt.Sprintf("Processed: %s", filepath.Base(path)))
 			}
 		}
