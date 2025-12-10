@@ -44,9 +44,9 @@ func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
 	if err != nil {
 		// Check if this is an HTMX request
 		if c.Get("HX-Request") == "true" {
-			return c.Status(500).SendString(fmt.Sprintf("Failed to start job: %s", err.Error()))
+			return c.Status(fiber.StatusInternalServerError).SendString(fmt.Sprintf("Failed to start job: %s", err.Error()))
 		}
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// Trigger HTMX to refresh the badge immediately
@@ -65,7 +65,7 @@ func (h *Handler) HandleJobStatus(c *fiber.Ctx) error {
 	jobID := c.Params("id")
 	job, exists := h.service.GetJob(jobID)
 	if !exists {
-		return c.Status(404).SendString("Job not found")
+		return c.Status(fiber.StatusNotFound).SendString("Job not found")
 	}
 
 	baseURL := c.BaseURL()
@@ -85,7 +85,7 @@ func (h *Handler) HandleJobLogs(c *fiber.Ctx) error {
 	jobID := c.Params("id")
 	job, exists := h.service.GetJob(jobID)
 	if !exists {
-		return c.Status(404).SendString("Job not found")
+		return c.Status(fiber.StatusNotFound).SendString("Job not found")
 	}
 
 	if job.LogPath == "" {
@@ -94,7 +94,7 @@ func (h *Handler) HandleJobLogs(c *fiber.Ctx) error {
 
 	logContent, err := os.ReadFile(job.LogPath)
 	if err != nil {
-		return c.Status(500).SendString("Failed to read log file.")
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to read log file.")
 	}
 
 	// Check if color parameter is set
@@ -124,7 +124,7 @@ func (h *Handler) HandleJobProgress(c *fiber.Ctx) error {
 	jobID := c.Params("id")
 	job, exists := h.service.GetJob(jobID)
 	if !exists {
-		return c.Status(404).SendString("Job not found.")
+		return c.Status(fiber.StatusNotFound).SendString("Job not found")
 	}
 
 	if job.Status == JobStatusCompleted || job.Status == JobStatusFailed || job.Status == JobStatusCancelled {
@@ -166,13 +166,13 @@ func (h *Handler) HandleCancelJob(c *fiber.Ctx) error {
 
 	err := h.service.CancelJob(jobID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// Get the updated job to render the card
 	job, exists := h.service.GetJob(jobID)
 	if !exists {
-		return c.Status(404).SendString("Job not found")
+		return c.Status(fiber.StatusNotFound).SendString("Job not found")
 	}
 
 	return c.Render("jobs/job_card", fiber.Map{
@@ -196,7 +196,7 @@ func (h *Handler) HandleCleanupJobs(c *fiber.Ctx) error {
 func (h *Handler) HandleClearFinishedJobs(c *fiber.Ctx) error {
 	err := h.service.ClearFinishedJobs()
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	if c.Get("HX-Request") == "true" {
