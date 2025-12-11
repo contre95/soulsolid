@@ -9,9 +9,11 @@
              <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-md shadow-green-500/10 hover:shadow-green-500/20">{{ $job.Type }}</span>
            {{ else if eq $job.Type "dap_sync" }}
              <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-yellow-500/10 backdrop-blur-md border border-yellow-400/30 text-yellow-600 dark:text-yellow-300 shadow-md shadow-yellow-500/10 hover:shadow-yellow-500/20">{{ $job.Type }}</span>
-           {{ else if eq $job.Type "analyze_lyrics" }}
-             <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-pink-500/10 backdrop-blur-md border border-pink-400/30 text-pink-600 dark:text-pink-300 shadow-md shadow-pink-500/10 hover:shadow-pink-500/20">{{ $job.Type }}</span>
-           {{ else }}
+            {{ else if eq $job.Type "analyze_lyrics" }}
+              <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-pink-500/10 backdrop-blur-md border border-pink-400/30 text-pink-600 dark:text-pink-300 shadow-md shadow-pink-500/10 hover:shadow-pink-500/20">{{ $job.Type }}</span>
+            {{ else if eq $job.Type "analyze_acoustid" }}
+              <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-teal-500/10 backdrop-blur-md border border-teal-400/30 text-teal-600 dark:text-teal-300 shadow-md shadow-teal-500/10 hover:shadow-teal-500/20">{{ $job.Type }}</span>
+            {{ else }}
              <span class="group inline-flex items-center px-2 py-1 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-gray-500/10 backdrop-blur-md border border-gray-400/30 text-gray-600 dark:text-gray-300 shadow-md shadow-gray-500/10 hover:shadow-gray-500/20">{{ $job.Type }}</span>
            {{ end }}
         <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">{{ $job.CreatedAt.Format "Jan 2, 15:04" }}</span>

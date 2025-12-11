@@ -44,7 +44,7 @@ func (e *DirectoryImportTask) MetadataKeys() []string {
 func (e *DirectoryImportTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
 	path := job.Metadata["path"].(string)
 
-	stats, err := e.runDirectoryImport(ctx, path, progressUpdater, job.Logger, job)
+	stats, importedTrackIDs, err := e.runDirectoryImport(ctx, path, progressUpdater, job.Logger, job)
 	if err != nil {
 		return nil, fmt.Errorf("failed to import directory: %w", err)
 	}
@@ -57,21 +57,81 @@ func (e *DirectoryImportTask) Execute(ctx context.Context, job *jobs.Job, progre
 	totalProcessed := stats.TracksImported + stats.Skipped + stats.Queued + stats.Errors
 	finalMessage := fmt.Sprintf("Directory import finished. Processed %d tracks (%d imported, %d queued, %d skipped, %d errors).",
 		totalProcessed, stats.TracksImported, stats.Queued, stats.Skipped, stats.Errors)
-	job.Logger.Info(finalMessage)
 
 	// Determine job status - consider skips and queued as successful
 	if stats.TracksImported == 0 && stats.Skipped == 0 && stats.Queued == 0 && stats.Errors > 0 {
 		// Complete failure - no tracks processed successfully
 		slog.Warn("No tracks were successfully processed", "stats", stats)
+		job.Logger.Info(finalMessage)
 		return map[string]any{"stats": stats, "msg": finalMessage}, errors.New("No tracks were successfully processed")
 	} else if stats.Errors > 0 {
 		// Partial success - some failures occurred
-		slog.Warn("Some tracks failed to process", "stats", stats)
-		return map[string]any{"stats": stats, "msg": finalMessage}, errors.New("Some tracks failed to process")
+		partialMessage := fmt.Sprintf("Partial import: %d tracks imported, %d errors occurred.", stats.TracksImported, stats.Errors)
+		job.Logger.Info(partialMessage, "color", "orange")
+		return map[string]any{"stats": stats, "msg": partialMessage}, fmt.Errorf("partial import: %d tracks imported, %d errors", stats.TracksImported, stats.Errors)
 	}
 
 	// Full success - all tracks processed without errors (including skips)
+	job.Logger.Info(finalMessage, "color", "green")
+
+	// Start analyze jobs for newly imported tracks if configured
+	if len(importedTrackIDs) > 0 {
+		e.startAnalyzeJobsForImportedTracks(ctx, importedTrackIDs, job.Logger)
+	}
+
 	return map[string]any{"stats": stats, "msg": finalMessage}, nil
+}
+
+// startAnalyzeJobsForImportedTracks starts analyze jobs for newly imported tracks based on config
+func (e *DirectoryImportTask) startAnalyzeJobsForImportedTracks(ctx context.Context, trackIDs []string, logger *slog.Logger) {
+	config := e.service.config.Get().Import
+	autoAnalyze := config.AutoAnalyze
+
+	if len(autoAnalyze) == 0 || len(trackIDs) == 0 {
+		return
+	}
+
+	logger.Info("Starting auto-analyze jobs for imported tracks", "trackCount", len(trackIDs), "analyzeTypes", autoAnalyze)
+
+	for _, analyzeType := range autoAnalyze {
+		var jobType string
+		var jobName string
+		var metadata map[string]any
+
+		switch analyzeType {
+		case "acoustid":
+			jobType = "analyze_acoustid"
+			jobName = "Analyze AcoustID for Imported Tracks"
+			metadata = map[string]any{"track_ids": trackIDs}
+		case "lyrics":
+			jobType = "analyze_lyrics"
+			jobName = "Analyze Lyrics for Imported Tracks"
+			// For lyrics, we need to get the default provider from config
+			lyricsConfig := e.service.config.Get().Lyrics
+			var defaultProvider string
+			for provider, cfg := range lyricsConfig.Providers {
+				if cfg.Enabled {
+					defaultProvider = provider
+					break
+				}
+			}
+			if defaultProvider == "" {
+				logger.Warn("No enabled lyrics provider found, skipping lyrics analysis for imported tracks")
+				continue
+			}
+			metadata = map[string]any{"track_ids": trackIDs, "provider": defaultProvider}
+		default:
+			logger.Warn("Unknown auto-analyze type", "type", analyzeType)
+			continue
+		}
+
+		jobID, err := e.service.jobService.StartJob(jobType, jobName, metadata)
+		if err != nil {
+			logger.Error("Failed to start analyze job for imported tracks", "type", analyzeType, "error", err)
+		} else {
+			logger.Info("Started analyze job for imported tracks", "type", analyzeType, "jobID", jobID)
+		}
+	}
 }
 
 // Cleanup does nothing for directory imports.
@@ -206,9 +266,10 @@ func (e *DirectoryImportTask) findExistingTrack(ctx context.Context, trackToImpo
 	return existingTrack, nil
 }
 
-func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImport string, progressUpdater func(int, string), logger *slog.Logger, job *jobs.Job) (ImportStats, error) {
+func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImport string, progressUpdater func(int, string), logger *slog.Logger, job *jobs.Job) (ImportStats, []string, error) {
 	logger.Info("Service.runDirectoryImport: starting import", "path", pathToImport)
 	var stats ImportStats
+	var importedTrackIDs []string
 	moveFiles := e.service.config.Get().Import.Move
 	config := e.service.config.Get().Import
 
@@ -298,6 +359,7 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 					stats.Errors++
 				} else {
 					stats.TracksImported++
+					importedTrackIDs = append(importedTrackIDs, trackToImport.ID)
 					logger.Info("Service.runDirectoryImport: Track Imported", "title", trackToImport.Title, "color", "green")
 				}
 			}
@@ -305,10 +367,7 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 			// Update progress after processing each file
 			processedFiles++
 			if progressUpdater != nil && totalFiles > 0 {
-				progress := (processedFiles * 100) / totalFiles
-				if progress > 100 {
-					progress = 100
-				}
+				progress := min((processedFiles*100)/totalFiles, 100)
 				progressUpdater(progress, fmt.Sprintf("Processed: %s", filepath.Base(path)))
 			}
 		}
@@ -319,5 +378,5 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 		progressUpdater(100, "Import completed")
 	}
 
-	return stats, err
+	return stats, importedTrackIDs, err
 }
