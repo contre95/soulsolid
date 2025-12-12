@@ -23,9 +23,25 @@ func NewHandler(service *Service) *Handler {
 // RenderLibrarySection renders the library page.
 func (h *Handler) RenderLibrarySection(c *fiber.Ctx) error {
 	slog.Debug("RenderLibrary handler called")
+
+	// Fetch all artists and albums for search form
+	artists, err := h.service.GetArtists(c.Context())
+	if err != nil {
+		slog.Error("Error loading artists for search form", "error", err)
+		artists = []*music.Artist{} // Continue with empty list
+	}
+
+	albums, err := h.service.GetAlbums(c.Context())
+	if err != nil {
+		slog.Error("Error loading albums for search form", "error", err)
+		albums = []*music.Album{} // Continue with empty list
+	}
+
 	data := fiber.Map{
 		"Title":               "Library",
 		"DefaultDownloadPath": h.service.configManager.Get().DownloadPath,
+		"SearchArtists":       artists,
+		"SearchAlbums":        albums,
 	}
 	if c.Get("HX-Request") != "true" {
 		data["Section"] = "library"
@@ -74,16 +90,35 @@ func (h *Handler) GetArtists(c *fiber.Ctx) error {
 
 	// Always use pagination to avoid loading all records
 	if true {
-		// Use paginated version
+		// Parse search parameters
+		nameFilter := strings.TrimSpace(c.Query("artist_filter", ""))
+
+		// Use filtered or regular paginated version
 		offset := (page - 1) * limit
-		artists, err := h.service.GetArtistsPaginated(c.Context(), limit, offset)
-		if err != nil {
-			slog.Error("Error loading paginated artists", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading artists")
+		var artists []*music.Artist
+		var totalCount int
+		var err error
+
+		if nameFilter != "" {
+			// Use filtered version
+			artists, err = h.service.GetArtistsFilteredPaginated(c.Context(), limit, offset, nameFilter)
+			if err != nil {
+				slog.Error("Error loading filtered paginated artists", "error", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Error loading artists")
+			}
+
+			totalCount, err = h.service.GetArtistsFilteredCount(c.Context(), nameFilter)
+		} else {
+			// Use regular paginated version
+			artists, err = h.service.GetArtistsPaginated(c.Context(), limit, offset)
+			if err != nil {
+				slog.Error("Error loading paginated artists", "error", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Error loading artists")
+			}
+
+			totalCount, err = h.service.GetArtistsCount(c.Context())
 		}
 
-		// Get total count for pagination
-		totalCount, err := h.service.GetArtistsCount(c.Context())
 		if err != nil {
 			slog.Error("Error getting artists count", "error", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Error loading artists")
@@ -146,16 +181,37 @@ func (h *Handler) GetAlbums(c *fiber.Ctx) error {
 
 	// Always use pagination to avoid loading all records
 	if true {
-		// Use paginated version
+		// Parse search parameters
+		titleFilter := strings.TrimSpace(c.Query("title", ""))
+		artistFilter := strings.TrimSpace(c.Query("artist_filter", ""))
+
+		// Use filtered or regular paginated version
 		offset := (page - 1) * limit
-		albums, err := h.service.GetAlbumsPaginated(c.Context(), limit, offset)
-		if err != nil {
-			slog.Error("Error loading paginated albums", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
+		var albums []*music.Album
+		var totalCount int
+		var err error
+
+		if titleFilter != "" || artistFilter != "" {
+			// For now, just filter by title since we changed to text inputs
+			// TODO: Update database queries to support text-based artist filtering
+			albums, err = h.service.GetAlbumsFilteredPaginated(c.Context(), limit, offset, titleFilter, []string{})
+			if err != nil {
+				slog.Error("Error loading filtered paginated albums", "error", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
+			}
+
+			totalCount, err = h.service.GetAlbumsFilteredCount(c.Context(), titleFilter, []string{})
+		} else {
+			// Use regular paginated version
+			albums, err = h.service.GetAlbumsPaginated(c.Context(), limit, offset)
+			if err != nil {
+				slog.Error("Error loading paginated albums", "error", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
+			}
+
+			totalCount, err = h.service.GetAlbumsCount(c.Context())
 		}
 
-		// Get total count for pagination
-		totalCount, err := h.service.GetAlbumsCount(c.Context())
 		if err != nil {
 			slog.Error("Error getting albums count", "error", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
@@ -218,16 +274,38 @@ func (h *Handler) GetTracks(c *fiber.Ctx) error {
 
 	// Always use pagination to avoid loading all records
 	if true {
-		// Use paginated version
+		// Parse search parameters
+		titleFilter := strings.TrimSpace(c.Query("title", ""))
+		artistFilter := strings.TrimSpace(c.Query("artist_filter", ""))
+		albumFilter := strings.TrimSpace(c.Query("album_filter", ""))
+
+		// Use filtered or regular paginated version
 		offset := (page - 1) * limit
-		tracks, err := h.service.GetTracksPaginated(c.Context(), limit, offset)
-		if err != nil {
-			slog.Error("Error loading paginated tracks", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
+		var tracks []*music.Track
+		var totalCount int
+		var err error
+
+		if titleFilter != "" || artistFilter != "" || albumFilter != "" {
+			// For now, just filter by title since we changed to text inputs
+			// TODO: Update database queries to support text-based artist/album filtering
+			tracks, err = h.service.GetTracksFilteredPaginated(c.Context(), limit, offset, titleFilter, []string{}, []string{})
+			if err != nil {
+				slog.Error("Error loading filtered paginated tracks", "error", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
+			}
+
+			totalCount, err = h.service.GetTracksFilteredCount(c.Context(), titleFilter, []string{}, []string{})
+		} else {
+			// Use regular paginated version
+			tracks, err = h.service.GetTracksPaginated(c.Context(), limit, offset)
+			if err != nil {
+				slog.Error("Error loading paginated tracks", "error", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
+			}
+
+			totalCount, err = h.service.GetTracksCount(c.Context())
 		}
 
-		// Get total count for pagination
-		totalCount, err := h.service.GetTracksCount(c.Context())
 		if err != nil {
 			slog.Error("Error getting tracks count", "error", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
@@ -355,7 +433,24 @@ func (h *Handler) GetTracksCount(c *fiber.Ctx) error {
 // GetLibraryTable renders the library table section with tabs.
 func (h *Handler) GetLibraryTable(c *fiber.Ctx) error {
 	slog.Debug("GetLibraryTable handler called")
-	return c.Render("library/library_table", fiber.Map{})
+
+	// Fetch all artists and albums for search form
+	artists, err := h.service.GetArtists(c.Context())
+	if err != nil {
+		slog.Error("Error loading artists for search form", "error", err)
+		artists = []*music.Artist{} // Continue with empty list
+	}
+
+	albums, err := h.service.GetAlbums(c.Context())
+	if err != nil {
+		slog.Error("Error loading albums for search form", "error", err)
+		albums = []*music.Album{} // Continue with empty list
+	}
+
+	return c.Render("library/library_table", fiber.Map{
+		"SearchArtists": artists,
+		"SearchAlbums":  albums,
+	})
 }
 
 // GetLibraryFileTree returns a tree structure of the library path.

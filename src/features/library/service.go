@@ -102,6 +102,30 @@ func (s *Service) GetTracksPaginated(ctx context.Context, limit, offset int) ([]
 	return tracks, nil
 }
 
+// GetTracksFilteredPaginated returns paginated tracks from the library with filtering.
+func (s *Service) GetTracksFilteredPaginated(ctx context.Context, limit, offset int, titleFilter string, artistIDs, albumIDs []string) ([]*library.Track, error) {
+	slog.Debug("GetTracksFilteredPaginated service called", "limit", limit, "offset", offset, "titleFilter", titleFilter, "artistIDs", artistIDs, "albumIDs", albumIDs)
+	tracks, err := s.library.GetTracksFilteredPaginated(ctx, limit, offset, titleFilter, artistIDs, albumIDs)
+	if err != nil {
+		slog.Error("GetTracksFilteredPaginated failed", "error", err)
+		return nil, err
+	}
+	slog.Debug("GetTracksFilteredPaginated completed", "count", len(tracks))
+	return tracks, nil
+}
+
+// GetTracksFilteredCount returns the filtered count of tracks in the library.
+func (s *Service) GetTracksFilteredCount(ctx context.Context, titleFilter string, artistIDs, albumIDs []string) (int, error) {
+	slog.Debug("GetTracksFilteredCount service called", "titleFilter", titleFilter, "artistIDs", artistIDs, "albumIDs", albumIDs)
+	count, err := s.library.GetTracksFilteredCount(ctx, titleFilter, artistIDs, albumIDs)
+	if err != nil {
+		slog.Error("GetTracksFilteredCount failed", "error", err)
+		return 0, err
+	}
+	slog.Debug("GetTracksFilteredCount completed", "count", count)
+	return count, nil
+}
+
 // GetTracksCount returns the total count of tracks in the library.
 func (s *Service) GetTracksCount(ctx context.Context) (int, error) {
 	slog.Debug("GetTracksCount service called")
@@ -126,6 +150,30 @@ func (s *Service) GetArtistsPaginated(ctx context.Context, limit, offset int) ([
 	return artists, nil
 }
 
+// GetArtistsFilteredPaginated returns paginated artists from the library with filtering.
+func (s *Service) GetArtistsFilteredPaginated(ctx context.Context, limit, offset int, nameFilter string) ([]*library.Artist, error) {
+	slog.Debug("GetArtistsFilteredPaginated service called", "limit", limit, "offset", offset, "nameFilter", nameFilter)
+	artists, err := s.library.GetArtistsFilteredPaginated(ctx, limit, offset, nameFilter)
+	if err != nil {
+		slog.Error("GetArtistsFilteredPaginated failed", "error", err)
+		return nil, err
+	}
+	slog.Debug("GetArtistsFilteredPaginated completed", "count", len(artists))
+	return artists, nil
+}
+
+// GetArtistsFilteredCount returns the filtered count of artists in the library.
+func (s *Service) GetArtistsFilteredCount(ctx context.Context, nameFilter string) (int, error) {
+	slog.Debug("GetArtistsFilteredCount service called", "nameFilter", nameFilter)
+	count, err := s.library.GetArtistsFilteredCount(ctx, nameFilter)
+	if err != nil {
+		slog.Error("GetArtistsFilteredCount failed", "error", err)
+		return 0, err
+	}
+	slog.Debug("GetArtistsFilteredCount completed", "count", count)
+	return count, nil
+}
+
 // GetArtistsCount returns the total count of artists in the library.
 func (s *Service) GetArtistsCount(ctx context.Context) (int, error) {
 	slog.Debug("GetArtistsCount service called")
@@ -148,6 +196,30 @@ func (s *Service) GetAlbumsPaginated(ctx context.Context, limit, offset int) ([]
 	}
 	slog.Debug("GetAlbumsPaginated completed", "count", len(albums))
 	return albums, nil
+}
+
+// GetAlbumsFilteredPaginated returns paginated albums from the library with filtering.
+func (s *Service) GetAlbumsFilteredPaginated(ctx context.Context, limit, offset int, titleFilter string, artistIDs []string) ([]*library.Album, error) {
+	slog.Debug("GetAlbumsFilteredPaginated service called", "limit", limit, "offset", offset, "titleFilter", titleFilter, "artistIDs", artistIDs)
+	albums, err := s.library.GetAlbumsFilteredPaginated(ctx, limit, offset, titleFilter, artistIDs)
+	if err != nil {
+		slog.Error("GetAlbumsFilteredPaginated failed", "error", err)
+		return nil, err
+	}
+	slog.Debug("GetAlbumsFilteredPaginated completed", "count", len(albums))
+	return albums, nil
+}
+
+// GetAlbumsFilteredCount returns the filtered count of albums in the library.
+func (s *Service) GetAlbumsFilteredCount(ctx context.Context, titleFilter string, artistIDs []string) (int, error) {
+	slog.Debug("GetAlbumsFilteredCount service called", "titleFilter", titleFilter, "artistIDs", artistIDs)
+	count, err := s.library.GetAlbumsFilteredCount(ctx, titleFilter, artistIDs)
+	if err != nil {
+		slog.Error("GetAlbumsFilteredCount failed", "error", err)
+		return 0, err
+	}
+	slog.Debug("GetAlbumsFilteredCount completed", "count", count)
+	return count, nil
 }
 
 // GetAlbumsCount returns the total count of albums in the library.
