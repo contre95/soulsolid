@@ -1,112 +1,35 @@
   <div class="bg-white/80 dark:bg-gray-900/80 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70" id="library-table">
-  <!-- Search Form -->
-  <div class="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-    <div class="flex flex-col md:flex-row gap-4">
-      <!-- Title Search -->
-      <div class="flex-1">
-        <label for="search-title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          <i class="fas fa-search mr-2 text-blue-500"></i>Search Title
-        </label>
-        <input type="text"
-               id="search-title"
-               name="title"
-               placeholder="Search by title..."
-               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
-      </div>
+   <!-- Search Form -->
+   <div class="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
+     <div class="flex flex-col md:flex-row gap-4">
+       <!-- Unified Search -->
+       <div class="flex-1">
+         <label for="search-query" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+           <i class="fas fa-search mr-2 text-blue-500"></i>Search Library
+         </label>
+         <input type="text"
+                id="search-query"
+                name="query"
+                placeholder="Search artists, albums, tracks..."
+                class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                hx-get="/library/search"
+                hx-trigger="input changed delay:300ms"
+                hx-target="#search-results"
+                hx-swap="innerHTML"
+                hx-include="[name='query']">
+       </div>
+     </div>
+   </div>
 
-      <!-- Artist Filter -->
-      <div class="flex-1">
-        <label for="search-artists" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          <i class="fas fa-user mr-2 text-green-500"></i>Filter by Artists
-        </label>
-        <input type="text"
-               id="search-artists"
-               name="artist_filter"
-               placeholder="Type artist name..."
-               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
-      </div>
-
-      <!-- Album Filter -->
-      <div class="flex-1">
-        <label for="search-albums" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          <i class="fas fa-compact-disc mr-2 text-purple-500"></i>Filter by Albums
-        </label>
-        <input type="text"
-               id="search-albums"
-               name="album_filter"
-               placeholder="Type album title..."
-               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
-      </div>
-
-      <!-- Search Button -->
-      <div class="flex items-end">
-        <button type="button"
-                id="search-button"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                hx-on:click="
-                  htmx.trigger('#artists-content div[hx-get]', 'search');
-                  htmx.trigger('#albums-content div[hx-get]', 'search');
-                  htmx.trigger('#tracks-content div[hx-get]', 'search');
-                ">
-          <i class="fas fa-search mr-2"></i>Search
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Library Content Tabs -->
-  <div class="bg-white/80 dark:bg-gray-900/80 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
-    <div class="border-b border-slate-200 dark:border-slate-700">
-      <nav class="flex -mb-px">
-        <button class="tab-button py-4 px-6 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300"
-                _="on click remove .border-cyan-600 .text-cyan-600 .dark\:text-cyan-400 from .tab-button then add .border-cyan-600 .text-cyan-600 .dark\:text-cyan-400 to me then show #artists-content then hide #albums-content then hide #tracks-content
-                      on load remove .border-cyan-600 .text-cyan-600 .dark\:text-cyan-400 from .tab-button then add .border-cyan-600 .text-cyan-600 .dark\:text-cyan-400 to me then show #artists-content then hide #albums-content then hide #tracks-content">
-           <i class="fa-solid fa-guitar mr-2"></i>Artists
-        </button>
-        <button class="tab-button py-4 px-6 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300"
-                _="on click remove .border-cyan-600 .text-cyan-600 .dark\:text-cyan-400 from .tab-button then add .border-cyan-600 .text-cyan-600 .dark\:text-cyan-400 to me then show #albums-content then hide #artists-content then hide #tracks-content">
-           <i class="fa-solid fa-compact-disc mr-2"></i>Albums
-        </button>
-        <button class="tab-button py-4 px-6 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300"
-          _="on click remove .border-cyan-600 .text-cyan-600 .dark\:text-cyan-400 from .tab-button then add .border-cyan-600 .text-cyan-600 .dark\:text-cyan-400 to me then show #tracks-content then hide #artists-content then hide #albums-content">
-           <i class="fa-solid fa-music mr-2"></i>Tracks
-        </button>
-      </nav>
-    </div>
-
-      <div id="library-tab-content" class="py-6 px-2">
-        <!-- Artists Content -->
-        <div class="p-0 rounded-lg" id="artists-content" role="tabpanel" aria-labelledby="artists-tab">
-          <div hx-get="/library/artists" hx-trigger="load, search" hx-swap="innerHTML" hx-include="[name='artist_filter']">
-            <div class="animate-pulse">
-              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
-              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
-              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
-            </div>
-          </div>
-        </div>
-
-         <!-- Albums Content -->
-         <div class="p-0 rounded-lg" id="albums-content" role="tabpanel" aria-labelledby="albums-tab">
-          <div hx-get="/library/albums" hx-trigger="load, search" hx-swap="innerHTML" hx-include="[name='title'],[name='artist_filter']">
-            <div class="animate-pulse">
-              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
-              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
-              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
-            </div>
-          </div>
-        </div>
-
-         <!-- Tracks Content -->
-         <div class="p-0 rounded-lg" id="tracks-content" role="tabpanel" aria-labelledby="tracks-tab">
-          <div hx-get="/library/tracks" hx-trigger="load, search" hx-swap="innerHTML" hx-include="[name='title'],[name='artist_filter'],[name='album_filter']">
-            <div class="animate-pulse">
-              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
-              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
-              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+   <!-- Library Search Results -->
+   <div class="py-6 px-2">
+     <div id="search-results" hx-get="/library/search" hx-trigger="load" hx-swap="innerHTML">
+       <div class="text-center py-8">
+         <svg class="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+         </svg>
+         <p class="text-gray-500 dark:text-gray-400">Loading tracks...</p>
+       </div>
+     </div>
+   </div>
 </div>

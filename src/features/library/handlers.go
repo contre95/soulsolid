@@ -62,6 +62,17 @@ type Pagination struct {
 	HasPrev    bool
 }
 
+// SearchResult represents a unified search result item
+type SearchResult struct {
+	Type        string // "artist", "album", "track"
+	ID          string
+	PrimaryName string // Artist name, Album title, Track title
+	Secondary   string // Artist ID, Album artist names, Track artist names
+	Tertiary    string // "", Album year, Track album title
+	Duration    int    // Track duration in seconds (for tracks only)
+	ImageURL    string // Image for display
+}
+
 // NewPagination creates a new Pagination instance with calculated values
 func NewPagination(page, limit, totalCount int) Pagination {
 	totalPages := (totalCount + limit - 1) / limit
@@ -450,6 +461,173 @@ func (h *Handler) GetLibraryTable(c *fiber.Ctx) error {
 	return c.Render("library/library_table", fiber.Map{
 		"SearchArtists": artists,
 		"SearchAlbums":  albums,
+	})
+}
+
+// GetUnifiedSearch performs a unified search across artists, albums, and tracks.
+func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
+	slog.Debug("GetUnifiedSearch handler called")
+
+	query := strings.TrimSpace(c.Query("query", ""))
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 50)
+
+	var results []SearchResult
+	var totalCount int
+
+	offset := (page - 1) * limit
+
+	if query == "" {
+		// When no query, show all tracks paginated
+		tracks, err := h.service.GetTracksPaginated(c.Context(), limit, offset)
+		if err != nil {
+			slog.Error("Error loading tracks", "error", err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
+		}
+
+		totalCount, err = h.service.GetTracksCount(c.Context())
+		if err != nil {
+			slog.Error("Error getting tracks count", "error", err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks count")
+		}
+
+		for _, track := range tracks {
+			artistNames := ""
+			if len(track.Artists) > 0 {
+				for i, ar := range track.Artists {
+					if i > 0 {
+						artistNames += ", "
+					}
+					artistNames += ar.Artist.Name
+				}
+			}
+			albumTitle := ""
+			if track.Album != nil {
+				albumTitle = track.Album.Title
+			}
+			results = append(results, SearchResult{
+				Type:        "track",
+				ID:          track.ID,
+				PrimaryName: track.Title,
+				Secondary:   artistNames,
+				Tertiary:    albumTitle,
+				Duration:    track.Metadata.Duration,
+				ImageURL:    "",
+			})
+		}
+	} else {
+		// Search artists
+		artists, err := h.service.GetArtistsFilteredPaginated(c.Context(), 20, 0, query)
+		if err != nil {
+			slog.Error("Error searching artists", "error", err)
+		} else {
+			for _, artist := range artists {
+				results = append(results, SearchResult{
+					Type:        "artist",
+					ID:          artist.ID,
+					PrimaryName: artist.Name,
+					Secondary:   artist.ID,
+					Tertiary:    "",
+					ImageURL:    "",
+				})
+			}
+		}
+
+		// Search albums
+		albums, err := h.service.GetAlbumsFilteredPaginated(c.Context(), 20, 0, query, []string{})
+		if err != nil {
+			slog.Error("Error searching albums", "error", err)
+		} else {
+			for _, album := range albums {
+				artistNames := ""
+				if len(album.Artists) > 0 {
+					for i, ar := range album.Artists {
+						if i > 0 {
+							artistNames += ", "
+						}
+						artistNames += ar.Artist.Name
+					}
+				}
+				year := ""
+				if !album.ReleaseDate.IsZero() {
+					year = fmt.Sprintf("%d", album.ReleaseDate.Year())
+				}
+				results = append(results, SearchResult{
+					Type:        "album",
+					ID:          album.ID,
+					PrimaryName: album.Title,
+					Secondary:   artistNames,
+					Tertiary:    year,
+					ImageURL:    album.ImageSmall,
+				})
+			}
+		}
+
+		// Search tracks
+		tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), 20, 0, query, []string{}, []string{})
+		if err != nil {
+			slog.Error("Error searching tracks", "error", err)
+		} else {
+			for _, track := range tracks {
+				artistNames := ""
+				if len(track.Artists) > 0 {
+					for i, ar := range track.Artists {
+						if i > 0 {
+							artistNames += ", "
+						}
+						artistNames += ar.Artist.Name
+					}
+				}
+				albumTitle := ""
+				if track.Album != nil {
+					albumTitle = track.Album.Title
+				}
+				results = append(results, SearchResult{
+					Type:        "track",
+					ID:          track.ID,
+					PrimaryName: track.Title,
+					Secondary:   artistNames,
+					Tertiary:    albumTitle,
+					Duration:    track.Metadata.Duration,
+					ImageURL:    "",
+				})
+			}
+		}
+
+		// For search results, paginate the collected results
+		totalCount = len(results)
+		start := (page - 1) * limit
+		end := start + limit
+		if start > totalCount {
+			start = totalCount
+		}
+		if end > totalCount {
+			end = totalCount
+		}
+		results = results[start:end]
+	}
+
+	pagination := NewPagination(page, limit, totalCount)
+
+	// Check if the request accepts HTML (like an HTMX request)
+	acceptHeader := c.Get("Accept")
+	hxRequest := c.Get("HX-Request")
+	if strings.Contains(acceptHeader, "text/html") || hxRequest == "true" {
+		return c.Render("library/unified_search_list", fiber.Map{
+			"Results":    results,
+			"Pagination": pagination,
+			"Query":      query,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"results": results,
+		"pagination": fiber.Map{
+			"page":       page,
+			"limit":      limit,
+			"totalCount": totalCount,
+			"totalPages": (totalCount + limit - 1) / limit,
+		},
 	})
 }
 

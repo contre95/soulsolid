@@ -14,6 +14,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	ui.Get("/library/tag/edit/:trackId", handler.RenderTagEditForm)
 
 	library := app.Group("/library")
+	library.Get("/search", handler.GetUnifiedSearch)
 	library.Get("/artists/count", handler.GetArtistsCount)
 	library.Get("/albums/count", handler.GetAlbumsCount)
 	library.Get("/tracks/count", handler.GetTracksCount)
