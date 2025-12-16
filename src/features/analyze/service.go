@@ -13,17 +13,17 @@ import (
 type Service struct {
 	taggingService music.MetadataService
 	lyricsService  music.LyricsService
-	libraryService music.LibraryService
+	library        music.Library
 	jobService     music.JobService
 	config         *config.Manager
 }
 
 // NewService creates a new analyze service
-func NewService(taggingService music.MetadataService, lyricsService music.LyricsService, libraryService music.LibraryService, jobService music.JobService, config *config.Manager) *Service {
+func NewService(taggingService music.MetadataService, lyricsService music.LyricsService, library music.Library, jobService music.JobService, config *config.Manager) *Service {
 	return &Service{
 		taggingService: taggingService,
 		lyricsService:  lyricsService,
-		libraryService: libraryService,
+		library:        library,
 		jobService:     jobService,
 		config:         config,
 	}

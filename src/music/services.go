@@ -33,15 +33,6 @@ type LyricsService interface {
 	SearchLyrics(ctx context.Context, trackID string, providerName string) (string, error)
 }
 
-// LibraryService defines the interface for library operations
-type LibraryService interface { // TODO: Maybe use Repo instead of library service in the rest of the features
-	GetTracks(ctx context.Context) ([]*Track, error)
-	GetTracksPaginated(ctx context.Context, limit, offset int) ([]*Track, error)
-	GetTracksCount(ctx context.Context) (int, error)
-	GetTrack(ctx context.Context, trackID string) (*Track, error)
-	UpdateTrack(ctx context.Context, track *Track) error
-}
-
 // JobService defines the interface for job management
 type JobService interface {
 	StartJob(jobType string, name string, metadata map[string]any) (string, error)
