@@ -23,9 +23,25 @@ func NewHandler(service *Service) *Handler {
 // RenderLibrarySection renders the library page.
 func (h *Handler) RenderLibrarySection(c *fiber.Ctx) error {
 	slog.Debug("RenderLibrary handler called")
+
+	// Fetch all artists and albums for search form
+	artists, err := h.service.GetArtists(c.Context())
+	if err != nil {
+		slog.Error("Error loading artists for search form", "error", err)
+		artists = []*music.Artist{} // Continue with empty list
+	}
+
+	albums, err := h.service.GetAlbums(c.Context())
+	if err != nil {
+		slog.Error("Error loading albums for search form", "error", err)
+		albums = []*music.Album{} // Continue with empty list
+	}
+
 	data := fiber.Map{
 		"Title":               "Library",
 		"DefaultDownloadPath": h.service.configManager.Get().DownloadPath,
+		"SearchArtists":       artists,
+		"SearchAlbums":        albums,
 	}
 	if c.Get("HX-Request") != "true" {
 		data["Section"] = "library"
@@ -62,222 +78,6 @@ func NewPagination(page, limit, totalCount int) Pagination {
 		HasNext:    page < totalPages,
 		HasPrev:    page > 1,
 	}
-}
-
-// GetArtists is the handler for getting all artists.
-func (h *Handler) GetArtists(c *fiber.Ctx) error {
-	slog.Debug("GetArtists handler called")
-
-	// Check if pagination parameters are provided
-	page := c.QueryInt("page", 1)
-	limit := c.QueryInt("limit", 50)
-
-	// Always use pagination to avoid loading all records
-	if true {
-		// Use paginated version
-		offset := (page - 1) * limit
-		artists, err := h.service.GetArtistsPaginated(c.Context(), limit, offset)
-		if err != nil {
-			slog.Error("Error loading paginated artists", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading artists")
-		}
-
-		// Get total count for pagination
-		totalCount, err := h.service.GetArtistsCount(c.Context())
-		if err != nil {
-			slog.Error("Error getting artists count", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading artists")
-		}
-
-		// Check if the request accepts HTML (like an HTMX request)
-		acceptHeader := c.Get("Accept")
-		hxRequest := c.Get("HX-Request")
-		if strings.Contains(acceptHeader, "text/html") || hxRequest == "true" {
-			pagination := NewPagination(page, limit, totalCount)
-			return c.Render("library/artists_list", fiber.Map{
-				"Artists":    artists,
-				"Pagination": pagination,
-			})
-		}
-
-		return c.JSON(fiber.Map{
-			"artists": artists,
-			"pagination": fiber.Map{
-				"page":       page,
-				"limit":      limit,
-				"totalCount": totalCount,
-				"totalPages": (totalCount + limit - 1) / limit,
-			},
-		})
-	}
-
-	// Fall back to getting all artists
-	artists, err := h.service.GetArtists(c.Context())
-	if err != nil {
-		slog.Error("Error loading artists", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Error loading artists")
-	}
-
-	// Check if the request accepts HTML (like an HTMX request)
-	acceptHeader := c.Get("Accept")
-	hxRequest := c.Get("HX-Request")
-	if strings.Contains(acceptHeader, "text/html") || hxRequest == "true" {
-		return c.Render("library/artists_list", fiber.Map{
-			"Artists": artists,
-			"Pagination": fiber.Map{
-				"Page":       1,
-				"Limit":      50,
-				"TotalCount": len(artists),
-				"TotalPages": 1,
-			},
-		})
-	}
-
-	return c.JSON(artists)
-}
-
-// GetAlbums is the handler for getting all albums.
-func (h *Handler) GetAlbums(c *fiber.Ctx) error {
-	slog.Debug("GetAlbums handler called")
-
-	// Check if pagination parameters are provided
-	page := c.QueryInt("page", 1)
-	limit := c.QueryInt("limit", 50)
-
-	// Always use pagination to avoid loading all records
-	if true {
-		// Use paginated version
-		offset := (page - 1) * limit
-		albums, err := h.service.GetAlbumsPaginated(c.Context(), limit, offset)
-		if err != nil {
-			slog.Error("Error loading paginated albums", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
-		}
-
-		// Get total count for pagination
-		totalCount, err := h.service.GetAlbumsCount(c.Context())
-		if err != nil {
-			slog.Error("Error getting albums count", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
-		}
-
-		// Check if the request accepts HTML (like an HTMX request)
-		acceptHeader := c.Get("Accept")
-		hxRequest := c.Get("HX-Request")
-		if strings.Contains(acceptHeader, "text/html") || hxRequest == "true" {
-			pagination := NewPagination(page, limit, totalCount)
-			return c.Render("library/albums_list", fiber.Map{
-				"Albums":     albums,
-				"Pagination": pagination,
-			})
-		}
-
-		return c.JSON(fiber.Map{
-			"albums": albums,
-			"pagination": fiber.Map{
-				"page":       page,
-				"limit":      limit,
-				"totalCount": totalCount,
-				"totalPages": (totalCount + limit - 1) / limit,
-			},
-		})
-	}
-
-	// Fall back to getting all albums
-	albums, err := h.service.GetAlbums(c.Context())
-	if err != nil {
-		slog.Error("Error loading albums", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
-	}
-
-	// Check if the request accepts HTML (like an HTMX request)
-	acceptHeader := c.Get("Accept")
-	hxRequest := c.Get("HX-Request")
-	if strings.Contains(acceptHeader, "text/html") || hxRequest == "true" {
-		return c.Render("library/albums_list", fiber.Map{
-			"Albums": albums,
-			"Pagination": fiber.Map{
-				"Page":       1,
-				"Limit":      50,
-				"TotalCount": len(albums),
-				"TotalPages": 1,
-			},
-		})
-	}
-
-	return c.JSON(albums)
-}
-
-// GetTracks is the handler for getting all tracks.
-func (h *Handler) GetTracks(c *fiber.Ctx) error {
-	slog.Debug("GetTracks handler called")
-
-	// Check if pagination parameters are provided
-	page := c.QueryInt("page", 1)
-	limit := c.QueryInt("limit", 50)
-
-	// Always use pagination to avoid loading all records
-	if true {
-		// Use paginated version
-		offset := (page - 1) * limit
-		tracks, err := h.service.GetTracksPaginated(c.Context(), limit, offset)
-		if err != nil {
-			slog.Error("Error loading paginated tracks", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
-		}
-
-		// Get total count for pagination
-		totalCount, err := h.service.GetTracksCount(c.Context())
-		if err != nil {
-			slog.Error("Error getting tracks count", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
-		}
-
-		// Check if the request accepts HTML (like an HTMX request)
-		acceptHeader := c.Get("Accept")
-		hxRequest := c.Get("HX-Request")
-		if strings.Contains(acceptHeader, "text/html") || hxRequest == "true" {
-			pagination := NewPagination(page, limit, totalCount)
-			return c.Render("library/tracks_list", fiber.Map{
-				"Tracks":     tracks,
-				"Pagination": pagination,
-			})
-		}
-
-		return c.JSON(fiber.Map{
-			"tracks": tracks,
-			"pagination": fiber.Map{
-				"page":       page,
-				"limit":      limit,
-				"totalCount": totalCount,
-				"totalPages": (totalCount + limit - 1) / limit,
-			},
-		})
-	}
-
-	// Fall back to getting all tracks
-	tracks, err := h.service.GetTracks(c.Context())
-	if err != nil {
-		slog.Error("Error loading tracks", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
-	}
-
-	// Check if the request accepts HTML (like an HTMX request)
-	acceptHeader := c.Get("Accept")
-	hxRequest := c.Get("HX-Request")
-	if strings.Contains(acceptHeader, "text/html") || hxRequest == "true" {
-		return c.Render("library/tracks_list", fiber.Map{
-			"Tracks": tracks,
-			"Pagination": fiber.Map{
-				"Page":       1,
-				"Limit":      50,
-				"TotalCount": len(tracks),
-				"TotalPages": 1,
-			},
-		})
-	}
-
-	return c.JSON(tracks)
 }
 
 // GetArtist is the handler for getting a single artist.
@@ -355,7 +155,202 @@ func (h *Handler) GetTracksCount(c *fiber.Ctx) error {
 // GetLibraryTable renders the library table section with tabs.
 func (h *Handler) GetLibraryTable(c *fiber.Ctx) error {
 	slog.Debug("GetLibraryTable handler called")
-	return c.Render("library/library_table", fiber.Map{})
+
+	// Fetch all artists and albums for search form
+	artists, err := h.service.GetArtists(c.Context())
+	if err != nil {
+		slog.Error("Error loading artists for search form", "error", err)
+		artists = []*music.Artist{} // Continue with empty list
+	}
+
+	albums, err := h.service.GetAlbums(c.Context())
+	if err != nil {
+		slog.Error("Error loading albums for search form", "error", err)
+		albums = []*music.Album{} // Continue with empty list
+	}
+
+	return c.Render("library/library_table", fiber.Map{
+		"SearchArtists": artists,
+		"SearchAlbums":  albums,
+	})
+}
+
+// SearchResult represents a unified search result item
+type SearchResult struct {
+	Type        string // "artist", "album", "track"
+	ID          string
+	PrimaryName string // Artist name, Album title, Track title
+	Secondary   string // Artist ID, Album artist names, Track artist names
+	Tertiary    string // "", Album year, Track album title
+	Duration    int    // Track duration in seconds (for tracks only)
+	ImageURL    string // Image for display
+}
+
+// GetUnifiedSearch performs a unified search across artists, albums, and tracks.
+func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
+	slog.Debug("GetUnifiedSearch handler called")
+
+	query := strings.TrimSpace(c.Query("query", ""))
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 50)
+
+	var results []SearchResult
+	var totalCount int
+
+	offset := (page - 1) * limit
+
+	if query == "" {
+		// When no query, show all tracks paginated
+		tracks, err := h.service.GetTracksPaginated(c.Context(), limit, offset)
+		if err != nil {
+			slog.Error("Error loading tracks", "error", err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
+		}
+
+		totalCount, err = h.service.GetTracksCount(c.Context())
+		if err != nil {
+			slog.Error("Error getting tracks count", "error", err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks count")
+		}
+
+		for _, track := range tracks {
+			artistNames := ""
+			if len(track.Artists) > 0 {
+				for i, ar := range track.Artists {
+					if i > 0 {
+						artistNames += ", "
+					}
+					artistNames += ar.Artist.Name
+				}
+			}
+			albumTitle := ""
+			if track.Album != nil {
+				albumTitle = track.Album.Title
+			}
+			results = append(results, SearchResult{
+				Type:        "track",
+				ID:          track.ID,
+				PrimaryName: track.Title,
+				Secondary:   artistNames,
+				Tertiary:    albumTitle,
+				Duration:    track.Metadata.Duration,
+				ImageURL:    "",
+			})
+		}
+	} else {
+		// Search artists
+		artists, err := h.service.GetArtistsFilteredPaginated(c.Context(), 20, 0, query)
+		if err != nil {
+			slog.Error("Error searching artists", "error", err)
+		} else {
+			for _, artist := range artists {
+				results = append(results, SearchResult{
+					Type:        "artist",
+					ID:          artist.ID,
+					PrimaryName: artist.Name,
+					Secondary:   artist.ID,
+					Tertiary:    "",
+					ImageURL:    "",
+				})
+			}
+		}
+
+		// Search albums
+		albums, err := h.service.GetAlbumsFilteredPaginated(c.Context(), 20, 0, query, []string{})
+		if err != nil {
+			slog.Error("Error searching albums", "error", err)
+		} else {
+			for _, album := range albums {
+				artistNames := ""
+				if len(album.Artists) > 0 {
+					for i, ar := range album.Artists {
+						if i > 0 {
+							artistNames += ", "
+						}
+						artistNames += ar.Artist.Name
+					}
+				}
+				year := ""
+				if !album.ReleaseDate.IsZero() {
+					year = fmt.Sprintf("%d", album.ReleaseDate.Year())
+				}
+				results = append(results, SearchResult{
+					Type:        "album",
+					ID:          album.ID,
+					PrimaryName: album.Title,
+					Secondary:   artistNames,
+					Tertiary:    year,
+					ImageURL:    album.ImageSmall,
+				})
+			}
+		}
+
+		// Search tracks
+		tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), 20, 0, query, []string{}, []string{})
+		if err != nil {
+			slog.Error("Error searching tracks", "error", err)
+		} else {
+			for _, track := range tracks {
+				artistNames := ""
+				if len(track.Artists) > 0 {
+					for i, ar := range track.Artists {
+						if i > 0 {
+							artistNames += ", "
+						}
+						artistNames += ar.Artist.Name
+					}
+				}
+				albumTitle := ""
+				if track.Album != nil {
+					albumTitle = track.Album.Title
+				}
+				results = append(results, SearchResult{
+					Type:        "track",
+					ID:          track.ID,
+					PrimaryName: track.Title,
+					Secondary:   artistNames,
+					Tertiary:    albumTitle,
+					Duration:    track.Metadata.Duration,
+					ImageURL:    "",
+				})
+			}
+		}
+
+		// For search results, paginate the collected results
+		totalCount = len(results)
+		start := (page - 1) * limit
+		end := start + limit
+		if start > totalCount {
+			start = totalCount
+		}
+		if end > totalCount {
+			end = totalCount
+		}
+		results = results[start:end]
+	}
+
+	pagination := NewPagination(page, limit, totalCount)
+
+	// Check if the request accepts HTML (like an HTMX request)
+	acceptHeader := c.Get("Accept")
+	hxRequest := c.Get("HX-Request")
+	if strings.Contains(acceptHeader, "text/html") || hxRequest == "true" {
+		return c.Render("library/unified_search_list", fiber.Map{
+			"Results":    results,
+			"Pagination": pagination,
+			"Query":      query,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"results": results,
+		"pagination": fiber.Map{
+			"page":       page,
+			"limit":      limit,
+			"totalCount": totalCount,
+			"totalPages": (totalCount + limit - 1) / limit,
+		},
+	})
 }
 
 // GetLibraryFileTree returns a tree structure of the library path.

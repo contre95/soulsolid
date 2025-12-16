@@ -13,7 +13,7 @@ import (
 // Service handles downloading operations
 type Service struct {
 	configManager *config.Manager
-	jobService    jobs.JobService
+	jobService    jobs.JobService // TODO: Move this to domain job service
 	pluginManager *PluginManager
 	tagWriter     TagWriter
 }
