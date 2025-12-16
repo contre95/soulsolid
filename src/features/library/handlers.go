@@ -62,17 +62,6 @@ type Pagination struct {
 	HasPrev    bool
 }
 
-// SearchResult represents a unified search result item
-type SearchResult struct {
-	Type        string // "artist", "album", "track"
-	ID          string
-	PrimaryName string // Artist name, Album title, Track title
-	Secondary   string // Artist ID, Album artist names, Track artist names
-	Tertiary    string // "", Album year, Track album title
-	Duration    int    // Track duration in seconds (for tracks only)
-	ImageURL    string // Image for display
-}
-
 // NewPagination creates a new Pagination instance with calculated values
 func NewPagination(page, limit, totalCount int) Pagination {
 	totalPages := (totalCount + limit - 1) / limit
@@ -184,6 +173,17 @@ func (h *Handler) GetLibraryTable(c *fiber.Ctx) error {
 		"SearchArtists": artists,
 		"SearchAlbums":  albums,
 	})
+}
+
+// SearchResult represents a unified search result item
+type SearchResult struct {
+	Type        string // "artist", "album", "track"
+	ID          string
+	PrimaryName string // Artist name, Album title, Track title
+	Secondary   string // Artist ID, Album artist names, Track artist names
+	Tertiary    string // "", Album year, Track album title
+	Duration    int    // Track duration in seconds (for tracks only)
+	ImageURL    string // Image for display
 }
 
 // GetUnifiedSearch performs a unified search across artists, albums, and tracks.
