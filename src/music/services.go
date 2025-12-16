@@ -34,7 +34,7 @@ type LyricsService interface {
 }
 
 // LibraryService defines the interface for library operations
-type LibraryService interface {
+type LibraryService interface { // TODO: Maybe use Repo instead of library service in the rest of the features
 	GetTracks(ctx context.Context) ([]*Track, error)
 	GetTracksPaginated(ctx context.Context, limit, offset int) ([]*Track, error)
 	GetTracksCount(ctx context.Context) (int, error)

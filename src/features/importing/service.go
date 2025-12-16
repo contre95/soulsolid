@@ -37,7 +37,7 @@ type Service struct {
 	metadataReader    TagReader
 	fingerprintReader FingerprintProvider
 	config            *config.Manager
-	jobService        jobs.JobService
+	jobService        jobs.JobService // TODO: Move this to domain job service
 	queue             Queue
 	watcher           Watcher
 }
