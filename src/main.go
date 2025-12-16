@@ -100,7 +100,7 @@ func main() {
 		"deezer":      deezerProvider,
 	}, acoustIDService, cfgManager)
 
-	analyzeService := analyze.NewService(tagService, lyricsService, libraryService, jobService, cfgManager) // Now using interfaces
+	analyzeService := analyze.NewService(tagService, lyricsService, db, jobService, cfgManager) // Now using interfaces
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
 
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)

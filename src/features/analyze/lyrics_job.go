@@ -47,7 +47,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 	job.Logger.Info("Enabled lyrics providers", "providers", enabledProviders, "color", "blue")
 
 	// Get total track count for progress reporting
-	totalTracks, err := t.service.libraryService.GetTracksCount(ctx)
+	totalTracks, err := t.service.library.GetTracksCount(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tracks count: %w", err)
 	}
@@ -80,7 +80,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 		}
 
 		// Get next batch of tracks
-		tracks, err := t.service.libraryService.GetTracksPaginated(ctx, batchSize, offset)
+		tracks, err := t.service.library.GetTracksPaginated(ctx, batchSize, offset)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get tracks batch (offset %d): %w", offset, err)
 		}
