@@ -372,6 +372,63 @@ func (h *Handler) GetLibraryFileTree(c *fiber.Ctx) error {
 	return c.SendString(tree)
 }
 
+// DeleteTrack deletes a track from the library.
+func (h *Handler) DeleteTrack(c *fiber.Ctx) error {
+	slog.Debug("DeleteTrack handler called", "trackId", c.Params("trackId"))
+
+	trackID := c.Params("trackId")
+	if trackID == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+	}
+
+	err := h.service.DeleteTrack(c.Context(), trackID)
+	if err != nil {
+		slog.Error("Failed to delete track", "error", err, "trackId", trackID)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete track")
+	}
+
+	// Return success toast
+	return c.Render("toast/toastOk", fiber.Map{"Msg": "Track deleted successfully"})
+}
+
+// DeleteAlbum deletes an album from the library.
+func (h *Handler) DeleteAlbum(c *fiber.Ctx) error {
+	slog.Debug("DeleteAlbum handler called", "albumId", c.Params("albumId"))
+
+	albumID := c.Params("albumId")
+	if albumID == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Album ID is required")
+	}
+
+	err := h.service.DeleteAlbum(c.Context(), albumID)
+	if err != nil {
+		slog.Error("Failed to delete album", "error", err, "albumId", albumID)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete album")
+	}
+
+	// Return success toast
+	return c.Render("toast/toastOk", fiber.Map{"Msg": "Album deleted successfully"})
+}
+
+// DeleteArtist deletes an artist from the library.
+func (h *Handler) DeleteArtist(c *fiber.Ctx) error {
+	slog.Debug("DeleteArtist handler called", "artistId", c.Params("artistId"))
+
+	artistID := c.Params("artistId")
+	if artistID == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Artist ID is required")
+	}
+
+	err := h.service.DeleteArtist(c.Context(), artistID)
+	if err != nil {
+		slog.Error("Failed to delete artist", "error", err, "artistId", artistID)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete artist")
+	}
+
+	// Return success toast
+	return c.Render("toast/toastOk", fiber.Map{"Msg": "Artist deleted successfully"})
+}
+
 // RenderTagEditForm renders the tag edit form for a track
 func (h *Handler) RenderTagEditForm(c *fiber.Ctx) error {
 	slog.Debug("RenderTagEditForm handler called", "trackId", c.Params("trackId"))

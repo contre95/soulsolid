@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -324,6 +325,102 @@ func (d *SqliteLibrary) UpdateAlbum(ctx context.Context, album *music.Album) err
 	}
 
 	return tx.Commit()
+}
+
+// DeleteAlbum deletes an album from the database and all its associated tracks.
+func (d *SqliteLibrary) DeleteAlbum(ctx context.Context, id string) error {
+	slog.Debug("DeleteAlbum called", "albumID", id)
+
+	// First, find all tracks associated with this album
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT t.id, t.path
+		FROM tracks t
+		INNER JOIN track_albums ta ON t.id = ta.track_id
+		WHERE ta.album_id = ?
+	`, id)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var trackIDs []string
+	var trackPaths []string
+	for rows.Next() {
+		var trackID, trackPath string
+		if err := rows.Scan(&trackID, &trackPath); err != nil {
+			return err
+		}
+		trackIDs = append(trackIDs, trackID)
+		trackPaths = append(trackPaths, trackPath)
+	}
+
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete all tracks associated with this album
+	for _, trackID := range trackIDs {
+		// Delete track attributes
+		_, err = tx.ExecContext(ctx, `DELETE FROM track_attributes WHERE track_id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+
+		// Delete track artists
+		_, err = tx.ExecContext(ctx, `DELETE FROM track_artists WHERE track_id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+
+		// Delete track albums
+		_, err = tx.ExecContext(ctx, `DELETE FROM track_albums WHERE track_id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+
+		// Delete track
+		_, err = tx.ExecContext(ctx, `DELETE FROM tracks WHERE id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Delete album attributes
+	_, err = tx.ExecContext(ctx, `DELETE FROM album_attributes WHERE album_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete album artists
+	_, err = tx.ExecContext(ctx, `DELETE FROM album_artists WHERE album_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete album
+	_, err = tx.ExecContext(ctx, `DELETE FROM albums WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Commit the database transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	// Delete track files from filesystem
+	for _, path := range trackPaths {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			slog.Warn("Failed to delete track file from filesystem", "path", path, "error", err)
+			// Don't return error here - database deletion succeeded, file deletion is secondary
+		} else {
+			slog.Debug("Successfully deleted track file from filesystem", "path", path)
+		}
+	}
+
+	return nil
 }
 
 // GetTrack gets a track from the database.
@@ -752,6 +849,66 @@ func (d *SqliteLibrary) UpdateTrack(ctx context.Context, track *music.Track) err
 	return tx.Commit()
 }
 
+// DeleteTrack deletes a track from the database and filesystem.
+func (d *SqliteLibrary) DeleteTrack(ctx context.Context, id string) error {
+	slog.Debug("DeleteTrack called", "trackID", id)
+
+	// First get the track path before deleting from database
+	var path string
+	err := d.db.QueryRowContext(ctx, `SELECT path FROM tracks WHERE id = ?`, id).Scan(&path)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("track not found: %s", id)
+		}
+		return err
+	}
+
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete track attributes
+	_, err = tx.ExecContext(ctx, `DELETE FROM track_attributes WHERE track_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete track artists
+	_, err = tx.ExecContext(ctx, `DELETE FROM track_artists WHERE track_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete track albums
+	_, err = tx.ExecContext(ctx, `DELETE FROM track_albums WHERE track_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete track
+	_, err = tx.ExecContext(ctx, `DELETE FROM tracks WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Commit the database transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	// Delete the file from filesystem
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		slog.Warn("Failed to delete track file from filesystem", "path", path, "error", err)
+		// Don't return error here - database deletion succeeded, file deletion is secondary
+	} else {
+		slog.Debug("Successfully deleted track file from filesystem", "path", path)
+	}
+
+	return nil
+}
+
 // AddAlbum adds an album to the database.
 func (d *SqliteLibrary) AddAlbum(ctx context.Context, album *music.Album) error {
 	// Validate album using domain validation
@@ -941,6 +1098,154 @@ func (d *SqliteLibrary) AddArtist(ctx context.Context, artist *music.Artist) err
 	}
 
 	slog.Debug("AddArtist: successfully added artist", "artistID", artist.ID, "artistName", artist.Name)
+	return nil
+}
+
+// UpdateArtist updates an artist in the database.
+func (d *SqliteLibrary) UpdateArtist(ctx context.Context, artist *music.Artist) error {
+	// Validate artist using domain validation
+	if err := artist.Validate(); err != nil {
+		slog.Error("UpdateArtist: validation failed", "error", err, "artistID", artist.ID)
+		return err
+	}
+
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Update artist
+	_, err = tx.ExecContext(ctx, `
+		UPDATE artists
+		SET name = ?, sort_name = ?
+		WHERE id = ?
+	`, artist.Name, artist.SortName, artist.ID)
+	if err != nil {
+		return err
+	}
+
+	// Delete existing artist attributes
+	_, err = tx.ExecContext(ctx, `DELETE FROM artist_attributes WHERE artist_id = ?`, artist.ID)
+	if err != nil {
+		return err
+	}
+
+	// Insert new artist attributes
+	for key, value := range artist.Attributes {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO artist_attributes (artist_id, key, value)
+			VALUES (?, ?, ?)
+		`, artist.ID, key, value)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+// DeleteArtist deletes an artist from the database and all tracks associated with that artist.
+func (d *SqliteLibrary) DeleteArtist(ctx context.Context, id string) error {
+	slog.Debug("DeleteArtist called", "artistID", id)
+
+	// First, find all tracks associated with this artist (either directly or through albums)
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT DISTINCT t.id, t.path
+		FROM tracks t
+		LEFT JOIN track_artists ta ON t.id = ta.track_id
+		LEFT JOIN track_albums tal ON t.id = tal.track_id
+		LEFT JOIN album_artists aa ON tal.album_id = aa.album_id
+		WHERE ta.artist_id = ? OR aa.artist_id = ?
+	`, id, id)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var trackIDs []string
+	var trackPaths []string
+	for rows.Next() {
+		var trackID, trackPath string
+		if err := rows.Scan(&trackID, &trackPath); err != nil {
+			return err
+		}
+		trackIDs = append(trackIDs, trackID)
+		trackPaths = append(trackPaths, trackPath)
+	}
+
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete all tracks associated with this artist
+	for _, trackID := range trackIDs {
+		// Delete track attributes
+		_, err = tx.ExecContext(ctx, `DELETE FROM track_attributes WHERE track_id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+
+		// Delete track artists
+		_, err = tx.ExecContext(ctx, `DELETE FROM track_artists WHERE track_id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+
+		// Delete track albums
+		_, err = tx.ExecContext(ctx, `DELETE FROM track_albums WHERE track_id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+
+		// Delete track
+		_, err = tx.ExecContext(ctx, `DELETE FROM tracks WHERE id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Delete artist attributes
+	_, err = tx.ExecContext(ctx, `DELETE FROM artist_attributes WHERE artist_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete track artists
+	_, err = tx.ExecContext(ctx, `DELETE FROM track_artists WHERE artist_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete album artists
+	_, err = tx.ExecContext(ctx, `DELETE FROM album_artists WHERE artist_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete artist
+	_, err = tx.ExecContext(ctx, `DELETE FROM artists WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Commit the database transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	// Delete track files from filesystem
+	for _, path := range trackPaths {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			slog.Warn("Failed to delete track file from filesystem", "path", path, "error", err)
+			// Don't return error here - database deletion succeeded, file deletion is secondary
+		} else {
+			slog.Debug("Successfully deleted track file from filesystem", "path", path)
+		}
+	}
+
 	return nil
 }
 

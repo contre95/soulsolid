@@ -291,6 +291,18 @@ func (s *Service) UpdateAlbum(ctx context.Context, album *library.Album) error {
 	return nil
 }
 
+// DeleteAlbum deletes an album from the library.
+func (s *Service) DeleteAlbum(ctx context.Context, id string) error {
+	slog.Debug("DeleteAlbum service called", "id", id)
+	err := s.library.DeleteAlbum(ctx, id)
+	if err != nil {
+		slog.Error("DeleteAlbum failed", "id", id, "error", err)
+		return err
+	}
+	slog.Debug("DeleteAlbum completed", "id", id)
+	return nil
+}
+
 // GetTrack returns a single track from the library.
 func (s *Service) GetTrack(ctx context.Context, id string) (*library.Track, error) {
 	slog.Debug("GetTrack service called", "id", id)
@@ -347,14 +359,26 @@ func (s *Service) FindOrCreateArtist(ctx context.Context, artistName string) (*l
 	return newArtist, nil
 }
 
-// UpdateTrack updates a track in the library.
-func (s *Service) UpdateTrack(ctx context.Context, track *library.Track) error {
-	slog.Debug("UpdateTrack service called", "id", track.ID)
-	err := s.library.UpdateTrack(ctx, track)
+// DeleteArtist deletes an artist from the library.
+func (s *Service) DeleteArtist(ctx context.Context, id string) error {
+	slog.Debug("DeleteArtist service called", "id", id)
+	err := s.library.DeleteArtist(ctx, id)
 	if err != nil {
-		slog.Error("UpdateTrack failed", "id", track.ID, "error", err)
+		slog.Error("DeleteArtist failed", "id", id, "error", err)
 		return err
 	}
-	slog.Debug("UpdateTrack completed", "id", track.ID)
+	slog.Debug("DeleteArtist completed", "id", id)
+	return nil
+}
+
+// DeleteTrack deletes a track from the library.
+func (s *Service) DeleteTrack(ctx context.Context, id string) error {
+	slog.Debug("DeleteTrack service called", "id", id)
+	err := s.library.DeleteTrack(ctx, id)
+	if err != nil {
+		slog.Error("DeleteTrack failed", "id", id, "error", err)
+		return err
+	}
+	slog.Debug("DeleteTrack completed", "id", id)
 	return nil
 }
