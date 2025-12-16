@@ -14,6 +14,11 @@ module.exports = {
     "opacity-0",
     "backdrop-blur-md",
     "bg-opacity-20",
+    "border-l-8",
+    "border-green-500",
+    "border-purple-500",
+    "border-cyan-500",
+    "border-blue-300",
   ],
   theme: {
     extend: {

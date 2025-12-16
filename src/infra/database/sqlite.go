@@ -1114,6 +1114,119 @@ func (d *SqliteLibrary) GetTracksPaginated(ctx context.Context, limit, offset in
 	return tracks, nil
 }
 
+// GetTracksFilteredPaginated gets paginated tracks from the database with filtering.
+func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, offset int, titleFilter string, artistIDs, albumIDs []string) ([]*music.Track, error) {
+	query := `SELECT DISTINCT t.id FROM tracks t`
+	args := []interface{}{}
+	conditions := []string{}
+
+	// Add title filter
+	if titleFilter != "" {
+		conditions = append(conditions, "t.title LIKE ?")
+		args = append(args, "%"+titleFilter+"%")
+	}
+
+	// Add artist filter
+	if len(artistIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(artistIDs))
+		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = t.id AND ta.artist_id IN ("+placeholders+"))")
+		for _, id := range artistIDs {
+			args = append(args, id)
+		}
+	}
+
+	// Add album filter
+	if len(albumIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(albumIDs))
+		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_albums ta WHERE ta.track_id = t.id AND ta.album_id IN ("+placeholders+"))")
+		for _, id := range albumIDs {
+			args = append(args, id)
+		}
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query += " ORDER BY t.title LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := d.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tracks := []*music.Track{}
+
+	for rows.Next() {
+		var trackID string
+		err := rows.Scan(&trackID)
+		if err != nil {
+			return nil, err
+		}
+
+		track, err := d.GetTrack(ctx, trackID)
+		if err != nil {
+			return nil, err
+		}
+		// Skip tracks that weren't found (shouldn't happen in a consistent database)
+		if track == nil {
+			continue
+		}
+
+		tracks = append(tracks, track)
+	}
+
+	return tracks, nil
+}
+
+// GetTracksFilteredCount gets the filtered count of tracks in the database.
+func (d *SqliteLibrary) GetTracksFilteredCount(ctx context.Context, titleFilter string, artistIDs, albumIDs []string) (int, error) {
+	query := `SELECT COUNT(DISTINCT t.id) FROM tracks t`
+	args := []interface{}{}
+	conditions := []string{}
+
+	// Add title filter
+	if titleFilter != "" {
+		conditions = append(conditions, "t.title LIKE ?")
+		args = append(args, "%"+titleFilter+"%")
+	}
+
+	// Add artist filter
+	if len(artistIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(artistIDs))
+		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = t.id AND ta.artist_id IN ("+placeholders+"))")
+		for _, id := range artistIDs {
+			args = append(args, id)
+		}
+	}
+
+	// Add album filter
+	if len(albumIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(albumIDs))
+		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_albums ta WHERE ta.track_id = t.id AND ta.album_id IN ("+placeholders+"))")
+		for _, id := range albumIDs {
+			args = append(args, id)
+		}
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	var count int
+	err := d.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 // GetTracksCount gets the total count of tracks in the database.
 func (d *SqliteLibrary) GetTracksCount(ctx context.Context) (int, error) {
 	var count int
@@ -1144,6 +1257,59 @@ func (d *SqliteLibrary) GetArtistsPaginated(ctx context.Context, limit, offset i
 	}
 
 	return artists, nil
+}
+
+// GetArtistsFilteredPaginated gets paginated artists from the database with filtering.
+func (d *SqliteLibrary) GetArtistsFilteredPaginated(ctx context.Context, limit, offset int, nameFilter string) ([]*music.Artist, error) {
+	query := `SELECT id, name FROM artists WHERE name != '' AND name IS NOT NULL`
+	args := []interface{}{}
+
+	// Add name filter
+	if nameFilter != "" {
+		query += " AND name LIKE ?"
+		args = append(args, "%"+nameFilter+"%")
+	}
+
+	query += " ORDER BY name LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := d.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	artists := []*music.Artist{}
+
+	for rows.Next() {
+		artist := &music.Artist{}
+		err := rows.Scan(&artist.ID, &artist.Name)
+		if err != nil {
+			return nil, err
+		}
+		artists = append(artists, artist)
+	}
+
+	return artists, nil
+}
+
+// GetArtistsFilteredCount gets the filtered count of artists in the database.
+func (d *SqliteLibrary) GetArtistsFilteredCount(ctx context.Context, nameFilter string) (int, error) {
+	query := `SELECT COUNT(*) FROM artists WHERE name != '' AND name IS NOT NULL`
+	args := []interface{}{}
+
+	// Add name filter
+	if nameFilter != "" {
+		query += " AND name LIKE ?"
+		args = append(args, "%"+nameFilter+"%")
+	}
+
+	var count int
+	err := d.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // GetArtistsCount gets the total count of artists in the database.
@@ -1187,6 +1353,99 @@ func (d *SqliteLibrary) GetAlbumsPaginated(ctx context.Context, limit, offset in
 	}
 
 	return albums, nil
+}
+
+// GetAlbumsFilteredPaginated gets paginated albums from the database with filtering.
+func (d *SqliteLibrary) GetAlbumsFilteredPaginated(ctx context.Context, limit, offset int, titleFilter string, artistIDs []string) ([]*music.Album, error) {
+	query := `SELECT DISTINCT a.id FROM albums a`
+	args := []interface{}{}
+	conditions := []string{}
+
+	// Add title filter
+	if titleFilter != "" {
+		conditions = append(conditions, "a.title LIKE ?")
+		args = append(args, "%"+titleFilter+"%")
+	}
+
+	// Add artist filter
+	if len(artistIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(artistIDs))
+		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+		conditions = append(conditions, "EXISTS (SELECT 1 FROM album_artists aa WHERE aa.album_id = a.id AND aa.artist_id IN ("+placeholders+"))")
+		for _, id := range artistIDs {
+			args = append(args, id)
+		}
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query += " ORDER BY a.title LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := d.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	albums := []*music.Album{}
+
+	for rows.Next() {
+		var albumID string
+		err := rows.Scan(&albumID)
+		if err != nil {
+			return nil, err
+		}
+
+		album, err := d.GetAlbum(ctx, albumID)
+		if err != nil {
+			return nil, err
+		}
+		// Skip albums that weren't found (shouldn't happen in a consistent database)
+		if album == nil {
+			continue
+		}
+
+		albums = append(albums, album)
+	}
+
+	return albums, nil
+}
+
+// GetAlbumsFilteredCount gets the filtered count of albums in the database.
+func (d *SqliteLibrary) GetAlbumsFilteredCount(ctx context.Context, titleFilter string, artistIDs []string) (int, error) {
+	query := `SELECT COUNT(DISTINCT a.id) FROM albums a`
+	args := []interface{}{}
+	conditions := []string{}
+
+	// Add title filter
+	if titleFilter != "" {
+		conditions = append(conditions, "a.title LIKE ?")
+		args = append(args, "%"+titleFilter+"%")
+	}
+
+	// Add artist filter
+	if len(artistIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(artistIDs))
+		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+		conditions = append(conditions, "EXISTS (SELECT 1 FROM album_artists aa WHERE aa.album_id = a.id AND aa.artist_id IN ("+placeholders+"))")
+		for _, id := range artistIDs {
+			args = append(args, id)
+		}
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	var count int
+	err := d.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // GetAlbumsCount gets the total count of albums in the database.
