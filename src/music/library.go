@@ -35,7 +35,6 @@ type Library interface {
 
 	// Artist methods
 	AddArtist(ctx context.Context, artist *Artist) error
-	UpdateArtist(ctx context.Context, artist *Artist) error
 	DeleteArtist(ctx context.Context, id string) error
 	GetArtist(ctx context.Context, id string) (*Artist, error)
 	GetArtists(ctx context.Context) ([]*Artist, error)

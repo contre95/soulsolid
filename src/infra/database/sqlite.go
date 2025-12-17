@@ -1101,50 +1101,6 @@ func (d *SqliteLibrary) AddArtist(ctx context.Context, artist *music.Artist) err
 	return nil
 }
 
-// UpdateArtist updates an artist in the database.
-func (d *SqliteLibrary) UpdateArtist(ctx context.Context, artist *music.Artist) error {
-	// Validate artist using domain validation
-	if err := artist.Validate(); err != nil {
-		slog.Error("UpdateArtist: validation failed", "error", err, "artistID", artist.ID)
-		return err
-	}
-
-	tx, err := d.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	// Update artist
-	_, err = tx.ExecContext(ctx, `
-		UPDATE artists
-		SET name = ?, sort_name = ?
-		WHERE id = ?
-	`, artist.Name, artist.SortName, artist.ID)
-	if err != nil {
-		return err
-	}
-
-	// Delete existing artist attributes
-	_, err = tx.ExecContext(ctx, `DELETE FROM artist_attributes WHERE artist_id = ?`, artist.ID)
-	if err != nil {
-		return err
-	}
-
-	// Insert new artist attributes
-	for key, value := range artist.Attributes {
-		_, err = tx.ExecContext(ctx, `
-			INSERT INTO artist_attributes (artist_id, key, value)
-			VALUES (?, ?, ?)
-		`, artist.ID, key, value)
-		if err != nil {
-			return err
-		}
-	}
-
-	return tx.Commit()
-}
-
 // DeleteArtist deletes an artist from the database and all tracks associated with that artist.
 func (d *SqliteLibrary) DeleteArtist(ctx context.Context, id string) error {
 	slog.Debug("DeleteArtist called", "artistID", id)
