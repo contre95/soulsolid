@@ -43,7 +43,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create library: %v", err)
 	}
-	libraryService := library.NewService(db, cfgManager)
+	libraryService := library.NewService(db, cfgManager, fileOrganizer)
 	metricsService := metrics.NewService(db, cfgManager)
 	jobService := jobs.NewService(&cfgManager.Get().Jobs)
 

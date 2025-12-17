@@ -160,9 +160,9 @@ func (e *DirectoryImportTask) importFile(ctx context.Context, track *music.Track
 	var newPath string
 	var err error
 	if moveFiles {
-		newPath, err = e.service.fileOrganizer.MoveTrack(ctx, track)
+		newPath, err = e.service.fileManager.MoveTrack(ctx, track)
 	} else {
-		newPath, err = e.service.fileOrganizer.CopyTrack(ctx, track)
+		newPath, err = e.service.fileManager.CopyTrack(ctx, track)
 	}
 	if err != nil {
 		logger.Error("Service.runDirectoryImport: could not organize track", "error", err)
@@ -186,7 +186,7 @@ func (e *DirectoryImportTask) findExistingTrack(ctx context.Context, trackToImpo
 	// Also check for existing track by library path to catch duplicates that have already been imported
 	if existingTrack == nil {
 		// Generate the library path that this track would get
-		libraryPath, err := e.service.fileOrganizer.GetLibraryPath(ctx, trackToImport)
+		libraryPath, err := e.service.fileManager.GetLibraryPath(ctx, trackToImport)
 		if err != nil {
 			logger.Warn("Service.runDirectoryImport: failed to generate library path for duplicate check", "error", err, "title", trackToImport.Title)
 			// Don't fail the import, just skip this check

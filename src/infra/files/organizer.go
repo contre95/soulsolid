@@ -11,7 +11,7 @@ import (
 	"github.com/contre95/soulsolid/src/music"
 )
 
-// FileOrganizer is the infrastructure implementation of the importing.FileOrganizer interface.
+// FileOrganizer is the infrastructure implementation of the music.FileManager interface.
 type FileOrganizer struct {
 	libraryPath string
 	pathParser  importing.PathParser

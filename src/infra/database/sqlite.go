@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 	"time"
 
@@ -333,7 +332,7 @@ func (d *SqliteLibrary) DeleteAlbum(ctx context.Context, id string) error {
 
 	// First, find all tracks associated with this album
 	rows, err := d.db.QueryContext(ctx, `
-		SELECT t.id, t.path
+		SELECT t.id
 		FROM tracks t
 		INNER JOIN track_albums ta ON t.id = ta.track_id
 		WHERE ta.album_id = ?
@@ -344,14 +343,12 @@ func (d *SqliteLibrary) DeleteAlbum(ctx context.Context, id string) error {
 	defer rows.Close()
 
 	var trackIDs []string
-	var trackPaths []string
 	for rows.Next() {
-		var trackID, trackPath string
-		if err := rows.Scan(&trackID, &trackPath); err != nil {
+		var trackID string
+		if err := rows.Scan(&trackID); err != nil {
 			return err
 		}
 		trackIDs = append(trackIDs, trackID)
-		trackPaths = append(trackPaths, trackPath)
 	}
 
 	tx, err := d.db.BeginTx(ctx, nil)
@@ -405,22 +402,7 @@ func (d *SqliteLibrary) DeleteAlbum(ctx context.Context, id string) error {
 		return err
 	}
 
-	// Commit the database transaction
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	// Delete track files from filesystem
-	for _, path := range trackPaths {
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			slog.Warn("Failed to delete track file from filesystem", "path", path, "error", err)
-			// Don't return error here - database deletion succeeded, file deletion is secondary
-		} else {
-			slog.Debug("Successfully deleted track file from filesystem", "path", path)
-		}
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 // GetTrack gets a track from the database.
@@ -849,19 +831,9 @@ func (d *SqliteLibrary) UpdateTrack(ctx context.Context, track *music.Track) err
 	return tx.Commit()
 }
 
-// DeleteTrack deletes a track from the database and filesystem.
+// DeleteTrack deletes a track from the database.
 func (d *SqliteLibrary) DeleteTrack(ctx context.Context, id string) error {
 	slog.Debug("DeleteTrack called", "trackID", id)
-
-	// First get the track path before deleting from database
-	var path string
-	err := d.db.QueryRowContext(ctx, `SELECT path FROM tracks WHERE id = ?`, id).Scan(&path)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return fmt.Errorf("track not found: %s", id)
-		}
-		return err
-	}
 
 	tx, err := d.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -893,20 +865,7 @@ func (d *SqliteLibrary) DeleteTrack(ctx context.Context, id string) error {
 		return err
 	}
 
-	// Commit the database transaction
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	// Delete the file from filesystem
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		slog.Warn("Failed to delete track file from filesystem", "path", path, "error", err)
-		// Don't return error here - database deletion succeeded, file deletion is secondary
-	} else {
-		slog.Debug("Successfully deleted track file from filesystem", "path", path)
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 // AddAlbum adds an album to the database.
@@ -1107,7 +1066,7 @@ func (d *SqliteLibrary) DeleteArtist(ctx context.Context, id string) error {
 
 	// First, find all tracks associated with this artist (either directly or through albums)
 	rows, err := d.db.QueryContext(ctx, `
-		SELECT DISTINCT t.id, t.path
+		SELECT DISTINCT t.id
 		FROM tracks t
 		LEFT JOIN track_artists ta ON t.id = ta.track_id
 		LEFT JOIN track_albums tal ON t.id = tal.track_id
@@ -1120,14 +1079,12 @@ func (d *SqliteLibrary) DeleteArtist(ctx context.Context, id string) error {
 	defer rows.Close()
 
 	var trackIDs []string
-	var trackPaths []string
 	for rows.Next() {
-		var trackID, trackPath string
-		if err := rows.Scan(&trackID, &trackPath); err != nil {
+		var trackID string
+		if err := rows.Scan(&trackID); err != nil {
 			return err
 		}
 		trackIDs = append(trackIDs, trackID)
-		trackPaths = append(trackPaths, trackPath)
 	}
 
 	tx, err := d.db.BeginTx(ctx, nil)
@@ -1187,22 +1144,7 @@ func (d *SqliteLibrary) DeleteArtist(ctx context.Context, id string) error {
 		return err
 	}
 
-	// Commit the database transaction
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	// Delete track files from filesystem
-	for _, path := range trackPaths {
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			slog.Warn("Failed to delete track file from filesystem", "path", path, "error", err)
-			// Don't return error here - database deletion succeeded, file deletion is secondary
-		} else {
-			slog.Debug("Successfully deleted track file from filesystem", "path", path)
-		}
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 // GetArtist gets an artist from the database.

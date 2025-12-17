@@ -32,7 +32,7 @@ type ImportStats struct {
 
 // Service is the domain service for the organizing feature.
 type Service struct {
-	fileOrganizer     FileOrganizer
+	fileManager       music.FileManager
 	library           music.Library
 	metadataReader    TagReader
 	fingerprintReader FingerprintProvider
@@ -43,13 +43,13 @@ type Service struct {
 }
 
 // NewService creates a new organizing service.
-func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, organizer FileOrganizer, cfg *config.Manager, jobService jobs.JobService, queue Queue, watcher Watcher) *Service {
+func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, fileManager music.FileManager, cfg *config.Manager, jobService jobs.JobService, queue Queue, watcher Watcher) *Service {
 	s := &Service{
 		config:            cfg,
 		library:           lib,
 		metadataReader:    tagReader,
 		fingerprintReader: fingerprintReader,
-		fileOrganizer:     organizer,
+		fileManager:       fileManager,
 		jobService:        jobService,
 		queue:             queue,
 		watcher:           watcher,
@@ -220,7 +220,7 @@ func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action st
 		return s.queue.Remove(itemID)
 	case "delete":
 		// Delete the file from the import location
-		if err := s.fileOrganizer.DeleteTrack(ctx, item.Track.Path); err != nil {
+		if err := s.fileManager.DeleteTrack(ctx, item.Track.Path); err != nil {
 			return fmt.Errorf("failed to delete track file: %w", err)
 		}
 		return s.queue.Remove(itemID)
@@ -279,9 +279,9 @@ func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *mus
 	var newPath string
 	var err error
 	if move {
-		newPath, err = s.fileOrganizer.MoveTrack(ctx, newTrack)
+		newPath, err = s.fileManager.MoveTrack(ctx, newTrack)
 	} else {
-		newPath, err = s.fileOrganizer.CopyTrack(ctx, newTrack)
+		newPath, err = s.fileManager.CopyTrack(ctx, newTrack)
 	}
 	if err != nil {
 		return fmt.Errorf("could not organize replacement track: %w", err)
@@ -306,7 +306,7 @@ func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *mus
 	}
 	// Delete the old file if paths differ (to avoid lingering files)
 	if oldPath != newPath {
-		err := s.fileOrganizer.DeleteTrack(ctx, oldPath)
+		err := s.fileManager.DeleteTrack(ctx, oldPath)
 		if err != nil {
 			logger.Warn("failed deleting old path of replaced track", "track", newTrack, "newPath", newPath, "oldPath", oldPath)
 		}
@@ -369,9 +369,9 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 	var err error
 
 	if move {
-		newPath, err = s.fileOrganizer.MoveTrack(ctx, track)
+		newPath, err = s.fileManager.MoveTrack(ctx, track)
 	} else {
-		newPath, err = s.fileOrganizer.CopyTrack(ctx, track)
+		newPath, err = s.fileManager.CopyTrack(ctx, track)
 	}
 	if err != nil {
 		logger.Error("Service.importTrack: could not organize track", "error", err, "title", track.Title)

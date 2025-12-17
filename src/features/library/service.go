@@ -15,13 +15,15 @@ import (
 type Service struct {
 	library       library.Library
 	configManager *config.Manager
+	fileManager   library.FileManager
 }
 
 // NewService creates a new library service.
-func NewService(lib library.Library, cfgManager *config.Manager) *Service {
+func NewService(lib library.Library, cfgManager *config.Manager, fileManager library.FileManager) *Service {
 	return &Service{
 		library:       lib,
 		configManager: cfgManager,
+		fileManager:   fileManager,
 	}
 }
 
@@ -294,12 +296,40 @@ func (s *Service) UpdateAlbum(ctx context.Context, album *library.Album) error {
 // DeleteAlbum deletes an album from the library.
 func (s *Service) DeleteAlbum(ctx context.Context, id string) error {
 	slog.Debug("DeleteAlbum service called", "id", id)
-	err := s.library.DeleteAlbum(ctx, id)
+
+	// Get all tracks in the album before deletion to access file paths
+	tracks, err := s.library.GetTracks(ctx)
+	if err != nil {
+		slog.Error("Failed to get tracks for album deletion", "albumId", id, "error", err)
+		return err
+	}
+
+	// Filter tracks that belong to this album
+	var albumTracks []*library.Track
+	for _, track := range tracks {
+		if track.Album != nil && track.Album.ID == id {
+			albumTracks = append(albumTracks, track)
+		}
+	}
+
+	// Delete from database (this now deletes tracks too)
+	err = s.library.DeleteAlbum(ctx, id)
 	if err != nil {
 		slog.Error("DeleteAlbum failed", "id", id, "error", err)
 		return err
 	}
-	slog.Debug("DeleteAlbum completed", "id", id)
+
+	// Delete track files from filesystem
+	for _, track := range albumTracks {
+		if err := s.fileManager.DeleteTrack(ctx, track.Path); err != nil {
+			slog.Warn("Failed to delete track file from filesystem", "path", track.Path, "error", err)
+			// Don't return error here - database deletion succeeded, file deletion is secondary
+		} else {
+			slog.Debug("Successfully deleted track file from filesystem", "path", track.Path)
+		}
+	}
+
+	slog.Debug("DeleteAlbum completed", "id", id, "tracksDeleted", len(albumTracks))
 	return nil
 }
 
@@ -362,23 +392,89 @@ func (s *Service) FindOrCreateArtist(ctx context.Context, artistName string) (*l
 // DeleteArtist deletes an artist from the library.
 func (s *Service) DeleteArtist(ctx context.Context, id string) error {
 	slog.Debug("DeleteArtist service called", "id", id)
-	err := s.library.DeleteArtist(ctx, id)
+
+	// Get all tracks associated with this artist (direct or through albums)
+	tracks, err := s.library.GetTracks(ctx)
+	if err != nil {
+		slog.Error("Failed to get tracks for artist deletion", "artistId", id, "error", err)
+		return err
+	}
+
+	// Filter tracks associated with this artist
+	var artistTracks []*library.Track
+	for _, track := range tracks {
+		// Check direct artist association
+		hasArtist := false
+		for _, artistRole := range track.Artists {
+			if artistRole.Artist != nil && artistRole.Artist.ID == id {
+				hasArtist = true
+				break
+			}
+		}
+		// Check album artist association
+		if !hasArtist && track.Album != nil {
+			for _, artistRole := range track.Album.Artists {
+				if artistRole.Artist != nil && artistRole.Artist.ID == id {
+					hasArtist = true
+					break
+				}
+			}
+		}
+		if hasArtist {
+			artistTracks = append(artistTracks, track)
+		}
+	}
+
+	// Delete from database (this now deletes tracks too)
+	err = s.library.DeleteArtist(ctx, id)
 	if err != nil {
 		slog.Error("DeleteArtist failed", "id", id, "error", err)
 		return err
 	}
-	slog.Debug("DeleteArtist completed", "id", id)
+
+	// Delete track files from filesystem
+	for _, track := range artistTracks {
+		if err := s.fileManager.DeleteTrack(ctx, track.Path); err != nil {
+			slog.Warn("Failed to delete track file from filesystem", "path", track.Path, "error", err)
+			// Don't return error here - database deletion succeeded, file deletion is secondary
+		} else {
+			slog.Debug("Successfully deleted track file from filesystem", "path", track.Path)
+		}
+	}
+
+	slog.Debug("DeleteArtist completed", "id", id, "tracksDeleted", len(artistTracks))
 	return nil
 }
 
 // DeleteTrack deletes a track from the library.
 func (s *Service) DeleteTrack(ctx context.Context, id string) error {
 	slog.Debug("DeleteTrack service called", "id", id)
-	err := s.library.DeleteTrack(ctx, id)
+
+	// Get track info before deletion to access the file path
+	track, err := s.library.GetTrack(ctx, id)
+	if err != nil {
+		slog.Error("Failed to get track for deletion", "id", id, "error", err)
+		return err
+	}
+	if track == nil {
+		return fmt.Errorf("track not found: %s", id)
+	}
+
+	// Delete from database first
+	err = s.library.DeleteTrack(ctx, id)
 	if err != nil {
 		slog.Error("DeleteTrack failed", "id", id, "error", err)
 		return err
 	}
+
+	// Delete the file from filesystem
+	if err := s.fileManager.DeleteTrack(ctx, track.Path); err != nil {
+		slog.Warn("Failed to delete track file from filesystem", "path", track.Path, "error", err)
+		// Don't return error here - database deletion succeeded, file deletion is secondary
+	} else {
+		slog.Debug("Successfully deleted track file from filesystem", "path", track.Path)
+	}
+
 	slog.Debug("DeleteTrack completed", "id", id)
 	return nil
 }
