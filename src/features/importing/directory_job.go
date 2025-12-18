@@ -290,7 +290,7 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 				}
 			case ImportTrack:
 				// Validate track before import to catch invalid data early
-				if err := trackToImport.Validate(); err != nil {
+				if err := trackToImport.ValidateImport(config.AllowMissingMetadata); err != nil {
 					logger.Error("Service.runDirectoryImport: track validation failed, skipping import", "error", err, "title", trackToImport.Title, "path", trackToImport.Path)
 					stats.Errors++
 				} else if err := e.service.importTrack(ctx, trackToImport, moveFiles, logger); err != nil {

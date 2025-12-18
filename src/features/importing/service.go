@@ -295,7 +295,7 @@ func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *mus
 	}
 	existingTrack.Artists = newTrack.Artists
 	existingTrack.Album = newTrack.Album
-	if err := existingTrack.Validate(); err != nil {
+	if err := existingTrack.ValidateImport(s.config.Get().Import.AllowMissingMetadata); err != nil {
 		logger.Error("Service.replaceTrack: existing track validation failed after update", "error", err, "title", existingTrack.Title)
 		return fmt.Errorf("existing track validation failed: %w", err)
 	}
@@ -382,7 +382,7 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 		return err
 	}
 
-	if err := track.Validate(); err != nil {
+	if err := track.ValidateImport(s.config.Get().Import.AllowMissingMetadata); err != nil {
 		logger.Error("Service.importTrack: track validation failed after population", "error", err, "title", track.Title)
 		return fmt.Errorf("track validation failed: %w", err)
 	}

@@ -48,10 +48,11 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 		DownloadPath: c.FormValue("downloadPath"),
 		Database:     currentConfig.Database, // Preserve database settings
 		Import: Import{
-			AutoStartWatcher: currentConfig.Import.AutoStartWatcher,
-			Move:             c.FormValue("import.move") == "true",
-			AlwaysQueue:      c.FormValue("import.always_queue") == "true",
-			Duplicates:       c.FormValue("import.duplicates"),
+			AutoStartWatcher:     currentConfig.Import.AutoStartWatcher,
+			Move:                 c.FormValue("import.move") == "true",
+			AlwaysQueue:          c.FormValue("import.always_queue") == "true",
+			Duplicates:           c.FormValue("import.duplicates"),
+			AllowMissingMetadata: c.FormValue("import.allow_missing_metadata") == "true",
 			PathOptions: Paths{
 				DefaultPath:     c.FormValue("import.paths.default_path"),
 				Compilations:    c.FormValue("import.paths.compilations"),
