@@ -102,9 +102,9 @@ func (s *Service) GetTracksPaginated(ctx context.Context, limit, offset int) ([]
 }
 
 // GetTracksFilteredPaginated returns paginated tracks from the library with filtering.
-func (s *Service) GetTracksFilteredPaginated(ctx context.Context, limit, offset int, titleFilter string, artistIDs, albumIDs []string) ([]*library.Track, error) {
-	slog.Debug("GetTracksFilteredPaginated service called", "limit", limit, "offset", offset, "titleFilter", titleFilter, "artistIDs", artistIDs, "albumIDs", albumIDs)
-	tracks, err := s.library.GetTracksFilteredPaginated(ctx, limit, offset, titleFilter, artistIDs, albumIDs)
+func (s *Service) GetTracksFilteredPaginated(ctx context.Context, limit, offset int, filter *library.TrackFilter) ([]*library.Track, error) {
+	slog.Debug("GetTracksFilteredPaginated service called", "limit", limit, "offset", offset, "filter", filter)
+	tracks, err := s.library.GetTracksFilteredPaginated(ctx, limit, offset, filter)
 	if err != nil {
 		slog.Error("GetTracksFilteredPaginated failed", "error", err)
 		return nil, err
@@ -114,9 +114,9 @@ func (s *Service) GetTracksFilteredPaginated(ctx context.Context, limit, offset 
 }
 
 // GetTracksFilteredCount returns the filtered count of tracks in the library.
-func (s *Service) GetTracksFilteredCount(ctx context.Context, titleFilter string, artistIDs, albumIDs []string) (int, error) {
-	slog.Debug("GetTracksFilteredCount service called", "titleFilter", titleFilter, "artistIDs", artistIDs, "albumIDs", albumIDs)
-	count, err := s.library.GetTracksFilteredCount(ctx, titleFilter, artistIDs, albumIDs)
+func (s *Service) GetTracksFilteredCount(ctx context.Context, filter *library.TrackFilter) (int, error) {
+	slog.Debug("GetTracksFilteredCount service called", "filter", filter)
+	count, err := s.library.GetTracksFilteredCount(ctx, filter)
 	if err != nil {
 		slog.Error("GetTracksFilteredCount failed", "error", err)
 		return 0, err
@@ -298,18 +298,18 @@ func (s *Service) DeleteAlbum(ctx context.Context, id string) error {
 	slog.Debug("DeleteAlbum service called", "id", id)
 
 	// Get all tracks in the album before deletion to access file paths
-	tracks, err := s.library.GetTracks(ctx)
+	filter := &library.TrackFilter{
+		AlbumIDs: []string{id},
+	}
+	totalTracks, err := s.library.GetTracksFilteredCount(ctx, filter)
+	if err != nil {
+		slog.Error("Failed to get track count for album deletion", "albumId", id, "error", err)
+		return err
+	}
+	albumTracks, err := s.library.GetTracksFilteredPaginated(ctx, totalTracks, 0, filter)
 	if err != nil {
 		slog.Error("Failed to get tracks for album deletion", "albumId", id, "error", err)
 		return err
-	}
-
-	// Filter tracks that belong to this album
-	var albumTracks []*library.Track
-	for _, track := range tracks {
-		if track.Album != nil && track.Album.ID == id {
-			albumTracks = append(albumTracks, track)
-		}
 	}
 
 	// Delete from database
@@ -394,35 +394,18 @@ func (s *Service) DeleteArtist(ctx context.Context, id string) error {
 	slog.Debug("DeleteArtist service called", "id", id)
 
 	// Get all tracks associated with this artist (direct or through albums)
-	tracks, err := s.library.GetTracks(ctx)
+	filter := &library.TrackFilter{
+		ArtistIDs: []string{id},
+	}
+	totalTracks, err := s.library.GetTracksFilteredCount(ctx, filter)
+	if err != nil {
+		slog.Error("Failed to get track count for artist deletion", "artistId", id, "error", err)
+		return err
+	}
+	artistTracks, err := s.library.GetTracksFilteredPaginated(ctx, totalTracks, 0, filter)
 	if err != nil {
 		slog.Error("Failed to get tracks for artist deletion", "artistId", id, "error", err)
 		return err
-	}
-
-	// Filter tracks associated with this artist
-	var artistTracks []*library.Track
-	for _, track := range tracks {
-		// Check direct artist association
-		hasArtist := false
-		for _, artistRole := range track.Artists {
-			if artistRole.Artist != nil && artistRole.Artist.ID == id {
-				hasArtist = true
-				break
-			}
-		}
-		// Check album artist association
-		if !hasArtist && track.Album != nil {
-			for _, artistRole := range track.Album.Artists {
-				if artistRole.Artist != nil && artistRole.Artist.ID == id {
-					hasArtist = true
-					break
-				}
-			}
-		}
-		if hasArtist {
-			artistTracks = append(artistTracks, track)
-		}
 	}
 
 	// Delete from database (this now deletes tracks too)

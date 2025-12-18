@@ -4,6 +4,13 @@ import (
 	"context"
 )
 
+// TrackFilter represents the filter criteria for tracks.
+type TrackFilter struct {
+	Title     string
+	ArtistIDs []string
+	AlbumIDs  []string
+}
+
 // Library is the interface for managing the music library.
 // It's our primary repository interface for the library domain.
 type Library interface {
@@ -14,9 +21,9 @@ type Library interface {
 	DeleteTrack(ctx context.Context, id string) error
 	GetTracks(ctx context.Context) ([]*Track, error)
 	GetTracksPaginated(ctx context.Context, limit, offset int) ([]*Track, error)
-	GetTracksFilteredPaginated(ctx context.Context, limit, offset int, titleFilter string, artistIDs, albumIDs []string) ([]*Track, error)
+	GetTracksFilteredPaginated(ctx context.Context, limit, offset int, filter *TrackFilter) ([]*Track, error)
 	GetTracksCount(ctx context.Context) (int, error)
-	GetTracksFilteredCount(ctx context.Context, titleFilter string, artistIDs, albumIDs []string) (int, error)
+	GetTracksFilteredCount(ctx context.Context, filter *TrackFilter) (int, error)
 	FindTrackByMetadata(ctx context.Context, title, artistName, albumTitle string) (*Track, error)
 	FindTrackByPath(ctx context.Context, path string) (*Track, error)
 

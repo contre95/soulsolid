@@ -1318,33 +1318,33 @@ func (d *SqliteLibrary) GetTracksPaginated(ctx context.Context, limit, offset in
 }
 
 // GetTracksFilteredPaginated gets paginated tracks from the database with filtering.
-func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, offset int, titleFilter string, artistIDs, albumIDs []string) ([]*music.Track, error) {
+func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, offset int, filter *music.TrackFilter) ([]*music.Track, error) {
 	query := `SELECT DISTINCT t.id FROM tracks t`
 	args := []interface{}{}
 	conditions := []string{}
 
 	// Add title filter
-	if titleFilter != "" {
+	if filter.Title != "" {
 		conditions = append(conditions, "t.title LIKE ?")
-		args = append(args, "%"+titleFilter+"%")
+		args = append(args, "%"+filter.Title+"%")
 	}
 
 	// Add artist filter
-	if len(artistIDs) > 0 {
-		placeholders := strings.Repeat("?,", len(artistIDs))
+	if len(filter.ArtistIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(filter.ArtistIDs))
 		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
 		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = t.id AND ta.artist_id IN ("+placeholders+"))")
-		for _, id := range artistIDs {
+		for _, id := range filter.ArtistIDs {
 			args = append(args, id)
 		}
 	}
 
 	// Add album filter
-	if len(albumIDs) > 0 {
-		placeholders := strings.Repeat("?,", len(albumIDs))
+	if len(filter.AlbumIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(filter.AlbumIDs))
 		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
 		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_albums ta WHERE ta.track_id = t.id AND ta.album_id IN ("+placeholders+"))")
-		for _, id := range albumIDs {
+		for _, id := range filter.AlbumIDs {
 			args = append(args, id)
 		}
 	}
@@ -1387,33 +1387,33 @@ func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, o
 }
 
 // GetTracksFilteredCount gets the filtered count of tracks in the database.
-func (d *SqliteLibrary) GetTracksFilteredCount(ctx context.Context, titleFilter string, artistIDs, albumIDs []string) (int, error) {
+func (d *SqliteLibrary) GetTracksFilteredCount(ctx context.Context, filter *music.TrackFilter) (int, error) {
 	query := `SELECT COUNT(DISTINCT t.id) FROM tracks t`
 	args := []interface{}{}
 	conditions := []string{}
 
 	// Add title filter
-	if titleFilter != "" {
+	if filter.Title != "" {
 		conditions = append(conditions, "t.title LIKE ?")
-		args = append(args, "%"+titleFilter+"%")
+		args = append(args, "%"+filter.Title+"%")
 	}
 
 	// Add artist filter
-	if len(artistIDs) > 0 {
-		placeholders := strings.Repeat("?,", len(artistIDs))
+	if len(filter.ArtistIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(filter.ArtistIDs))
 		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
 		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = t.id AND ta.artist_id IN ("+placeholders+"))")
-		for _, id := range artistIDs {
+		for _, id := range filter.ArtistIDs {
 			args = append(args, id)
 		}
 	}
 
 	// Add album filter
-	if len(albumIDs) > 0 {
-		placeholders := strings.Repeat("?,", len(albumIDs))
+	if len(filter.AlbumIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(filter.AlbumIDs))
 		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
 		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_albums ta WHERE ta.track_id = t.id AND ta.album_id IN ("+placeholders+"))")
-		for _, id := range albumIDs {
+		for _, id := range filter.AlbumIDs {
 			args = append(args, id)
 		}
 	}

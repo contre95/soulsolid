@@ -286,7 +286,12 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 		}
 
 		// Search tracks
-		tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), 20, 0, query, []string{}, []string{})
+		filter := &music.TrackFilter{
+			Title:     query,
+			ArtistIDs: []string{},
+			AlbumIDs:  []string{},
+		}
+		tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), 20, 0, filter)
 		if err != nil {
 			slog.Error("Error searching tracks", "error", err)
 		} else {
