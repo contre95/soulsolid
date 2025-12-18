@@ -85,7 +85,6 @@ func (t *Track) Validate() error {
 		err = fmt.Errorf("invalid album in track: %w", err)
 		return err
 	}
-	return nil
 
 	if t.ISRC != "" && len(t.ISRC) > 12 {
 		err := fmt.Errorf("ISRC cannot exceed 12 characters, got %d: isrc -> %s", len(t.ISRC), t.ISRC)
@@ -217,13 +216,21 @@ func (t *Track) EnsureMetadataDefaults() {
 	// Fallback for missing artist
 	if len(t.Artists) == 0 || t.Artists[0].Artist.Name == "" {
 		t.Artists = []ArtistRole{{
-			Artist: &Artist{Name: "Unknown Artist"},
+			Artist: &Artist{ID: "00000000-0000-0000-0000-000000000001", Name: "Unknown Artist", SortName: "Unknown Artist"},
 			Role:   "main",
 		}}
 	}
 	// Fallback for missing album
 	if t.Album == nil || t.Album.Title == "" {
-		t.Album = &Album{Title: "Unknown Album"}
+		t.Album = &Album{
+			ID:    "00000000-0000-0000-0000-000000000002",
+			Title: "Unknown Album",
+			Artists: []ArtistRole{{
+				Artist: &Artist{ID: "00000000-0000-0000-0000-000000000001", Name: "Unknown Artist", SortName: "Unknown Artist"},
+				Role:   "main",
+			}},
+			ReleaseDate: time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC),
+		}
 	}
 	// Fallback for missing year
 	if t.Metadata.Year == 0 {
