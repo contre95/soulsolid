@@ -312,7 +312,7 @@ func (s *Service) DeleteAlbum(ctx context.Context, id string) error {
 		}
 	}
 
-	// Delete from database (this now deletes tracks too)
+	// Delete from database
 	err = s.library.DeleteAlbum(ctx, id)
 	if err != nil {
 		slog.Error("DeleteAlbum failed", "id", id, "error", err)
