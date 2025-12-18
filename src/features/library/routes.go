@@ -22,4 +22,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	library.Get("/albums/:id", handler.GetAlbum)
 	library.Get("/tracks/:id", handler.GetTrack)
 	library.Get("/tree", handler.GetLibraryFileTree)
+	library.Delete("/tracks/:trackId", handler.DeleteTrack)
+	library.Delete("/albums/:albumId", handler.DeleteAlbum)
+	library.Delete("/artists/:artistId", handler.DeleteArtist)
 }

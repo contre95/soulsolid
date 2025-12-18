@@ -326,6 +326,85 @@ func (d *SqliteLibrary) UpdateAlbum(ctx context.Context, album *music.Album) err
 	return tx.Commit()
 }
 
+// DeleteAlbum deletes an album from the database and all its associated tracks.
+func (d *SqliteLibrary) DeleteAlbum(ctx context.Context, id string) error {
+	slog.Debug("DeleteAlbum called", "albumID", id)
+
+	// First, find all tracks associated with this album
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT t.id
+		FROM tracks t
+		INNER JOIN track_albums ta ON t.id = ta.track_id
+		WHERE ta.album_id = ?
+	`, id)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var trackIDs []string
+	for rows.Next() {
+		var trackID string
+		if err := rows.Scan(&trackID); err != nil {
+			return err
+		}
+		trackIDs = append(trackIDs, trackID)
+	}
+
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete all tracks associated with this album
+	for _, trackID := range trackIDs {
+		// Delete track attributes
+		_, err = tx.ExecContext(ctx, `DELETE FROM track_attributes WHERE track_id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+
+		// Delete track artists
+		_, err = tx.ExecContext(ctx, `DELETE FROM track_artists WHERE track_id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+
+		// Delete track albums
+		_, err = tx.ExecContext(ctx, `DELETE FROM track_albums WHERE track_id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+
+		// Delete track
+		_, err = tx.ExecContext(ctx, `DELETE FROM tracks WHERE id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Delete album attributes
+	_, err = tx.ExecContext(ctx, `DELETE FROM album_attributes WHERE album_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete album artists
+	_, err = tx.ExecContext(ctx, `DELETE FROM album_artists WHERE album_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete album
+	_, err = tx.ExecContext(ctx, `DELETE FROM albums WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 // GetTrack gets a track from the database.
 func (d *SqliteLibrary) GetTrack(ctx context.Context, id string) (*music.Track, error) {
 	tx, err := d.db.BeginTx(ctx, nil)
@@ -752,6 +831,43 @@ func (d *SqliteLibrary) UpdateTrack(ctx context.Context, track *music.Track) err
 	return tx.Commit()
 }
 
+// DeleteTrack deletes a track from the database.
+func (d *SqliteLibrary) DeleteTrack(ctx context.Context, id string) error {
+	slog.Debug("DeleteTrack called", "trackID", id)
+
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete track attributes
+	_, err = tx.ExecContext(ctx, `DELETE FROM track_attributes WHERE track_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete track artists
+	_, err = tx.ExecContext(ctx, `DELETE FROM track_artists WHERE track_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete track albums
+	_, err = tx.ExecContext(ctx, `DELETE FROM track_albums WHERE track_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete track
+	_, err = tx.ExecContext(ctx, `DELETE FROM tracks WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 // AddAlbum adds an album to the database.
 func (d *SqliteLibrary) AddAlbum(ctx context.Context, album *music.Album) error {
 	// Validate album using domain validation
@@ -944,6 +1060,93 @@ func (d *SqliteLibrary) AddArtist(ctx context.Context, artist *music.Artist) err
 	return nil
 }
 
+// DeleteArtist deletes an artist from the database and all tracks associated with that artist.
+func (d *SqliteLibrary) DeleteArtist(ctx context.Context, id string) error {
+	slog.Debug("DeleteArtist called", "artistID", id)
+
+	// First, find all tracks associated with this artist (either directly or through albums)
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT DISTINCT t.id
+		FROM tracks t
+		LEFT JOIN track_artists ta ON t.id = ta.track_id
+		LEFT JOIN track_albums tal ON t.id = tal.track_id
+		LEFT JOIN album_artists aa ON tal.album_id = aa.album_id
+		WHERE ta.artist_id = ? OR aa.artist_id = ?
+	`, id, id)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var trackIDs []string
+	for rows.Next() {
+		var trackID string
+		if err := rows.Scan(&trackID); err != nil {
+			return err
+		}
+		trackIDs = append(trackIDs, trackID)
+	}
+
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete all tracks associated with this artist
+	for _, trackID := range trackIDs {
+		// Delete track attributes
+		_, err = tx.ExecContext(ctx, `DELETE FROM track_attributes WHERE track_id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+
+		// Delete track artists
+		_, err = tx.ExecContext(ctx, `DELETE FROM track_artists WHERE track_id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+
+		// Delete track albums
+		_, err = tx.ExecContext(ctx, `DELETE FROM track_albums WHERE track_id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+
+		// Delete track
+		_, err = tx.ExecContext(ctx, `DELETE FROM tracks WHERE id = ?`, trackID)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Delete artist attributes
+	_, err = tx.ExecContext(ctx, `DELETE FROM artist_attributes WHERE artist_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete track artists
+	_, err = tx.ExecContext(ctx, `DELETE FROM track_artists WHERE artist_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete album artists
+	_, err = tx.ExecContext(ctx, `DELETE FROM album_artists WHERE artist_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete artist
+	_, err = tx.ExecContext(ctx, `DELETE FROM artists WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 // GetArtist gets an artist from the database.
 func (d *SqliteLibrary) GetArtist(ctx context.Context, id string) (*music.Artist, error) {
 	tx, err := d.db.BeginTx(ctx, nil)
@@ -1115,33 +1318,33 @@ func (d *SqliteLibrary) GetTracksPaginated(ctx context.Context, limit, offset in
 }
 
 // GetTracksFilteredPaginated gets paginated tracks from the database with filtering.
-func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, offset int, titleFilter string, artistIDs, albumIDs []string) ([]*music.Track, error) {
+func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, offset int, filter *music.TrackFilter) ([]*music.Track, error) {
 	query := `SELECT DISTINCT t.id FROM tracks t`
 	args := []interface{}{}
 	conditions := []string{}
 
 	// Add title filter
-	if titleFilter != "" {
+	if filter.Title != "" {
 		conditions = append(conditions, "t.title LIKE ?")
-		args = append(args, "%"+titleFilter+"%")
+		args = append(args, "%"+filter.Title+"%")
 	}
 
 	// Add artist filter
-	if len(artistIDs) > 0 {
-		placeholders := strings.Repeat("?,", len(artistIDs))
+	if len(filter.ArtistIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(filter.ArtistIDs))
 		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
 		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = t.id AND ta.artist_id IN ("+placeholders+"))")
-		for _, id := range artistIDs {
+		for _, id := range filter.ArtistIDs {
 			args = append(args, id)
 		}
 	}
 
 	// Add album filter
-	if len(albumIDs) > 0 {
-		placeholders := strings.Repeat("?,", len(albumIDs))
+	if len(filter.AlbumIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(filter.AlbumIDs))
 		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
 		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_albums ta WHERE ta.track_id = t.id AND ta.album_id IN ("+placeholders+"))")
-		for _, id := range albumIDs {
+		for _, id := range filter.AlbumIDs {
 			args = append(args, id)
 		}
 	}
@@ -1184,33 +1387,33 @@ func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, o
 }
 
 // GetTracksFilteredCount gets the filtered count of tracks in the database.
-func (d *SqliteLibrary) GetTracksFilteredCount(ctx context.Context, titleFilter string, artistIDs, albumIDs []string) (int, error) {
+func (d *SqliteLibrary) GetTracksFilteredCount(ctx context.Context, filter *music.TrackFilter) (int, error) {
 	query := `SELECT COUNT(DISTINCT t.id) FROM tracks t`
 	args := []interface{}{}
 	conditions := []string{}
 
 	// Add title filter
-	if titleFilter != "" {
+	if filter.Title != "" {
 		conditions = append(conditions, "t.title LIKE ?")
-		args = append(args, "%"+titleFilter+"%")
+		args = append(args, "%"+filter.Title+"%")
 	}
 
 	// Add artist filter
-	if len(artistIDs) > 0 {
-		placeholders := strings.Repeat("?,", len(artistIDs))
+	if len(filter.ArtistIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(filter.ArtistIDs))
 		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
 		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = t.id AND ta.artist_id IN ("+placeholders+"))")
-		for _, id := range artistIDs {
+		for _, id := range filter.ArtistIDs {
 			args = append(args, id)
 		}
 	}
 
 	// Add album filter
-	if len(albumIDs) > 0 {
-		placeholders := strings.Repeat("?,", len(albumIDs))
+	if len(filter.AlbumIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(filter.AlbumIDs))
 		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
 		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_albums ta WHERE ta.track_id = t.id AND ta.album_id IN ("+placeholders+"))")
-		for _, id := range albumIDs {
+		for _, id := range filter.AlbumIDs {
 			args = append(args, id)
 		}
 	}
