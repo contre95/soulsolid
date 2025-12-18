@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -97,7 +96,7 @@ func (s *Service) PruneDownloadPath(ctx context.Context) error {
 		}
 		ext := strings.ToLower(filepath.Ext(path))
 		if _, ok := supportedExtensions[ext]; ok {
-			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			if err := s.fileManager.DeleteTrack(ctx, path); err != nil {
 				return fmt.Errorf("failed to delete %s: %w", path, err)
 			}
 		}

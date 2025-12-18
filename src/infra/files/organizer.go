@@ -52,6 +52,14 @@ func (o *FileOrganizer) MoveTrack(ctx context.Context, track *music.Track) (stri
 	if err := os.Remove(track.Path); err != nil {
 		return "", fmt.Errorf("failed to remove original file after copy: %w", err)
 	}
+
+	// Check if parent directory of original file is now empty and remove it if so
+	dir := filepath.Dir(track.Path)
+	if err := o.removeEmptyDirectories(dir); err != nil {
+		// Log warning but don't fail the operation since file move succeeded
+		fmt.Printf("Warning: failed to clean up empty directories after move: %v\n", err)
+	}
+
 	return newPath, nil
 }
 
@@ -83,6 +91,50 @@ func (o *FileOrganizer) DeleteTrack(ctx context.Context, trackPath string) error
 	if err := os.Remove(trackPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to delete track file: %w", err)
 	}
+
+	// Check if parent directory is now empty and remove it if so
+	dir := filepath.Dir(trackPath)
+	if err := o.removeEmptyDirectories(dir); err != nil {
+		// Log warning but don't fail the operation since file deletion succeeded
+		fmt.Printf("Warning: failed to clean up empty directories: %v\n", err)
+	}
+
+	return nil
+}
+
+// removeEmptyDirectories recursively removes empty directories up the path
+func (o *FileOrganizer) removeEmptyDirectories(dir string) error {
+	for {
+		// Check if directory exists
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			return nil // Directory doesn't exist, nothing to do
+		}
+
+		// Check if directory is empty
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return fmt.Errorf("failed to read directory %s: %w", dir, err)
+		}
+
+		// If directory is not empty, stop
+		if len(entries) > 0 {
+			break
+		}
+
+		// Directory is empty, remove it
+		if err := os.Remove(dir); err != nil {
+			return fmt.Errorf("failed to remove empty directory %s: %w", dir, err)
+		}
+
+		// Move up to parent directory
+		parent := filepath.Dir(dir)
+		// Stop if we've reached the library root or a non-empty directory
+		if parent == dir || parent == o.libraryPath {
+			break
+		}
+		dir = parent
+	}
+
 	return nil
 }
 
