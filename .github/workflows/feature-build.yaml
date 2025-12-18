@@ -19,12 +19,12 @@ jobs:
       - name: Login to DockerHub
         run: |
           podman login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} docker.io
-       - name: Extract feature name
-         id: extract_feature
-         run: |
-           branch_name=${{ github.ref_name }}
-           feature_name=${branch_name//\//-}
-           echo "feature_name=$feature_name" >> $GITHUB_OUTPUT
+      - name: Extract feature name
+        id: extract_feature
+        run: |
+          branch_name=${{ github.ref_name }}
+          feature_name=${branch_name//\//-}
+          echo "feature_name=$feature_name" >> $GITHUB_OUTPUT
       - name: Build and push feature image
         run: |
           feature_name=${{ steps.extract_feature.outputs.feature_name }}
