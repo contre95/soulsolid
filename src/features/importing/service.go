@@ -290,12 +290,16 @@ func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *mus
 	existingTrack.Metadata = newTrack.Metadata
 	existingTrack.Title = newTrack.Title
 	existingTrack.TitleVersion = newTrack.TitleVersion
+	// Apply default metadata if configured to allow missing metadata
+	if s.config.Get().Import.AllowMissingMetadata {
+		existingTrack.EnsureMetadataDefaults()
+	}
 	if err := s.populateTrackArtistsAndAlbum(ctx, newTrack, logger); err != nil {
 		return err
 	}
 	existingTrack.Artists = newTrack.Artists
 	existingTrack.Album = newTrack.Album
-	if err := existingTrack.ValidateImport(s.config.Get().Import.AllowMissingMetadata); err != nil {
+	if err := existingTrack.Validate(); err != nil {
 		logger.Error("Service.replaceTrack: existing track validation failed after update", "error", err, "title", existingTrack.Title)
 		return fmt.Errorf("existing track validation failed: %w", err)
 	}
@@ -382,7 +386,12 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 		return err
 	}
 
-	if err := track.ValidateImport(s.config.Get().Import.AllowMissingMetadata); err != nil {
+	// Apply default metadata if configured to allow missing metadata
+	if s.config.Get().Import.AllowMissingMetadata {
+		track.EnsureMetadataDefaults()
+	}
+
+	if err := track.Validate(); err != nil {
 		logger.Error("Service.importTrack: track validation failed after population", "error", err, "title", track.Title)
 		return fmt.Errorf("track validation failed: %w", err)
 	}
