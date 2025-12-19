@@ -220,12 +220,17 @@ func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
 		}
 	}
 
+	// Sort active jobs by date (newest first)
+	sort.Slice(activeJobs, func(i, j int) bool {
+		return activeJobs[i].CreatedAt.After(activeJobs[j].CreatedAt)
+	})
+
 	return c.Render("jobs/active_list", fiber.Map{
 		"Jobs": activeJobs,
 	})
 }
 
-func (h *Handler) HandleAllJobsList(c *fiber.Ctx) error {
+func (h *Handler) HandleFilteredJobsList(c *fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 
 	// Filter jobs by type if specified
@@ -239,6 +244,11 @@ func (h *Handler) HandleAllJobsList(c *fiber.Ctx) error {
 		}
 		jobs = filteredJobs
 	}
+
+	// Sort jobs by date (newest first)
+	sort.Slice(jobs, func(i, j int) bool {
+		return jobs[i].CreatedAt.After(jobs[j].CreatedAt)
+	})
 
 	return c.Render("jobs/job_list", fiber.Map{
 		"Jobs": jobs,
