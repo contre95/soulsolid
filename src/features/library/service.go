@@ -255,12 +255,12 @@ func (s *Service) FindOrCreateArtist(ctx context.Context, artistName string) (*l
 
 	// First try to find existing artist
 	artist, err := s.library.GetArtistByName(ctx, artistName)
-	if err == nil && artist != nil {
+	if err != nil {
+		return nil, err
+	}
+	if artist != nil {
 		slog.Debug("Found existing artist", "artistName", artistName, "artistID", artist.ID)
 		return artist, nil
-	} else if err == nil && artist == nil {
-		// Artist not found
-		return nil, fmt.Errorf("artist '%s' not found in library", artistName)
 	}
 
 	// If not found, create new artist
