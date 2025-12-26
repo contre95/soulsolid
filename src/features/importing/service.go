@@ -290,6 +290,10 @@ func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *mus
 	existingTrack.Metadata = newTrack.Metadata
 	existingTrack.Title = newTrack.Title
 	existingTrack.TitleVersion = newTrack.TitleVersion
+	// Apply default metadata if configured to allow missing metadata
+	if s.config.Get().Import.AllowMissingMetadata {
+		existingTrack.EnsureMetadataDefaults()
+	}
 	if err := s.populateTrackArtistsAndAlbum(ctx, newTrack, logger); err != nil {
 		return err
 	}
@@ -380,6 +384,11 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 
 	if err := s.populateTrackArtistsAndAlbum(ctx, track, logger); err != nil {
 		return err
+	}
+
+	// Apply default metadata if configured to allow missing metadata
+	if s.config.Get().Import.AllowMissingMetadata {
+		track.EnsureMetadataDefaults()
 	}
 
 	if err := track.Validate(); err != nil {

@@ -210,11 +210,16 @@
                      class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
               <label for="import.move" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Move files instead of copying</label>
             </div>
-           <div class="flex flex-col md:flex-row md:items-center p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
-               <input type="checkbox" id="import.always_queue" name="import.always_queue" value="true" {{if .Config.Import.AlwaysQueue}}checked{{end}}
-                      class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-               <label for="import.always_queue" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Always queue tracks for review.</label>
-             </div>
+            <div class="flex flex-col md:flex-row md:items-center p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+                <input type="checkbox" id="import.always_queue" name="import.always_queue" value="true" {{if .Config.Import.AlwaysQueue}}checked{{end}}
+                       class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                <label for="import.always_queue" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Always queue tracks for review.</label>
+              </div>
+              <div class="flex flex-col md:flex-row md:items-center p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+                <input type="checkbox" id="import.allow_missing_metadata" name="import.allow_missing_metadata" value="true" {{if .Config.Import.AllowMissingMetadata}}checked{{end}}
+                       class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                <label for="import.allow_missing_metadata" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Allow tracks without artist or album metadata.</label>
+              </div>
              <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
                <label for="import.duplicates" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Duplicate Handling</label>
                  <select id="import.duplicates" name="import.duplicates"
