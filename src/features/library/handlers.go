@@ -200,42 +200,122 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 	offset := (page - 1) * limit
 
 	if query == "" {
-		// When no query, show all tracks paginated
-		tracks, err := h.service.GetTracksPaginated(c.Context(), limit, offset)
+		// When no query, show all artists, albums, and tracks combined
+		artists, err := h.service.GetArtists(c.Context())
 		if err != nil {
-			slog.Error("Error loading tracks", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
+			slog.Error("Error loading artists", "error", err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Error loading artists")
 		}
 
-		totalCount, err = h.service.GetTracksCount(c.Context())
+		albums, err := h.service.GetAlbums(c.Context())
+		if err != nil {
+			slog.Error("Error loading albums", "error", err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
+		}
+
+		artistsCount := len(artists)
+		albumsCount := len(albums)
+		totalOther := artistsCount + albumsCount
+
+		tracksCount, err := h.service.GetTracksCount(c.Context())
 		if err != nil {
 			slog.Error("Error getting tracks count", "error", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks count")
 		}
 
-		for _, track := range tracks {
-			artistNames := ""
-			if len(track.Artists) > 0 {
-				for i, ar := range track.Artists {
-					if i > 0 {
-						artistNames += ", "
+		totalCount = totalOther + tracksCount
+
+		// Determine the slice for this page
+		start := offset
+		end := min(offset+limit, totalCount)
+
+		// Add artists
+		if start < artistsCount {
+			artistEnd := min(end, artistsCount)
+			for i := start; i < artistEnd; i++ {
+				artist := artists[i]
+				results = append(results, SearchResult{
+					Type:        "artist",
+					ID:          artist.ID,
+					PrimaryName: artist.Name,
+					Secondary:   artist.ID,
+					Tertiary:    "",
+					ImageURL:    "",
+				})
+			}
+		}
+
+		// Add albums
+		if end > artistsCount {
+			albumStart := 0
+			if start > artistsCount {
+				albumStart = start - artistsCount
+			}
+			albumEnd := min(end-artistsCount, albumsCount)
+			for i := albumStart; i < albumEnd; i++ {
+				album := albums[i]
+				var artistNames strings.Builder
+				if len(album.Artists) > 0 {
+					for j, ar := range album.Artists {
+						if j > 0 {
+							artistNames.WriteString(", ")
+						}
+						artistNames.WriteString(ar.Artist.Name)
 					}
-					artistNames += ar.Artist.Name
+				}
+				year := ""
+				if !album.ReleaseDate.IsZero() {
+					year = fmt.Sprintf("%d", album.ReleaseDate.Year())
+				}
+				results = append(results, SearchResult{
+					Type:        "album",
+					ID:          album.ID,
+					PrimaryName: album.Title,
+					Secondary:   artistNames.String(),
+					Tertiary:    year,
+					ImageURL:    album.ImageSmall,
+				})
+			}
+		}
+
+		// Add tracks
+		if end > totalOther {
+			trackStart := 0
+			if start > totalOther {
+				trackStart = start - totalOther
+			}
+			trackLimit := end - totalOther - trackStart
+			if trackLimit > 0 {
+				tracks, err := h.service.GetTracksPaginated(c.Context(), trackLimit, trackStart)
+				if err != nil {
+					slog.Error("Error loading tracks", "error", err)
+					return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
+				}
+				for _, track := range tracks {
+					var artistNames strings.Builder
+					if len(track.Artists) > 0 {
+						for i, ar := range track.Artists {
+							if i > 0 {
+								artistNames.WriteString(", ")
+							}
+							artistNames.WriteString(ar.Artist.Name)
+						}
+					}
+					albumTitle := ""
+					if track.Album != nil {
+						albumTitle = track.Album.Title
+					}
+					results = append(results, SearchResult{
+						Type:        "track",
+						ID:          track.ID,
+						PrimaryName: track.Title,
+						Secondary:   artistNames.String(),
+						Tertiary:    albumTitle,
+						Duration:    track.Metadata.Duration,
+						ImageURL:    "",
+					})
 				}
 			}
-			albumTitle := ""
-			if track.Album != nil {
-				albumTitle = track.Album.Title
-			}
-			results = append(results, SearchResult{
-				Type:        "track",
-				ID:          track.ID,
-				PrimaryName: track.Title,
-				Secondary:   artistNames,
-				Tertiary:    albumTitle,
-				Duration:    track.Metadata.Duration,
-				ImageURL:    "",
-			})
 		}
 	} else {
 		// Search artists
@@ -261,13 +341,13 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 			slog.Error("Error searching albums", "error", err)
 		} else {
 			for _, album := range albums {
-				artistNames := ""
+				var artistNames strings.Builder
 				if len(album.Artists) > 0 {
 					for i, ar := range album.Artists {
 						if i > 0 {
-							artistNames += ", "
+							artistNames.WriteString(", ")
 						}
-						artistNames += ar.Artist.Name
+						artistNames.WriteString(ar.Artist.Name)
 					}
 				}
 				year := ""
@@ -278,7 +358,7 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 					Type:        "album",
 					ID:          album.ID,
 					PrimaryName: album.Title,
-					Secondary:   artistNames,
+					Secondary:   artistNames.String(),
 					Tertiary:    year,
 					ImageURL:    album.ImageSmall,
 				})
@@ -296,13 +376,13 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 			slog.Error("Error searching tracks", "error", err)
 		} else {
 			for _, track := range tracks {
-				artistNames := ""
+				var artistNames strings.Builder
 				if len(track.Artists) > 0 {
 					for i, ar := range track.Artists {
 						if i > 0 {
-							artistNames += ", "
+							artistNames.WriteString(", ")
 						}
-						artistNames += ar.Artist.Name
+						artistNames.WriteString(ar.Artist.Name)
 					}
 				}
 				albumTitle := ""
@@ -313,7 +393,7 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 					Type:        "track",
 					ID:          track.ID,
 					PrimaryName: track.Title,
-					Secondary:   artistNames,
+					Secondary:   artistNames.String(),
 					Tertiary:    albumTitle,
 					Duration:    track.Metadata.Duration,
 					ImageURL:    "",
