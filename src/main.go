@@ -100,7 +100,7 @@ func main() {
 		"deezer":      deezerProvider,
 	}, acoustIDService, cfgManager)
 
-	analyzeService := analyze.NewService(tagService, lyricsService, db, jobService, cfgManager) // Now using interfaces
+	analyzeService := analyze.NewService(tagService, lyricsService, db, jobService, cfgManager, fileOrganizer) // Now using interfaces
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
 
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)
@@ -115,6 +115,9 @@ func main() {
 
 	lyricsTask := analyze.NewLyricsJobTask(analyzeService)
 	jobService.RegisterHandler("analyze_lyrics", jobs.NewBaseTaskHandler(lyricsTask))
+
+	reorganizeTask := analyze.NewReorganizeJobTask(analyzeService)
+	jobService.RegisterHandler("analyze_reorganize", jobs.NewBaseTaskHandler(reorganizeTask))
 
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {

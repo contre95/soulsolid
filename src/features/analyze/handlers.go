@@ -78,6 +78,32 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 	return c.Redirect("/ui/analyze")
 }
 
+// StartReorganizeAnalysis handles starting the file reorganization job
+func (h *Handler) StartReorganizeAnalysis(c *fiber.Ctx) error {
+	slog.Info("Starting file reorganization via HTTP request")
+
+	jobID, err := h.service.StartReorganizeAnalysis(c.Context())
+	if err != nil {
+		slog.Error("Failed to start file reorganization", "error", err)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": "Failed to start file reorganization: " + err.Error(),
+		})
+	}
+
+	slog.Info("File reorganization job started successfully", "jobID", jobID)
+
+	// Trigger HTMX to refresh the job list
+	c.Set("HX-Trigger", "refreshJobList")
+
+	if c.Get("HX-Request") == "true" {
+		return c.Render("toast/toastOk", fiber.Map{
+			"Msg": "File reorganization started successfully",
+		})
+	}
+
+	return c.Redirect("/ui/analyze")
+}
+
 // RenderAnalyzeSection renders the analyze section page
 func (h *Handler) RenderAnalyzeSection(c *fiber.Ctx) error {
 	slog.Debug("Rendering analyze section")
