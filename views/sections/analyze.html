@@ -64,6 +64,30 @@
             </form>
         </div>
 
+        <!-- File Reorganization Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+            <div class="flex items-center mb-4">
+                <svg class="w-8 h-8 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+                <h3 class="text-xl font-semibold text-slate-800 dark:text-white">File Reorganization</h3>
+            </div>
+            <p class="text-slate-600 dark:text-slate-400 mb-4">
+                Reorganize all library files according to the current path configuration. Moves files that don't match the configured paths.
+            </p>
+            <button
+                hx-post="/analyze/reorganize"
+                hx-target="#toast-container"
+                hx-swap="beforeend"
+                class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+            >
+                Start File Reorganization
+                <span class="htmx-indicator ml-2">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </span>
+            </button>
+        </div>
+
         <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg opacity-50">
             <div class="flex items-center mb-4">
                 <svg class="w-8 h-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
