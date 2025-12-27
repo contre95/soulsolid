@@ -62,6 +62,17 @@ func (p *TemplatePathParser) renderPathTemplate(template string, track *music.Tr
 		switch funcName {
 		case "asciify":
 			return unidecode.Unidecode(argValue)
+		case "artistfolder":
+			asciified := unidecode.Unidecode(argValue)
+			if len(asciified) == 0 {
+				return "#/"
+			}
+			firstRune := rune(strings.ToUpper(string(asciified[0]))[0])
+			if firstRune >= 'A' && firstRune <= 'Z' {
+				return string(firstRune) + "/" + asciified
+			} else {
+				return "#/" + asciified
+			}
 		case "if":
 			// Simple if: %if{condition,true_value,false_value}
 			args := strings.Split(argValue, ",")

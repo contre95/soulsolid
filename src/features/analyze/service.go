@@ -16,16 +16,18 @@ type Service struct {
 	library        music.Library
 	jobService     music.JobService
 	config         *config.Manager
+	fileManager    music.FileManager
 }
 
 // NewService creates a new analyze service
-func NewService(taggingService music.MetadataService, lyricsService music.LyricsService, library music.Library, jobService music.JobService, config *config.Manager) *Service {
+func NewService(taggingService music.MetadataService, lyricsService music.LyricsService, library music.Library, jobService music.JobService, config *config.Manager, fileManager music.FileManager) *Service {
 	return &Service{
 		taggingService: taggingService,
 		lyricsService:  lyricsService,
 		library:        library,
 		jobService:     jobService,
 		config:         config,
+		fileManager:    fileManager,
 	}
 }
 
@@ -50,5 +52,16 @@ func (s *Service) StartLyricsAnalysis(ctx context.Context, provider string) (str
 		return "", fmt.Errorf("failed to start lyrics analysis job: %w", err)
 	}
 	slog.Info("Lyrics analysis job started", "jobID", jobID, "provider", provider)
+	return jobID, nil
+}
+
+// StartReorganizeAnalysis starts a job to reorganize all tracks based on current path configuration
+func (s *Service) StartReorganizeAnalysis(ctx context.Context) (string, error) {
+	slog.Info("Starting file reorganization job")
+	jobID, err := s.jobService.StartJob("analyze_reorganize", "Reorganize Library Files", map[string]any{})
+	if err != nil {
+		return "", fmt.Errorf("failed to start reorganization job: %w", err)
+	}
+	slog.Info("File reorganization job started", "jobID", jobID)
 	return jobID, nil
 }

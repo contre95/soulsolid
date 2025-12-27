@@ -289,12 +289,12 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 					logger.Info("Service.runDirectoryImport: Existing track replaced", "title", trackToImport.Title, "color", "orange")
 				}
 			case ImportTrack:
-				// Validate track before import to catch invalid data early
-				if err := trackToImport.Validate(); err != nil {
-					logger.Error("Service.runDirectoryImport: track validation failed, skipping import", "error", err, "title", trackToImport.Title, "path", trackToImport.Path)
-					stats.Errors++
-				} else if err := e.service.importTrack(ctx, trackToImport, moveFiles, logger); err != nil {
-					logger.Error("Service.runDirectoryImport: failed to import track", "error", err, "title", trackToImport.Title, "artist", trackToImport.Artists[0].Artist.Name, "album", trackToImport.Album.Title, "path", trackToImport.Path)
+				// Apply default metadata if configured to allow missing metadata
+				if config.AllowMissingMetadata {
+					trackToImport.EnsureMetadataDefaults()
+				}
+				if err := e.service.importTrack(ctx, trackToImport, moveFiles, logger); err != nil {
+					logger.Error("Service.runDirectoryImport: failed to import track", "error", err, "title", trackToImport.Title, "path", trackToImport.Path)
 					stats.Errors++
 				} else {
 					stats.TracksImported++
