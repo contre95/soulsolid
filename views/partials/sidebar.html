@@ -51,15 +51,32 @@
             <span class="mx-4">Library</span>
           </a>
         </button>
-      </li>
-      <li>
-        <button type="button" class="w-full">
-           <a
-             hx-get="/ui/import"
-             hx-trigger="click"
-             hx-push-url="true"
-             hx-swap="outerHTML"
-             hx-target="#contenido"
+       </li>
+       <li>
+         <button type="button" class="w-full">
+            <a
+              hx-get="/ui/playlists"
+              hx-trigger="click"
+              hx-push-url="true"
+              hx-swap="outerHTML"
+              hx-target="#contenido"
+              class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer"
+            >
+             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+               <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+             </svg>
+             <span class="mx-4">Playlists</span>
+           </a>
+         </button>
+       </li>
+       <li>
+         <button type="button" class="w-full">
+            <a
+              hx-get="/ui/import"
+              hx-trigger="click"
+              hx-push-url="true"
+              hx-swap="outerHTML"
+              hx-target="#contenido"
              class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer"
            >
              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="size-6">

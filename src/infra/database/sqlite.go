@@ -139,6 +139,24 @@ func createTables(db *sql.DB) error {
 			FOREIGN KEY (artist_id) REFERENCES artists(id)
 		);
 
+		CREATE TABLE IF NOT EXISTS playlists (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			description TEXT,
+			created_date TEXT,
+			modified_date TEXT
+		);
+
+		CREATE TABLE IF NOT EXISTS playlist_tracks (
+			playlist_id TEXT,
+			track_id TEXT,
+			position INTEGER,
+			added_date TEXT,
+			PRIMARY KEY (playlist_id, track_id),
+			FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
+			FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+		);
+
 		CREATE TABLE IF NOT EXISTS library_metrics (
 			id INTEGER PRIMARY KEY,
 			metric_type TEXT NOT NULL,
@@ -155,6 +173,8 @@ func createTables(db *sql.DB) error {
 		CREATE INDEX IF NOT EXISTS idx_track_attributes_track ON track_attributes(track_id);
 		CREATE INDEX IF NOT EXISTS idx_album_attributes_album ON album_attributes(album_id);
 		CREATE INDEX IF NOT EXISTS idx_artist_attributes_artist ON artist_attributes(artist_id);
+		CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist ON playlist_tracks(playlist_id);
+		CREATE INDEX IF NOT EXISTS idx_playlist_tracks_track ON playlist_tracks(track_id);
 	`)
 	if err != nil {
 		return err
@@ -518,7 +538,7 @@ func (d *SqliteLibrary) GetTrack(ctx context.Context, id string) (*music.Track, 
 		track.Attributes[key] = value
 	}
 
-	return track, nil
+	return track, tx.Commit()
 }
 
 // GetGenreDistribution returns the distribution of tracks by genre.
@@ -1872,6 +1892,356 @@ func (d *SqliteLibrary) FindTrackByMetadata(ctx context.Context, title, artistNa
 	return track, nil
 }
 
+// Create creates a new playlist in the database.
+func (d *SqliteLibrary) Create(ctx context.Context, playlist *music.Playlist) error {
+	// Validate playlist using domain validation
+	if err := playlist.Validate(); err != nil {
+		return err
+	}
+
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Insert playlist
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO playlists (id, name, description, created_date, modified_date)
+		VALUES (?, ?, ?, ?, ?)
+	`, playlist.ID, playlist.Name, playlist.Description,
+		playlist.CreatedDate.Format(time.RFC3339), playlist.ModifiedDate.Format(time.RFC3339))
+	if err != nil {
+		return err
+	}
+
+	// Insert playlist-track relationships with positions
+	for i, track := range playlist.Tracks {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO playlist_tracks (playlist_id, track_id, position, added_date)
+			VALUES (?, ?, ?, ?)
+		`, playlist.ID, track.ID, i, time.Now().Format(time.RFC3339))
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+// GetByID gets a playlist by ID from the database.
+func (d *SqliteLibrary) GetByID(ctx context.Context, id string) (*music.Playlist, error) {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	// Get playlist basic info
+	row := tx.QueryRowContext(ctx, `
+		SELECT id, name, description, created_date, modified_date
+		FROM playlists
+		WHERE id = ?
+	`, id)
+
+	playlist := &music.Playlist{}
+	var createdDateStr, modifiedDateStr string
+	var description sql.NullString
+
+	err = row.Scan(&playlist.ID, &playlist.Name, &description, &createdDateStr, &modifiedDateStr)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	playlist.Description = description.String
+	playlist.CreatedDate, _ = time.Parse(time.RFC3339, createdDateStr)
+	playlist.ModifiedDate, _ = time.Parse(time.RFC3339, modifiedDateStr)
+
+	// Get playlist tracks ordered by position
+	rows, err := tx.QueryContext(ctx, `
+		SELECT t.id, t.path, t.title, t.title_version, t.duration, t.track_number, t.disc_number,
+			   t.isrc, t.bitrate, t.format, t.sample_rate, t.bit_depth, t.channels,
+			   t.explicit_content, t.preview_url, t.composer, t.genre, t.year,
+			   t.original_year, t.lyrics, t.explicit_lyrics, t.bpm, t.gain, t.source, t.source_url, t.added_date, t.modified_date
+		FROM playlist_tracks pt
+		JOIN tracks t ON pt.track_id = t.id
+		WHERE pt.playlist_id = ?
+		ORDER BY pt.position
+	`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		track := &music.Track{}
+		var addedDateStr, modifiedDateStr string
+		var sourceNull, sourceURLNull sql.NullString
+		err := rows.Scan(&track.ID, &track.Path, &track.Title, &track.TitleVersion, &track.Metadata.Duration,
+			&track.Metadata.TrackNumber, &track.Metadata.DiscNumber,
+			&track.ISRC, &track.Bitrate, &track.Format, &track.SampleRate, &track.BitDepth,
+			&track.Channels, &track.ExplicitContent, &track.PreviewURL,
+			&track.Metadata.Composer, &track.Metadata.Genre, &track.Metadata.Year,
+			&track.Metadata.OriginalYear, &track.Metadata.Lyrics, &track.Metadata.ExplicitLyrics,
+			&track.Metadata.BPM, &track.Metadata.Gain, &sourceNull, &sourceURLNull, &addedDateStr, &modifiedDateStr)
+		if err != nil {
+			return nil, err
+		}
+
+		track.MetadataSource.Source = sourceNull.String
+		track.MetadataSource.MetadataSourceURL = sourceURLNull.String
+		track.AddedDate, _ = time.Parse(time.RFC3339, addedDateStr)
+		track.ModifiedDate, _ = time.Parse(time.RFC3339, modifiedDateStr)
+
+		playlist.Tracks = append(playlist.Tracks, track)
+	}
+
+	return playlist, tx.Commit()
+}
+
+// GetAll gets all playlists from the database.
+func (d *SqliteLibrary) GetAll(ctx context.Context) ([]*music.Playlist, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT id, name, description, created_date, modified_date
+		FROM playlists
+		ORDER BY name
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	playlists := []*music.Playlist{}
+
+	for rows.Next() {
+		playlist := &music.Playlist{}
+		var createdDateStr, modifiedDateStr string
+		var description sql.NullString
+
+		err := rows.Scan(&playlist.ID, &playlist.Name, &description, &createdDateStr, &modifiedDateStr)
+		if err != nil {
+			return nil, err
+		}
+
+		playlist.Description = description.String
+		playlist.CreatedDate, _ = time.Parse(time.RFC3339, createdDateStr)
+		playlist.ModifiedDate, _ = time.Parse(time.RFC3339, modifiedDateStr)
+
+		playlists = append(playlists, playlist)
+	}
+
+	return playlists, nil
+}
+
+// Update updates a playlist in the database.
+func (d *SqliteLibrary) Update(ctx context.Context, playlist *music.Playlist) error {
+	// Validate playlist using domain validation
+	if err := playlist.Validate(); err != nil {
+		return err
+	}
+
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Update playlist
+	_, err = tx.ExecContext(ctx, `
+		UPDATE playlists
+		SET name = ?, description = ?, modified_date = ?
+		WHERE id = ?
+	`, playlist.Name, playlist.Description, playlist.ModifiedDate.Format(time.RFC3339), playlist.ID)
+	if err != nil {
+		return err
+	}
+
+	// Delete existing playlist-track relationships
+	_, err = tx.ExecContext(ctx, `DELETE FROM playlist_tracks WHERE playlist_id = ?`, playlist.ID)
+	if err != nil {
+		return err
+	}
+
+	// Insert new playlist-track relationships with positions
+	for i, track := range playlist.Tracks {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO playlist_tracks (playlist_id, track_id, position, added_date)
+			VALUES (?, ?, ?, ?)
+		`, playlist.ID, track.ID, i, time.Now().Format(time.RFC3339))
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+// Delete deletes a playlist from the database.
+func (d *SqliteLibrary) Delete(ctx context.Context, id string) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete playlist-track relationships (cascade should handle this, but being explicit)
+	_, err = tx.ExecContext(ctx, `DELETE FROM playlist_tracks WHERE playlist_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete playlist
+	_, err = tx.ExecContext(ctx, `DELETE FROM playlists WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// AddTrackToPlaylist adds a track to a playlist.
+func (d *SqliteLibrary) AddTrackToPlaylist(ctx context.Context, playlistID, trackID string) error {
+	slog.Debug("AddTrackToPlaylist database method called", "playlistID", playlistID, "trackID", trackID)
+
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		slog.Error("AddTrackToPlaylist: failed to begin transaction", "error", err)
+		return err
+	}
+	defer tx.Rollback()
+
+	// Check if track already exists in playlist
+	var exists bool
+	err = tx.QueryRowContext(ctx, `
+		SELECT EXISTS(SELECT 1 FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?)
+	`, playlistID, trackID).Scan(&exists)
+	if err != nil {
+		slog.Error("AddTrackToPlaylist: failed to check if track exists", "error", err)
+		return err
+	}
+	if exists {
+		slog.Info("AddTrackToPlaylist: track already exists in playlist", "playlistID", playlistID, "trackID", trackID)
+		return fmt.Errorf("track already exists in playlist")
+	}
+
+	// Get current max position
+	var maxPosition int
+	err = tx.QueryRowContext(ctx, `
+		SELECT COALESCE(MAX(position), -1) FROM playlist_tracks WHERE playlist_id = ?
+	`, playlistID).Scan(&maxPosition)
+	if err != nil {
+		slog.Error("AddTrackToPlaylist: failed to get max position", "error", err)
+		return err
+	}
+
+	slog.Debug("AddTrackToPlaylist: inserting track", "playlistID", playlistID, "trackID", trackID, "position", maxPosition+1)
+
+	// Insert track at the end
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO playlist_tracks (playlist_id, track_id, position, added_date)
+		VALUES (?, ?, ?, ?)
+	`, playlistID, trackID, maxPosition+1, time.Now().Format(time.RFC3339))
+	if err != nil {
+		slog.Error("AddTrackToPlaylist: failed to insert track", "error", err)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		slog.Error("AddTrackToPlaylist: failed to commit transaction", "error", err)
+		return err
+	}
+
+	slog.Info("AddTrackToPlaylist: successfully added track to playlist", "playlistID", playlistID, "trackID", trackID)
+	return nil
+}
+
+// RemoveTrackFromPlaylist removes a track from a playlist.
+func (d *SqliteLibrary) RemoveTrackFromPlaylist(ctx context.Context, playlistID, trackID string) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Get the position of the track being removed
+	var removedPosition int
+	err = tx.QueryRowContext(ctx, `
+		SELECT position FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?
+	`, playlistID, trackID).Scan(&removedPosition)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("track not found in playlist")
+		}
+		return err
+	}
+
+	// Delete the track
+	_, err = tx.ExecContext(ctx, `
+		DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?
+	`, playlistID, trackID)
+	if err != nil {
+		return err
+	}
+
+	// Update positions of remaining tracks
+	_, err = tx.ExecContext(ctx, `
+		UPDATE playlist_tracks
+		SET position = position - 1
+		WHERE playlist_id = ? AND position > ?
+	`, playlistID, removedPosition)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// GetTracksForPlaylist gets all tracks for a specific playlist.
+func (d *SqliteLibrary) GetTracksForPlaylist(ctx context.Context, playlistID string) ([]*music.Track, error) {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	rows, err := tx.QueryContext(ctx, `
+		SELECT t.id
+		FROM playlist_tracks pt
+		JOIN tracks t ON pt.track_id = t.id
+		WHERE pt.playlist_id = ?
+		ORDER BY pt.position
+	`, playlistID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tracks := []*music.Track{}
+
+	for rows.Next() {
+		var trackID string
+		err := rows.Scan(&trackID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get full track data
+		track, err := d.GetTrack(ctx, trackID)
+		if err != nil {
+			return nil, err
+		}
+		if track != nil {
+			tracks = append(tracks, track)
+		}
+	}
+
+	return tracks, tx.Commit()
+}
+
 // FindTrackByPath finds a track by its file path
 func (d *SqliteLibrary) FindTrackByPath(ctx context.Context, path string) (*music.Track, error) {
 	row := d.db.QueryRowContext(ctx, `
@@ -1928,3 +2298,6 @@ func (d *SqliteLibrary) FindTrackByPath(ctx context.Context, path string) (*musi
 
 	return track, nil
 }
+
+// Ensure SqliteLibrary implements PlaylistRepository
+var _ music.PlaylistRepository = (*SqliteLibrary)(nil)

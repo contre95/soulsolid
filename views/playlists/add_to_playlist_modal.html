@@ -1,0 +1,108 @@
+{{define "playlists/add_to_playlist_modal"}}
+<!-- Modal Background -->
+<div id="playlist-modal" class="fixed inset-0 z-50">
+  <!-- Blurry Background Overlay -->
+  <div class="modal-overlay"></div>
+  <!-- Modal Content Container -->
+  <div class="flex items-center justify-center h-full">
+    <!-- Modal Content -->
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 max-h-[80vh] overflow-hidden border border-gray-200 dark:border-gray-700">
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-700">
+      <div>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Add to Playlist</h2>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Choose a playlist for this track</p>
+      </div>
+      <button id="close-playlist-modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-2 transition-colors duration-200">
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="p-6 max-h-96 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+      {{if .Playlists}}
+      <div class="space-y-2">
+        {{range .Playlists}}
+        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:bg-white dark:hover:bg-gray-700 hover:shadow-md transition-all duration-200 bg-white dark:bg-gray-900 shadow-sm cursor-pointer"
+             hx-post="/playlists/tracks"
+             hx-vals='{"playlist_id": "{{.ID}}", "track_id": "{{$.TrackID}}"}'
+             hx-target="#toast-container"
+             hx-swap="beforeend"
+             hx-on:htmx:after-request="if (event.detail.successful) { document.getElementById('playlist-modal').remove(); }">
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <h3 class="text-sm font-medium text-gray-900 dark:text-white">{{.Name}}</h3>
+              {{if .Description}}
+              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{.Description}}</p>
+              {{end}}
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+              {{len .Tracks}} tracks
+            </div>
+          </div>
+        </div>
+        {{end}}
+      </div>
+      {{else}}
+      <div class="text-center py-8">
+        <svg class="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+        </svg>
+        <p class="text-gray-500 dark:text-gray-400 mb-4">No playlists found</p>
+        <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+                hx-get="/ui/playlists"
+                hx-target="#contenido"
+                hx-swap="innerHTML"
+                hx-push-url="true">
+          Create your first playlist
+        </button>
+      </div>
+      {{end}}
+    </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.dark .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+</style>
+
+<script>
+// Close modal functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('playlist-modal');
+  const closeBtn = document.getElementById('close-playlist-modal');
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function() {
+      modal.remove();
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+
+    // Close on escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        modal.remove();
+      }
+    });
+  }
+});
+</script>
+{{end}}

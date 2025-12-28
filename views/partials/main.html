@@ -29,6 +29,8 @@
                  {{template "sections/jobs" .}}
                  {{else if eq .Section "settings"}}
                  {{template "sections/settings" .}}
+                 {{else if eq .Section "playlists"}}
+                 {{template "sections/playlists" .}}
                  {{else if eq .Section "sync"}}
                  {{template "sections/sync" .}}
                  {{else if eq .Section "download"}}
