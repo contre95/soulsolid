@@ -1,0 +1,19 @@
+<div id="contenido" class="animate__animated animate__fadeIn">
+    <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">
+        Playlists
+    </h1>
+
+    <div class="mb-6">
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                hx-get="/ui/playlists/list"
+                hx-target="#playlists-content"
+                hx-swap="innerHTML">
+            <i class="fas fa-plus mr-2"></i>
+            Create New Playlist
+        </button>
+    </div>
+
+    <div id="playlists-content" hx-get="/ui/playlists/list" hx-trigger="load" hx-swap="innerHTML">
+        Loading playlists...
+    </div>
+</div>

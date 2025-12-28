@@ -1,0 +1,65 @@
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <!-- Create new playlist card -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+         hx-get="/ui/playlists/new"
+         hx-target="#contenido"
+         hx-push-url="true">
+        <div class="flex flex-col items-center justify-center h-32">
+            <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mb-4">
+                <i class="fas fa-plus text-blue-600 dark:text-blue-400 text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Create Playlist</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Add a new playlist</p>
+        </div>
+    </div>
+
+    {{range .Playlists}}
+    <!-- Playlist card -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+         hx-get="/ui/playlists/{{.ID}}"
+         hx-target="#contenido"
+         hx-push-url="true">
+        <div class="p-6">
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white truncate">{{.Name}}</h3>
+                    {{if .Description}}
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{{.Description}}</p>
+                    {{end}}
+                </div>
+                <div class="ml-4">
+                    <button class="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1"
+                            hx-delete="/api/playlists/{{.ID}}"
+                            hx-confirm="Are you sure you want to delete '{{.Name}}'?"
+                            hx-target="#toast-container"
+                            hx-swap="beforeend"
+                            onclick="event.stopPropagation()">
+                        <i class="fas fa-trash text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+                <span>{{len .Tracks}} tracks</span>
+                <span>{{.ModifiedDate.Format "Jan 02, 2006"}}</span>
+            </div>
+        </div>
+    </div>
+    {{else}}
+    <!-- Empty state -->
+    <div class="col-span-full text-center py-12">
+        <div class="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-list text-gray-400 text-3xl"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No playlists yet</h3>
+        <p class="text-gray-600 dark:text-gray-400 mb-6">Create your first playlist to get started</p>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                hx-get="/ui/playlists/new"
+                hx-target="#contenido"
+                hx-push-url="true">
+            <i class="fas fa-plus mr-2"></i>
+            Create Your First Playlist
+        </button>
+    </div>
+    {{end}}
+</div>

@@ -1,0 +1,54 @@
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <div class="flex items-center mb-6">
+            <button class="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 mr-4"
+                    hx-get="/ui/playlists"
+                    hx-target="#contenido"
+                    hx-push-url="true">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Create New Playlist</h2>
+        </div>
+
+        <form hx-post="/api/playlists" hx-target="#toast-container" hx-swap="beforeend">
+            <div class="space-y-6">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Playlist Name *
+                    </label>
+                    <input type="text"
+                           id="name"
+                           name="name"
+                           required
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                           placeholder="Enter playlist name">
+                </div>
+
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Description
+                    </label>
+                    <textarea id="description"
+                              name="description"
+                              rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                              placeholder="Optional description"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-4">
+                    <button type="button"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            hx-get="/ui/playlists"
+                            hx-target="#contenido"
+                            hx-push-url="true">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Create Playlist
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

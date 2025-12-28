@@ -1,0 +1,114 @@
+<div class="max-w-6xl mx-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <!-- Playlist Header -->
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button class="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                            hx-get="/ui/playlists"
+                            hx-target="#contenido"
+                            hx-push-url="true">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{.Playlist.Name}}</h1>
+                        {{if .Playlist.Description}}
+                        <p class="text-gray-600 dark:text-gray-400 mt-1">{{.Playlist.Description}}</p>
+                        {{end}}
+                        <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                            {{len .Playlist.Tracks}} tracks • Created {{.Playlist.CreatedDate.Format "Jan 02, 2006"}}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <button class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 px-3 py-1.5 rounded-md text-sm font-medium"
+                            hx-get="/api/playlists/{{.Playlist.ID}}/export/m3u"
+                            hx-target="_blank">
+                        <i class="fas fa-download mr-1"></i>
+                        Export M3U
+                    </button>
+                    <button class="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-1.5 rounded-md text-sm font-medium"
+                            hx-get="/ui/playlists/{{.Playlist.ID}}/edit"
+                            hx-target="#contenido"
+                            hx-push-url="true">
+                        <i class="fas fa-edit mr-1"></i>
+                        Edit
+                    </button>
+                    <button class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 px-3 py-1.5 rounded-md text-sm font-medium"
+                            hx-delete="/api/playlists/{{.Playlist.ID}}"
+                            hx-confirm="Are you sure you want to delete '{{.Playlist.Name}}'?"
+                            hx-target="#toast-container"
+                            hx-swap="beforeend">
+                        <i class="fas fa-trash mr-1"></i>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tracks List -->
+        <div class="p-6">
+            {{if .Playlist.Tracks}}
+            <div class="space-y-2">
+                {{range $index, $track := .Playlist.Tracks}}
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                    <div class="flex items-center space-x-4 flex-1">
+                        <span class="text-sm font-medium text-gray-500 dark:text-gray-400 w-8 text-center">
+                            {{$index | add 1}}
+                        </span>
+
+                        {{if $track.Album.ImageXL}}
+                        <img src="{{$track.Album.ImageXL}}" alt="Album art" class="w-10 h-10 rounded object-cover">
+                        {{else}}
+                        <div class="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded flex items-center justify-center">
+                            <i class="fas fa-music text-gray-600 dark:text-gray-400"></i>
+                        </div>
+                        {{end}}
+
+                        <div class="flex-1">
+                            <h3 class="font-medium text-gray-900 dark:text-white truncate">
+                                {{$track.Title}}
+                                {{if $track.TitleVersion}}({{$track.TitleVersion}}){{end}}
+                            </h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 truncate">
+                                {{range $i, $artist := $track.Artists}}
+                                    {{if $i}}, {{end}}{{$artist.Artist.Name}}
+                                {{end}}
+                                {{if $track.Album}}• {{$track.Album.Title}}{{end}}
+                            </p>
+                        </div>
+
+                        <div class="text-sm text-gray-500 dark:text-gray-400">
+                            {{duration $track.Metadata.Duration}}
+                        </div>
+                    </div>
+
+                    <button class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-2 ml-4"
+                            hx-delete="/api/playlists/{{$.Playlist.ID}}/tracks/{{$track.ID}}"
+                            hx-confirm="Remove '{{$track.Title}}' from playlist?"
+                            hx-target="#toast-container"
+                            hx-swap="beforeend"
+                            title="Remove from playlist">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                {{end}}
+            </div>
+            {{else}}
+            <!-- Empty playlist state -->
+            <div class="text-center py-12">
+                <div class="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-music text-gray-400 text-3xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No tracks in this playlist</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">Add tracks from your library to get started</p>
+                <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200">
+                    <i class="fas fa-plus mr-2"></i>
+                    Add Tracks
+                </button>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>

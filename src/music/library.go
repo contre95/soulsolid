@@ -51,4 +51,16 @@ type Library interface {
 	GetArtistsFilteredCount(ctx context.Context, nameFilter string) (int, error)
 	GetArtistByName(ctx context.Context, name string) (*Artist, error)
 	FindOrCreateArtist(ctx context.Context, artistName string) (*Artist, error)
+
+	// Playlist methods
+	AddPlaylist(ctx context.Context, playlist *Playlist) error
+	GetPlaylist(ctx context.Context, id string) (*Playlist, error)
+	UpdatePlaylist(ctx context.Context, playlist *Playlist) error
+	DeletePlaylist(ctx context.Context, id string) error
+	GetPlaylists(ctx context.Context) ([]*Playlist, error)
+	GetPlaylistsPaginated(ctx context.Context, limit, offset int) ([]*Playlist, error)
+	GetPlaylistsCount(ctx context.Context) (int, error)
+	AddTrackToPlaylist(ctx context.Context, playlistID, trackID string) error
+	RemoveTrackFromPlaylist(ctx context.Context, playlistID, trackID string) error
+	GetPlaylistTracks(ctx context.Context, playlistID string) ([]*Track, error)
 }

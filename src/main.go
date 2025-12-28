@@ -17,7 +17,9 @@ import (
 	"github.com/contre95/soulsolid/src/features/lyrics"
 	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
+	"github.com/contre95/soulsolid/src/features/playlists"
 	"github.com/contre95/soulsolid/src/features/syncdap"
+	"github.com/contre95/soulsolid/src/infra"
 	"github.com/contre95/soulsolid/src/infra/database"
 	"github.com/contre95/soulsolid/src/infra/files"
 	"github.com/contre95/soulsolid/src/infra/fingerprint"
@@ -25,6 +27,7 @@ import (
 	"github.com/contre95/soulsolid/src/infra/queue"
 	"github.com/contre95/soulsolid/src/infra/tag"
 	"github.com/contre95/soulsolid/src/infra/watcher"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 func main() {
@@ -103,6 +106,9 @@ func main() {
 	analyzeService := analyze.NewService(tagService, lyricsService, db, jobService, cfgManager, fileOrganizer) // Now using interfaces
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
 
+	playlistService := music.NewPlaylistService(db)
+	m3uParser := infra.NewM3UParser(playlistService, db)
+
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)
 	jobService.RegisterHandler("download_track", jobs.NewBaseTaskHandler(downloadTask))
 	jobService.RegisterHandler("download_album", jobs.NewBaseTaskHandler(downloadTask))
@@ -131,7 +137,10 @@ func main() {
 		}
 	}
 
-	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService, lyricsService, metricsService, analyzeService)
+	playlistsService := playlists.NewService(playlistService, m3uParser)
+	playlistsHandler := playlists.NewHandler(playlistsService)
+
+	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService, lyricsService, metricsService, analyzeService, playlistsService, playlistsHandler)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped: %v", "error", err)
