@@ -59,5 +59,21 @@
       initSlimSelect();
     }
   });
+
+  // Queue grouping button activation
+  function activateGroupingButton(groupingType) {
+    // Remove active state from all buttons
+    document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+      btn.classList.remove('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm');
+      btn.classList.add('text-gray-600', 'dark:text-gray-400');
+    });
+
+    // Add active state to target button
+    const targetBtn = document.getElementById(`view-${groupingType}`);
+    if (targetBtn) {
+      targetBtn.classList.add('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm');
+      targetBtn.classList.remove('text-gray-600', 'dark:text-gray-400');
+    }
+  }
 </script>
 {{end}}

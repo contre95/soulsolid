@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"sort"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -81,6 +82,7 @@ func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
 	}
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
 	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
+	c.Response().Header.Set("HX-Trigger", "activateIndividualGrouping")
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": fmt.Sprintf("Track %s successfully", actionMsg),
 	})
@@ -106,6 +108,7 @@ func (h *Handler) ClearQueue(c *fiber.Ctx) error {
 	}
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
 	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
+	c.Response().Header.Set("HX-Trigger", "activateIndividualGrouping")
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": "Queue cleared successfully",
 	})
@@ -122,6 +125,7 @@ func (h *Handler) PruneDownloadPath(c *fiber.Ctx) error {
 	}
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
 	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
+	c.Response().Header.Set("HX-Trigger", "activateIndividualGrouping")
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": "Download path pruned and queue cleared successfully",
 	})
@@ -205,15 +209,20 @@ func (h *Handler) RenderQueueItems(c *fiber.Ctx) error {
 	c.Response().Header.Set("HX-Trigger", "updateQueueCount")
 	queueItemsMap := h.service.GetQueuedItems()
 
-	// Limit to 10 items for better performance and UX
-	queueItems := make([]QueueItem, 0, 10)
-	count := 0
+	// Collect all items into a slice
+	queueItems := make([]QueueItem, 0, len(queueItemsMap))
 	for _, item := range queueItemsMap {
-		if count >= 10 {
-			break
-		}
 		queueItems = append(queueItems, item)
-		count++
+	}
+
+	// Sort by timestamp (oldest first)
+	sort.Slice(queueItems, func(i, j int) bool {
+		return queueItems[i].Timestamp.Before(queueItems[j].Timestamp)
+	})
+
+	// Limit to 10 items for better performance and UX
+	if len(queueItems) > 10 {
+		queueItems = queueItems[:10]
 	}
 
 	return c.Render("importing/queue_items", fiber.Map{
@@ -282,6 +291,14 @@ func (h *Handler) ProcessQueueGroup(c *fiber.Ctx) error {
 
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
 	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
+
+	// Send grouping activation header based on group type
+	if groupType == "artist" {
+		c.Response().Header.Set("HX-Trigger", "activateArtistGrouping")
+	} else if groupType == "album" {
+		c.Response().Header.Set("HX-Trigger", "activateAlbumGrouping")
+	}
+
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": fmt.Sprintf("Group '%s' %s successfully", decodedGroupKey, actionMsg),
 	})
@@ -300,6 +317,13 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 	} else {
 		groups = h.service.GetGroupedByArtist()
 		templateName = "importing/queue_items_grouped_artist"
+	}
+
+	// Sort items within each group by timestamp
+	for _, items := range groups {
+		sort.Slice(items, func(i, j int) bool {
+			return items[i].Timestamp.Before(items[j].Timestamp)
+		})
 	}
 
 	return c.Render(templateName, fiber.Map{
