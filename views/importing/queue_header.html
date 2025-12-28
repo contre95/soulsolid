@@ -40,42 +40,45 @@
   <!-- View toggle buttons row -->
   <div class="flex justify-center">
      <div class="flex gap-2 bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-1 backdrop-blur-sm">
-      <button
-        id="view-individual"
-        hx-get="/ui/importing/queue/items"
-        hx-target="#queue-content"
-        hx-swap="innerHTML"
-        hx-trigger="click, queueUpdated from:body, refreshImportQueueBadge from:body"
-        hx-on:click="document.querySelectorAll('.view-toggle-btn').forEach(btn => { btn.classList.remove('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm'); btn.classList.add('text-gray-600', 'dark:text-gray-400'); }); this.classList.add('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm'); this.classList.remove('text-gray-600', 'dark:text-gray-400');"
-        class="view-toggle-btn active inline-flex mx-1 items-center px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 ease-out-expo bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 shadow-sm hover:shadow-md"
-        title="Individual View">
-        <i class="fas fa-list mr-1"></i>
-        Individual
-      </button>
-      <button
-        id="view-artist-groups"
-        hx-get="/ui/importing/queue/items/grouped?type=artist"
-        hx-target="#queue-content"
-        hx-swap="innerHTML"
-        hx-trigger="click, queueUpdated from:body, refreshImportQueueBadge from:body"
-        hx-on:click="document.querySelectorAll('.view-toggle-btn').forEach(btn => { btn.classList.remove('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm'); btn.classList.add('text-gray-600', 'dark:text-gray-400'); }); this.classList.add('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm'); this.classList.remove('text-gray-600', 'dark:text-gray-400');"
-        class="view-toggle-btn inline-flex mx-1 items-center px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 ease-out-expo text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200"
-        title="Group by Artist">
-        <i class="fas fa-user mr-1"></i>
-        By Artist
-      </button>
-      <button
-        id="view-album-groups"
-        hx-get="/ui/importing/queue/items/grouped?type=album"
-        hx-target="#queue-content"
-        hx-swap="innerHTML"
-        hx-trigger="click, queueUpdated from:body, refreshImportQueueBadge from:body"
-        hx-on:click="document.querySelectorAll('.view-toggle-btn').forEach(btn => { btn.classList.remove('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm'); btn.classList.add('text-gray-600', 'dark:text-gray-400'); }); this.classList.add('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm'); this.classList.remove('text-gray-600', 'dark:text-gray-400');"
-        class="view-toggle-btn inline-flex mx-1 items-center px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 ease-out-expo text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200"
-        title="Group by Album">
-        <i class="fas fa-compact-disc mr-1"></i>
-        By Album
-      </button>
+       <button
+         id="view-individual"
+         hx-get="/ui/importing/queue/items"
+         hx-target="#queue-content"
+         hx-swap="innerHTML"
+         hx-trigger="click, activateIndividualGrouping from:body, queueUpdated from:body, refreshImportQueueBadge from:body"
+         hx-on:click="activateGroupingButton('individual');"
+         hx-on:htmx:after-request="if (event.detail.xhr.getResponseHeader('HX-Trigger')?.includes('activateIndividualGrouping')) { activateGroupingButton('individual'); }"
+         class="view-toggle-btn active inline-flex mx-1 items-center px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 ease-out-expo bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 shadow-sm hover:shadow-md"
+         title="Individual View">
+         <i class="fas fa-list mr-1"></i>
+         Individual
+       </button>
+       <button
+         id="view-artist-groups"
+         hx-get="/ui/importing/queue/items/grouped?type=artist"
+         hx-target="#queue-content"
+         hx-swap="innerHTML"
+         hx-trigger="click, activateArtistGrouping from:body, queueUpdated from:body, refreshImportQueueBadge from:body"
+         hx-on:click="activateGroupingButton('artist-groups');"
+         hx-on:htmx:after-request="if (event.detail.xhr.getResponseHeader('HX-Trigger')?.includes('activateArtistGrouping')) { activateGroupingButton('artist-groups'); }"
+         class="view-toggle-btn inline-flex mx-1 items-center px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 ease-out-expo text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200"
+         title="Group by Artist">
+         <i class="fas fa-user mr-1"></i>
+         By Artist
+       </button>
+       <button
+         id="view-album-groups"
+         hx-get="/ui/importing/queue/items/grouped?type=album"
+         hx-target="#queue-content"
+         hx-swap="innerHTML"
+         hx-trigger="click, activateAlbumGrouping from:body, queueUpdated from:body, refreshImportQueueBadge from:body"
+         hx-on:click="activateGroupingButton('album-groups');"
+         hx-on:htmx:after-request="if (event.detail.xhr.getResponseHeader('HX-Trigger')?.includes('activateAlbumGrouping')) { activateGroupingButton('album-groups'); }"
+         class="view-toggle-btn inline-flex mx-1 items-center px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 ease-out-expo text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200"
+         title="Group by Album">
+         <i class="fas fa-compact-disc mr-1"></i>
+         By Album
+       </button>
     </div>
   </div>
 </div>

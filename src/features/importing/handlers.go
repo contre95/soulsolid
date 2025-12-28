@@ -82,6 +82,7 @@ func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
 	}
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
 	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
+	c.Response().Header.Set("HX-Trigger", "activateIndividualGrouping")
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": fmt.Sprintf("Track %s successfully", actionMsg),
 	})
@@ -107,6 +108,7 @@ func (h *Handler) ClearQueue(c *fiber.Ctx) error {
 	}
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
 	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
+	c.Response().Header.Set("HX-Trigger", "activateIndividualGrouping")
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": "Queue cleared successfully",
 	})
@@ -123,6 +125,7 @@ func (h *Handler) PruneDownloadPath(c *fiber.Ctx) error {
 	}
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
 	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
+	c.Response().Header.Set("HX-Trigger", "activateIndividualGrouping")
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": "Download path pruned and queue cleared successfully",
 	})
@@ -288,6 +291,14 @@ func (h *Handler) ProcessQueueGroup(c *fiber.Ctx) error {
 
 	c.Response().Header.Set("HX-Trigger", "queueUpdated")
 	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
+
+	// Send grouping activation header based on group type
+	if groupType == "artist" {
+		c.Response().Header.Set("HX-Trigger", "activateArtistGrouping")
+	} else if groupType == "album" {
+		c.Response().Header.Set("HX-Trigger", "activateAlbumGrouping")
+	}
+
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": fmt.Sprintf("Group '%s' %s successfully", decodedGroupKey, actionMsg),
 	})
