@@ -19,6 +19,15 @@ type Playlist struct {
 	ModifiedDate time.Time
 }
 
+// TotalDuration returns the total duration of all tracks in the playlist in seconds.
+func (p *Playlist) TotalDuration() int {
+	total := 0
+	for _, track := range p.Tracks {
+		total += track.Metadata.Duration
+	}
+	return total
+}
+
 // Validate validates the playlist fields.
 func (p *Playlist) Validate() error {
 	if strings.TrimSpace(p.Name) == "" {

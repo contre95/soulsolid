@@ -1960,44 +1960,12 @@ func (d *SqliteLibrary) GetByID(ctx context.Context, id string) (*music.Playlist
 	playlist.CreatedDate, _ = time.Parse(time.RFC3339, createdDateStr)
 	playlist.ModifiedDate, _ = time.Parse(time.RFC3339, modifiedDateStr)
 
-	// Get playlist tracks ordered by position
-	rows, err := tx.QueryContext(ctx, `
-		SELECT t.id, t.path, t.title, t.title_version, t.duration, t.track_number, t.disc_number,
-			   t.isrc, t.bitrate, t.format, t.sample_rate, t.bit_depth, t.channels,
-			   t.explicit_content, t.preview_url, t.composer, t.genre, t.year,
-			   t.original_year, t.lyrics, t.explicit_lyrics, t.bpm, t.gain, t.source, t.source_url, t.added_date, t.modified_date
-		FROM playlist_tracks pt
-		JOIN tracks t ON pt.track_id = t.id
-		WHERE pt.playlist_id = ?
-		ORDER BY pt.position
-	`, id)
+	// Get playlist tracks with full track data
+	tracks, err := d.GetTracksForPlaylist(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	for rows.Next() {
-		track := &music.Track{}
-		var addedDateStr, modifiedDateStr string
-		var sourceNull, sourceURLNull sql.NullString
-		err := rows.Scan(&track.ID, &track.Path, &track.Title, &track.TitleVersion, &track.Metadata.Duration,
-			&track.Metadata.TrackNumber, &track.Metadata.DiscNumber,
-			&track.ISRC, &track.Bitrate, &track.Format, &track.SampleRate, &track.BitDepth,
-			&track.Channels, &track.ExplicitContent, &track.PreviewURL,
-			&track.Metadata.Composer, &track.Metadata.Genre, &track.Metadata.Year,
-			&track.Metadata.OriginalYear, &track.Metadata.Lyrics, &track.Metadata.ExplicitLyrics,
-			&track.Metadata.BPM, &track.Metadata.Gain, &sourceNull, &sourceURLNull, &addedDateStr, &modifiedDateStr)
-		if err != nil {
-			return nil, err
-		}
-
-		track.MetadataSource.Source = sourceNull.String
-		track.MetadataSource.MetadataSourceURL = sourceURLNull.String
-		track.AddedDate, _ = time.Parse(time.RFC3339, addedDateStr)
-		track.ModifiedDate, _ = time.Parse(time.RFC3339, modifiedDateStr)
-
-		playlist.Tracks = append(playlist.Tracks, track)
-	}
+	playlist.Tracks = tracks
 
 	return playlist, tx.Commit()
 }
@@ -2029,6 +1997,13 @@ func (d *SqliteLibrary) GetAll(ctx context.Context) ([]*music.Playlist, error) {
 		playlist.Description = description.String
 		playlist.CreatedDate, _ = time.Parse(time.RFC3339, createdDateStr)
 		playlist.ModifiedDate, _ = time.Parse(time.RFC3339, modifiedDateStr)
+
+		// Get playlist tracks with full track data
+		tracks, err := d.GetTracksForPlaylist(ctx, playlist.ID)
+		if err != nil {
+			return nil, err
+		}
+		playlist.Tracks = tracks
 
 		playlists = append(playlists, playlist)
 	}

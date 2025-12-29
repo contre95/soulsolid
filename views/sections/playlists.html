@@ -41,32 +41,7 @@
     </div>
   </div>
 
-  <!-- Import M3U Form -->
-  <div class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 mb-6">
-    <div class="p-6">
-      <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Import from M3U File</h2>
-      <form hx-post="/playlists/import" hx-target="#toast-container" hx-swap="beforeend" enctype="multipart/form-data" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="m3u-file" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">M3U File</label>
-            <input type="file" id="m3u-file" name="file" accept=".m3u,.m3u8" required
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-l-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-900 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-800">
-          </div>
-          <div>
-            <label for="m3u-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Playlist Name (optional)</label>
-            <input type="text" id="m3u-name" name="name" placeholder="Use filename if empty"
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
-          </div>
-        </div>
-        <div class="flex justify-end">
-          <button type="submit"
-                  class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-            Import Playlist
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
+
 
   <!-- Playlists List -->
   <div class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
@@ -92,11 +67,11 @@
                       title="View Playlist">
                 <i class="fas fa-eye text-sm"></i>
               </button>
-              <button class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 p-1"
-                      hx-get="/playlists/{{.ID}}/export"
-                      title="Export as M3U">
+              <a href="/playlists/{{.ID}}/export" target="_blank"
+                 class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 p-1 inline-block"
+                 title="Export as M3U">
                 <i class="fas fa-download text-sm"></i>
-              </button>
+              </a>
               <button class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1"
                       hx-delete="/playlists/{{.ID}}"
                       hx-confirm="Are you sure you want to delete this playlist?"

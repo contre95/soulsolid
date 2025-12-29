@@ -19,15 +19,15 @@
               onclick="editPlaylist()">
         <i class="fas fa-edit mr-2"></i>Edit
       </button>
-      <button class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
-              hx-get="/playlists/{{.Playlist.ID}}/export">
+      <a href="/playlists/{{.Playlist.ID}}/export" target="_blank"
+         class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors duration-200 inline-block">
         <i class="fas fa-download mr-2"></i>Export
-      </button>
+      </a>
     </div>
   </div>
 
-  <!-- Playlist Stats -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+   <!-- Playlist Stats -->
+   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" hx-trigger="playlistUpdated" hx-get="/ui/playlists/{{.Playlist.ID}}" hx-target="#contenido" hx-swap="innerHTML">
     <div class="bg-white/80 dark:bg-gray-900/70 rounded-xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 p-4">
       <div class="flex items-center">
         <div class="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-lg mr-4">
@@ -46,7 +46,7 @@
         </div>
         <div>
           <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Duration</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{totalDuration .Playlist.Tracks}}</p>
+           <p class="text-2xl font-bold text-gray-900 dark:text-white">{{duration .Playlist.TotalDuration}}</p>
         </div>
       </div>
     </div>
@@ -63,61 +63,63 @@
     </div>
   </div>
 
-  <!-- Tracks Table -->
-  <div class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+   <!-- Tracks Table -->
+   <div class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70" hx-trigger="playlistUpdated" hx-get="/ui/playlists/{{.Playlist.ID}}" hx-target="#contenido" hx-swap="innerHTML">
     <div class="p-6">
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Tracks</h2>
       {{if .Playlist.Tracks}}
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200/50 dark:divide-gray-700/50">
-          <thead class="bg-gray-50/80 dark:bg-gray-800/90 backdrop-blur-sm">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">#</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Title</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Artist</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Album</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Duration</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white/50 dark:bg-gray-800/70 divide-y divide-gray-200/30 dark:divide-gray-700/40 backdrop-blur-sm">
-            {{range $index, $track := .Playlist.Tracks}}
-            <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/60 transition-colors">
-              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white font-medium">
-                {{$index | add 1}}
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900 dark:text-white">{{.Title}}</div>
-                {{if .TitleVersion}}
-                <div class="text-xs text-gray-500 dark:text-gray-400">({{.TitleVersion}})</div>
-                {{end}}
-              </td>
-              <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                {{range $i, $artist := .Artists}}
-                  {{if gt $i 0}}, {{end}}{{$artist.Artist.Name}}
-                {{end}}
-              </td>
-              <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 truncate max-w-xs">
-                {{if .Album}}{{.Album.Title}}{{else}}Unknown Album{{end}}
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                {{duration .Metadata.Duration}}
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap text-center">
-                <button class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1"
-                        hx-delete="/playlists/{{$.Playlist.ID}}/tracks/{{.ID}}"
-                        hx-target="#toast-container"
-                        hx-swap="beforeend"
-                        hx-confirm="Remove this track from the playlist?"
-                        title="Remove from playlist">
-                  <i class="fas fa-trash text-sm"></i>
-                </button>
-              </td>
-            </tr>
-            {{end}}
-          </tbody>
-        </table>
-      </div>
+       <div class="mt-6">
+         <!-- Header -->
+         <div class="flex text-slate-500 dark:text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+           <div class="px-2 md:p-1 w-10 text-center">#</div>
+           <div class="px-2 md:p-1 w-full">Title</div>
+           <div class="px-2 md:p-1 w-full hidden md:block">Artist</div>
+           <div class="px-2 md:p-1 w-24 text-right">
+             <svg class="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+               <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+             </svg>
+           </div>
+           <div class="p-2 md:p-1 w-16 text-center">
+             <svg class="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+             </svg>
+           </div>
+         </div>
+
+         <!-- Tracks -->
+         {{range $index, $track := .Playlist.Tracks}}
+         <div class="group flex items-center border-b border-slate-200/50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+           <div class="p-2 md:p-1 w-10 text-center text-slate-500 dark:text-slate-400">{{add $index 1}}</div>
+           <div class="p-2 md:p-1 flex-1 flex items-center gap-3">
+             <div class="flex flex-col w-full justify-center">
+               <div class="font-medium text-slate-800 dark:text-white overflow-hidden whitespace-nowrap" style="text-overflow: ellipsis;">
+                 {{.Title}}
+                 {{if .TitleVersion}} ({{.TitleVersion}}){{end}}
+               </div>
+               <div class="text-xs text-slate-600 dark:text-slate-400 overflow-hidden whitespace-nowrap" style="text-overflow: ellipsis;">
+                 {{range $i, $artist := .Artists}}
+                   {{if gt $i 0}}, {{end}}{{$artist.Artist.Name}}
+                 {{end}}
+               </div>
+             </div>
+           </div>
+           <div class="p-2 md:p-1 flex-1 hidden md:block text-sm text-slate-600 dark:text-slate-400 truncate">
+             {{if .Album}}{{.Album.Title}}{{else}}Unknown Album{{end}}
+           </div>
+           <div class="p-2 w-24 text-right text-sm text-slate-600 dark:text-slate-400">{{duration .Metadata.Duration}}</div>
+           <div class="p-2 w-16 text-center">
+             <button class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1"
+                     hx-delete="/playlists/{{$.Playlist.ID}}/tracks/{{.ID}}"
+                     hx-target="#toast-container"
+                     hx-swap="beforeend"
+                     hx-confirm="Remove this track from the playlist?"
+                     title="Remove from playlist">
+               <i class="fas fa-trash text-sm"></i>
+             </button>
+           </div>
+         </div>
+         {{end}}
+       </div>
       {{else}}
       <div class="text-center py-12">
         <svg class="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,12 +206,6 @@ function editPlaylist() {
 }
 
 // Helper functions for template
-function totalDuration(tracks) {
-  let total = 0;
-  tracks.forEach(track => total += track.Metadata.Duration);
-  return total;
-}
-
 function duration(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;

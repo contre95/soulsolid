@@ -16,9 +16,9 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	playlists.Post("/", handler.CreatePlaylist)
 	playlists.Put("/:id", handler.UpdatePlaylist)
 	playlists.Delete("/:id", handler.DeletePlaylist)
-	playlists.Post("/tracks", handler.AddTrackToPlaylist)
+	playlists.Post("/items", handler.AddItemToPlaylist)
 	playlists.Delete("/:playlistId/tracks/:trackId", handler.RemoveTrackFromPlaylist)
-	playlists.Get("/track/:trackId/playlists", handler.GetPlaylistsForTrack)
-	playlists.Post("/import", handler.ImportM3U)
+	playlists.Get("/:type/:id/playlists", handler.GetPlaylistsForItem)
+
 	playlists.Get("/:id/export", handler.ExportM3U)
 }

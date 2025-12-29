@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -121,39 +120,85 @@ func (s *Service) DeletePlaylist(ctx context.Context, id string) error {
 	return nil
 }
 
-// AddTrackToPlaylist adds a track to a playlist.
-func (s *Service) AddTrackToPlaylist(ctx context.Context, playlistID, trackID string) error {
-	slog.Debug("AddTrackToPlaylist service called", "playlistID", playlistID, "trackID", trackID)
+// AddItemToPlaylist adds tracks, artists, or albums to a playlist.
+func (s *Service) AddItemToPlaylist(ctx context.Context, playlistID, itemType, itemID string) error {
+	slog.Debug("AddItemToPlaylist service called", "playlistID", playlistID, "itemType", itemType, "itemID", itemID)
 
 	// Verify playlist exists
 	playlist, err := s.playlistRepo.GetByID(ctx, playlistID)
 	if err != nil {
-		slog.Error("AddTrackToPlaylist: failed to get playlist", "playlistID", playlistID, "error", err)
+		slog.Error("AddItemToPlaylist: failed to get playlist", "playlistID", playlistID, "error", err)
 		return fmt.Errorf("failed to get playlist %s: %w", playlistID, err)
 	}
 	if playlist == nil {
-		slog.Error("AddTrackToPlaylist: playlist not found", "playlistID", playlistID)
+		slog.Error("AddItemToPlaylist: playlist not found", "playlistID", playlistID)
 		return fmt.Errorf("playlist not found: %s", playlistID)
 	}
 
-	// Verify track exists
-	track, err := s.library.GetTrack(ctx, trackID)
-	if err != nil {
-		slog.Error("AddTrackToPlaylist: failed to get track", "trackID", trackID, "error", err)
-		return fmt.Errorf("failed to get track %s: %w", trackID, err)
-	}
-	if track == nil {
-		slog.Error("AddTrackToPlaylist: track not found in database", "trackID", trackID)
-		return fmt.Errorf("track not found: %s", trackID)
+	// Get track IDs to add based on item type
+	var trackIDs []string
+	switch itemType {
+	case "track":
+		// Verify track exists
+		track, err := s.library.GetTrack(ctx, itemID)
+		if err != nil {
+			slog.Error("AddItemToPlaylist: failed to get track", "trackID", itemID, "error", err)
+			return fmt.Errorf("failed to get track %s: %w", itemID, err)
+		}
+		if track == nil {
+			slog.Error("AddItemToPlaylist: track not found in database", "trackID", itemID)
+			return fmt.Errorf("track not found: %s", itemID)
+		}
+		trackIDs = []string{itemID}
+
+	case "artist":
+		// Get all tracks by this artist
+		tracks, err := s.library.GetTracksFilteredPaginated(ctx, 10000, 0, &music.TrackFilter{ArtistIDs: []string{itemID}})
+		if err != nil {
+			slog.Error("AddItemToPlaylist: failed to get artist tracks", "artistID", itemID, "error", err)
+			return fmt.Errorf("failed to get artist tracks: %w", err)
+		}
+		for _, track := range tracks {
+			trackIDs = append(trackIDs, track.ID)
+		}
+		if len(trackIDs) == 0 {
+			return fmt.Errorf("no tracks found for artist: %s", itemID)
+		}
+
+	case "album":
+		// Get all tracks from this album
+		tracks, err := s.library.GetTracksFilteredPaginated(ctx, 10000, 0, &music.TrackFilter{AlbumIDs: []string{itemID}})
+		if err != nil {
+			slog.Error("AddItemToPlaylist: failed to get album tracks", "albumID", itemID, "error", err)
+			return fmt.Errorf("failed to get album tracks: %w", err)
+		}
+		for _, track := range tracks {
+			trackIDs = append(trackIDs, track.ID)
+		}
+		if len(trackIDs) == 0 {
+			return fmt.Errorf("no tracks found for album: %s", itemID)
+		}
+
+	default:
+		return fmt.Errorf("unsupported item type: %s", itemType)
 	}
 
-	err = s.playlistRepo.AddTrackToPlaylist(ctx, playlistID, trackID)
-	if err != nil {
-		slog.Error("AddTrackToPlaylist failed", "playlistID", playlistID, "trackID", trackID, "error", err)
-		return err
+	// Add tracks to playlist (skip duplicates)
+	addedCount := 0
+	for _, trackID := range trackIDs {
+		err = s.playlistRepo.AddTrackToPlaylist(ctx, playlistID, trackID)
+		if err != nil {
+			// If track already exists, that's ok - just skip it
+			if !strings.Contains(err.Error(), "already exists") {
+				slog.Error("AddItemToPlaylist: failed to add track", "playlistID", playlistID, "trackID", trackID, "error", err)
+				return fmt.Errorf("failed to add track %s: %w", trackID, err)
+			}
+		} else {
+			addedCount++
+		}
 	}
 
-	slog.Info("AddTrackToPlaylist completed successfully", "playlistID", playlistID, "trackID", trackID)
+	slog.Info("AddItemToPlaylist completed successfully", "playlistID", playlistID, "itemType", itemType, "itemID", itemID, "tracksAdded", addedCount)
 	return nil
 }
 
@@ -183,62 +228,6 @@ func (s *Service) GetPlaylistTracks(ctx context.Context, playlistID string) ([]*
 
 	slog.Debug("GetPlaylistTracks completed", "playlistID", playlistID, "count", len(tracks))
 	return tracks, nil
-}
-
-// ImportM3U imports a playlist from an M3U file.
-func (s *Service) ImportM3U(ctx context.Context, filePath, playlistName string) (*music.Playlist, error) {
-	slog.Debug("ImportM3U service called", "filePath", filePath, "playlistName", playlistName)
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		slog.Error("ImportM3U: failed to open file", "filePath", filePath, "error", err)
-		return nil, fmt.Errorf("failed to open M3U file: %w", err)
-	}
-	defer file.Close()
-
-	playlist := &music.Playlist{
-		ID:           music.GeneratePlaylistID(),
-		Name:         playlistName,
-		Description:  fmt.Sprintf("Imported from %s", filepath.Base(filePath)),
-		Tracks:       []*music.Track{},
-		CreatedDate:  time.Now(),
-		ModifiedDate: time.Now(),
-	}
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-
-		// Skip comments and empty lines
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		// Try to find track by path
-		track, err := s.library.FindTrackByPath(ctx, line)
-		if err != nil {
-			slog.Warn("ImportM3U: track not found in library", "path", line, "error", err)
-			continue
-		}
-		if track != nil {
-			playlist.Tracks = append(playlist.Tracks, track)
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		slog.Error("ImportM3U: error reading file", "filePath", filePath, "error", err)
-		return nil, fmt.Errorf("error reading M3U file: %w", err)
-	}
-
-	// Create the playlist
-	err = s.playlistRepo.Create(ctx, playlist)
-	if err != nil {
-		slog.Error("ImportM3U: failed to create playlist", "error", err)
-		return nil, err
-	}
-
-	slog.Debug("ImportM3U completed", "playlistID", playlist.ID, "tracksImported", len(playlist.Tracks))
-	return playlist, nil
 }
 
 // ExportM3U exports a playlist to an M3U file.
