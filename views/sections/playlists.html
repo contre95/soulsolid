@@ -1,4 +1,4 @@
-<div id="contenido" class="animate__animated animate__fadeIn">
+<div id="contenido" class="animate__animated animate__fadeIn" hx-get="/ui/playlists" hx-trigger="refreshPlaylists from:body" hx-swap="outerHTML">
   <div id="app-status" hx-get="/ui/jobs/active" hx-trigger="load, every 5s" hx-swap="innerHTML" hx-swap-oob="true">
   </div>
   <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">

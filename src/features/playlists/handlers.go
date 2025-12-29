@@ -82,7 +82,8 @@ func (h *Handler) CreatePlaylist(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to create playlist")
 	}
 
-	// Return success toast
+	// Trigger playlist refresh and return success toast
+	c.Set("HX-Trigger", "refreshPlaylists")
 	return c.Render("toast/toastOk", fiber.Map{"Msg": "Playlist created successfully"})
 }
 
@@ -130,7 +131,8 @@ func (h *Handler) DeletePlaylist(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete playlist")
 	}
 
-	// Return success toast
+	// Trigger playlist refresh and return success toast
+	c.Set("HX-Trigger", "refreshPlaylists")
 	return c.Render("toast/toastOk", fiber.Map{"Msg": "Playlist deleted successfully"})
 }
 
