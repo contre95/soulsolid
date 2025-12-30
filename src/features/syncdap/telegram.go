@@ -60,7 +60,7 @@ func (h *TelegramHandler) handleDeviceList(bot *tgbotapi.BotAPI, chatID int64) e
 		}
 
 		syncStatus := ""
-		if status.Syncing {
+		if _, running := h.service.findRunningSyncJob(status.UUID); running {
 			syncStatus = " (🔄 Syncing...)"
 		}
 

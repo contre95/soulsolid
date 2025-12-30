@@ -1,4 +1,4 @@
-<div id="sync-status" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 animate__animated animate__headShake">
+<div id="sync-status" class="grid grid-cols-1 sm:grid-cols-2 mb-2 md:grid-cols-3 gap-4 animate__animated animate__headShake">
 {{range .Status}}
 <div class="bg-white/80 dark:bg-gray-900/70 p-6 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
     <div class="flex items-center justify-between mb-4">
@@ -32,15 +32,6 @@
     
     <div class="flex space-x-3">
         {{if .Mounted}}
-            {{if .Syncing}}
-            <button
-                class="px-4 py-2 bg-gray-400 text-white text-sm rounded-lg cursor-not-allowed"
-                disabled
-            >
-                Syncing...
-            </button>
-            {{else}}
-            <!-- Show sync button -->
             <button 
                  hx-post="/sync/device/{{.UUID}}/trigger"
                  hx-target="#toast-container" hx-swap="beforeend"
@@ -49,7 +40,6 @@
             >
                 Sync Now
             </button>
-            {{end}}
         {{end}}
     </div>
 </div>
