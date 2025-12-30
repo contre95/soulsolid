@@ -314,3 +314,35 @@ func (h *Handler) ExportM3U(c *fiber.Ctx) error {
 
 	return c.SendString(m3uContent)
 }
+
+// SyncPlaylistToPlayers handles syncing a playlist to external players.
+func (h *Handler) SyncPlaylistToPlayers(c *fiber.Ctx) error {
+	playlistID := c.Params("id")
+
+	slog.Debug("SyncPlaylistToPlayers handler called", "playlistID", playlistID)
+
+	err := h.service.SyncPlaylistToPlayers(c.Context(), playlistID)
+	if err != nil {
+		slog.Error("Error syncing playlist to players", "error", err, "playlistID", playlistID)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to sync playlist to players")
+	}
+
+	// Return success toast
+	return c.Render("toast/toastOk", fiber.Map{"Msg": "Playlist synced to external players"})
+}
+
+// DeletePlaylistFromPlayers handles deleting a playlist from external players.
+func (h *Handler) DeletePlaylistFromPlayers(c *fiber.Ctx) error {
+	playlistID := c.Params("id")
+
+	slog.Debug("DeletePlaylistFromPlayers handler called", "playlistID", playlistID)
+
+	err := h.service.DeletePlaylistFromPlayers(c.Context(), playlistID)
+	if err != nil {
+		slog.Error("Error deleting playlist from players", "error", err, "playlistID", playlistID)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete playlist from players")
+	}
+
+	// Return success toast
+	return c.Render("toast/toastOk", fiber.Map{"Msg": "Playlist deleted from external players"})
+}
