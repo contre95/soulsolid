@@ -13,6 +13,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	ui.Get("/playlists/:id", handler.GetPlaylist)
 
 	playlists := app.Group("/playlists")
+	playlists.Get("/create-modal", handler.GetCreatePlaylistModal)
 	playlists.Post("/", handler.CreatePlaylist)
 	playlists.Put("/:id", handler.UpdatePlaylist)
 	playlists.Delete("/:id", handler.DeletePlaylist)

@@ -1,0 +1,96 @@
+{{define "playlists/create_playlist_modal"}}
+<!-- Modal Background -->
+<div id="create-playlist-modal" class="fixed inset-0 z-50">
+  <!-- Blurry Background Overlay -->
+  <div class="modal-overlay"></div>
+  <!-- Modal Content Container -->
+  <div class="flex items-center justify-center h-full">
+    <!-- Modal Content -->
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 max-h-[80vh] overflow-hidden border border-gray-200 dark:border-gray-700">
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-700">
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Create New Playlist</h2>
+      </div>
+      <button id="close-create-playlist-modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-2 transition-colors duration-200">
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="p-4 bg-gray-50 dark:bg-gray-900">
+      <form hx-post="/playlists" hx-target="#toast-container" hx-swap="beforeend" class="space-y-3" hx-on:htmx:after-request="if (event.detail.successful) { document.getElementById('create-playlist-modal').remove(); htmx.trigger('#contenido', 'refreshPlaylists'); }">
+        <div>
+          <label for="modal-playlist-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+          <input type="text" id="modal-playlist-name" name="name" required
+                 class="w-full px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+        </div>
+        <div>
+          <label for="modal-playlist-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description (optional)</label>
+          <input type="text" id="modal-playlist-description" name="description"
+                 class="w-full px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button type="button" id="cancel-create-playlist" class="px-3 py-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium transition-colors duration-200">
+            Cancel
+          </button>
+          <button type="submit" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+            Create
+          </button>
+        </div>
+      </form>
+    </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.dark .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+</style>
+
+<script>
+// Close modal functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('create-playlist-modal');
+  const closeBtn = document.getElementById('close-create-playlist-modal');
+  const cancelBtn = document.getElementById('cancel-create-playlist');
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function() {
+      modal.remove();
+    });
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', function() {
+      modal.remove();
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+
+    // Close on escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        modal.remove();
+      }
+    });
+  }
+});
+</script>
+{{end}}

@@ -213,6 +213,13 @@ func (h *Handler) RemoveTrackFromPlaylist(c *fiber.Ctx) error {
 	return c.Render("toast/toastOk", fiber.Map{"Msg": "Track removed from playlist"})
 }
 
+// GetCreatePlaylistModal returns the create playlist modal.
+func (h *Handler) GetCreatePlaylistModal(c *fiber.Ctx) error {
+	slog.Debug("GetCreatePlaylistModal handler called")
+
+	return c.Render("playlists/create_playlist_modal", nil)
+}
+
 // GetPlaylistsForItem returns playlists for adding tracks, artists, or albums.
 func (h *Handler) GetPlaylistsForItem(c *fiber.Ctx) error {
 	itemType := c.Params("type")

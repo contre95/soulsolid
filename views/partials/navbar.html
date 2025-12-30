@@ -17,12 +17,12 @@
      </a>
         <div id="navbar-menu"
           class="fixed w-fit hidden z-50 bg-gray-200 dark:bg-gray-800 p-4 rounded-lg border-t border-gray-200 dark:border-gray-700 shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out left-1 top-5">
-      <ul class="space-y-2 font-medium">
+       <ul class="space-y-2 font-medium">
         <li>
           <button type="button" class="w-full">
             <a hx-get="/ui/dashboard" hx-trigger="click,reloadDashboard from:body{{ .DashboardTrigger }}"
               hx-push-url="true" hx-swap="outerHTML" hx-target="#contenido"
-              class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
+              class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                 stroke="currentColor" class="size-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" />
@@ -36,7 +36,7 @@
           <button type="button" class="w-full">
             <a hx-get="/ui/library" hx-trigger="click,reloadLibrary from:body{{ .LibraryTrigger }}" hx-push-url="true"
               hx-swap="outerHTML" hx-target="#contenido"
-              class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
+              class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                 stroke="currentColor" class="size-6">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -49,7 +49,7 @@
          <li>
            <button type="button" class="w-full">
              <a hx-get="/ui/playlists" hx-trigger="click" hx-push-url="true" hx-swap="outerHTML" hx-target="#contenido"
-               class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
+               class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
                <svg fill="currentColor" viewBox="0 0 32 32" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:serif="http://www.serif.com/" xmlns:xlink="http://www.w3.org/1999/xlink" class="size-6">
                  <g id="Icon">
                    <path d="M5.011,19l21.989,-0c0.552,0 1,-0.448 1,-1c0,-0.552 -0.448,-1 -1,-1l-21.989,0c-0.552,0 -1,0.448 -1,1c-0,0.552 0.448,1 1,1Z"></path>
@@ -66,7 +66,7 @@
            <button type="button" class="w-full">
              <a hx-get="/ui/import" hx-trigger="click,reloadImport from:body{{ .ImportTrigger }}" hx-push-url="true"
               hx-swap="outerHTML" hx-target="#contenido"
-              class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
+              class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="size-6">
                  <path d="M9 13H15M15 13L13 11M15 13L13 15M12.0627 6.06274L11.9373 5.93726C11.5914 5.59135 11.4184 5.4184 11.2166 5.29472C11.0376 5.18506 10.8425 5.10425 10.6385 5.05526C10.4083 5 10.1637 5 9.67452 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V15.8C3 16.9201 3 17.4802 3.21799 17.908C3.40973 18.2843 3.71569 18.5903 4.09202 18.782C4.51984 19 5.07989 19 6.2 19H17.8C18.9201 19 19.4802 19 19.908 18.782C20.2843 18.5903 20.5903 18.2843 20.782 17.908C21 17.4802 21 16.9201 21 15.8V10.2C21 9.0799 21 8.51984 20.782 8.09202C20.5903 7.71569 20.2843 7.40973 19.908 7.21799C19.4802 7 18.9201 7 17.8 7H14.3255C13.8363 7 13.5917 7 13.3615 6.94474C13.1575 6.89575 12.9624 6.81494 12.7834 6.70528C12.5816 6.5816 12.4086 6.40865 12.0627 6.06274Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
                </svg>
@@ -90,7 +90,7 @@
              hx-push-url="true"
              hx-swap="outerHTML"
              hx-target="#contenido"
-             class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer"
+             class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer"
            >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
                 <rect x="6" y="2" width="12" height="20" rx="2" ry="2" stroke="currentColor" fill="none"/>
@@ -106,7 +106,7 @@
            <button type="button" class="w-full">
              <a hx-get="/ui/jobs" hx-trigger="click,reloadJobs from:body{{ .JobsTrigger }}"
                hx-push-url="true" hx-swap="outerHTML" hx-target="#contenido"
-               class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
+               class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z" />
              </svg>
@@ -126,7 +126,7 @@
             <button type="button" class="w-full">
               <a hx-get="/ui/analyze" hx-trigger="click,reloadAnalyze from:body"
                 hx-push-url="true" hx-swap="outerHTML" hx-target="#contenido"
-                class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
+                class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                   stroke="currentColor" class="size-6">
                   <path stroke-linecap="round" stroke-linejoin="round"
@@ -137,12 +137,12 @@
             </button>
           </li>
            <li>
-             <div class="flex items-center px-4 py-2 mt-5 text-gray-600 dark:text-gray-400">
+             <div class="flex items-center px-4 py-2 mt-2 text-gray-600 dark:text-gray-400">
               <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" class="size-6"><path d="M232,136v64a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V136a8,8,0,0,1,8-8H224A8,8,0,0,1,232,136Z" opacity="0.2"></path><path d="M240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H72a8,8,0,0,1,0,16H32v64H224V136H184a8,8,0,0,1,0-16h40A16,16,0,0,1,240,136Zm-117.66-2.34a8,8,0,0,0,11.32,0l48-48a8,8,0,0,0-11.32-11.32L136,108.69V24a8,8,0,0,0-16,0v84.69L85.66,74.34A8,8,0,0,0,74.34,85.66ZM200,168a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"></path></svg>
               <span class="mx-4 font-semibold">Downloaders</span>
             </div>
             <!-- Sub-buttons for each downloader -->
-            <ul class="ml-6 mt-2 space-y-1">
+              <ul class="ml-6 mt-2 space-y-2">
               {{range $name, $downloader := .Downloaders}}
               <li>
                 <button type="button" class="w-full">
@@ -165,7 +165,7 @@
           <button type="button" class="w-full">
             <a hx-get="/ui/settings" hx-trigger="click,reloadSettings from:body{{ .SettingsTrigger }}"
               hx-push-url="true" hx-swap="outerHTML" hx-target="#contenido"
-              class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
+              class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                 stroke="currentColor" class="size-6">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -178,7 +178,7 @@
          <li>
            <button type="button" class="w-full">
              <a onclick="toggleDarkMode()"
-               class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
+               class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                  stroke="currentColor" class="size-6">
                  <path stroke-linecap="round" stroke-linejoin="round"
@@ -196,7 +196,7 @@
          <li>
            <button type="button" class="w-full">
               <a href="https://t.me/{{.Telegram.BotHandle}}" target="_blank"
-               class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-5 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
+               class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
               <img src="/img/telegram.png" alt="Telegram" class="size-6">
                <span class="mx-4">Telegram</span>
              </a>
