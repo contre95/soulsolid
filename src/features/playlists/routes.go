@@ -22,4 +22,6 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	playlists.Get("/:type/:id/playlists", handler.GetPlaylistsForItem)
 
 	playlists.Get("/:id/export", handler.ExportM3U)
+	playlists.Post("/:id/sync", handler.SyncPlaylistToPlayers)
+	playlists.Delete("/:id/sync", handler.DeletePlaylistFromPlayers)
 }

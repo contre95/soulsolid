@@ -51,10 +51,19 @@ metadata:
       secret: <discogs_token> # You can get it here -> https://www.discogs.com/settings/developers
     musicbrainz:
       enabled: true
-lyrics:
-  providers:
-    lrclib:
+  lyrics:
+    providers:
+      lrclib:
+        enabled: true
+  players:
+    emby:
       enabled: true
+      url: http://emby-server:8096
+      api_key: <api_key>
+    plex:
+      enabled: true
+      url: http://plex-server:32400
+      token: <plex_token>
 sync:
   enabled: true
   devices:
