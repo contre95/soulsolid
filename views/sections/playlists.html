@@ -1,0 +1,78 @@
+<div id="contenido" class="animate__animated animate__fadeIn" hx-get="/ui/playlists" hx-trigger="refreshPlaylists from:body" hx-swap="outerHTML">
+  <div id="app-status" hx-get="/ui/jobs/active" hx-trigger="load, every 5s" hx-swap="innerHTML" hx-swap-oob="true">
+  </div>
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+    <h1 class="text-3xl font-bold text-slate-800 dark:text-white">Playlists</h1>
+  <div class="flex items-center gap-3">
+    <button hx-get="/playlists/create-modal" hx-target="#modal-container" hx-swap="innerHTML" title="Create Playlist"
+      class="cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-blue-500/10 backdrop-blur-md border border-blue-400/30 text-blue-600 dark:text-blue-300 shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20">
+      <i class="fas fa-plus"></i>
+    </button>
+    <button hx-get="/ui/playlists" hx-swap="outerHTML" hx-target="#contenido" title="Refresh Playlists"
+      class="cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-lg shadow-green-500/10 hover:shadow-green-500/20">
+      <span class="flex items-center">
+        <i class="fas fa-refresh mr-2 opacity-80"></i>
+        <i class="fas fa-list-music opacity-80"></i>
+      </span>
+    </button>
+  </div>
+  </div>
+
+  <!-- Playlists List -->
+  <div class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+    <div class="p-6">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Your Playlists</h2>
+      {{if .Playlists}}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {{range .Playlists}}
+        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-800">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex-1">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white truncate">{{.Name}}</h3>
+              {{if .Description}}
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">{{.Description}}</p>
+              {{end}}
+            </div>
+            <div class="flex gap-2 ml-2">
+              <button class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-1"
+                      hx-get="/ui/playlists/{{.ID}}"
+                      hx-target="#contenido"
+                      hx-swap="innerHTML"
+                      hx-push-url="true"
+                      title="View Playlist">
+                <i class="fas fa-eye text-sm"></i>
+              </button>
+              <a href="/playlists/{{.ID}}/export" target="_blank"
+                 class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 p-1 inline-block"
+                 title="Export as M3U">
+                <i class="fas fa-download text-sm"></i>
+              </a>
+              <button class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1"
+                      hx-delete="/playlists/{{.ID}}"
+                      hx-confirm="Are you sure you want to delete this playlist?"
+                      hx-target="#toast-container"
+                      hx-swap="beforeend"
+                      title="Delete Playlist">
+                <i class="fas fa-trash text-sm"></i>
+              </button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+            <span>{{len .Tracks}} tracks</span>
+            <span>{{.CreatedDate.Format "Jan 2, 2006"}}</span>
+          </div>
+        </div>
+        {{end}}
+      </div>
+      {{else}}
+      <div class="text-center py-12">
+        <svg class="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No playlists yet</h3>
+        <p class="text-gray-500 dark:text-gray-400 mb-6">Create your first playlist to get started organizing your music.</p>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</div>

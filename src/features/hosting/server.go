@@ -15,6 +15,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/lyrics"
 	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
+	"github.com/contre95/soulsolid/src/features/playlists"
 	"github.com/contre95/soulsolid/src/features/syncdap"
 	"github.com/contre95/soulsolid/src/features/ui"
 	"github.com/contre95/soulsolid/src/music"
@@ -29,7 +30,7 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server.
-func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, syncService *syncdap.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, analyzeService *analyze.Service) *Server {
+func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, playlistsService *playlists.Service, syncService *syncdap.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, analyzeService *analyze.Service) *Server {
 	engine := html.New("./views", ".html")
 	engine.Debug(cfg.Get().Logger.Level == "debug")
 	// Add custom template functions
@@ -59,7 +60,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 		}
 		return fmt.Sprintf("%d min", minutes)
 	})
-	engine.AddFunc("totalDuration", func(tracks []music.Track) string {
+	engine.AddFunc("totalDuration", func(tracks []*music.Track) string {
 		totalSeconds := 0
 		for _, track := range tracks {
 			totalSeconds += track.Metadata.Duration
@@ -124,6 +125,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 
 	importing.RegisterRoutes(app, importingService)
 	library.RegisterRoutes(app, libraryService)
+	playlists.RegisterRoutes(app, playlistsService)
 	ui.RegisterRoutes(app, uiHandler)
 	config.RegisterRoutes(app, cfg)
 	jobs.RegisterRoutes(app, jobService)

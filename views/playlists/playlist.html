@@ -1,0 +1,228 @@
+<div id="contenido" class="animate__animated animate__fadeIn">
+  <div id="app-status" hx-get="/ui/jobs/active" hx-trigger="load, every 5s" hx-swap="innerHTML" hx-swap-oob="true">
+  </div>
+
+  <!-- Back Button and Title -->
+  <div class="flex items-center gap-4 mb-8">
+    <button hx-get="/ui/playlists" hx-target="#contenido" hx-swap="innerHTML" hx-push-url="true"
+            class="p-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200">
+      <i class="fas fa-arrow-left"></i>
+    </button>
+    <div class="flex-1">
+      <h1 class="text-3xl font-bold text-slate-800 dark:text-white">{{.Playlist.Name}}</h1>
+      {{if .Playlist.Description}}
+      <p class="text-gray-600 dark:text-gray-400 mt-1">{{.Playlist.Description}}</p>
+      {{end}}
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+              onclick="editPlaylist()">
+        <i class="fas fa-edit mr-2"></i>Edit
+      </button>
+      <a href="/playlists/{{.Playlist.ID}}/export" target="_blank"
+         class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors duration-200 inline-block">
+        <i class="fas fa-download mr-2"></i>Export
+      </a>
+    </div>
+  </div>
+
+   <!-- Playlist Stats -->
+   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" hx-trigger="playlistUpdated" hx-get="/ui/playlists/{{.Playlist.ID}}" hx-target="#contenido" hx-swap="innerHTML">
+    <div class="bg-white/80 dark:bg-gray-900/70 rounded-xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 p-4">
+      <div class="flex items-center">
+        <div class="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-lg mr-4">
+          <i class="fas fa-music text-blue-600 dark:text-blue-400"></i>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Tracks</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{len .Playlist.Tracks}}</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white/80 dark:bg-gray-900/70 rounded-xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 p-4">
+      <div class="flex items-center">
+        <div class="p-3 bg-green-100 dark:bg-green-900/40 rounded-lg mr-4">
+          <i class="fas fa-clock text-green-600 dark:text-green-400"></i>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Duration</p>
+           <p class="text-2xl font-bold text-gray-900 dark:text-white">{{duration .Playlist.TotalDuration}}</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white/80 dark:bg-gray-900/70 rounded-xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 p-4">
+      <div class="flex items-center">
+        <div class="p-3 bg-purple-100 dark:bg-purple-900/40 rounded-lg mr-4">
+          <i class="fas fa-calendar text-purple-600 dark:text-purple-400"></i>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Created</p>
+          <p class="text-lg font-bold text-gray-900 dark:text-white">{{.Playlist.CreatedDate.Format "Jan 2, 2006"}}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+   <!-- Tracks Table -->
+   <div class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70" hx-trigger="playlistUpdated" hx-get="/ui/playlists/{{.Playlist.ID}}" hx-target="#contenido" hx-swap="innerHTML">
+    <div class="p-6">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Tracks</h2>
+      {{if .Playlist.Tracks}}
+       <div class="mt-6">
+         <!-- Header -->
+         <div class="flex text-slate-500 dark:text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+           <div class="px-2 md:p-1 w-10 text-center">#</div>
+           <div class="px-2 md:p-1 w-full">Title</div>
+           <div class="px-2 md:p-1 w-full hidden md:block">Artist</div>
+           <div class="px-2 md:p-1 w-24 text-right">
+             <svg class="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+               <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+             </svg>
+           </div>
+           <div class="p-2 md:p-1 w-16 text-center">
+             <svg class="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+             </svg>
+           </div>
+         </div>
+
+         <!-- Tracks -->
+         {{range $index, $track := .Playlist.Tracks}}
+         <div class="group flex items-center border-b border-slate-200/50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+           <div class="p-2 md:p-1 w-10 text-center text-slate-500 dark:text-slate-400">{{add $index 1}}</div>
+           <div class="p-2 md:p-1 flex-1 flex items-center gap-3">
+             <div class="flex flex-col w-full justify-center">
+               <div class="font-medium text-slate-800 dark:text-white overflow-hidden whitespace-nowrap" style="text-overflow: ellipsis;">
+                 {{.Title}}
+                 {{if .TitleVersion}} ({{.TitleVersion}}){{end}}
+               </div>
+               <div class="text-xs text-slate-600 dark:text-slate-400 overflow-hidden whitespace-nowrap" style="text-overflow: ellipsis;">
+                 {{range $i, $artist := .Artists}}
+                   {{if gt $i 0}}, {{end}}{{$artist.Artist.Name}}
+                 {{end}}
+               </div>
+             </div>
+           </div>
+           <div class="p-2 md:p-1 flex-1 hidden md:block text-sm text-slate-600 dark:text-slate-400 truncate">
+             {{if .Album}}{{.Album.Title}}{{else}}Unknown Album{{end}}
+           </div>
+           <div class="p-2 w-24 text-right text-sm text-slate-600 dark:text-slate-400">{{duration .Metadata.Duration}}</div>
+           <div class="p-2 w-16 text-center">
+             <button class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1"
+                     hx-delete="/playlists/{{$.Playlist.ID}}/tracks/{{.ID}}"
+                     hx-target="#toast-container"
+                     hx-swap="beforeend"
+                     hx-confirm="Remove this track from the playlist?"
+                     title="Remove from playlist">
+               <i class="fas fa-trash text-sm"></i>
+             </button>
+           </div>
+         </div>
+         {{end}}
+       </div>
+      {{else}}
+      <div class="text-center py-12">
+        <svg class="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No tracks in this playlist</h3>
+        <p class="text-gray-500 dark:text-gray-400 mb-6">Add tracks from your library to get started.</p>
+        <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                hx-get="/ui/library"
+                hx-target="#contenido"
+                hx-swap="innerHTML"
+                hx-push-url="true">
+          Browse Library
+        </button>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</div>
+
+<!-- Edit Playlist Modal -->
+<div id="edit-playlist-modal" class="hidden fixed inset-0 z-50">
+  <div class="modal-overlay"></div>
+  <div class="flex items-center justify-center h-full">
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 border border-gray-200 dark:border-gray-700">
+      <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Edit Playlist</h2>
+        <button id="close-edit-modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-2">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      <div class="p-6">
+        <form hx-put="/playlists/{{.Playlist.ID}}" hx-target="#toast-container" hx-swap="beforeend" class="space-y-4">
+          <div>
+            <label for="edit-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name</label>
+            <input type="text" id="edit-name" name="name" value="{{.Playlist.Name}}" required
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label for="edit-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+            <input type="text" id="edit-description" name="description" value="{{.Playlist.Description}}"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+          </div>
+          <div class="flex justify-end gap-3">
+            <button type="button" id="cancel-edit" class="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+              Cancel
+            </button>
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors duration-200">
+              Update
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function editPlaylist() {
+  const modal = document.getElementById('edit-playlist-modal');
+  modal.classList.remove('hidden');
+
+  const closeBtn = document.getElementById('close-edit-modal');
+  const cancelBtn = document.getElementById('cancel-edit');
+
+  function closeModal() {
+    modal.classList.add('hidden');
+  }
+
+  closeBtn.addEventListener('click', closeModal);
+  cancelBtn.addEventListener('click', closeModal);
+
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+      closeModal();
+    }
+  });
+}
+
+// Helper functions for template
+function duration(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+</script>
+
+<style>
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.dark .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+</style>

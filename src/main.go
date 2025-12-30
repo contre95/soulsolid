@@ -17,6 +17,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/lyrics"
 	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
+	"github.com/contre95/soulsolid/src/features/playlists"
 	"github.com/contre95/soulsolid/src/features/syncdap"
 	"github.com/contre95/soulsolid/src/infra/database"
 	"github.com/contre95/soulsolid/src/infra/files"
@@ -44,6 +45,7 @@ func main() {
 		log.Fatalf("failed to create library: %v", err)
 	}
 	libraryService := library.NewService(db, cfgManager, fileOrganizer)
+	playlistsService := playlists.NewService(db, db, cfgManager)
 	metricsService := metrics.NewService(db, cfgManager)
 	jobService := jobs.NewService(&cfgManager.Get().Jobs)
 
@@ -131,7 +133,7 @@ func main() {
 		}
 	}
 
-	server := hosting.NewServer(cfgManager, importingService, libraryService, syncService, downloadingService, jobService, tagService, lyricsService, metricsService, analyzeService)
+	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, syncService, downloadingService, jobService, tagService, lyricsService, metricsService, analyzeService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped: %v", "error", err)
