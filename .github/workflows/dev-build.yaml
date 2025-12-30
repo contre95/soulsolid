@@ -1,0 +1,32 @@
+name: Development Build
+on:
+  pull_request:
+    branches:
+      - development
+    types: [closed]
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dev-build:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+      - name: Login to DockerHub
+        run: |
+          podman login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} docker.io
+      - name: Build and push dev image
+        run: |
+          commit_sha=$(git rev-parse --short HEAD)
+          podman image build --build-arg IMAGE_TAG=dev-$commit_sha -t contre95/soulsolid:dev .
+          podman push contre95/soulsolid:dev
