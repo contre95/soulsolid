@@ -284,8 +284,13 @@ func (h *Handler) renderAlbumResults(c *fiber.Ctx, albums []music.Album, downloa
 
 // renderTrackResults renders track search results as HTML for HTMX
 func (h *Handler) renderTrackResults(c *fiber.Ctx, tracks []music.Track, downloader string) error {
+	// Convert []music.Track to []*music.Track for template compatibility
+	trackPtrs := make([]*music.Track, len(tracks))
+	for i := range tracks {
+		trackPtrs[i] = &tracks[i]
+	}
 	return c.Render("downloading/spotify_track_results", fiber.Map{
-		"Tracks":     tracks,
+		"Tracks":     trackPtrs,
 		"Downloader": downloader,
 	})
 }
@@ -298,8 +303,14 @@ func (h *Handler) renderLinkResults(c *fiber.Ctx, tracks []music.Track, download
 		playlistName = tracks[0].Attributes["playlist_name"]
 	}
 
+	// Convert []music.Track to []*music.Track for template compatibility
+	trackPtrs := make([]*music.Track, len(tracks))
+	for i := range tracks {
+		trackPtrs[i] = &tracks[i]
+	}
+
 	return c.Render("downloading/link_results", fiber.Map{
-		"Tracks":       tracks,
+		"Tracks":       trackPtrs,
 		"Downloader":   downloader,
 		"PlaylistName": playlistName,
 	})
@@ -667,9 +678,14 @@ func (h *Handler) GetAlbumTracks(c *fiber.Ctx) error {
 		totalDuration += track.Metadata.Duration
 	}
 
+	// Convert []music.Track to []*music.Track for template compatibility
+	trackPtrs := make([]*music.Track, len(tracks))
+	for i := range tracks {
+		trackPtrs[i] = &tracks[i]
+	}
 	return c.Render("downloading/album_tracks", fiber.Map{
 		"Album":         album,
-		"Tracks":        tracks,
+		"Tracks":        trackPtrs,
 		"TotalDuration": totalDuration,
 		"Downloader":    downloader,
 	})
@@ -700,7 +716,7 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 			downloaderName = d.Name()
 		}
 		return c.Render("downloading/chart_tracks", fiber.Map{
-			"Tracks":         []music.Track{},
+			"Tracks":         []*music.Track{},
 			"NotSupported":   true,
 			"DownloaderName": downloaderName,
 			"Downloader":     downloader,
@@ -723,14 +739,19 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 
 	if err != nil || downloaderStatus.Status != "valid" {
 		return c.Render("downloading/chart_tracks", fiber.Map{
-			"Tracks":           []music.Track{},
+			"Tracks":           []*music.Track{},
 			"DownloaderStatus": downloaderStatus,
 			"DownloaderName":   downloaderName,
 			"Downloader":       downloader,
 		})
 	}
+	// Convert []music.Track to []*music.Track for template compatibility
+	trackPtrs := make([]*music.Track, len(tracks))
+	for i := range tracks {
+		trackPtrs[i] = &tracks[i]
+	}
 	return c.Render("downloading/chart_tracks", fiber.Map{
-		"Tracks":           tracks,
+		"Tracks":           trackPtrs,
 		"DownloaderStatus": downloaderStatus,
 		"DownloaderName":   downloaderName,
 		"Downloader":       downloader,
