@@ -12,6 +12,7 @@ type Config struct {
 	Import       Import      `yaml:"import"`
 	Metadata     Metadata    `yaml:"metadata"`
 	Lyrics       Lyrics      `yaml:"lyrics"`
+	Players      Players     `yaml:"players"`
 	Sync         Sync        `yaml:"sync"`
 	Jobs         Jobs        `yaml:"jobs"`
 }
@@ -84,6 +85,17 @@ type Metadata struct {
 // Lyrics holds the configuration for lyrics providers
 type Lyrics struct {
 	Providers map[string]Provider `yaml:"providers"`
+}
+
+// Players holds the configuration for external media player providers
+type Players map[string]PlayerProvider
+
+// PlayerProvider holds configuration for individual player providers
+type PlayerProvider struct {
+	Enabled bool    `yaml:"enabled"`
+	URL     *string `yaml:"url,omitempty"`
+	APIKey  *string `yaml:"api_key,omitempty"`
+	Token   *string `yaml:"token,omitempty"`
 }
 
 // Provider holds configuration for individual tagging providers

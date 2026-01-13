@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"log/slog"
 	"os"
@@ -26,6 +27,7 @@ import (
 	"github.com/contre95/soulsolid/src/infra/queue"
 	"github.com/contre95/soulsolid/src/infra/tag"
 	"github.com/contre95/soulsolid/src/infra/watcher"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 func main() {
@@ -45,7 +47,37 @@ func main() {
 		log.Fatalf("failed to create library: %v", err)
 	}
 	libraryService := library.NewService(db, cfgManager, fileOrganizer)
-	playlistsService := playlists.NewService(db, db, cfgManager)
+
+	// Initialize player providers
+	var playerProviders []interface {
+		IsEnabled() bool
+		SyncPlaylist(ctx context.Context, playlist *music.Playlist) error
+		DeletePlaylist(ctx context.Context, playlistID string) error
+	}
+	if cfg, ok := cfgManager.Get().Players["emby"]; ok && cfg.Enabled {
+		url := ""
+		if cfg.URL != nil {
+			url = *cfg.URL
+		}
+		apiKey := ""
+		if cfg.APIKey != nil {
+			apiKey = *cfg.APIKey
+		}
+		playerProviders = append(playerProviders, providers.NewEmbyProvider(url, apiKey, cfg.Enabled))
+	}
+	if cfg, ok := cfgManager.Get().Players["plex"]; ok && cfg.Enabled {
+		url := ""
+		if cfg.URL != nil {
+			url = *cfg.URL
+		}
+		token := ""
+		if cfg.Token != nil {
+			token = *cfg.Token
+		}
+		playerProviders = append(playerProviders, providers.NewPlexProvider(url, token, cfg.Enabled))
+	}
+
+	playlistsService := playlists.NewService(db, db, cfgManager, playerProviders)
 	metricsService := metrics.NewService(db, cfgManager)
 	jobService := jobs.NewService(&cfgManager.Get().Jobs)
 

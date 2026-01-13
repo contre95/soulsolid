@@ -15,17 +15,27 @@ import (
 
 // Service is the domain service for the playlists feature.
 type Service struct {
-	playlistRepo  music.PlaylistRepository
-	library       music.Library
-	configManager *config.Manager
+	playlistRepo    music.PlaylistRepository
+	library         music.Library
+	configManager   *config.Manager
+	playerProviders []interface {
+		IsEnabled() bool
+		SyncPlaylist(ctx context.Context, playlist *music.Playlist) error
+		DeletePlaylist(ctx context.Context, playlistID string) error
+	}
 }
 
 // NewService creates a new playlists service.
-func NewService(playlistRepo music.PlaylistRepository, lib music.Library, cfgManager *config.Manager) *Service {
+func NewService(playlistRepo music.PlaylistRepository, lib music.Library, cfgManager *config.Manager, playerProviders []interface {
+	IsEnabled() bool
+	SyncPlaylist(ctx context.Context, playlist *music.Playlist) error
+	DeletePlaylist(ctx context.Context, playlistID string) error
+}) *Service {
 	return &Service{
-		playlistRepo:  playlistRepo,
-		library:       lib,
-		configManager: cfgManager,
+		playlistRepo:    playlistRepo,
+		library:         lib,
+		configManager:   cfgManager,
+		playerProviders: playerProviders,
 	}
 }
 
@@ -315,4 +325,54 @@ func (s *Service) GetPlaylistsContainingTrack(ctx context.Context, trackID strin
 
 	slog.Debug("GetPlaylistsContainingTrack completed", "trackID", trackID, "count", len(containingPlaylists))
 	return containingPlaylists, nil
+}
+
+// SyncPlaylistToPlayers syncs a playlist to all enabled external players.
+func (s *Service) SyncPlaylistToPlayers(ctx context.Context, playlistID string) error {
+	slog.Debug("SyncPlaylistToPlayers service called", "playlistID", playlistID)
+
+	playlist, err := s.playlistRepo.GetByID(ctx, playlistID)
+	if err != nil {
+		slog.Error("SyncPlaylistToPlayers: failed to get playlist", "playlistID", playlistID, "error", err)
+		return fmt.Errorf("failed to get playlist %s: %w", playlistID, err)
+	}
+	if playlist == nil {
+		slog.Error("SyncPlaylistToPlayers: playlist not found", "playlistID", playlistID)
+		return fmt.Errorf("playlist not found: %s", playlistID)
+	}
+
+	for _, provider := range s.playerProviders {
+		if provider.IsEnabled() {
+			err := provider.SyncPlaylist(ctx, playlist)
+			if err != nil {
+				slog.Error("Failed to sync playlist to provider", "playlistID", playlistID, "provider", fmt.Sprintf("%T", provider), "error", err)
+				// Continue with other providers even if one fails
+			} else {
+				slog.Info("Successfully synced playlist to provider", "playlistID", playlistID, "provider", fmt.Sprintf("%T", provider))
+			}
+		}
+	}
+
+	slog.Debug("SyncPlaylistToPlayers completed", "playlistID", playlistID)
+	return nil
+}
+
+// DeletePlaylistFromPlayers deletes a playlist from all enabled external players.
+func (s *Service) DeletePlaylistFromPlayers(ctx context.Context, playlistID string) error {
+	slog.Debug("DeletePlaylistFromPlayers service called", "playlistID", playlistID)
+
+	for _, provider := range s.playerProviders {
+		if provider.IsEnabled() {
+			err := provider.DeletePlaylist(ctx, playlistID)
+			if err != nil {
+				slog.Error("Failed to delete playlist from provider", "playlistID", playlistID, "provider", fmt.Sprintf("%T", provider), "error", err)
+				// Continue with other providers even if one fails
+			} else {
+				slog.Info("Successfully deleted playlist from provider", "playlistID", playlistID, "provider", fmt.Sprintf("%T", provider))
+			}
+		}
+	}
+
+	slog.Debug("DeletePlaylistFromPlayers completed", "playlistID", playlistID)
+	return nil
 }
