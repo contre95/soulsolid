@@ -22,9 +22,6 @@ type DeviceStatus struct {
 	MountPath string
 	LastSeen  time.Time
 	Error     string
-	// Sync progress fields
-	Syncing bool
-	JobID   string
 }
 
 // Service handles device synchronization monitoring
@@ -85,20 +82,8 @@ func (s *Service) checkDevices() {
 		// Check if we have existing status for this device
 		var status DeviceStatus
 		if existing, exists := s.statuses[device.UUID]; exists {
-			// Preserve sync progress data if device is currently syncing
 			status = existing
 			status.LastSeen = time.Now()
-			// Only update mount status if not currently syncing
-			if !status.Syncing {
-				mounted, mountPath, err := s.isDeviceMounted(device)
-				if err != nil {
-					slog.Error("Failed to check if device is mounted", "error", err)
-					status.Error = err.Error()
-				} else {
-					status.Mounted = mounted
-					status.MountPath = mountPath
-				}
-			}
 		} else {
 			// New device, create fresh status
 			status = DeviceStatus{
@@ -106,15 +91,16 @@ func (s *Service) checkDevices() {
 				Name:     device.Name,
 				LastSeen: time.Now(),
 			}
-			// Check mount status for new devices
-			mounted, mountPath, err := s.isDeviceMounted(device)
-			if err != nil {
-				slog.Error("Failed to check if device is mounted", "error", err)
-				status.Error = err.Error()
-			} else {
-				status.Mounted = mounted
-				status.MountPath = mountPath
-			}
+		}
+
+		// Check mount status
+		mounted, mountPath, err := s.isDeviceMounted(device)
+		if err != nil {
+			slog.Error("Failed to check if device is mounted", "error", err)
+			status.Error = err.Error()
+		} else {
+			status.Mounted = mounted
+			status.MountPath = mountPath
 		}
 
 		newStatuses[device.UUID] = status
@@ -190,6 +176,21 @@ func (s *Service) GetDeviceStatus(uuid string) (DeviceStatus, bool) {
 	return status, exists
 }
 
+// findRunningSyncJob finds the job ID of a running sync job for the given UUID
+func (s *Service) findRunningSyncJob(uuid string) (string, bool) {
+	jobs := s.jobService.GetJobs()
+	for _, job := range jobs {
+		if job.Type == "dap_sync" && job.Status == "running" {
+			if job.Metadata != nil {
+				if jobUUID, ok := job.Metadata["uuid"].(string); ok && jobUUID == uuid {
+					return job.ID, true
+				}
+			}
+		}
+	}
+	return "", false
+}
+
 // StartSync starts a sync operation for a device
 func (s *Service) StartSync(uuid string) (string, error) {
 	s.mu.Lock()
@@ -206,8 +207,9 @@ func (s *Service) StartSync(uuid string) (string, error) {
 		return "", fmt.Errorf("device not mounted")
 	}
 
-	if status.Syncing {
-		slog.Error("Sync already in progress", "uuid", uuid)
+	// Check if sync already in progress
+	if jobID, running := s.findRunningSyncJob(uuid); running {
+		slog.Error("Sync already in progress", "uuid", uuid, "jobID", jobID)
 		return "", fmt.Errorf("sync already in progress")
 	}
 
@@ -220,10 +222,6 @@ func (s *Service) StartSync(uuid string) (string, error) {
 		return "", fmt.Errorf("failed to start sync job: %w", err)
 	}
 
-	status.Syncing = true
-	status.JobID = jobID
-	s.statuses[uuid] = status
-
 	return jobID, nil
 }
 
@@ -232,23 +230,15 @@ func (s *Service) CancelSync(uuid string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	status, exists := s.statuses[uuid]
-	if !exists {
-		return fmt.Errorf("device not found")
-	}
-
-	if !status.Syncing {
+	jobID, running := s.findRunningSyncJob(uuid)
+	if !running {
 		return fmt.Errorf("no sync in progress")
 	}
 
-	err := s.jobService.CancelJob(status.JobID)
+	err := s.jobService.CancelJob(jobID)
 	if err != nil {
 		return fmt.Errorf("failed to cancel sync job: %w", err)
 	}
-
-	status.Syncing = false
-	status.JobID = ""
-	s.statuses[uuid] = status
 
 	return nil
 }
