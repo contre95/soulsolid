@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -128,8 +129,13 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	h.configManager.Update(newConfig)
 	slog.Info("Configuration updated in memory")
 
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "config.yaml"
+	}
+
 	// Try to save to file (optional - may fail in containerized environments)
-	if err := h.configManager.Save("config.yaml"); err != nil {
+	if err := h.configManager.Save(configPath); err != nil {
 		slog.Warn("failed to save config to file (this is normal in containerized environments)", "error", err)
 	} else {
 		slog.Info("Configuration saved to file successfully")
