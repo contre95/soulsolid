@@ -26,12 +26,13 @@ type lrclibSong struct {
 
 // LRCLibProvider implements LyricsProvider for LRCLib
 type LRCLibProvider struct {
-	enabled bool
+	enabled      bool
+	preferSynced bool
 }
 
 // NewLRCLibProvider creates a new LRCLib provider
-func NewLRCLibProvider(enabled bool) *LRCLibProvider {
-	return &LRCLibProvider{enabled: enabled}
+func NewLRCLibProvider(enabled bool, preferSynced bool) *LRCLibProvider {
+	return &LRCLibProvider{enabled: enabled, preferSynced: preferSynced}
 }
 
 func (p *LRCLibProvider) SearchLyrics(ctx context.Context, params music.LyricsSearchParams) (string, error) {
@@ -82,6 +83,15 @@ func (p *LRCLibProvider) SearchLyrics(ctx context.Context, params music.LyricsSe
 
 	if len(searchResp) == 0 {
 		return "", fmt.Errorf("no lyrics found")
+	}
+
+	// Iterate over all songs to find synced lyrics
+	if p.preferSynced {
+		for _, song := range searchResp {
+			if song.SyncedLyrics != "" {
+				return song.SyncedLyrics, nil
+			}
+		}
 	}
 
 	// Return the first result's plain lyrics
