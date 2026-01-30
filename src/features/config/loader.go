@@ -146,9 +146,10 @@ func createDefaultConfig() *Config {
 			},
 		},
 		Lyrics: Lyrics{ // NOTE: Add this to the documentation
-			Providers: map[string]Provider{
+			Providers: map[string]LyricsProvider{
 				"lrclib": {
 					Enabled: true,
+					PreferSynced: false,
 				},
 			},
 		},

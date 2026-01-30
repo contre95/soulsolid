@@ -81,15 +81,21 @@ type Metadata struct {
 	Providers map[string]Provider `yaml:"providers"`
 }
 
-// Lyrics holds the configuration for lyrics providers
-type Lyrics struct {
-	Providers map[string]Provider `yaml:"providers"`
-}
-
 // Provider holds configuration for individual tagging providers
 type Provider struct {
 	Enabled bool    `yaml:"enabled"`
 	Secret  *string `yaml:"secret,omitempty"`
+}
+
+// Lyrics holds the configuration for lyrics providers
+type Lyrics struct {
+	Providers map[string]LyricsProvider `yaml:"providers"`
+}
+
+// Provider holds configuration for individual lyric providers
+type LyricsProvider struct {
+	Enabled      bool `yaml:"enabled"`
+	PreferSynced bool `yaml:"prefer_synced,omitempty"`
 }
 
 // Sync holds configuration for device synchronization
