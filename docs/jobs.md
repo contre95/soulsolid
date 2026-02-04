@@ -8,8 +8,8 @@ jobs:
   log_path: ./logs/jobs
   webhooks:
     enabled: true
-     job_types:
-       - directory_import
+    job_types:
+      - directory_import
       - download_album
       - dap_sync
     command: | # ntfy

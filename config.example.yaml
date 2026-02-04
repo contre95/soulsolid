@@ -55,6 +55,7 @@ lyrics:
   providers:
     lrclib:
       enabled: true
+      prefer_synced: false # Some programs like navidrome require synced lyrics
 sync:
   enabled: true
   devices:
