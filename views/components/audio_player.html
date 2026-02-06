@@ -1,0 +1,24 @@
+{{define "components/audio_player"}}
+<!-- Hidden audio player for track previews -->
+<div id="audio-player-container" class="fixed bottom-4 left-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 hidden z-40">
+  <div class="flex items-center space-x-3">
+    <button id="player-play-pause" class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300" onclick="togglePlayPause()">
+      <i class="fas fa-pause text-sm"></i>
+    </button>
+    <button id="player-stop" class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" onclick="stopTrackPreview()">
+      <i class="fas fa-stop text-sm"></i>
+    </button>
+    <div class="flex flex-col">
+      <div id="player-track-title" class="text-xs font-medium text-gray-900 dark:text-gray-100 truncate max-w-[200px]"></div>
+      <div class="flex items-center space-x-2">
+        <span id="player-current-time" class="text-xs text-gray-500 dark:text-gray-400">0:00</span>
+        <div class="w-24 bg-gray-200 dark:bg-gray-600 rounded-full h-1">
+          <div id="player-progress" class="bg-green-500 h-1 rounded-full" style="width: 0%"></div>
+        </div>
+        <span id="player-duration" class="text-xs text-gray-500 dark:text-gray-400">0:30</span>
+      </div>
+    </div>
+  </div>
+  <audio id="preview-audio" class="hidden"></audio>
+</div>
+{{end}}

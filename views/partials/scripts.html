@@ -75,5 +75,249 @@
       targetBtn.classList.remove('text-gray-600', 'dark:text-gray-400');
     }
   }
+
+  // Audio player functionality for track previews
+  let currentAudio = null;
+  let currentTrackId = null;
+  let currentPlayButton = null;
+
+  function playTrackPreview(trackId, buttonElement) {
+    console.log('playTrackPreview called with trackId:', trackId);
+    console.log('trackId type:', typeof trackId);
+    console.log('trackId length:', trackId ? trackId.length : 'undefined');
+    
+    // Validate trackId
+    if (!trackId || trackId.trim() === '') {
+      console.error('Invalid trackId provided');
+      return;
+    }
+    
+    const audioPlayer = document.getElementById('preview-audio');
+    const playerContainer = document.getElementById('audio-player-container');
+    const playerTitle = document.getElementById('player-track-title');
+    
+    // If we're clicking the same track that's currently playing, just toggle play/pause
+    if (currentTrackId === trackId && currentAudio && !currentAudio.paused) {
+      pauseTrackPreview();
+      return;
+    }
+    
+    // If a different track is playing, stop it first
+    if (currentAudio && currentTrackId !== trackId) {
+      stopTrackPreview();
+    }
+    
+    // Store references
+    currentTrackId = trackId;
+    currentPlayButton = buttonElement;
+    currentAudio = audioPlayer;
+    
+    // Update button UI to show playing state
+    const icon = buttonElement.querySelector('i');
+    icon.classList.remove('fa-play');
+    icon.classList.add('fa-spinner', 'fa-spin');
+    
+    // Set up audio source
+    const previewUrl = `/playback/tracks/${trackId}/preview`;
+    console.log('Setting audio src to:', previewUrl);
+    
+    audioPlayer.src = previewUrl;
+    audioPlayer.currentTime = 0;
+    
+    // Show player container
+    playerContainer.classList.remove('hidden');
+    
+    // Get track title for display (try to get it from the table row)
+    const row = buttonElement.closest('tr');
+    if (row) {
+      const titleCell = row.querySelector('td:first-child');
+      if (titleCell) {
+        playerTitle.textContent = titleCell.textContent.trim();
+      }
+    } else {
+      playerTitle.textContent = `Track ${trackId}`;
+    }
+    
+    // Wait for audio to be ready before playing
+    const playAudio = () => {
+      console.log('Attempting to play audio, readyState:', audioPlayer.readyState);
+      console.log('Audio src:', audioPlayer.src);
+      console.log('Audio duration:', audioPlayer.duration);
+      
+      audioPlayer.play()
+        .then(() => {
+          console.log('Audio playback started successfully');
+          // Update button to show pause state
+          icon.classList.remove('fa-spinner', 'fa-spin');
+          icon.classList.add('fa-pause');
+          updatePlayPauseButton('pause');
+        })
+        .catch(error => {
+          console.error('Failed to play audio:', error);
+          console.error('Audio network state:', audioPlayer.networkState);
+          console.error('Audio ready state:', audioPlayer.readyState);
+          
+          // Try to determine if it's a format or network issue
+          fetch(previewUrl, { method: 'HEAD' })
+            .then(response => {
+              if (!response.ok) {
+                console.error('Server returned non-OK status:', response.status, response.statusText);
+              } else {
+                console.log('Server responds OK, possibly a format issue');
+              }
+            })
+            .catch(networkError => {
+              console.error('Network error when checking URL:', networkError);
+            });
+          
+          // Reset button state
+          icon.classList.remove('fa-spinner', 'fa-spin');
+          icon.classList.add('fa-play');
+          stopTrackPreview();
+        });
+    };
+    
+    // Check if audio is already ready
+    if (audioPlayer.readyState >= 2) { // HAVE_CURRENT_DATA
+      playAudio();
+    } else {
+      // Wait for the audio to be loaded
+      audioPlayer.addEventListener('canplay', playAudio, { once: true });
+      
+      // Also set a timeout in case canplay doesn't fire
+      setTimeout(() => {
+        if (audioPlayer.src === previewUrl && currentTrackId === trackId) {
+          console.log('Timeout reached, attempting to play anyway');
+          playAudio();
+        }
+      }, 2000);
+    }
+  }
+  
+  function pauseTrackPreview() {
+    if (currentAudio && !currentAudio.paused) {
+      currentAudio.pause();
+      updatePlayPauseButton('play');
+      
+      // Update the button that triggered this playback
+      if (currentPlayButton) {
+        const icon = currentPlayButton.querySelector('i');
+        icon.classList.remove('fa-pause');
+        icon.classList.add('fa-play');
+      }
+    }
+  }
+  
+  function togglePlayPause() {
+    if (!currentAudio) return;
+    
+    if (currentAudio.paused) {
+      currentAudio.play().then(() => {
+        updatePlayPauseButton('pause');
+        if (currentPlayButton) {
+          const icon = currentPlayButton.querySelector('i');
+          icon.classList.remove('fa-play');
+          icon.classList.add('fa-pause');
+        }
+      });
+    } else {
+      pauseTrackPreview();
+    }
+  }
+  
+  function stopTrackPreview() {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      currentAudio.src = '';
+    }
+    
+    // Reset UI
+    const playerContainer = document.getElementById('audio-player-container');
+    playerContainer.classList.add('hidden');
+    
+    // Reset play button
+    if (currentPlayButton) {
+      const icon = currentPlayButton.querySelector('i');
+      icon.classList.remove('fa-pause', 'fa-spinner', 'fa-spin');
+      icon.classList.add('fa-play');
+    }
+    
+    // Reset player controls
+    updatePlayPauseButton('play');
+    updateProgress(0, 30);
+    
+    // Clear references
+    currentAudio = null;
+    currentTrackId = null;
+    currentPlayButton = null;
+  }
+  
+  function updatePlayPauseButton(state) {
+    const button = document.getElementById('player-play-pause');
+    const icon = button.querySelector('i');
+    
+    if (state === 'pause') {
+      icon.classList.remove('fa-play');
+      icon.classList.add('fa-pause');
+    } else {
+      icon.classList.remove('fa-pause');
+      icon.classList.add('fa-play');
+    }
+  }
+  
+  function updateProgress(currentTime, duration) {
+    const currentTimeEl = document.getElementById('player-current-time');
+    const durationEl = document.getElementById('player-duration');
+    const progressBar = document.getElementById('player-progress');
+    
+    currentTimeEl.textContent = formatTime(currentTime);
+    durationEl.textContent = formatTime(duration);
+    
+    const percentage = (currentTime / duration) * 100;
+    progressBar.style.width = `${Math.min(percentage, 100)}%`;
+  }
+  
+  function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+  
+  // Set up audio event listeners
+  document.addEventListener('DOMContentLoaded', function() {
+    const audioPlayer = document.getElementById('preview-audio');
+    
+    audioPlayer.addEventListener('timeupdate', function() {
+      if (audioPlayer.duration) {
+        updateProgress(audioPlayer.currentTime, Math.min(audioPlayer.duration, 30));
+      }
+    });
+    
+    audioPlayer.addEventListener('ended', function() {
+      stopTrackPreview();
+    });
+    
+    audioPlayer.addEventListener('error', function(e) {
+      console.error('Audio player error:', e);
+      console.error('Audio src:', audioPlayer.src);
+      console.error('Audio error code:', audioPlayer.error ? audioPlayer.error.code : 'unknown');
+      console.error('Audio error message:', audioPlayer.error ? audioPlayer.error.message : 'unknown');
+      console.error('Network state:', audioPlayer.networkState);
+      console.error('Ready state:', audioPlayer.readyState);
+      
+      // Try to get more detailed error info
+      fetch(audioPlayer.src, { method: 'HEAD' })
+        .then(response => {
+          console.error('HTTP status:', response.status);
+          console.error('HTTP headers:', [...response.headers.entries()]);
+        })
+        .catch(error => {
+          console.error('Network error during HEAD request:', error);
+        });
+      
+      stopTrackPreview();
+    });
+  });
 </script>
 {{end}}

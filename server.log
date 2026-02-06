@@ -1,0 +1,7 @@
+2025/12/31 21:49:33 INFO Required directories created/verified library=./music_library downloads=./downloads
+9:49PM INFO <logging/logger.go:47> Soulsolid: Logger initialized
+9:49PM INFO <downloading/plugins.go:34> Soulsolid: Loading downloader plugins
+9:49PM ERRO <downloading/plugins.go:38> Soulsolid: Failed to load plugin name=deezer path=../soulsolid-deemix-plugin/plugin.so error="failed to open plugin ../soulsolid-deemix-plugin/plugin.so: plugin.Open(\"../soulsolid-deemix-plugin/plugin\"): plugin was built with a different version of package crypto/x509"
+9:49PM INFO <downloading/plugins.go:46> Soulsolid: Plugin loading completed total_downloaders=0
+9:49PM INFO <src/main.go:171> Soulsolid: Starting server port=3535
+9:49PM ERRO <src/main.go:173> Soulsolid: server stopped: %v error="failed to listen: listen tcp4 :3535: bind: address already in use"
