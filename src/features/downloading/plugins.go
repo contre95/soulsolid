@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"os"
 	"plugin"
@@ -96,12 +97,13 @@ func (pm *PluginManager) loadPlugin(pluginCfg config.PluginConfig) error {
 		return fmt.Errorf("plugin %s does not export NewDownloader function: %w", pluginCfg.Name, err)
 	}
 
-	newDownloaderFunc, ok := sym.(func(map[string]interface{}) (Downloader, error))
+	newDownloaderFunc, ok := sym.(func(map[string]any) (Downloader, error))
 	if !ok {
 		return fmt.Errorf("plugin %s NewDownloader function has incorrect signature", pluginCfg.Name)
 	}
 
 	downloader, err := newDownloaderFunc(pluginCfg.Config)
+	// NOTE: When debuggin, take into account that plugins might override this custom pluginCfg.Config with custom configurations with environment variables given that this config might contain secret values to connect to their respective providers.
 	if err != nil {
 		return fmt.Errorf("failed to create downloader from plugin %s: %w", pluginCfg.Name, err)
 	}
@@ -134,9 +136,7 @@ func (pm *PluginManager) AddDownloader(name string, downloader Downloader) {
 func (pm *PluginManager) GetAllDownloaders() map[string]Downloader {
 	pm.mu.RLock()
 	result := make(map[string]Downloader)
-	for k, v := range pm.downloaders {
-		result[k] = v
-	}
+	maps.Copy(result, pm.downloaders)
 	pm.mu.RUnlock()
 	return result
 }

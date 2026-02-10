@@ -11,28 +11,6 @@ Downloaders are implemented as Go plugins that can be loaded at runtime. Each pl
 - Manages quality selection and format preferences
 - Provides user information and status reporting
 
-## Configuration
-
-Downloaders are configured in the `config.yaml` file:
-
-```yaml
-downloaders:
-  plugins:
-    - name: "examplefy"
-      path: "/path/to/examplefy.so"
-      config:
-        arl_token: "your_arl_token"
-        preferred_quality: "FLAC"
-  builtin:
-    dummy: true  # Enable built-in dummy downloader for testing
-   artwork:
-     embedded:
-       enabled: true
-       size: 1000
-       format: "jpeg"
-       quality: 85
-```
-
 ## Downloading Process
 
 The download process varies by plugin implementation, but generally follows this pattern:

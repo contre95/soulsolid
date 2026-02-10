@@ -26,6 +26,8 @@ Documentation: https://soulsolid.contre.io
 
 The application can run without copying `config.yaml` into the container. If no config file exists, it will automatically create one with sensible defaults. Use environment variables to override specific settings:
 
+Environment variables must be prefixed with `SS_` (e.g., `SS_TELEGRAM_TOKEN`).
+
 ```bash
 # Build the image
 podman build -t soulsolid .
@@ -39,7 +41,6 @@ podman run -d \
   -v /host/logs:/app/logs \
   -v /host/library.db:/app/library.db \
   -v /host/config.yaml:/app/config.yaml \
-  -e TELEGRAM_TOKEN="your_token" \
   soulsolid
 ```
 

@@ -4,6 +4,8 @@ While there isn't a dedicated Docker deployment guide, you can use the provided 
 
 Here's an example `docker-compose.yaml` file:
 
+Environment variables must be prefixed with `SS_`.
+
 ```yaml
 version: "3.8"
 services:
@@ -16,7 +18,7 @@ services:
       - ./library.db:/app/library.db
       - ./logs:/app/logs
     environment:
-      - TELEGRAM_TOKEN=your_telegram_bot_token_here
+      - SS_TELEGRAM_TOKEN=your_telegram_bot_token_here
     restart: unless-stopped
 ````
 

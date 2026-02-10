@@ -4,33 +4,39 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/go-viper/mapstructure/v2"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
-
-// setProviderSecret sets the secret for a provider from an environment variable
-func setProviderSecret(cfg *Config, providerName, envVar string) {
-	if key := os.Getenv(envVar); key != "" {
-		if cfg.Metadata.Providers == nil {
-			cfg.Metadata.Providers = make(map[string]Provider)
-		}
-		if provider, exists := cfg.Metadata.Providers[providerName]; exists {
-			provider.Secret = &key
-			cfg.Metadata.Providers[providerName] = provider
-		} else {
-			cfg.Metadata.Providers[providerName] = Provider{Enabled: false, Secret: &key}
-		}
-	}
-}
 
 // Load reads a YAML file from the given path and returns a new ConfigManager.
 // If the file doesn't exist, creates a default configuration.
 func Load(path string) (*Manager, error) {
+	v := viper.New()
+
+	// Configure Viper
+	v.SetConfigFile(path)
+	v.SetConfigType("yaml")
+	v.SetEnvPrefix("SS")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", ":", "_"))
+	v.AutomaticEnv() // Automatically bind environment variables with SS_ prefix
+
+	// Set defaults from createDefaultConfig
+	defaultCfg := createDefaultConfig()
+	// Convert default config to map and set defaults
+	defaultMap := make(map[string]any)
+	bytes, _ := yaml.Marshal(defaultCfg)
+	yaml.Unmarshal(bytes, &defaultMap)
+	for key, value := range defaultMap {
+		v.SetDefault(key, value)
+	}
+
 	// Check if config file exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		slog.Info("Config file not found, creating default configuration", "path", path)
-		defaultCfg := createDefaultConfig()
 
 		// Save default config to file
 		if err := saveDefaultConfig(path, defaultCfg); err != nil {
@@ -45,31 +51,27 @@ func Load(path string) (*Manager, error) {
 		return manager, nil
 	}
 
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
+	// Read config file
+	if err := v.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
-	defer f.Close()
 
+	// Unmarshal config
 	var cfg Config
-	if err := yaml.NewDecoder(f).Decode(&cfg); err != nil {
-		return nil, err
+	if err := v.Unmarshal(&cfg, viper.DecoderConfigOption(func(dc *mapstructure.DecoderConfig) {
+		dc.TagName = "yaml"
+	})); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
+	// Merge indexed environment variables into slice fields
+	mergeIndexedSlices(v, &cfg)
+
+	// Validate
 	validate := validator.New()
 	if err := validate.Struct(cfg); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
-
-	// Set defaults for missing values
-
-	// Override with environment variables if set
-	if token := os.Getenv("TELEGRAM_TOKEN"); token != "" {
-		cfg.Telegram.Token = token
-	}
-
-	setProviderSecret(&cfg, "discogs", "DISCOGS_API_KEY")      // NOTE: Add this to the docs
-	setProviderSecret(&cfg, "acoustid", "ACOUSTID_CLIENT_KEY") // NOTE: Add this to the docs
 
 	manager := NewManager(&cfg)
 	if err := manager.EnsureDirectories(); err != nil {
@@ -167,6 +169,61 @@ func createDefaultConfig() *Config {
 			},
 		},
 	}
+}
+
+// mergeIndexedSlices merges indexed environment variables into slice fields
+func mergeIndexedSlices(v *viper.Viper, cfg *Config) {
+	// Merge sync.devices
+	deviceIndex := 0
+	for {
+		uuidKey := fmt.Sprintf("sync.devices.%d.uuid", deviceIndex)
+		if !v.IsSet(uuidKey) {
+			break
+		}
+		// Ensure slice is large enough
+		if len(cfg.Sync.Devices) <= deviceIndex {
+			cfg.Sync.Devices = append(cfg.Sync.Devices, Device{})
+		}
+		if v.IsSet(uuidKey) {
+			cfg.Sync.Devices[deviceIndex].UUID = v.GetString(uuidKey)
+		}
+		if v.IsSet(fmt.Sprintf("sync.devices.%d.name", deviceIndex)) {
+			cfg.Sync.Devices[deviceIndex].Name = v.GetString(fmt.Sprintf("sync.devices.%d.name", deviceIndex))
+		}
+		if v.IsSet(fmt.Sprintf("sync.devices.%d.sync_path", deviceIndex)) {
+			cfg.Sync.Devices[deviceIndex].SyncPath = v.GetString(fmt.Sprintf("sync.devices.%d.sync_path", deviceIndex))
+		}
+		deviceIndex++
+	}
+
+	// Merge telegram.allowedUsers (indexed)
+	userIndex := 0
+	hasIndexedUsers := false
+	for {
+		userKey := fmt.Sprintf("telegram.allowedUsers.%d", userIndex)
+		if !v.IsSet(userKey) {
+			break
+		}
+		hasIndexedUsers = true
+		if len(cfg.Telegram.AllowedUsers) <= userIndex {
+			cfg.Telegram.AllowedUsers = append(cfg.Telegram.AllowedUsers, "")
+		}
+		cfg.Telegram.AllowedUsers[userIndex] = v.GetString(userKey)
+		userIndex++
+	}
+
+	// If no indexed users, check for comma-separated string
+	if !hasIndexedUsers {
+		if allowedUsersStr := v.GetString("telegram.allowedUsers"); allowedUsersStr != "" && strings.Contains(allowedUsersStr, ",") {
+			users := strings.Split(allowedUsersStr, ",")
+			for i, user := range users {
+				users[i] = strings.TrimSpace(user)
+			}
+			cfg.Telegram.AllowedUsers = users
+		}
+	}
+
+	// Note: jobs.webhooks.job_types could also be indexed, but we'll rely on comma-separated or YAML
 }
 
 // saveDefaultConfig saves the default configuration to the specified file path
