@@ -7,25 +7,57 @@ import (
 	"os"
 	"sync"
 
+	"github.com/go-viper/mapstructure/v2"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
 
 // Manager holds the application configuration and provides thread-safe access to it.
 type Manager struct {
-	mu     sync.RWMutex
-	config *Config
+	mu sync.RWMutex
+	v  *viper.Viper // viper instance holding configuration
 }
 
-// NewManager creates a new ConfigManager.
-func NewManager(config *Config) *Manager {
-	return &Manager{config: config}
+// NewManager creates a new ConfigManager from a viper instance.
+func NewManager(v *viper.Viper) *Manager {
+	return &Manager{v: v}
+}
+
+// getConfigUnsafe returns the current configuration without locking (internal use).
+func (m *Manager) getConfigUnsafe() (*Config, error) {
+	var cfg Config
+	if err := m.v.Unmarshal(&cfg, viper.DecoderConfigOption(func(dc *mapstructure.DecoderConfig) {
+		dc.TagName = "yaml"
+	})); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
 }
 
 // Get returns the current configuration.
 func (m *Manager) Get() *Config {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.config
+	cfg, err := m.getConfigUnsafe()
+	if err != nil {
+		slog.Error("failed to unmarshal config", "error", err)
+		// Return empty config as fallback
+		return &Config{}
+	}
+	return cfg
+}
+
+// configToMap converts a Config to a map[string]any using YAML marshaling.
+func configToMap(cfg *Config) (map[string]any, error) {
+	bytes, err := yaml.Marshal(cfg)
+	if err != nil {
+		return nil, err
+	}
+	var result map[string]any
+	if err := yaml.Unmarshal(bytes, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // Update updates the configuration.
@@ -33,8 +65,18 @@ func (m *Manager) Update(config *Config) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	oldConfig := m.config
-	m.config = config
+	// Get old config for logging
+	oldConfig, _ := m.getConfigUnsafe()
+
+	// Convert new config to map and set in viper
+	configMap, err := configToMap(config)
+	if err != nil {
+		slog.Error("failed to convert config to map", "error", err)
+		return
+	}
+	for key, value := range configMap {
+		m.v.Set(key, value)
+	}
 
 	// Log configuration changes
 	if oldConfig != nil {
@@ -53,17 +95,10 @@ func (m *Manager) Save(path string) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	file, err := os.Create(path)
-	if err != nil {
-		slog.Error("failed to create config file", "path", path, "error", err)
-		return err
-	}
-	defer file.Close()
-
-	encoder := yaml.NewEncoder(file)
-	encoder.SetIndent(2)
-	if err := encoder.Encode(m.config); err != nil {
-		slog.Error("failed to encode config", "path", path, "error", err)
+	// Temporarily set config file path and write
+	m.v.SetConfigFile(path)
+	if err := m.v.WriteConfigAs(path); err != nil {
+		slog.Error("failed to write config file", "path", path, "error", err)
 		return err
 	}
 
@@ -74,8 +109,11 @@ func (m *Manager) Save(path string) error {
 // EnsureDirectories creates the library and download directories if they don't exist.
 func (m *Manager) EnsureDirectories() error {
 	m.mu.RLock()
-	cfg := m.config
+	cfg, err := m.getConfigUnsafe()
 	m.mu.RUnlock()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %w", err)
+	}
 
 	// Create library directory
 	if err := os.MkdirAll(cfg.LibraryPath, 0755); err != nil {
@@ -91,9 +129,9 @@ func (m *Manager) EnsureDirectories() error {
 	return nil
 }
 
-// redactedCfg gets a redacted copy of the Config
-func (m *Manager) redactedCfg() Config {
-	var cfgCpy = *m.Get()
+// redactConfig returns a redacted copy of the Config
+func redactConfig(cfg *Config) Config {
+	var cfgCpy = *cfg
 	cfgCpy.Telegram.Token = "<redacted>"
 	// Note: DownloadPath is not redacted as it's a path, not a secret
 	return cfgCpy
@@ -103,7 +141,13 @@ func (m *Manager) redactedCfg() Config {
 func (m *Manager) GetJSON() string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	jsonBytes, err := json.Marshal(m.redactedCfg())
+	cfg, err := m.getConfigUnsafe()
+	if err != nil {
+		slog.Error("failed to unmarshal config for JSON", "error", err)
+		return err.Error()
+	}
+	redacted := redactConfig(cfg)
+	jsonBytes, err := json.Marshal(redacted)
 	if err != nil {
 		slog.Error("failed to marshal config to JSON", "error", err)
 		return err.Error()
@@ -114,7 +158,13 @@ func (m *Manager) GetJSON() string {
 func (m *Manager) GetYAML() string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	yamlBytes, err := yaml.Marshal(m.redactedCfg())
+	cfg, err := m.getConfigUnsafe()
+	if err != nil {
+		slog.Error("failed to unmarshal config for YAML", "error", err)
+		return err.Error()
+	}
+	redacted := redactConfig(cfg)
+	yamlBytes, err := yaml.Marshal(redacted)
 	if err != nil {
 		slog.Error("failed to marshal config to YAML", "error", err)
 		return err.Error()
@@ -126,9 +176,14 @@ func (m *Manager) GetYAML() string {
 func (m *Manager) GetEnabledMetadataProviders() map[string]bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	cfg, err := m.getConfigUnsafe()
+	if err != nil {
+		slog.Error("failed to unmarshal config for metadata providers", "error", err)
+		return make(map[string]bool)
+	}
 	enabled := make(map[string]bool)
-	if m.config.Metadata.Providers != nil {
-		for name, provider := range m.config.Metadata.Providers {
+	if cfg.Metadata.Providers != nil {
+		for name, provider := range cfg.Metadata.Providers {
 			enabled[name] = provider.Enabled
 		}
 	}
@@ -139,9 +194,14 @@ func (m *Manager) GetEnabledMetadataProviders() map[string]bool {
 func (m *Manager) GetEnabledLyricsProviders() map[string]bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	cfg, err := m.getConfigUnsafe()
+	if err != nil {
+		slog.Error("failed to unmarshal config for lyrics providers", "error", err)
+		return make(map[string]bool)
+	}
 	enabled := make(map[string]bool)
-	if m.config.Lyrics.Providers != nil {
-		for name, provider := range m.config.Lyrics.Providers {
+	if cfg.Lyrics.Providers != nil {
+		for name, provider := range cfg.Lyrics.Providers {
 			enabled[name] = provider.Enabled
 		}
 	}

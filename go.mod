@@ -12,6 +12,7 @@ require (
 	github.com/go-flac/go-flac v1.0.0
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
+	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/gofiber/fiber/v2 v2.52.9
 	github.com/gofiber/template/html/v2 v2.1.3
 	github.com/google/uuid v1.6.0
@@ -35,7 +36,6 @@ require (
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/gofiber/template v1.8.3 // indirect
 	github.com/gofiber/utils v1.1.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
