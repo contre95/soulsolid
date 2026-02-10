@@ -176,6 +176,14 @@ func (s *Service) RegisterHandler(jobType string, handler TaskHandler) {
 }
 
 func (s *Service) StartJob(jobType string, name string, metadata map[string]any) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Check if this is a DAP job and if dap_sync is running or pending
+	if strings.HasPrefix(jobType, "dap_") && s.hasDapSyncRunningOrPending() {
+		return "", fmt.Errorf("cannot start DAP job: dap_sync job is running or pending")
+	}
+
 	// Create a copy of jobType to prevent potential memory sharing issues
 	jobTypeCopy := strings.Clone(jobType)
 	job := &Job{
@@ -207,16 +215,12 @@ func (s *Service) StartJob(jobType string, name string, metadata map[string]any)
 		job.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 
-	s.mu.Lock()
 	s.jobs[job.ID] = job
 
 	// Check if we can start this job immediately
 	if !s.isAnyJobRunning() {
 		job.Status = JobStatusRunning
-		s.mu.Unlock()
 		go s.executeJob(job)
-	} else {
-		s.mu.Unlock()
 	}
 
 	return job.ID, nil
@@ -359,6 +363,15 @@ func (s *Service) ClearFinishedJobs() error {
 func (s *Service) isAnyJobRunning() bool {
 	for _, job := range s.jobs {
 		if job.Status == JobStatusRunning {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Service) hasDapSyncRunningOrPending() bool {
+	for _, job := range s.jobs {
+		if job.Type == "dap_sync" && (job.Status == JobStatusRunning || job.Status == JobStatusPending) {
 			return true
 		}
 	}
