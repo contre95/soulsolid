@@ -72,8 +72,8 @@ type Telegram struct {
 
 // Downloaders holds the configuration for the various downloaders.
 type Downloaders struct {
-	Plugins []PluginConfig `yaml:"plugins"`
-	Artwork Artwork        `yaml:"artwork"`
+	Plugins []PluginConfig `yaml:"plugins" json:"plugins"`
+	Artwork Artwork        `yaml:"artwork" json:"artwork"`
 }
 
 // Metadata holds the configuration for metadata tagging providers
@@ -100,15 +100,15 @@ type LyricsProvider struct {
 
 // Sync holds configuration for device synchronization
 type Sync struct {
-	Enabled bool     `yaml:"enabled"`
-	Devices []Device `yaml:"devices"`
+	Enabled bool     `yaml:"enabled" json:"enabled"`
+	Devices []Device `yaml:"devices" json:"devices"`
 }
 
 // Device holds configuration for individual sync devices
 type Device struct {
-	UUID     string `yaml:"uuid"`
-	Name     string `yaml:"name"`
-	SyncPath string `yaml:"sync_path"`
+	UUID     string `yaml:"uuid" json:"uuid"`
+	Name     string `yaml:"name" json:"name"`
+	SyncPath string `yaml:"sync_path" json:"sync_path"`
 }
 
 // Artwork holds configuration for artwork handling
@@ -125,8 +125,8 @@ type EmbeddedArtwork struct {
 
 // PluginConfig holds configuration for a plugin downloader
 type PluginConfig struct {
-	Name   string         `yaml:"name"`
-	Path   string         `yaml:"path"`
-	Icon   string         `yaml:"icon,omitempty"`
-	Config map[string]any `yaml:"config"`
+	Name   string         `yaml:"name" json:"name"`
+	Path   string         `yaml:"path" json:"path"`
+	Icon   string         `yaml:"icon,omitempty" json:"icon,omitempty"`
+	Config map[string]any `yaml:"config" json:"config"`
 }

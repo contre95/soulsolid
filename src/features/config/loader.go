@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -123,27 +124,52 @@ func setViperDefaults(v *viper.Viper) {
 func mergeIndexedSlicesIntoViper(v *viper.Viper) {
 	// Merge sync.devices
 	var devices []Device
+	// Parse sync devices from JSON environment variable (required)
+	if raw := v.GetString("sync.devices"); raw != "" {
+		if err := json.Unmarshal([]byte(raw), &devices); err != nil {
+			slog.Error("SS_SYNC_DEVICES contains invalid JSON", "error", err)
+			// Clear the invalid value to prevent unmarshal errors
+			v.Set("sync.devices", []Device{})
+		} else {
+			// Successfully parsed JSON
+			v.Set("sync.devices", devices)
+		}
+	}
+
+	// Check for indexed environment variables and warn they're ignored
 	deviceIndex := 0
 	for {
 		uuidKey := fmt.Sprintf("sync.devices.%d.uuid", deviceIndex)
 		if !v.IsSet(uuidKey) {
 			break
 		}
-		device := Device{}
-		if v.IsSet(uuidKey) {
-			device.UUID = v.GetString(uuidKey)
-		}
-		if v.IsSet(fmt.Sprintf("sync.devices.%d.name", deviceIndex)) {
-			device.Name = v.GetString(fmt.Sprintf("sync.devices.%d.name", deviceIndex))
-		}
-		if v.IsSet(fmt.Sprintf("sync.devices.%d.sync_path", deviceIndex)) {
-			device.SyncPath = v.GetString(fmt.Sprintf("sync.devices.%d.sync_path", deviceIndex))
-		}
-		devices = append(devices, device)
+		slog.Warn("Indexed environment variable detected but ignored for sync devices. Use SS_SYNC_DEVICES JSON array instead.", "variable", uuidKey)
 		deviceIndex++
 	}
-	if len(devices) > 0 {
-		v.Set("sync.devices", devices)
+
+	// Merge downloaders.plugins
+	var plugins []PluginConfig
+	// Parse plugins from JSON environment variable
+	if raw := v.GetString("downloaders.plugins"); raw != "" {
+		if err := json.Unmarshal([]byte(raw), &plugins); err != nil {
+			slog.Error("SS_DOWNLOADERS_PLUGINS contains invalid JSON", "error", err)
+			// Clear the invalid value to prevent unmarshal errors
+			v.Set("downloaders.plugins", []PluginConfig{})
+		} else {
+			// Successfully parsed JSON
+			v.Set("downloaders.plugins", plugins)
+		}
+	}
+
+	// Check for indexed environment variables and warn they're ignored
+	pluginIndex := 0
+	for {
+		nameKey := fmt.Sprintf("downloaders.plugins.%d.name", pluginIndex)
+		if !v.IsSet(nameKey) {
+			break
+		}
+		slog.Warn("Indexed environment variable detected but ignored for downloader plugins. Use SS_DOWNLOADERS_PLUGINS JSON array instead.", "variable", nameKey)
+		pluginIndex++
 	}
 
 	// Merge telegram.allowedUsers (indexed)

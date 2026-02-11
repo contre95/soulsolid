@@ -207,18 +207,19 @@ Lyrics providers are configured as a map. Replace `[provider]` with the provider
 
 | YAML Path | Environment Variable | Type | Default | Description |
 |-----------|----------------------|------|---------|-------------|
+| `downloaders.plugins` | `SS_DOWNLOADERS_PLUGINS` | array | `[]` | Downloader plugins (JSON array) |
 | `downloaders.artwork.embedded.enabled` | `SS_DOWNLOADERS_ARTWORK_EMBEDDED_ENABLED` | boolean | `true` | Enable embedded artwork |
 | `downloaders.artwork.embedded.size` | `SS_DOWNLOADERS_ARTWORK_EMBEDDED_SIZE` | integer | `1000` | Artwork size (pixels) |
 | `downloaders.artwork.embedded.quality` | `SS_DOWNLOADERS_ARTWORK_EMBEDDED_QUALITY` | integer | `85` | Artwork quality (1-100) |
 
-**Note**: `downloaders.plugins` should be configured only via YAML, not environment variables.
+**Note**: `downloaders.plugins` can be configured via JSON environment variable `SS_DOWNLOADERS_PLUGINS`. See Array Configuration section for details.
 
 ### Sync Configuration
 
 | YAML Path | Environment Variable | Type | Default | Description |
 |-----------|----------------------|------|---------|-------------|
 | `sync.enabled` | `SS_SYNC_ENABLED` | boolean | `true` | Enable device sync |
-| `sync.devices` | `SS_SYNC_DEVICES_*` | array | `[]` | Sync devices (see Array section) |
+| `sync.devices` | `SS_SYNC_DEVICES` | array | `[]` | Sync devices (JSON array, see Array section) |
 
 ### Job Configuration
 
@@ -246,21 +247,33 @@ export SS_TELEGRAM_ALLOWEDUSERS_1="user2"
 export SS_TELEGRAM_ALLOWEDUSERS_2="user3"
 ```
 
-### Object Arrays (e.g., `sync.devices`)
+### Object Arrays (e.g., `sync.devices`, `downloaders.plugins`)
 
-Use indexed environment variables for each field:
+Use JSON arrays for object arrays:
 
+**Sync Devices**:
 ```bash
-# Device 0
-export SS_SYNC_DEVICES_0_UUID="8722-166E"
-export SS_SYNC_DEVICES_0_NAME="iPod"
-export SS_SYNC_DEVICES_0_SYNC_PATH="SoulMusic"
-
-# Device 1
-export SS_SYNC_DEVICES_1_UUID="ABCD-1234"
-export SS_SYNC_DEVICES_1_NAME="Walkman"
-export SS_SYNC_DEVICES_1_SYNC_PATH="PortableMusic"
+export SS_SYNC_DEVICES='[
+  {"uuid":"8722-166E","name":"iPod","sync_path":"SoulMusic"},
+  {"uuid":"ABCD-1234","name":"Walkman","sync_path":"PortableMusic"}
+]'
 ```
+
+**Downloader Plugins**:
+```bash
+export SS_DOWNLOADERS_PLUGINS='[
+  {
+    "name": "deezer",
+    "path": "/path/to/plugin.so",
+    "icon": "https://example.com/icon.png",
+    "config": {
+      "arl": "your_deezer_arl"
+    }
+  }
+]'
+```
+
+**Note**: Indexed environment variables (e.g., `SS_SYNC_DEVICES_0_UUID`) are no longer supported for object arrays.
 
 ### Job Type Arrays (e.g., `jobs.webhooks.job_types`)
 
@@ -298,8 +311,7 @@ docker run -d \
   -e SS_TELEGRAM_TOKEN="your_token" \
   -e SS_TELEGRAM_ALLOWEDUSERS="user1,user2" \
   -e SS_SYNC_ENABLED=true \
-  -e SS_SYNC_DEVICES_0_UUID="1234-5678" \
-  -e SS_SYNC_DEVICES_0_NAME="MyDevice" \
+  -e SS_SYNC_DEVICES='[{"uuid":"1234-5678","name":"MyDevice","sync_path":"MyPath"}]' \
   soulsolid
 ```
 
