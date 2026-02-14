@@ -31,18 +31,18 @@ spec:
         - mountPath: /downloads
           name: downloads
       volumes:
-      - name: data
-        hostPath:
-          path: /mnt/SSD/data/demos/soulsolid-demo
-          type: Directory
       - name: config
         configMap:
           name: soulsolid-demo-config
+      - name: data
+        hostPath:
+          path: <path_to_data_folder>
+          type: Directory
       - name: music
         hostPath:
-          path: /mnt/SSD/data/demos/soulsolid-demo/music
+          path: <path_to_music>
           type: DirectoryOrCreate
       - name: downloads
         hostPath:
-          path: /mnt/SSD/data/demos/soulsolid-demo/downloads
+          path: </path/to/downlaod_folder>
           type: DirectoryOrCreate
