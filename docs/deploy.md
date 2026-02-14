@@ -12,7 +12,7 @@ services:
     ports:
       - "3535:3535"
     volumes:
-      - ./config.yaml:/app/config.yaml
+      - ./config.yaml:/config/config.yaml
       - ./library.db:/app/library.db
       - ./logs:/app/logs
     environment:

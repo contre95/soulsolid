@@ -4,14 +4,67 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"gopkg.in/yaml.v3"
 )
 
+// processEnvVarNodes recursively processes YAML nodes to handle !env_var tags
+func processEnvVarNodes(node *yaml.Node) error {
+	if node == nil {
+		return nil
+	}
+
+	// Check if this node has a !env_var tag
+	if node.Tag == "!env_var" {
+		if node.Kind != yaml.ScalarNode {
+			return fmt.Errorf("!env_var tag can only be used with scalar values (line %d)", node.Line)
+		}
+
+		// Extract environment variable name
+		envVarName := strings.TrimSpace(node.Value)
+		if envVarName == "" {
+			return fmt.Errorf("!env_var tag requires environment variable name (line %d)", node.Line)
+		}
+
+		// Get environment variable value
+		value := os.Getenv(envVarName)
+		if value == "" {
+			return fmt.Errorf("environment variable %s is not set or empty (referenced at line %d)", envVarName, node.Line)
+		}
+
+		// Replace the node value with the environment variable value
+		node.Tag = ""
+		node.Value = value
+		return nil
+	}
+
+	// Recursively process child nodes
+	// Start with DocumentNode content if present
+	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
+		for i := range node.Content {
+			if err := processEnvVarNodes(node.Content[i]); err != nil {
+				return err
+			}
+		}
+	} else if node.Kind == yaml.MappingNode || node.Kind == yaml.SequenceNode {
+		for i := range node.Content {
+			if err := processEnvVarNodes(node.Content[i]); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // setProviderSecret sets the secret for a provider from an environment variable
 func setProviderSecret(cfg *Config, providerName, envVar string) {
 	if key := os.Getenv(envVar); key != "" {
+		slog.Warn("DEPRECATED: Using environment variable override for provider secret. Migrate to !env_var syntax in config.yaml",
+			"provider", providerName, "env_var", envVar)
 		if cfg.Metadata.Providers == nil {
 			cfg.Metadata.Providers = make(map[string]Provider)
 		}
@@ -51,8 +104,26 @@ func Load(path string) (*Manager, error) {
 	}
 	defer f.Close()
 
+	// Read the entire file
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse YAML into a Node first
+	var rootNode yaml.Node
+	if err := yaml.Unmarshal(content, &rootNode); err != nil {
+		return nil, err
+	}
+
+	// Process !env_var tags in the node tree
+	if err := processEnvVarNodes(&rootNode); err != nil {
+		return nil, err
+	}
+
+	// Decode the processed node tree into Config struct
 	var cfg Config
-	if err := yaml.NewDecoder(f).Decode(&cfg); err != nil {
+	if err := rootNode.Decode(&cfg); err != nil {
 		return nil, err
 	}
 
@@ -63,8 +134,9 @@ func Load(path string) (*Manager, error) {
 
 	// Set defaults for missing values
 
-	// Override with environment variables if set
+	// Override with environment variables if set (deprecated)
 	if token := os.Getenv("TELEGRAM_TOKEN"); token != "" {
+		slog.Warn("DEPRECATED: Using TELEGRAM_TOKEN environment variable override. Migrate to !env_var syntax in config.yaml")
 		cfg.Telegram.Token = token
 	}
 
@@ -171,6 +243,12 @@ func createDefaultConfig() *Config {
 
 // saveDefaultConfig saves the default configuration to the specified file path
 func saveDefaultConfig(path string, cfg *Config) error {
+	// Ensure the directory exists
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory %s: %w", dir, err)
+	}
+
 	file, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("failed to create config file: %w", err)

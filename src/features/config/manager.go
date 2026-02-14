@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"gopkg.in/yaml.v3"
@@ -52,6 +53,13 @@ func (m *Manager) Update(config *Config) {
 func (m *Manager) Save(path string) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+
+	// Ensure the directory exists
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		slog.Error("failed to create config directory", "path", dir, "error", err)
+		return err
+	}
 
 	file, err := os.Create(path)
 	if err != nil {

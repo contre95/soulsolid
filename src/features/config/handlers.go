@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -129,7 +130,11 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	slog.Info("Configuration updated in memory")
 
 	// Try to save to file (optional - may fail in containerized environments)
-	if err := h.configManager.Save("config.yaml"); err != nil {
+	configPath := "/config/config.yaml"
+	if envPath := os.Getenv("SOULSOLID_CONFIG_PATH"); envPath != "" {
+		configPath = envPath
+	}
+	if err := h.configManager.Save(configPath); err != nil {
 		slog.Warn("failed to save config to file (this is normal in containerized environments)", "error", err)
 	} else {
 		slog.Info("Configuration saved to file successfully")

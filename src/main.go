@@ -29,7 +29,11 @@ import (
 )
 
 func main() {
-	cfgManager, err := config.Load("config.yaml")
+	configPath := "/config/config.yaml"
+	if envPath := os.Getenv("SOULSOLID_CONFIG_PATH"); envPath != "" {
+		configPath = envPath
+	}
+	cfgManager, err := config.Load(configPath)
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}

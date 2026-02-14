@@ -24,13 +24,30 @@ Documentation: https://soulsolid.contre.io
 
 ### 🦭 Container Usage
 
-The application can run without copying `config.yaml` into the container. If no config file exists, it will automatically create one with sensible defaults. Use environment variables to override specific settings:
+The application can run without copying `config.yaml` into the container. If no config file exists, it will automatically create one with sensible defaults. 
+
+#### Environment Variable Support
+
+Soulsolid supports environment variables in configuration files using the `!env_var` tag:
+
+```yaml
+telegram:
+  token: !env_var TELEGRAM_BOT_TOKEN
+metadata:
+  providers:
+    discogs:
+      secret: !env_var DISCOGS_API_KEY
+```
+
+The application will fail to start if a referenced environment variable is not set.
+
+**Deprecated**: Old environment variable overrides (`TELEGRAM_TOKEN`, `DISCOGS_API_KEY`, `ACOUSTID_CLIENT_KEY`) still work but show deprecation warnings.
 
 ```bash
 # Build the image
 podman build -t soulsolid .
 
-# Run with environment variables (config.yaml will be auto-created if missing)
+# Run with environment variables
 podman run -d \
   --name soulsolid \
   -p 3535:3535 \
@@ -38,9 +55,20 @@ podman run -d \
   -v /host/downloads:/app/downloads \
   -v /host/logs:/app/logs \
   -v /host/library.db:/app/library.db \
-  -v /host/config.yaml:/app/config.yaml \
-  -e TELEGRAM_TOKEN="your_token" \
+  -v /host/config.yaml:/config/config.yaml \
+  -e TELEGRAM_BOT_TOKEN="your_token" \
+  -e DISCOGS_API_KEY="your_discogs_key" \
   soulsolid
+```
+
+Make sure your `config.yaml` uses the `!env_var` syntax:
+```yaml
+telegram:
+  token: !env_var TELEGRAM_BOT_TOKEN
+metadata:
+  providers:
+    discogs:
+      secret: !env_var DISCOGS_API_KEY
 ```
 
 The web interface will be available at `http://localhost:3535`.
