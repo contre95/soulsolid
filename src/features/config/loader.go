@@ -158,9 +158,9 @@ func createDefaultConfig() *Config {
 		DownloadPath: "./downloads",
 		Telegram: Telegram{
 			Enabled:      false,
-			Token:        "",                  // Can be obtained with https://t.me/BotFather
-			AllowedUsers: []string{"user1"},   // No @
-			BotHandle:    "@SoulsolidDemoBot", // With @
+			Token:        "",                                   // Can be obtained with https://t.me/BotFather
+			AllowedUsers: []string{"<your_telegram_username>"}, // No @
+			BotHandle:    "@<YourTelegramUserBot>",             // With @
 		},
 		Logger: Logger{
 			Enabled:   true,
