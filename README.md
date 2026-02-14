@@ -1,4 +1,4 @@
-<table>
+>
   <tr>
     <td><img src="public/img/galaxy.png" width="50" alt="souldsolid"></td>
     <td><h1>Soulsolid</h1></td>
@@ -6,6 +6,7 @@
 </table>
 
 [![Join Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/mHRjGAjEJz)
+[See Demo](https://soulsolid-demo.contre.io/)
 
 A feature rich music organization app built for the music hoarder. Heavily under development, focused on ease of usage.
 ## Features
