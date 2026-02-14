@@ -54,7 +54,7 @@ podman run -d \
   -v /host/music:/app/library \
   -v /host/downloads:/app/downloads \
   -v /host/logs:/app/logs \
-  -v /host/library.db:/app/library.db \
+  -v /host/library.db:/data/library.db \
   -v /host/config.yaml:/config/config.yaml \
   -e TELEGRAM_BOT_TOKEN="your_token" \
   -e DISCOGS_API_KEY="your_discogs_key" \
