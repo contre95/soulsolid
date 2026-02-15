@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: soulsolid-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: soulsolid-demo
+  template:
+    metadata:
+      labels:
+        app: soulsolid-demo
+    spec:
+      containers:
+      - name: soulsolid
+        image: contre95/soulsolid:feat-fix-config_refactor
+        ports:
+        - containerPort: 3535
+          protocol: TCP
+        env:
+        - name: SOULSOLID_CONFIG_PATH
+          value: /config/config.yaml
+        volumeMounts:
+        - mountPath: /data
+          name: data
+        - mountPath: /config
+          name: config
+        - mountPath: /music
+          name: music
+        - mountPath: /downloads
+          name: downloads
+      volumes:
+      - name: config
+        configMap:
+          name: soulsolid-demo-config
+      - name: data
+        hostPath:
+          path: <path_to_data_folder>
+          type: Directory
+      - name: music
+        hostPath:
+          path: <path_to_music>
+          type: DirectoryOrCreate
+      - name: downloads
+        hostPath:
+          path: </path/to/downlaod_folder>
+          type: DirectoryOrCreate

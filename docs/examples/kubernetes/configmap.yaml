@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: soulsolid-demo-config
+data:
+  config.yaml: |
+    libraryPath: /music
+    downloadPath: /downloads
+    telegram:
+      enabled: true
+      token: !env_var TELEGRAM_BOT_TOKEN
+      allowedUsers:
+        - anouxx
+      bot_handle: SoulsolidContreBot
+    logger:
+      enabled: true
+      level: info
+      format: text
+      htmx_debug: false
+    downloaders:
+      plugins:
+        - name: deezer
+          path: /app/plugins/deemix/plugin.so
+          icon: https://demo2.contre.io/img/deezer.png
+          config:
+            arl: !env_var DEEZER_ARL
+            preferred_quality: FLAC
+            fallback_quality: MP3_320
+      artwork:
+        embedded:
+          enabled: true
+          size: 500
+          quality: 85
+    server:
+      show_routes: false
+      port: 3737
+    database:
+      path: /data/library.db
+    import:
+      move: true
+      always_queue: true
+      duplicates: queue
+      paths:
+        compilations: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+        album:soundtrack: '%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+        album:single: '%asciify{$albumartist}/%asciify{$album} [Single] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+        album:ep: '%asciify{$albumartist}/%asciify{$album} [EP] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+        default_path: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+      auto_start_watcher: false
+    metadata:
+      providers:
+        acoustid:
+          enabled: true
+          secret: !env_var ACOUSTID_SECRET
+        deezer:
+          enabled: true
+        discogs:
+          enabled: true
+          api_key: !env_var DISCOGS_API_KEY
+        musicbrainz:
+          enabled: true
+    lyrics:
+      providers:
+        lrclib:
+          enabled: true
+    sync:
+      enabled: false
+      devices:
+        - uuid: 8722-177E
+          name: iPod
+          sync_path: Soulsolid
+    jobs:
+      log: true
+      log_path: ./logs/jobs
+      webhooks:
+        enabled: true
+        job_types:
+          - directory_import
+        # command: curl -X POST 'http://<emby-ip>:<emby-port>/Emby/Library/Refresh?api_key=<emby-token>'
+
+

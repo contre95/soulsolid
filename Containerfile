@@ -15,7 +15,7 @@ ARG IMAGE_TAG
 ENV CGO_ENABLED=2
 RUN apk add --no-cache git tree chromaprint
 RUN apk add --no-cache gcc libc-dev
-RUN mkdir -p /app/plugins
+RUN mkdir -p /app/plugins /config /data
 WORKDIR /app
 ENV IMAGE_TAG=$IMAGE_TAG
 # Copy the dynamically built app and assets
