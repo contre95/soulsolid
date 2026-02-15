@@ -241,11 +241,11 @@
         {{end}}
     </ul>
   </div>
-  <div class="absolute bottom-0 left-0 w-full p-4 pb-6">
-    <div class="mb-2 text-center">
+  <div class="absolute bottom-0 left-0 w-full p-4 pb-6" _="on mouseenter remove .opacity-0 .invisible from #breaking-changes then add .opacity-100 .visible on mouseleave add .opacity-0 .invisible to #breaking-changes then remove .opacity-100 .visible">
+    <div id="breaking-changes" class="mb-2 text-center opacity-0 invisible transition-all duration-300">
       <a href="https://github.com/contre95/soulsolid/pull/116" target="_blank" class="text-amber-500 hover:text-amber-400 text-xs font-semibold items-center space-x-1">
         <span>⚠️</span>
-        <span class="text-red-400">Breaking changes</span>
+        <span class="text-red-400">Migrating from </span><span class="flex items-center justify-center text-white glowy-blue space-x-2" class="text-xs pt-1"><= v0.19.2</span>
       </a>
     </div>
     <a href="https://github.com/contre95/soulsolid" target="_blank" class="flex items-center justify-center text-white glowy-blue space-x-2">
