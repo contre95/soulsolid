@@ -54,11 +54,10 @@ podman run -d \
   -v /host/logs:/app/logs \
   -v /host/library.db:/data/library.db \
   -v /host/config.yaml:/config/config.yaml \
-  -e TELEGRAM_BOT_TOKEN="your_token" \
   soulsolid
 ```
 
-Make sure your `config.yaml` uses the `!env_var` syntax:
+Optionally, to hide secrets, you can `!env_var` syntax in anywhere in you `config.yaml`:
 ```yaml
 telegram:
   token: !env_var TELEGRAM_BOT_TOKEN
