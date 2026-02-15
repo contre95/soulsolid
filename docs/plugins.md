@@ -136,7 +136,10 @@ Example config.yaml:
 downloaders:
   plugins:
     - name: "mydownloader"
-      path: "/path/to/mydownloader.so"
+      # Either specify a URL to build from git:
+      url: "https://github.com/user/soulsolid-myplugin.git"
+      # Or specify a path to a pre-built .so file:
+      # path: "/path/to/mydownloader.so"
       icon: "path/to/icon.png"  # Optional icon for the downloader
       config:
         api_key: "your_api_key_here"
@@ -146,11 +149,55 @@ downloaders:
 
 ## Distribution
 
-1. **Build for the target platform:** Make sure to build the plugin for the same OS and architecture as the Soulsolid binary.
+There are two ways to distribute plugins:
 
+### Option 1: Pre-built .so files
+1. **Build for the target platform:** Make sure to build the plugin for the same OS and architecture as the Soulsolid binary.
 2. **Distribute the .so file:** Users can place the `.so` file anywhere accessible to Soulsolid and configure the path in their config.
 
-3. **Version compatibility:** Plugins should be built against the same version of Soulsolid to ensure API compatibility.
+### Option 2: Git repositories
+1. **Publish your plugin source code** in a public git repository with a valid `go.mod` file.
+2. **Users configure the repository URL** in their Soulsolid config (see "Building from Git Repositories" section below).
+
+### Version compatibility
+Plugins should be built against the same version of Soulsolid to ensure API compatibility.
+
+## Building from Git Repositories
+
+Soulsolid can automatically build plugins directly from git repositories. Instead of distributing pre-built `.so` files, you can specify a repository URL in your configuration.
+
+### Configuration Example
+
+```yaml
+downloaders:
+  plugins:
+    - name: "mydownloader"
+      url: "https://github.com/user/soulsolid-myplugin.git"
+      # path: "/fallback.so"  # Optional fallback path if URL building fails
+      config:
+        api_key: "your_api_key_here"
+```
+
+### Requirements
+
+- **git** must be installed and available in PATH
+- **go** must be installed (same version as the main application) and available in PATH
+- Network access to clone the repository
+
+### How It Works
+
+1. Soulsolid clones the repository (default branch only, depth=1)
+2. Adds a replace directive to use the local soulsolid module
+3. Runs `go mod tidy` to resolve dependencies
+4. Builds the plugin with `go build -buildmode=plugin`
+5. Loads the built `.so` file into memory
+
+### Notes
+
+- Plugins are rebuilt each time Soulsolid starts (no caching)
+- Only the default branch is cloned (no branch/tag/commit support)
+- Repository must contain a `go.mod` file at the root
+- Building arbitrary code carries inherent security risks (same as loading pre-built `.so` files)
 
 ## Best Practices
 

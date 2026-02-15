@@ -6,7 +6,6 @@
 </table>
 
 [![Join Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/mHRjGAjEJz)
-[See Demo](https://soulsolid-demo.contre.io/)
 
 A feature rich music organization app built for the music hoarder. Heavily under development, focused on ease of usage.
 ## Features
@@ -20,6 +19,19 @@ A feature rich music organization app built for the music hoarder. Heavily under
 - **Job Management**: Background processing for downloads, imports, and syncs
 
 Documentation: https://soulsolid.contre.io
+Demo: https://soulsolid-demo.contre.io
+
+## Screenshots
+<table>
+  <tr>
+    <td>
+      <img src="./docs/screen0.jpg" />
+    </td>
+    <td>
+      <img src="./docs/screen1.jpg" />
+    </td>
+  </tr>
+</table>
 
 ## Quick Start
 
