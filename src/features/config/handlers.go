@@ -41,7 +41,6 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 
 	// Get current config to preserve server settings
 	currentConfig := h.configManager.Get()
-	slog.Debug(h.configManager.GetJSON())
 	// Parse form data into a new config struct
 	// TODO: We might want to add some validations probably, not sure if here.
 	newConfig := &Config{
@@ -171,18 +170,16 @@ func (h *Handler) GetConfigForm(c *fiber.Ctx) error {
 
 // GetConfig returns the current configuration in the requested format.
 func (h *Handler) GetConfig(c *fiber.Ctx) error {
-	slog.Debug("GetConfig handler called", "format", c.Query("fmt", "json"))
+	// Supporting only one format for now
+	slog.Debug("GetConfig handler called", "format", c.Query("fmt", "yaml"))
 	format := c.Query("fmt", "yaml")
 
 	switch format {
 	case "yaml":
 		c.Set("Content-Type", "text/yaml")
 		return c.SendString(h.configManager.GetYAML())
-	case "json":
-		c.Set("Content-Type", "application/json")
-		return c.SendString(h.configManager.GetJSON())
 	default:
-		return c.Status(fiber.StatusBadRequest).SendString("Invalid format. Use 'json' or 'yaml'")
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid format. 'yaml' only availabe for now")
 	}
 }
 

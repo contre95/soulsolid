@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -33,7 +32,7 @@ func (h *TelegramHandler) HandleCommand(bot *tgbotapi.BotAPI, chatID int64, comm
 // GetCommands returns the available commands for this handler
 func (h *TelegramHandler) GetCommands() map[string]string {
 	return map[string]string{
-		"config": "Show configuration (use 'json' for JSON format)",
+		"config": "Show configuration (use 'yaml' for YAML format)",
 	}
 }
 
@@ -45,18 +44,8 @@ func (h *TelegramHandler) HandleCallback(bot *tgbotapi.BotAPI, callback *tgbotap
 // handleConfig shows configuration
 func (h *TelegramHandler) handleConfig(bot *tgbotapi.BotAPI, chatID int64, args string) error {
 	format := "yaml" // default
-	if strings.ToLower(strings.TrimSpace(args)) == "json" {
-		format = "json"
-	}
-
 	var configStr string
-
-	if format == "json" {
-		configStr = h.configManager.GetJSON()
-	} else {
-		configStr = h.configManager.GetYAML()
-	}
-
+	configStr = h.configManager.GetYAML()
 	message := fmt.Sprintf("⚙️ *Configuration (%s)*\n\n```%s\n%s\n```", format, format, configStr)
 	msg := tgbotapi.NewMessage(chatID, message)
 	msg.ParseMode = tgbotapi.ModeMarkdown

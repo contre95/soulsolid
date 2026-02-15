@@ -33,9 +33,9 @@ func main() {
 	if envPath := os.Getenv("SOULSOLID_CONFIG_PATH"); envPath != "" {
 		configPath = envPath
 	}
-	cfgManager, err := config.Load(configPath)
+	cfgManager, err := config.NewManager(configPath)
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		log.Fatalf("failed to load config manager: %v", err)
 	}
 
 	logger := logging.SetupLogger(cfgManager)
