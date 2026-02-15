@@ -65,7 +65,7 @@ type Logger struct {
 
 type Telegram struct {
 	Enabled      bool     `yaml:"enabled"`
-	Token        string   `yaml:"token" redact:"true"`
+	Token        string   `yaml:"token"`
 	AllowedUsers []string `yaml:"allowedUsers"`
 	BotHandle    string   `yaml:"bot_handle"`
 }
@@ -84,7 +84,7 @@ type Metadata struct {
 // Provider holds configuration for individual tagging providers
 type Provider struct {
 	Enabled bool    `yaml:"enabled"`
-	Secret  *string `yaml:"secret,omitempty" redact:"true"`
+	Secret  *string `yaml:"secret,omitempty"`
 }
 
 // Lyrics holds the configuration for lyrics providers
