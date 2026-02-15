@@ -127,6 +127,7 @@ type EmbeddedArtwork struct {
 type PluginConfig struct {
 	Name   string         `yaml:"name"`
 	Path   string         `yaml:"path"`
+	URL    string         `yaml:"url,omitempty"`
 	Icon   string         `yaml:"icon,omitempty"`
 	Config map[string]any `yaml:"config"`
 }
