@@ -76,6 +76,6 @@ data:
         enabled: true
         job_types:
           - directory_import
-        command: curl -X POST 'http://10.12.95.2:8099/Emby/Library/Refresh?api_key=e69875b1a2634cd58dbdc39e41ef3733'
+        # command: curl -X POST 'http://<emby-ip>:<emby-port>/Emby/Library/Refresh?api_key=<emby-token>'
 
 
