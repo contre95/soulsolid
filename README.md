@@ -6,9 +6,21 @@
 </table>
 
 [![Join Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/mHRjGAjEJz)
-[See Demo](https://soulsolid-demo.contre.io/)
 
-A feature rich music organization app built for the music hoarder. Heavily under development, focused on ease of usage.
+A work in progress, feature rich music organization app built for the music hoarder. Heavily under development, focused on ease of usage and start up. Feel free to check the [docs](https://soulsolid.contre.io) or [demo](https://soulsolid-demo.contre.io)
+
+## Screenshots
+<table>
+  <tr>
+    <td>
+      <img src="./docs/screen0.jpg" />
+    </td>
+    <td>
+      <img src="./docs/screen1.jpg" />
+    </td>
+  </tr>
+</table>
+
 ## Features
 - **Music Library Management**: Organize and browse albums, artists, and tracks
 - **Downloading**: Download tracks and albums. 
@@ -20,6 +32,8 @@ A feature rich music organization app built for the music hoarder. Heavily under
 - **Job Management**: Background processing for downloads, imports, and syncs
 
 Documentation: https://soulsolid.contre.io
+Demo: https://soulsolid-demo.contre.io
+
 
 ## Quick Start
 
@@ -52,7 +66,7 @@ podman run -d \
   -p 3535:3535 \
   -v /host/music:/app/library \
   -v /host/downloads:/app/downloads \
-  -v /host/logs:/app/logs \
+  -v /host/logs:/app/logs \ # optional
   -v /host/library.db:/data/library.db \
   -v /host/config.yaml:/config/config.yaml \
   soulsolid
@@ -92,6 +106,4 @@ nix-shell dev.nix
 # Then, simply run:
 go run ./src/main.go
 ```
-
 The web interface will be available at `http://localhost:3535`.
-
