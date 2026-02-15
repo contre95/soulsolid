@@ -202,20 +202,20 @@ func (m *Manager) Update(config *Config) {
 }
 
 // Save writes the current configuration to the specified file path.
-func (m *Manager) Save(path string) error {
+func (m *Manager) Save() error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	// Ensure the directory exists
-	dir := filepath.Dir(path)
+	dir := filepath.Dir(m.configPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		slog.Error("failed to create config directory", "path", dir, "error", err)
 		return err
 	}
 
-	file, err := os.Create(path)
+	file, err := os.Create(m.configPath)
 	if err != nil {
-		slog.Error("failed to create config file", "path", path, "error", err)
+		slog.Error("failed to create config file", "path", m.configPath, "error", err)
 		return err
 	}
 	defer file.Close()
@@ -223,11 +223,11 @@ func (m *Manager) Save(path string) error {
 	encoder := yaml.NewEncoder(file)
 	encoder.SetIndent(2)
 	if err := encoder.Encode(m.config); err != nil {
-		slog.Error("failed to encode config", "path", path, "error", err)
+		slog.Error("failed to encode config", "path", m.configPath, "error", err)
 		return err
 	}
 
-	slog.Info("Configuration saved successfully", "path", path)
+	slog.Info("Configuration saved successfully", "path", m.configPath)
 	return nil
 }
 
