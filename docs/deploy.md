@@ -16,7 +16,7 @@ services:
       - ./library.db:/app/library.db
       - ./logs:/app/logs
     environment:
-      - TELEGRAM_TOKEN=your_telegram_bot_token_here
+      - TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
     restart: unless-stopped
 ````
 

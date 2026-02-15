@@ -41,8 +41,6 @@ metadata:
 
 The application will fail to start if a referenced environment variable is not set.
 
-**Deprecated**: Old environment variable overrides (`TELEGRAM_TOKEN`, `DISCOGS_API_KEY`, `ACOUSTID_CLIENT_KEY`) still work but show deprecation warnings.
-
 ```bash
 # Build the image
 podman build -t soulsolid .
@@ -57,7 +55,6 @@ podman run -d \
   -v /host/library.db:/data/library.db \
   -v /host/config.yaml:/config/config.yaml \
   -e TELEGRAM_BOT_TOKEN="your_token" \
-  -e DISCOGS_API_KEY="your_discogs_key" \
   soulsolid
 ```
 

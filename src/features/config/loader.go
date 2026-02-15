@@ -61,21 +61,6 @@ func processEnvVarNodes(node *yaml.Node) error {
 }
 
 // setProviderSecret sets the secret for a provider from an environment variable
-func setProviderSecret(cfg *Config, providerName, envVar string) {
-	if key := os.Getenv(envVar); key != "" {
-		slog.Warn("DEPRECATED: Using environment variable override for provider secret. Migrate to !env_var syntax in config.yaml",
-			"provider", providerName, "env_var", envVar)
-		if cfg.Metadata.Providers == nil {
-			cfg.Metadata.Providers = make(map[string]Provider)
-		}
-		if provider, exists := cfg.Metadata.Providers[providerName]; exists {
-			provider.Secret = &key
-			cfg.Metadata.Providers[providerName] = provider
-		} else {
-			cfg.Metadata.Providers[providerName] = Provider{Enabled: false, Secret: &key}
-		}
-	}
-}
 
 // Load reads a YAML file from the given path and returns a new ConfigManager.
 // If the file doesn't exist, creates a default configuration.
@@ -133,15 +118,6 @@ func Load(path string) (*Manager, error) {
 	}
 
 	// Set defaults for missing values
-
-	// Override with environment variables if set (deprecated)
-	if token := os.Getenv("TELEGRAM_TOKEN"); token != "" {
-		slog.Warn("DEPRECATED: Using TELEGRAM_TOKEN environment variable override. Migrate to !env_var syntax in config.yaml")
-		cfg.Telegram.Token = token
-	}
-
-	setProviderSecret(&cfg, "discogs", "DISCOGS_API_KEY")      // NOTE: Add this to the docs
-	setProviderSecret(&cfg, "acoustid", "ACOUSTID_CLIENT_KEY") // NOTE: Add this to the docs
 
 	manager := NewManager(&cfg)
 	if err := manager.EnsureDirectories(); err != nil {

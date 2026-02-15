@@ -4,8 +4,6 @@
 #   token: !env_var TELEGRAM_BOT_TOKEN
 #
 # The application will fail to start if a referenced environment variable is not set.
-# Deprecated: Old environment variable overrides (TELEGRAM_TOKEN, DISCOGS_API_KEY, ACOUSTID_CLIENT_KEY)
-# still work but show deprecation warnings.
 
 libraryPath: ./music
 downloadPath: ./downloads
