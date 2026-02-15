@@ -125,14 +125,13 @@ func (m *Manager) loadConfig(path string) (*Config, error) {
 }
 
 // saveDefaultConfig saves the default configuration to the specified file path
-func saveDefaultConfig(path string, cfg *Config) error {
-	// Ensure the directory exists
-	dir := filepath.Dir(path)
+func (m *Manager) saveDefaultConfig(cfg *Config) error {
+	dir := filepath.Dir(m.configPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create config directory %s: %w", dir, err)
 	}
 
-	file, err := os.Create(path)
+	file, err := os.Create(m.configPath)
 	if err != nil {
 		return fmt.Errorf("failed to create config file: %w", err)
 	}
@@ -142,7 +141,7 @@ func saveDefaultConfig(path string, cfg *Config) error {
 	if err := encoder.Encode(cfg); err != nil {
 		return fmt.Errorf("failed to encode config: %w", err)
 	}
-	slog.Info("Default configuration saved", "path", path)
+	slog.Info("Default configuration saved", "path", m.configPath)
 	return nil
 }
 
@@ -152,7 +151,7 @@ func NewManager(path string) (*Manager, error) {
 	manager.configPath = path
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		slog.Info("Config file not found, creating default configuration", "path", path)
-		if err := saveDefaultConfig(path, &defaultConfig); err != nil {
+		if err := manager.saveDefaultConfig(&defaultConfig); err != nil {
 			return nil, fmt.Errorf("failed to create default config: %w", err)
 		}
 		slog.Info("Default configuration created successfully", "path", path)
@@ -162,7 +161,6 @@ func NewManager(path string) (*Manager, error) {
 		}
 		return manager, nil
 	}
-	// Create manager with nil config, load config
 	cfg, err := manager.loadConfig(path)
 	if err != nil {
 		return nil, err

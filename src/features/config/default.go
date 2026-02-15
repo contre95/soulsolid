@@ -1,8 +1,8 @@
 package config
 
 var defaultConfig = Config{
-	LibraryPath:  "/music",
-	DownloadPath: "/downloads",
+	LibraryPath:  "./music",
+	DownloadPath: "./downloads",
 	Telegram: Telegram{
 		Enabled:      false,
 		Token:        "",                                   // Can be obtained with https://t.me/BotFather
