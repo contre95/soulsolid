@@ -29,7 +29,7 @@ A work in progress, feature rich music organization app built for the music hoar
 - **Sync with DAP**: Sync library with digital audio players
 - **Telegram Integration**: Control via Telegram bot
 - **Web UI**: Mobile-friendly interface for all operations 
-- **Job Management**: Background processing for downloads, imports, and syncs
+- **Job Management**: Background processing for downloads, imports, and synced lyrics and more. 
 
 Documentation: https://soulsolid.contre.io
 Demo: https://soulsolid-demo.contre.io
