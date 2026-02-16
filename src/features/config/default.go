@@ -26,8 +26,9 @@ var defaultConfig = Config{
 		},
 	},
 	Server: Server{
-		PrintRoutes: false,
-		Port:        3535,
+		PrintRoutes:       false,
+		Port:              3535,
+		PrometheusEnabled: false,
 	},
 	Database: Database{
 		Path: "./library.db",

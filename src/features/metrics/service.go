@@ -21,6 +21,11 @@ func NewService(metrics LibraryMetrics, cfgManager *config.Manager) *Service {
 	}
 }
 
+// GetLibraryMetrics returns the underlying LibraryMetrics implementation.
+func (s *Service) GetLibraryMetrics() LibraryMetrics {
+	return s.metrics
+}
+
 // Metric represents a single metric data point.
 type Metric struct {
 	Type  string `json:"type"`
