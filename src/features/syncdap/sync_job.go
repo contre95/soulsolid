@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // SyncDapTask implements jobs.Task for syncdap.
@@ -117,7 +117,7 @@ func (e *SyncDapTask) createSanitizedCopy(ctx context.Context, sourceDir, tempDi
 }
 
 // Execute runs the sync logic.
-func (e *SyncDapTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
+func (e *SyncDapTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
 	mountPath := job.Metadata["mountPath"].(string)
 
 	// Get library path from config
@@ -226,12 +226,12 @@ func (e *SyncDapTask) Execute(ctx context.Context, job *jobs.Job, progressUpdate
 }
 
 // Cleanup does nothing for syncdap.
-func (e *SyncDapTask) Cleanup(job *jobs.Job) error {
+func (e *SyncDapTask) Cleanup(job *music.Job) error {
 	return nil
 }
 
 // parseRsyncOutput parses rsync progress output and updates status
-func (e *SyncDapTask) parseRsyncOutput(job *jobs.Job, stdout io.Reader, progressUpdater func(int, string)) {
+func (e *SyncDapTask) parseRsyncOutput(job *music.Job, stdout io.Reader, progressUpdater func(int, string)) {
 	scanner := bufio.NewScanner(stdout)
 	fileRegex := regexp.MustCompile(`^(\S+)$`)
 	progressRegex := regexp.MustCompile(`^\s*(\d+)\s+(\d+)%\s+([\d.]+\w+/s).*$`)

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/contre95/soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // LyricsJobTask handles lyrics analysis job execution
@@ -26,7 +26,7 @@ func (t *LyricsJobTask) MetadataKeys() []string {
 }
 
 // Execute performs the lyrics analysis operation
-func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
+func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
 	job.Logger.Info("EXECUTE STARTED: Lyrics job task is running", "color", "pink")
 
 	// Check if any lyrics providers are enabled
@@ -146,7 +146,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpda
 }
 
 // Cleanup performs cleanup after job completion
-func (t *LyricsJobTask) Cleanup(job *jobs.Job) error {
+func (t *LyricsJobTask) Cleanup(job *music.Job) error {
 	slog.Debug("Cleaning up lyrics analysis job", "jobID", job.ID)
 	return nil
 }

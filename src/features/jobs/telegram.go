@@ -3,6 +3,7 @@ package jobs
 import (
 	"fmt"
 
+	"github.com/contre95/soulsolid/src/music"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -65,17 +66,17 @@ func (h *TelegramHandler) handleJobs(bot *tgbotapi.BotAPI, chatID int64) error {
 }
 
 // getJobStatusEmoji returns emoji for job status
-func (h *TelegramHandler) getJobStatusEmoji(status JobStatus) string {
+func (h *TelegramHandler) getJobStatusEmoji(status music.JobStatus) string {
 	switch status {
-	case JobStatusPending:
+	case music.JobStatusPending:
 		return "⏳"
-	case JobStatusRunning:
+	case music.JobStatusRunning:
 		return "🔄"
-	case JobStatusCompleted:
+	case music.JobStatusCompleted:
 		return "✅"
-	case JobStatusFailed:
+	case music.JobStatusFailed:
 		return "❌"
-	case JobStatusCancelled:
+	case music.JobStatusCancelled:
 		return "🚫"
 	default:
 		return "❓"

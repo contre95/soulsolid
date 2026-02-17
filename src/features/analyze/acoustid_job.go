@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/contre95/soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // AcoustIDJobTask handles AcoustID analysis job execution
@@ -26,7 +26,7 @@ func (t *AcoustIDJobTask) MetadataKeys() []string {
 }
 
 // Execute performs the AcoustID analysis operation
-func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
+func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
 	// Get total track count for progress reporting
 	totalTracks, err := t.service.library.GetTracksCount(ctx)
 	if err != nil {
@@ -134,7 +134,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 }
 
 // Cleanup performs cleanup after job completion
-func (t *AcoustIDJobTask) Cleanup(job *jobs.Job) error {
+func (t *AcoustIDJobTask) Cleanup(job *music.Job) error {
 	slog.Debug("Cleaning up AcoustID analysis job", "jobID", job.ID)
 	return nil
 }

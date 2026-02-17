@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/music"
 )
 
@@ -40,7 +39,7 @@ func (e *DownloadJobTask) MetadataKeys() []string {
 }
 
 // Execute performs the download operation
-func (e *DownloadJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
+func (e *DownloadJobTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
 	jobType, ok := job.Metadata["type"].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid job type")
@@ -67,7 +66,7 @@ func (e *DownloadJobTask) Execute(ctx context.Context, job *jobs.Job, progressUp
 }
 
 // executeTrackDownload handles track download jobs
-func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *jobs.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
+func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *music.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
 	trackID, ok := job.Metadata["trackID"].(string)
 	if !ok {
 		return nil, fmt.Errorf("trackID not found in job metadata")
@@ -152,7 +151,7 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *jobs.Jo
 }
 
 // executeAlbumDownload handles album download jobs
-func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *jobs.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
+func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *music.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
 	albumID, ok := job.Metadata["albumID"].(string)
 	if !ok {
 		return nil, fmt.Errorf("albumID not found in job metadata")
@@ -264,7 +263,7 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *jobs.Jo
 }
 
 // executeArtistDownload handles artist download jobs
-func (e *DownloadJobTask) executeArtistDownload(ctx context.Context, job *jobs.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
+func (e *DownloadJobTask) executeArtistDownload(ctx context.Context, job *music.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
 	artistID, ok := job.Metadata["artistID"].(string)
 	if !ok {
 		return nil, fmt.Errorf("artistID not found in job metadata")
@@ -384,7 +383,7 @@ func (e *DownloadJobTask) executeArtistDownload(ctx context.Context, job *jobs.J
 }
 
 // executeTracksDownload handles multiple track download jobs
-func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *jobs.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
+func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *music.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
 	var trackIDs []string
 
 	// Try to get trackIDs as []string first
@@ -488,7 +487,7 @@ func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *jobs.J
 }
 
 // executePlaylistDownload handles playlist download jobs
-func (e *DownloadJobTask) executePlaylistDownload(ctx context.Context, job *jobs.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
+func (e *DownloadJobTask) executePlaylistDownload(ctx context.Context, job *music.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
 	playlistName, ok := job.Metadata["playlistName"].(string)
 	if !ok {
 		return nil, fmt.Errorf("playlistName not found in job metadata")
@@ -588,7 +587,7 @@ func (e *DownloadJobTask) executePlaylistDownload(ctx context.Context, job *jobs
 }
 
 // Cleanup performs cleanup after job completion
-func (e *DownloadJobTask) Cleanup(job *jobs.Job) error {
+func (e *DownloadJobTask) Cleanup(job *music.Job) error {
 	// TODO: Clean up temporary files, etc.
 	slog.Debug("Cleaning up download job", "jobID", job.ID)
 	return nil

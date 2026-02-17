@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // DeviceStatus represents the current status of a sync device
@@ -30,14 +30,14 @@ type DeviceStatus struct {
 // Service handles device synchronization monitoring
 type Service struct {
 	configManager *config.Manager
-	jobService    jobs.JobService
+	jobService    music.JobService
 	statuses      map[string]DeviceStatus
 	mu            sync.RWMutex
 	stopChan      chan struct{}
 }
 
 // NewService creates a new sync service
-func NewService(cfgManager *config.Manager, jobService jobs.JobService) *Service {
+func NewService(cfgManager *config.Manager, jobService music.JobService) *Service {
 	return &Service{
 		configManager: cfgManager,
 		jobService:    jobService,

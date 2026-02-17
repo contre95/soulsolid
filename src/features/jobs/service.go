@@ -20,52 +20,19 @@ import (
 	"github.com/google/uuid"
 )
 
-// Ensure Service implements JobService interface
+// Ensure Service implements music.JobService interface
 var _ music.JobService = (*Service)(nil)
 
-type JobStatus string
-
-const (
-	JobStatusPending   JobStatus = "pending"
-	JobStatusRunning   JobStatus = "running"
-	JobStatusCompleted JobStatus = "completed"
-	JobStatusFailed    JobStatus = "failed"
-	JobStatusCancelled JobStatus = "cancelled"
-)
-
-type Job struct {
-	ID         string
-	Type       string
-	Name       string
-	Status     JobStatus
-	Progress   int
-	Message    string
-	Error      string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	Metadata   map[string]any
-	cancelFunc context.CancelFunc
-	Logger     *slog.Logger
-	LogPath    string
-	cancelled  bool // Track if job has been cancelled
-}
-
-type JobProgress struct {
-	JobID    string
-	Progress int
-	Message  string
-}
-
 type TaskHandler interface {
-	Execute(ctx context.Context, job *Job, progressChan chan<- JobProgress) error
+	Execute(ctx context.Context, job *music.Job, progressChan chan<- music.JobProgress) error
 	Cancel(jobID string) error
 }
 
 // Task defines the specific logic for a job type.
 type Task interface {
 	MetadataKeys() []string
-	Execute(ctx context.Context, job *Job, progressUpdater func(int, string)) (map[string]any, error)
-	Cleanup(job *Job) error
+	Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error)
+	Cleanup(job *music.Job) error
 }
 
 // BaseTaskHandler provides a base implementation for TaskHandler.
@@ -79,7 +46,7 @@ func NewBaseTaskHandler(task Task) *BaseTaskHandler {
 }
 
 // Execute runs the job using the provided task.
-func (h *BaseTaskHandler) Execute(ctx context.Context, job *Job, progressChan chan<- JobProgress) error {
+func (h *BaseTaskHandler) Execute(ctx context.Context, job *music.Job, progressChan chan<- music.JobProgress) error {
 	if job.Logger != nil {
 		job.Logger.Info("Starting job", "name", job.Name)
 	}
@@ -96,7 +63,7 @@ func (h *BaseTaskHandler) Execute(ctx context.Context, job *Job, progressChan ch
 	}
 
 	progressUpdater := func(percentage int, status string) {
-		progressChan <- JobProgress{
+		progressChan <- music.JobProgress{
 			JobID:    job.ID,
 			Progress: percentage,
 			Message:  status,
@@ -144,18 +111,8 @@ func (h *BaseTaskHandler) Cancel(jobID string) error {
 	return nil
 }
 
-// JobService defines the interface for job management that other services will use
-type JobService interface {
-	StartJob(jobType string, name string, metadata map[string]any) (string, error)
-	UpdateJobProgress(jobID string, progress int, message string)
-	GetJob(jobID string) (*Job, bool)
-	CancelJob(jobID string) error
-	GetJobs() []*Job
-	ClearFinishedJobs() error
-}
-
 type Service struct {
-	jobs     map[string]*Job
+	jobs     map[string]*music.Job
 	handlers map[string]TaskHandler
 	mu       sync.RWMutex
 	config   *config.Jobs
@@ -163,7 +120,7 @@ type Service struct {
 
 func NewService(cfg *config.Jobs) *Service {
 	return &Service{
-		jobs:     make(map[string]*Job),
+		jobs:     make(map[string]*music.Job),
 		handlers: make(map[string]TaskHandler),
 		config:   cfg,
 	}
@@ -178,11 +135,11 @@ func (s *Service) RegisterHandler(jobType string, handler TaskHandler) {
 func (s *Service) StartJob(jobType string, name string, metadata map[string]any) (string, error) {
 	// Create a copy of jobType to prevent potential memory sharing issues
 	jobTypeCopy := strings.Clone(jobType)
-	job := &Job{
+	job := &music.Job{
 		ID:        uuid.New().String(),
 		Type:      jobTypeCopy,
 		Name:      name,
-		Status:    JobStatusPending,
+		Status:    music.JobStatusPending,
 		Progress:  0,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -212,7 +169,7 @@ func (s *Service) StartJob(jobType string, name string, metadata map[string]any)
 
 	// Check if we can start this job immediately
 	if !s.isAnyJobRunning() {
-		job.Status = JobStatusRunning
+		job.Status = music.JobStatusRunning
 		s.mu.Unlock()
 		go s.executeJob(job)
 	} else {
@@ -222,18 +179,18 @@ func (s *Service) StartJob(jobType string, name string, metadata map[string]any)
 	return job.ID, nil
 }
 
-func (s *Service) executeJob(job *Job) {
+func (s *Service) executeJob(job *music.Job) {
 	handler, exists := s.handlers[job.Type]
 	if !exists {
-		s.updateJobStatus(job.ID, JobStatusFailed, "No handler registered")
+		s.updateJobStatus(job.ID, music.JobStatusFailed, "No handler registered")
 		return
 	}
-	progressChan := make(chan JobProgress, 10)
+	progressChan := make(chan music.JobProgress, 10)
 	ctx, cancel := context.WithCancel(context.Background())
 	s.mu.Lock()
-	job.cancelFunc = cancel
+	job.CancelFunc = cancel
 	s.mu.Unlock()
-	s.updateJobStatus(job.ID, JobStatusRunning, "Starting...")
+	s.updateJobStatus(job.ID, music.JobStatusRunning, "Starting...")
 	// Goroutine to listen for progress updates
 	go func() {
 		for progress := range progressChan {
@@ -244,30 +201,30 @@ func (s *Service) executeJob(job *Job) {
 	close(progressChan)
 
 	s.mu.Lock()
-	cancelled := job.cancelled
+	cancelled := job.Cancelled
 	s.mu.Unlock()
 
 	if err != nil {
 		if errors.Is(err, context.Canceled) || cancelled {
-			s.updateJobStatus(job.ID, JobStatusCancelled, "Job cancelled")
+			s.updateJobStatus(job.ID, music.JobStatusCancelled, "Job cancelled")
 			s.executeWebhook(job)
 		} else {
 			// Check if this is a partial import success
 			errMsg := err.Error()
 			if strings.Contains(errMsg, "partial import:") && strings.Contains(errMsg, "tracks imported") {
-				s.updateJobStatus(job.ID, JobStatusCompleted, "Job completed with errors - "+errMsg)
+				s.updateJobStatus(job.ID, music.JobStatusCompleted, "Job completed with errors - "+errMsg)
 				s.executeWebhook(job)
 			} else {
-				s.updateJobStatus(job.ID, JobStatusFailed, err.Error())
+				s.updateJobStatus(job.ID, music.JobStatusFailed, err.Error())
 				s.executeWebhook(job)
 			}
 		}
 	} else {
 		if cancelled {
-			s.updateJobStatus(job.ID, JobStatusCancelled, "Job cancelled")
+			s.updateJobStatus(job.ID, music.JobStatusCancelled, "Job cancelled")
 			s.executeWebhook(job)
 		} else {
-			s.updateJobStatus(job.ID, JobStatusCompleted, "Job completed successfully")
+			s.updateJobStatus(job.ID, music.JobStatusCompleted, "Job completed successfully")
 			s.executeWebhook(job)
 		}
 	}
@@ -275,14 +232,14 @@ func (s *Service) executeJob(job *Job) {
 	s.startNextPendingJob()
 }
 
-func (s *Service) updateJobStatus(jobID string, status JobStatus, message string) {
+func (s *Service) updateJobStatus(jobID string, status music.JobStatus, message string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if job, exists := s.jobs[jobID]; exists {
 		job.Status = status
 		job.Message = message
 		job.UpdatedAt = time.Now()
-		if status == JobStatusCompleted {
+		if status == music.JobStatusCompleted {
 			job.Progress = 100
 		}
 	}
@@ -293,7 +250,7 @@ func (s *Service) UpdateJobProgress(jobID string, progress int, message string) 
 	defer s.mu.Unlock()
 	if job, exists := s.jobs[jobID]; exists {
 		// Don't update progress if job is in a terminal state
-		if job.Status == JobStatusCompleted || job.Status == JobStatusFailed || job.Status == JobStatusCancelled {
+		if job.Status == music.JobStatusCompleted || job.Status == music.JobStatusFailed || job.Status == music.JobStatusCancelled {
 			return
 		}
 		job.Progress = progress
@@ -311,13 +268,13 @@ func (s *Service) CancelJob(jobID string) error {
 	}
 
 	// Mark job as cancelled and update status
-	job.cancelled = true
-	job.Status = JobStatusCancelled
+	job.Cancelled = true
+	job.Status = music.JobStatusCancelled
 	job.Message = "Job cancelled"
 	job.UpdatedAt = time.Now()
 
-	if job.cancelFunc != nil {
-		job.cancelFunc()
+	if job.CancelFunc != nil {
+		job.CancelFunc()
 	}
 	if handler, exists := s.handlers[job.Type]; exists {
 		return handler.Cancel(jobID)
@@ -325,17 +282,17 @@ func (s *Service) CancelJob(jobID string) error {
 	return nil
 }
 
-func (s *Service) GetJob(jobID string) (*Job, bool) {
+func (s *Service) GetJob(jobID string) (*music.Job, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	job, exists := s.jobs[jobID]
 	return job, exists
 }
 
-func (s *Service) GetJobs() []*Job {
+func (s *Service) GetJobs() []*music.Job {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	jobs := make([]*Job, 0, len(s.jobs))
+	jobs := make([]*music.Job, 0, len(s.jobs))
 	for _, job := range s.jobs {
 		jobs = append(jobs, job)
 	}
@@ -346,7 +303,7 @@ func (s *Service) ClearFinishedJobs() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for id, job := range s.jobs {
-		if job.Status == JobStatusCompleted || job.Status == JobStatusFailed || job.Status == JobStatusCancelled {
+		if job.Status == music.JobStatusCompleted || job.Status == music.JobStatusFailed || job.Status == music.JobStatusCancelled {
 			if job.LogPath != "" {
 				os.Remove(job.LogPath)
 			}
@@ -358,7 +315,7 @@ func (s *Service) ClearFinishedJobs() error {
 
 func (s *Service) isAnyJobRunning() bool {
 	for _, job := range s.jobs {
-		if job.Status == JobStatusRunning {
+		if job.Status == music.JobStatusRunning {
 			return true
 		}
 	}
@@ -369,16 +326,16 @@ func (s *Service) startNextPendingJob() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	// Find the oldest pending job
-	var nextJob *Job
+	var nextJob *music.Job
 	for _, job := range s.jobs {
-		if job.Status == JobStatusPending {
+		if job.Status == music.JobStatusPending {
 			if nextJob == nil || job.CreatedAt.Before(nextJob.CreatedAt) {
 				nextJob = job
 			}
 		}
 	}
 	if nextJob != nil {
-		nextJob.Status = JobStatusRunning
+		nextJob.Status = music.JobStatusRunning
 		go s.executeJob(nextJob)
 	}
 }
@@ -390,7 +347,7 @@ func (s *Service) CleanupOldJobs(maxAge time.Duration) {
 	now := time.Now()
 	for id, job := range s.jobs {
 		if now.Sub(job.UpdatedAt) > maxAge &&
-			(job.Status == JobStatusCompleted || job.Status == JobStatusFailed || job.Status == JobStatusCancelled) {
+			(job.Status == music.JobStatusCompleted || job.Status == music.JobStatusFailed || job.Status == music.JobStatusCancelled) {
 			if job.LogPath != "" {
 				os.Remove(job.LogPath)
 			}
@@ -400,7 +357,7 @@ func (s *Service) CleanupOldJobs(maxAge time.Duration) {
 }
 
 // executeWebhook executes the configured webhook command for job completion
-func (s *Service) executeWebhook(job *Job) {
+func (s *Service) executeWebhook(job *music.Job) {
 	if !s.config.Webhooks.Enabled {
 		return
 	}
@@ -464,7 +421,7 @@ func (s *Service) executeWebhook(job *Job) {
 }
 
 // executeWebhookCommand executes the webhook command safely
-func (s *Service) executeWebhookCommand(command string, job *Job) {
+func (s *Service) executeWebhookCommand(command string, job *music.Job) {
 	// Use shell to properly handle quoted strings and complex commands
 	cmd := exec.Command("/bin/sh", "-c", command)
 	cmd.Env = os.Environ()

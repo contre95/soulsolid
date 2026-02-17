@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/contre95/soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // ReorganizeJobTask handles file reorganization job execution
@@ -28,7 +28,7 @@ func (t *ReorganizeJobTask) MetadataKeys() []string {
 }
 
 // Execute performs the file reorganization operation
-func (t *ReorganizeJobTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
+func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
 	// Get total track count for progress reporting
 	totalTracks, err := t.service.library.GetTracksCount(ctx)
 	if err != nil {
@@ -144,7 +144,7 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *jobs.Job, progress
 }
 
 // Cleanup performs cleanup after job completion
-func (t *ReorganizeJobTask) Cleanup(job *jobs.Job) error {
+func (t *ReorganizeJobTask) Cleanup(job *music.Job) error {
 	slog.Debug("Cleaning up reorganization job", "jobID", job.ID)
 	return nil
 }

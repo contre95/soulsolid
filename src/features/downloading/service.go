@@ -6,20 +6,19 @@ import (
 	"strings"
 
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/music"
 )
 
 // Service handles downloading operations
 type Service struct {
 	configManager *config.Manager
-	jobService    jobs.JobService // TODO: Move this to domain job service
+	jobService    music.JobService // TODO: Move this to domain job service
 	pluginManager *PluginManager
 	tagWriter     TagWriter
 }
 
 // NewService creates a new downloading service
-func NewService(cfgManager *config.Manager, jobService jobs.JobService, pluginManager *PluginManager, tagWriter TagWriter) *Service {
+func NewService(cfgManager *config.Manager, jobService music.JobService, pluginManager *PluginManager, tagWriter TagWriter) *Service {
 	return &Service{
 		configManager: cfgManager,
 		jobService:    jobService,
