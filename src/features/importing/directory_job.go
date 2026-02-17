@@ -12,6 +12,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/music"
+	"github.com/google/uuid"
 )
 
 // ImportAction represents the action to take for a track during import
@@ -23,6 +24,11 @@ const (
 	QueueTrack
 	ImportTrack
 )
+
+// generateTrackIDFromPath generates a deterministic UUID for a track from its file path
+func generateTrackIDFromPath(path string) string {
+	return uuid.NewSHA1(uuid.NameSpaceDNS, []byte(path)).String()
+}
 
 // DirectoryImportTask implements jobs.Task for directory imports.
 type DirectoryImportTask struct {
@@ -136,19 +142,19 @@ func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType Queu
 		return fmt.Errorf("track ID cannot be empty")
 	}
 
-	item := QueueItem{
+	item := music.QueueItem{
 		ID:        track.ID,
-		Type:      queueType,
+		Type:      string(queueType),
 		Track:     track,
 		Timestamp: time.Now(),
 		JobID:     jobID,
 	}
 	err := e.service.queue.Add(item)
 	if err != nil {
-		if errors.Is(err, ErrAlreadyExists) {
-			logger.Warn("Service.runDirectoryImport: track already exists in queue", "error", err, "q_item", item)
+		if errors.Is(err, music.ErrTrackInTheQueueAlready) {
+			logger.Warn("Service.runDirectoryImport: track already exists in queue", "error", err, "trackID", track.ID)
 		} else {
-			logger.Error("Service.runDirectoryImport: failed to add track to queue", "error", err, "q_item", item)
+			logger.Error("Service.runDirectoryImport: failed to add track to queue", "error", err, "trackID", track.ID)
 		}
 	}
 	return nil
@@ -234,6 +240,18 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 			if err != nil {
 				logger.Warn("Service.runDirectoryImport: could not read metadata from file", "path", path, "error", err)
 				stats.Errors++
+				// Create minimal track and add to queue.
+				nullTrackForQueue := music.Track{}
+				nullTrackForQueue.Title = path
+				nullTrackForQueue.Path = path
+				nullTrackForQueue.EnsureMetadataDefaults()
+				nullTrackForQueue.ID = generateTrackIDFromPath(path)
+				if err := e.addTrackToQueue(&nullTrackForQueue, FailedImport, job.ID, nil, logger); err != nil {
+					logger.Error("Service.runDirectoryImport: failed to add metadata-failed track to queue", "error", err)
+				} else {
+					stats.Queued++
+					logger.Info("Service.runDirectoryImport: metadata-failed track queued for manual review", "path", path)
+				}
 				processedFiles++
 				return nil
 			}
@@ -249,6 +267,14 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 			if err != nil {
 				logger.Warn("Service.runDirectoryImport: failed to generate fingerprint, falling back to metadata", "error", err, "trackToImport", path)
 				stats.Errors++
+				// Set track ID from path and add to queue for manual review
+				trackToImport.ID = generateTrackIDFromPath(path)
+				if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, nil, logger); err != nil {
+					logger.Error("Service.runDirectoryImport: failed to add fingerprint-failed track to queue", "error", err)
+				} else {
+					stats.Queued++
+					logger.Info("Service.runDirectoryImport: fingerprint-failed track queued for manual review", "path", path)
+				}
 				processedFiles++
 				return nil
 			}
@@ -260,7 +286,15 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 
 			existingTrack, err := e.findExistingTrack(ctx, trackToImport, fingerprint, logger)
 			if err != nil {
+				logger.Error("Service.runDirectoryImport: failed to find existing track", "error", err)
 				stats.Errors++
+				// Add track to queue for manual review due to database error
+				if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, nil, logger); err != nil {
+					logger.Error("Service.runDirectoryImport: failed to add database-error track to queue", "error", err)
+				} else {
+					stats.Queued++
+					logger.Info("Service.runDirectoryImport: database-error track queued for manual review", "path", path)
+				}
 				processedFiles++
 				return nil
 			}
@@ -283,6 +317,13 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 				if err := e.service.replaceTrack(ctx, trackToImport, existingTrack, moveFiles, logger); err != nil {
 					logger.Error("Service.runDirectoryImport: failed to replace track", "error", err)
 					stats.Errors++
+					// Add failed track to queue for manual review
+					if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, existingTrack, logger); err != nil {
+						logger.Error("Service.runDirectoryImport: failed to add failed replace track to queue", "error", err)
+					} else {
+						stats.Queued++
+						logger.Info("Service.runDirectoryImport: failed replace track queued for manual review", "title", trackToImport.Title)
+					}
 				} else {
 					stats.TracksImported++
 					logger.Info("Service.runDirectoryImport: Existing track replaced", "title", trackToImport.Title, "color", "orange")
@@ -295,6 +336,13 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 				if err := e.service.importTrack(ctx, trackToImport, moveFiles, logger); err != nil {
 					logger.Error("Service.runDirectoryImport: failed to import track", "error", err, "title", trackToImport.Title, "path", trackToImport.Path)
 					stats.Errors++
+					// Add failed track to queue for manual review
+					if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, nil, logger); err != nil {
+						logger.Error("Service.runDirectoryImport: failed to add failed import track to queue", "error", err)
+					} else {
+						stats.Queued++
+						logger.Info("Service.runDirectoryImport: failed import track queued for manual review", "title", trackToImport.Title)
+					}
 				} else {
 					stats.TracksImported++
 					logger.Info("Service.runDirectoryImport: Track Imported", "title", trackToImport.Title, "color", "green")

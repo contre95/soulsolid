@@ -65,19 +65,23 @@
                     <div class="flex items-center justify-between">
                         <div class="flex-1">
                             <h4 class="text-sm font-medium text-gray-900 dark:text-white">{{.Track.Title}}</h4>
-                            <p class="text-xs text-gray-600 dark:text-gray-400">{{.Track.Album.Title}}</p>
+                             <p class="text-xs text-gray-600 dark:text-gray-400">{{with .Track.Album}}{{.Title}}{{else}}Unknown Album{{end}}</p>
                         </div>
                         <div class="flex items-center space-x-1">
                             <span class="text-xs text-gray-500 dark:text-gray-400">{{.Timestamp.Format "Jan 2, 15:04"}}</span>
-                            {{if eq .Type "duplicate"}}
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-violet-500/10 border border-violet-400/30 text-violet-600 dark:text-violet-300">
-                                Duplicate
-                            </span>
-                            {{else}}
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 border border-blue-400/30 text-blue-600 dark:text-blue-300">
-                                Manual Review
-                            </span>
-                            {{end}}
+                             {{if eq .Type "duplicate"}}
+                             <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-violet-500/10 border border-violet-400/30 text-violet-600 dark:text-violet-300">
+                                 Duplicate
+                             </span>
+                             {{else if eq .Type "failed_import"}}
+                             <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-500/10 border border-orange-400/30 text-orange-600 dark:text-orange-300">
+                                 Failed Import
+                             </span>
+                             {{else}}
+                             <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 border border-blue-400/30 text-blue-600 dark:text-blue-300">
+                                 Manual Review
+                             </span>
+                             {{end}}
                         </div>
                     </div>
                 </div>

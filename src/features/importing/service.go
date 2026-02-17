@@ -36,12 +36,12 @@ type Service struct {
 	fingerprintReader FingerprintProvider
 	config            *config.Manager
 	jobService        music.JobService // TODO: Move this to domain job service
-	queue             Queue
+	queue             music.Queue
 	watcher           Watcher
 }
 
 // NewService creates a new organizing service.
-func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, fileManager music.FileManager, cfg *config.Manager, jobService music.JobService, queue Queue, watcher Watcher) *Service {
+func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, fileManager music.FileManager, cfg *config.Manager, jobService music.JobService, queue music.Queue, watcher Watcher) *Service {
 	s := &Service{
 		config:            cfg,
 		library:           lib,
@@ -74,7 +74,7 @@ func (s *Service) ImportDirectory(ctx context.Context, pathToImport string) (str
 }
 
 // GetQueuedItems returns all items in the queue
-func (s *Service) GetQueuedItems() map[string]QueueItem {
+func (s *Service) GetQueuedItems() map[string]music.QueueItem {
 	return s.queue.GetAll()
 }
 
@@ -187,16 +187,24 @@ func (s *Service) jobsAreRunning() bool {
 // ProcessQueueItem processes a single queue item
 func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action string) error {
 	item, err := s.queue.GetByID(itemID)
-	if err != nil || item.Track == nil {
+	if err != nil {
 		return fmt.Errorf("queue item not found: %w", err)
 	}
+	if item.Track == nil {
+		return fmt.Errorf("queue item does not contain a valid track")
+	}
+	// Validate action based on item type
+	if item.Type == string(FailedImport) && (action == "import" || action == "replace") {
+		return fmt.Errorf("action '%s' not allowed for failed import items (only skip/cancel and delete)", action)
+	}
+	track := item.Track
 	switch action {
 	case "cancel":
 		return s.queue.Remove(itemID)
 	case "replace":
 		// For replace action, we need to find the existing track to replace
 		// Use fingerprint to find the existing track
-		existingTrack, err := s.library.GetTrack(ctx, item.Track.ID)
+		existingTrack, err := s.library.GetTrack(ctx, track.ID)
 		if err != nil {
 			if err.Error() == "sql: no rows in result set" {
 				return fmt.Errorf("no existing track found with matching ID for replacement")
@@ -206,19 +214,19 @@ func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action st
 			return fmt.Errorf("no existing track found with matching ID for replacement")
 		}
 		move := s.config.Get().Import.Move
-		if err := s.replaceTrack(ctx, item.Track, existingTrack, move, nil); err != nil {
+		if err := s.replaceTrack(ctx, track, existingTrack, move, nil); err != nil {
 			return fmt.Errorf("failed to replace track: %w", err)
 		}
 		return s.queue.Remove(itemID)
 	case "import":
 		moveFiles := s.config.Get().Import.Move
-		if err := s.importTrack(ctx, item.Track, moveFiles, nil); err != nil {
+		if err := s.importTrack(ctx, track, moveFiles, nil); err != nil {
 			return fmt.Errorf("failed to import track: %w", err)
 		}
 		return s.queue.Remove(itemID)
 	case "delete":
 		// Delete the file from the import location
-		if err := s.fileManager.DeleteTrack(ctx, item.Track.Path); err != nil {
+		if err := s.fileManager.DeleteTrack(ctx, track.Path); err != nil {
 			return fmt.Errorf("failed to delete track file: %w", err)
 		}
 		return s.queue.Remove(itemID)
@@ -229,19 +237,19 @@ func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action st
 }
 
 // GetGroupedByArtist returns queue items grouped by artist
-func (s *Service) GetGroupedByArtist() map[string][]QueueItem {
+func (s *Service) GetGroupedByArtist() map[string][]music.QueueItem {
 	return s.queue.GetGroupedByArtist()
 }
 
 // GetGroupedByAlbum returns queue items grouped by album
-func (s *Service) GetGroupedByAlbum() map[string][]QueueItem {
+func (s *Service) GetGroupedByAlbum() map[string][]music.QueueItem {
 	return s.queue.GetGroupedByAlbum()
 }
 
 // ProcessQueueGroup processes all items in a group with the given action
 func (s *Service) ProcessQueueGroup(ctx context.Context, groupKey string, groupType string, action string) error {
 	// Get the group items first to process them individually
-	var groupItems []QueueItem
+	var groupItems []music.QueueItem
 
 	if groupType == "artist" {
 		groups := s.GetGroupedByArtist()

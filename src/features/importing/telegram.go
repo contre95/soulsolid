@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/contre95/soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/music"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -27,14 +28,14 @@ func NewTelegramHandler(service *Service, config *config.Manager) *TelegramHandl
 }
 
 // getNextQueueItem gets the oldest item from the queue (stateless)
-func (h *TelegramHandler) getNextQueueItem() (QueueItem, bool) {
+func (h *TelegramHandler) getNextQueueItem() (music.QueueItem, bool) {
 	allItems := h.service.GetQueuedItems()
 	if len(allItems) == 0 {
-		return QueueItem{}, false
+		return music.QueueItem{}, false
 	}
 
 	// Convert map to sorted slice by timestamp
-	var items []QueueItem
+	var items []music.QueueItem
 	for _, item := range allItems {
 		items = append(items, item)
 	}
@@ -153,7 +154,7 @@ func (h *TelegramHandler) HandleQueueBulkAlbum(bot *tgbotapi.BotAPI, chatID int6
 }
 
 // sendBulkArtistGroup sends a single artist group with inline keyboard
-func (h *TelegramHandler) sendBulkArtistGroup(bot *tgbotapi.BotAPI, chatID int64, artistName string, items []QueueItem) {
+func (h *TelegramHandler) sendBulkArtistGroup(bot *tgbotapi.BotAPI, chatID int64, artistName string, items []music.QueueItem) {
 	text := h.formatBulkArtistMessage(artistName, items)
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = tgbotapi.ModeMarkdown
@@ -162,7 +163,7 @@ func (h *TelegramHandler) sendBulkArtistGroup(bot *tgbotapi.BotAPI, chatID int64
 }
 
 // sendBulkAlbumGroup sends a single album group with inline keyboard
-func (h *TelegramHandler) sendBulkAlbumGroup(bot *tgbotapi.BotAPI, chatID int64, albumName string, items []QueueItem) {
+func (h *TelegramHandler) sendBulkAlbumGroup(bot *tgbotapi.BotAPI, chatID int64, albumName string, items []music.QueueItem) {
 	text := h.formatBulkAlbumMessage(albumName, items)
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = tgbotapi.ModeMarkdown
@@ -171,19 +172,19 @@ func (h *TelegramHandler) sendBulkAlbumGroup(bot *tgbotapi.BotAPI, chatID int64,
 }
 
 // formatBulkArtistMessage formats artist group information for Telegram
-func (h *TelegramHandler) formatBulkArtistMessage(artistName string, items []QueueItem) string {
+func (h *TelegramHandler) formatBulkArtistMessage(artistName string, items []music.QueueItem) string {
 	escapedArtist := h.escapeMarkdown(artistName)
 	return fmt.Sprintf("👤 *%s*\n%d track(s) queued", escapedArtist, len(items))
 }
 
 // formatBulkAlbumMessage formats album group information for Telegram
-func (h *TelegramHandler) formatBulkAlbumMessage(albumName string, items []QueueItem) string {
+func (h *TelegramHandler) formatBulkAlbumMessage(albumName string, items []music.QueueItem) string {
 	escapedAlbum := h.escapeMarkdown(albumName)
 	return fmt.Sprintf("💿 *%s*\n%d track(s) queued", escapedAlbum, len(items))
 }
 
 // createBulkArtistKeyboard creates inline keyboard for artist bulk actions
-func (h *TelegramHandler) createBulkArtistKeyboard(artistName string, items []QueueItem) tgbotapi.InlineKeyboardMarkup {
+func (h *TelegramHandler) createBulkArtistKeyboard(artistName string, items []music.QueueItem) tgbotapi.InlineKeyboardMarkup {
 	// URL encode the artist name for callback data
 	encodedArtist := url.QueryEscape(artistName)
 
@@ -201,7 +202,7 @@ func (h *TelegramHandler) createBulkArtistKeyboard(artistName string, items []Qu
 }
 
 // createBulkAlbumKeyboard creates inline keyboard for album bulk actions
-func (h *TelegramHandler) createBulkAlbumKeyboard(albumName string, items []QueueItem) tgbotapi.InlineKeyboardMarkup {
+func (h *TelegramHandler) createBulkAlbumKeyboard(albumName string, items []music.QueueItem) tgbotapi.InlineKeyboardMarkup {
 	// URL encode the album name for callback data
 	encodedAlbum := url.QueryEscape(albumName)
 
@@ -260,7 +261,7 @@ func (h *TelegramHandler) HandleBulkGroupAction(bot *tgbotapi.BotAPI, chatID int
 }
 
 // sendQueueItem sends a queue item with inline keyboard
-func (h *TelegramHandler) sendQueueItem(bot *tgbotapi.BotAPI, chatID int64, item QueueItem, totalCount int) error {
+func (h *TelegramHandler) sendQueueItem(bot *tgbotapi.BotAPI, chatID int64, item music.QueueItem, totalCount int) error {
 	text := h.formatQueueItemMessage(item, totalCount)
 
 	msg := tgbotapi.NewMessage(chatID, text)
@@ -272,7 +273,10 @@ func (h *TelegramHandler) sendQueueItem(bot *tgbotapi.BotAPI, chatID int64, item
 }
 
 // formatQueueItemMessage formats track information for Telegram
-func (h *TelegramHandler) formatQueueItemMessage(item QueueItem, totalCount int) string {
+func (h *TelegramHandler) formatQueueItemMessage(item music.QueueItem, totalCount int) string {
+	if item.Track == nil {
+		return "❌ Error: queue item has no track"
+	}
 	track := item.Track
 
 	var artists string
@@ -286,14 +290,20 @@ func (h *TelegramHandler) formatQueueItemMessage(item QueueItem, totalCount int)
 	}
 
 	typeText := "Manual Review"
-	if item.Type == "duplicate" {
+	if item.Type == string(Duplicate) {
 		typeText = "Duplicate"
+	} else if item.Type == string(FailedImport) {
+		typeText = "Failed Import"
 	}
 
 	// Escape text fields for Markdown, but use code formatting for file path
 	escapedTitle := h.escapeMarkdown(track.Title)
 	escapedArtists := h.escapeMarkdown(artists)
-	escapedAlbum := h.escapeMarkdown(track.Album.Title)
+	albumTitle := "Unknown Album"
+	if track.Album != nil {
+		albumTitle = track.Album.Title
+	}
+	escapedAlbum := h.escapeMarkdown(albumTitle)
 
 	return fmt.Sprintf(`📀 *Import Queue Item*
 
@@ -340,13 +350,18 @@ func (h *TelegramHandler) escapeMarkdown(text string) string {
 }
 
 // createInlineKeyboard creates appropriate buttons based on item type
-func (h *TelegramHandler) createInlineKeyboard(item QueueItem) tgbotapi.InlineKeyboardMarkup {
+func (h *TelegramHandler) createInlineKeyboard(item music.QueueItem) tgbotapi.InlineKeyboardMarkup {
 	var buttons [][]tgbotapi.InlineKeyboardButton
 
 	// Action buttons based on type
-	if item.Type == "duplicate" {
+	if item.Type == string(Duplicate) {
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("✴️ Replace", fmt.Sprintf("queue_replace_%s", item.ID)),
+			tgbotapi.NewInlineKeyboardButtonData("⏭️ Skip", fmt.Sprintf("queue_cancel_%s", item.ID)),
+			tgbotapi.NewInlineKeyboardButtonData("🗑️ Delete", fmt.Sprintf("queue_delete_%s", item.ID)),
+		})
+	} else if item.Type == string(FailedImport) {
+		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("⏭️ Skip", fmt.Sprintf("queue_cancel_%s", item.ID)),
 			tgbotapi.NewInlineKeyboardButtonData("🗑️ Delete", fmt.Sprintf("queue_delete_%s", item.ID)),
 		})
