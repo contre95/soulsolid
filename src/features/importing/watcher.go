@@ -17,9 +17,9 @@ type Watcher interface {
 type FileEventType string
 
 const (
-	FileCreated   FileEventType = "created"
-	FileRemoved   FileEventType = "removed"
-	FileModified  FileEventType = "modified"
+	FileCreated  FileEventType = "created"
+	FileRemoved  FileEventType = "removed"
+	FileModified FileEventType = "modified"
 )
 
 // FileEvent represents a file system event
@@ -28,4 +28,3 @@ type FileEvent struct {
 	EventType FileEventType
 	Timestamp time.Time
 }
-

@@ -39,6 +39,20 @@ type Track struct {
 	ModifiedDate           time.Time
 }
 
+type Metadata struct {
+	Composer       string
+	Genre          string
+	Year           int
+	Duration       int
+	OriginalYear   int
+	DiscNumber     int
+	TrackNumber    int
+	Lyrics         string
+	ExplicitLyrics bool
+	BPM            float64
+	Gain           float64
+}
+
 // Validate validates the track fields.
 func (t *Track) Validate() error {
 	if strings.TrimSpace(t.Title) == "" {
@@ -139,11 +153,11 @@ func (t *Track) Validate() error {
 
 func (t *Track) Pretty() string {
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "ID", t.ID))
-	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Path", t.Path))
-	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Title", t.Title))
+	fmt.Fprintf(&builder, "%-30s : %s\n", "ID", t.ID)
+	fmt.Fprintf(&builder, "%-30s : %s\n", "Path", t.Path)
+	fmt.Fprintf(&builder, "%-30s : %s\n", "Title", t.Title)
 	if t.TitleVersion != "" {
-		builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Title Version", t.TitleVersion))
+		fmt.Fprintf(&builder, "%-30s : %s\n", "Title Version", t.TitleVersion)
 	}
 	var artistNames []string
 	if t.Artists != nil {
@@ -153,65 +167,65 @@ func (t *Track) Pretty() string {
 			}
 		}
 	}
-	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Artist", strings.Join(artistNames, ", ")))
+	fmt.Fprintf(&builder, "%-30s : %s\n", "Artist", strings.Join(artistNames, ", "))
 	if t.Album != nil {
-		builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Artwork", len(t.Album.ArtworkData)))
-		builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Album", t.Album.Title))
+		fmt.Fprintf(&builder, "%-30s : %d\n", "Artwork", len(t.Album.ArtworkData))
+		fmt.Fprintf(&builder, "%-30s : %s\n", "Album", t.Album.Title)
 	} else {
-		builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Artwork", 0))
+		fmt.Fprintf(&builder, "%-30s : %d\n", "Artwork", 0)
 	}
 	if t.Metadata.Composer != "" {
-		builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Composer", t.Metadata.Composer))
+		fmt.Fprintf(&builder, "%-30s : %s\n", "Composer", t.Metadata.Composer)
 	}
-	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Genre", t.Metadata.Genre))
-	builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Year", t.Metadata.Year))
-	builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Duration", t.Metadata.Duration))
+	fmt.Fprintf(&builder, "%-30s : %s\n", "Genre", t.Metadata.Genre)
+	fmt.Fprintf(&builder, "%-30s : %d\n", "Year", t.Metadata.Year)
+	fmt.Fprintf(&builder, "%-30s : %d\n", "Duration", t.Metadata.Duration)
 	if t.Metadata.OriginalYear != 0 {
-		builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Original Year", t.Metadata.OriginalYear))
+		fmt.Fprintf(&builder, "%-30s : %d\n", "Original Year", t.Metadata.OriginalYear)
 	}
-	builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Disc Number", t.Metadata.DiscNumber))
-	builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Track Number", t.Metadata.TrackNumber))
+	fmt.Fprintf(&builder, "%-30s : %d\n", "Disc Number", t.Metadata.DiscNumber)
+	fmt.Fprintf(&builder, "%-30s : %d\n", "Track Number", t.Metadata.TrackNumber)
 	if t.Metadata.Lyrics != "" {
 		lyrics := t.Metadata.Lyrics
 		if len(lyrics) > 100 {
 			lyrics = lyrics[:100] + "..."
 		}
-		builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Lyrics", lyrics))
+		fmt.Fprintf(&builder, "%-30s : %s\n", "Lyrics", lyrics)
 	}
-	builder.WriteString(fmt.Sprintf("%-30s : %t\n", "Explicit Lyrics", t.Metadata.ExplicitLyrics))
-	builder.WriteString(fmt.Sprintf("%-30s : %.1f\n", "BPM", t.Metadata.BPM))
-	builder.WriteString(fmt.Sprintf("%-30s : %.1f\n", "Gain", t.Metadata.Gain))
-	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "ISRC", t.ISRC))
-	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Chromaprint Fingerprint", t.ChromaprintFingerprint))
+	fmt.Fprintf(&builder, "%-30s : %t\n", "Explicit Lyrics", t.Metadata.ExplicitLyrics)
+	fmt.Fprintf(&builder, "%-30s : %.1f\n", "BPM", t.Metadata.BPM)
+	fmt.Fprintf(&builder, "%-30s : %.1f\n", "Gain", t.Metadata.Gain)
+	fmt.Fprintf(&builder, "%-30s : %s\n", "ISRC", t.ISRC)
+	fmt.Fprintf(&builder, "%-30s : %s\n", "Chromaprint Fingerprint", t.ChromaprintFingerprint)
 	if acoustID, exists := t.Attributes["acoustid"]; exists && acoustID != "" {
-		builder.WriteString(fmt.Sprintf("%-30s : %s\n", "AcoustID", acoustID))
+		fmt.Fprintf(&builder, "%-30s : %s\n", "AcoustID", acoustID)
 	}
-	builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Bitrate", t.Bitrate))
-	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Format", t.Format))
-	builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Sample Rate", t.SampleRate))
-	builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Bit Depth", t.BitDepth))
-	builder.WriteString(fmt.Sprintf("%-30s : %d\n", "Channels", t.Channels))
-	builder.WriteString(fmt.Sprintf("%-30s : %t\n", "Explicit Content", t.ExplicitContent))
+	fmt.Fprintf(&builder, "%-30s : %d\n", "Bitrate", t.Bitrate)
+	fmt.Fprintf(&builder, "%-30s : %s\n", "Format", t.Format)
+	fmt.Fprintf(&builder, "%-30s : %d\n", "Sample Rate", t.SampleRate)
+	fmt.Fprintf(&builder, "%-30s : %d\n", "Bit Depth", t.BitDepth)
+	fmt.Fprintf(&builder, "%-30s : %d\n", "Channels", t.Channels)
+	fmt.Fprintf(&builder, "%-30s : %t\n", "Explicit Content", t.ExplicitContent)
 	if t.Attributes != nil {
 		for k, v := range t.Attributes {
-			builder.WriteString(fmt.Sprintf("%-30s : %s\n", k, v))
+			fmt.Fprintf(&builder, "%-30s : %s\n", k, v)
 		}
 	}
 	if t.PreviewURL != "" {
-		builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Preview URL", t.PreviewURL))
+		fmt.Fprintf(&builder, "%-30s : %s\n", "Preview URL", t.PreviewURL)
 	}
 	if t.MetadataSource.Source != "" {
-		builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Metadata Source", t.MetadataSource.Source))
+		fmt.Fprintf(&builder, "%-30s : %s\n", "Metadata Source", t.MetadataSource.Source)
 	}
 	if t.MetadataSource.MetadataSourceURL != "" {
-		builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Metadata Source URL", t.MetadataSource.MetadataSourceURL))
+		fmt.Fprintf(&builder, "%-30s : %s\n", "Metadata Source URL", t.MetadataSource.MetadataSourceURL)
 	}
-	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Added Date", t.AddedDate.Format("2006:01:02 15:04:05-07:00")))
-	builder.WriteString(fmt.Sprintf("%-30s : %s\n", "Modified Date", t.ModifiedDate.Format("2006:01:02 15:04:05-07:00")))
+	fmt.Fprintf(&builder, "%-30s : %s\n", "Added Date", t.AddedDate.Format("2006:01:02 15:04:05-07:00"))
+	fmt.Fprintf(&builder, "%-30s : %s\n", "Modified Date", t.ModifiedDate.Format("2006:01:02 15:04:05-07:00"))
 	return builder.String()
 }
 
-// EnsureMetadataDefaults adds fallback values for missing metadata fields
+// EnsureMetadataDefaults adds fallback values for missing metadata fields. This function doesn't mean track struct completeness
 func (t *Track) EnsureMetadataDefaults() {
 	// Fallback for missing artist
 	if len(t.Artists) == 0 || t.Artists[0].Artist.Name == "" {
@@ -251,6 +265,9 @@ func (t *Track) ValidateRequiredMetadata() error {
 	if t.Album == nil || t.Album.Title == "" {
 		missingFields = append(missingFields, "Album")
 	}
+	if t.Title == "" {
+		missingFields = append(missingFields, "Title")
+	}
 	if t.Metadata.Year == 0 {
 		missingFields = append(missingFields, "Year")
 	}
@@ -264,18 +281,4 @@ func (t *Track) ValidateRequiredMetadata() error {
 func GenerateTrackID(fingerprint string) string {
 	inputBytes := []byte(fingerprint)
 	return uuid.NewSHA1(uuid.NameSpaceDNS, inputBytes).String()
-}
-
-type Metadata struct {
-	Composer       string
-	Genre          string
-	Year           int
-	Duration       int
-	OriginalYear   int
-	DiscNumber     int
-	TrackNumber    int
-	Lyrics         string
-	ExplicitLyrics bool
-	BPM            float64
-	Gain           float64
 }

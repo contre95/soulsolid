@@ -1,17 +1,51 @@
 package importing
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
 	"sort"
+	"time"
 
+	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
 
 // Handler is the handler for the organizing feature.
 type Handler struct {
 	service *Service
+}
+
+// queueItemView is a view model for queue items that includes the track
+type queueItemView struct {
+	ID           string
+	Type         string
+	Timestamp    time.Time
+	JobID        string
+	Track        *music.Track
+	ItemMetadata map[string]string
+}
+
+// groupView is a view model for grouped queue items
+type groupView struct {
+	Items         []queueItemView
+	HasImportable bool // true if at least one item's type is NOT "failed_import" AND NOT "missing_metadata"
+}
+
+// convertQueueItem converts a music.QueueItem to queueItemView
+func convertQueueItem(item music.QueueItem) (queueItemView, error) {
+	if item.Track == nil {
+		return queueItemView{}, errors.New("queue item has no track")
+	}
+	return queueItemView{
+		ID:           item.ID,
+		Type:         string(item.Type),
+		Timestamp:    item.Timestamp,
+		JobID:        item.JobID,
+		Track:        item.Track,
+		ItemMetadata: item.Metadata,
+	}, nil
 }
 
 // NewHandler creates a new handler for the organizing feature.
@@ -67,7 +101,7 @@ func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
 	if err != nil {
 		slog.Error("Failed to process queue item", "error", err, "itemID", itemID, "action", action)
 		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Failed to process queue item",
+			"Msg": fmt.Sprintf("Failed to process queue item: %s", err.Error()),
 		})
 	}
 	// Return success response that updates the UI
@@ -209,10 +243,15 @@ func (h *Handler) RenderQueueItems(c *fiber.Ctx) error {
 	c.Response().Header.Set("HX-Trigger", "updateQueueCount")
 	queueItemsMap := h.service.GetQueuedItems()
 
-	// Collect all items into a slice
-	queueItems := make([]QueueItem, 0, len(queueItemsMap))
+	// Collect all items into a slice of view models
+	queueItems := make([]queueItemView, 0, len(queueItemsMap))
 	for _, item := range queueItemsMap {
-		queueItems = append(queueItems, item)
+		view, err := convertQueueItem(item)
+		if err != nil {
+			slog.Error("Failed to convert queue item", "error", err, "itemID", item.ID)
+			continue // skip items with invalid payload
+		}
+		queueItems = append(queueItems, view)
 	}
 
 	// Sort by timestamp (oldest first)
@@ -308,7 +347,7 @@ func (h *Handler) ProcessQueueGroup(c *fiber.Ctx) error {
 func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 	groupType := c.Query("type", "artist") // default to artist grouping
 
-	var groups map[string][]QueueItem
+	var groups map[string][]music.QueueItem
 	var templateName string
 
 	if groupType == "album" {
@@ -319,15 +358,35 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 		templateName = "importing/queue_items_grouped_artist"
 	}
 
-	// Sort items within each group by timestamp
-	for _, items := range groups {
-		sort.Slice(items, func(i, j int) bool {
-			return items[i].Timestamp.Before(items[j].Timestamp)
+	// Convert groups to view models
+	viewGroups := make(map[string]groupView)
+	for groupKey, items := range groups {
+		viewItems := make([]queueItemView, 0, len(items))
+		hasImportable := false
+		for _, item := range items {
+			view, err := convertQueueItem(item)
+			if err != nil {
+				slog.Error("Failed to convert queue item", "error", err, "itemID", item.ID)
+				continue
+			}
+			viewItems = append(viewItems, view)
+			// Check if this item is importable (not failed_import and not missing_metadata)
+			if view.Type != "failed_import" && view.Type != "missing_metadata" {
+				hasImportable = true
+			}
+		}
+		// Sort items within each group by timestamp
+		sort.Slice(viewItems, func(i, j int) bool {
+			return viewItems[i].Timestamp.Before(viewItems[j].Timestamp)
 		})
+		viewGroups[groupKey] = groupView{
+			Items:         viewItems,
+			HasImportable: hasImportable,
+		}
 	}
 
 	return c.Render(templateName, fiber.Map{
-		"Groups":    groups,
+		"Groups":    viewGroups,
 		"GroupType": groupType,
 	})
 }
