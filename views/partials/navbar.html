@@ -124,17 +124,67 @@
           </li>
           <li>
             <button type="button" class="w-full">
-              <a hx-get="/ui/analyze" hx-trigger="click,reloadAnalyze from:body"
-                hx-push-url="true" hx-swap="outerHTML" hx-target="#contenido"
-                class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
+              <a hx-get="/ui/analyze" hx-trigger="click" hx-push-url="true" hx-swap="outerHTML" hx-target="#contenido"
+                 class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                   stroke="currentColor" class="size-6">
                   <path stroke-linecap="round" stroke-linejoin="round"
                     d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c.251.023.501.05.75.082m-.75-.082a24.301 24.301 0 0 0-4.5 0m4.5 0v5.714c0 .597-.237 1.17-.659 1.591L5 14.5m-.5 0h.5m-.5 0 2.5 2.5M5 14.5l2.5 2.5M5 14.5l-2.5 2.5M9.75 3.104c.251.023.501.05.75.082M3 3l.75.75M3 3l-.75.75" />
                 </svg>
-                <span class="mx-4">Analyze</span>
+                <span class="mx-4 font-semibold">Analyze</span>
               </a>
             </button>
+            <!-- Sub-buttons for each analysis type -->
+            <ul class="ml-6 mt-2 space-y-2">
+
+              <li>
+                <button type="button" class="w-full">
+                  <a
+                    hx-get="/ui/analyze/lyrics"
+                    hx-trigger="click"
+                    hx-push-url="true"
+                    hx-swap="outerHTML"
+                    hx-target="#contenido"
+                    class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-3 py-1.5 text-base text-gray-500 transition-colors duration-200 transform rounded-md dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-300 hover:text-gray-600 dark:focus:bg-neutral-700 dark:focus:text-pink-400 dark:hover:text-pink-400 focus:outline-none cursor-pointer"
+                  >
+                    <img src="/svg/mic.svg" class="size-4 dark:invert dark:brightness-200" alt="Lyrics icon">
+                    <span class="mx-2 font-medium">Lyrics</span>
+                  </a>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="w-full">
+                  <a
+                    hx-get="/ui/analyze/files"
+                    hx-trigger="click"
+                    hx-push-url="true"
+                    hx-swap="outerHTML"
+                    hx-target="#contenido"
+                    class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-3 py-1.5 text-base text-gray-500 transition-colors duration-200 transform rounded-md dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-300 hover:text-gray-600 dark:focus:bg-neutral-700 dark:focus:text-green-400 dark:hover:text-green-400 focus:outline-none cursor-pointer"
+                  >
+                     <svg class="size-4 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                     </svg>
+                    <span class="mx-2 font-medium">File Paths</span>
+                  </a>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="w-full">
+                  <a
+                    hx-get="/ui/analyze/metadata"
+                    hx-trigger="click"
+                    hx-push-url="true"
+                    hx-swap="outerHTML"
+                    hx-target="#contenido"
+                    class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-3 py-1.5 text-base text-gray-500 transition-colors duration-200 transform rounded-md dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-300 hover:text-gray-600 dark:focus:bg-neutral-700 dark:focus:text-blue-400 dark:hover:text-blue-400 focus:outline-none cursor-pointer"
+                  >
+                    <img src="/svg/fingerprint.svg" class="size-4 dark:invert dark:brightness-200" alt="Metadata icon">
+                    <span class="mx-2 font-medium">Metadata</span>
+                  </a>
+                </button>
+              </li>
+            </ul>
           </li>
            <li>
              <div class="flex items-center px-4 py-2 mt-2 text-gray-600 dark:text-gray-400">

@@ -201,8 +201,6 @@ func (w *Watcher) handleEvent(event fsnotify.Event) {
 	}
 }
 
-
-
 // emitDebounceEvent emits a file event after debounce period
 func (w *Watcher) emitDebounceEvent() {
 	slog.Debug("Emitting debounced file event", "file", w.lastFile)

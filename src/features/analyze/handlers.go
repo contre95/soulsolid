@@ -41,7 +41,7 @@ func (h *Handler) StartAcoustIDAnalysis(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Redirect("/ui/analyze")
+	return c.Redirect("/ui/analyze/metadata")
 }
 
 // StartLyricsAnalysis handles starting the lyrics analysis job
@@ -75,7 +75,7 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Redirect("/ui/analyze")
+	return c.Redirect("/ui/analyze/lyrics")
 }
 
 // StartReorganizeAnalysis handles starting the file reorganization job
@@ -101,15 +101,15 @@ func (h *Handler) StartReorganizeAnalysis(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Redirect("/ui/analyze")
+	return c.Redirect("/ui/analyze/files")
 }
 
-// RenderAnalyzeSection renders the analyze section page
+// RenderAnalyzeSection renders the all analyze jobs page
 func (h *Handler) RenderAnalyzeSection(c *fiber.Ctx) error {
-	slog.Debug("Rendering analyze section")
+	slog.Debug("Rendering all analyze jobs page")
 
 	data := fiber.Map{
-		"Title": "Analyze",
+		"Title": "All Analyze Jobs",
 	}
 
 	// Get lyrics providers info for the UI (same as tag section)
@@ -121,4 +121,55 @@ func (h *Handler) RenderAnalyzeSection(c *fiber.Ctx) error {
 	}
 
 	return c.Render("sections/analyze", data)
+}
+
+// RenderLyricsAnalysisSection renders the lyrics analysis section page
+func (h *Handler) RenderLyricsAnalysisSection(c *fiber.Ctx) error {
+	slog.Debug("Rendering lyrics analysis section")
+
+	data := fiber.Map{
+		"Title": "Lyrics Analysis",
+	}
+
+	// Get lyrics providers info for the UI
+	data["LyricsProviders"] = h.service.lyricsService.GetLyricsProvidersInfo()
+
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "analyze_lyrics"
+		return c.Render("main", data)
+	}
+
+	return c.Render("sections/analyze_lyrics", data)
+}
+
+// RenderFilesReorganizationSection renders the file paths section page
+func (h *Handler) RenderFilesReorganizationSection(c *fiber.Ctx) error {
+	slog.Debug("Rendering file paths section")
+
+	data := fiber.Map{
+		"Title": "File Paths",
+	}
+
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "analyze_files"
+		return c.Render("main", data)
+	}
+
+	return c.Render("sections/analyze_files", data)
+}
+
+// RenderMetadataAnalysisSection renders the metadata analysis section page
+func (h *Handler) RenderMetadataAnalysisSection(c *fiber.Ctx) error {
+	slog.Debug("Rendering metadata analysis section")
+
+	data := fiber.Map{
+		"Title": "Metadata Analysis",
+	}
+
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "analyze_metadata"
+		return c.Render("main", data)
+	}
+
+	return c.Render("sections/analyze_metadata", data)
 }

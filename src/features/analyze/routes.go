@@ -15,4 +15,7 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	// UI routes for the analyze section
 	ui := app.Group("/ui")
 	ui.Get("/analyze", handler.RenderAnalyzeSection)
+	ui.Get("/analyze/lyrics", handler.RenderLyricsAnalysisSection)
+	ui.Get("/analyze/files", handler.RenderFilesReorganizationSection)
+	ui.Get("/analyze/metadata", handler.RenderMetadataAnalysisSection)
 }
