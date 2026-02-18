@@ -1,4 +1,4 @@
-package importing
+package reorganize
 
 import (
 	"context"

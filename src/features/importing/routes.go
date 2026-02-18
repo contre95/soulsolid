@@ -29,10 +29,4 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	app.Get("/import/watcher/status", handler.GetWatcherStatus)
 	app.Get("/import/watcher/toggle-state", handler.GetWatcherToggleState)
 
-	// Analyze routes - file reorganization
-	app.Post("/analyze/reorganize", handler.StartReorganizeAnalysis)
-
-	// UI routes for file reorganization section
-	ui.Get("/analyze/files", handler.RenderFilesReorganizationSection)
-
 }

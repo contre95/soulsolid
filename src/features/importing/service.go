@@ -424,14 +424,3 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 
 	return nil
 }
-
-// StartReorganizeAnalysis starts a job to reorganize all tracks based on current path configuration
-func (s *Service) StartReorganizeAnalysis(ctx context.Context) (string, error) {
-	slog.Info("Starting file reorganization job")
-	jobID, err := s.jobService.StartJob("analyze_reorganize", "Reorganize Library Files", map[string]any{})
-	if err != nil {
-		return "", fmt.Errorf("failed to start reorganization job: %w", err)
-	}
-	slog.Info("File reorganization job started", "jobID", jobID)
-	return jobID, nil
-}

@@ -17,6 +17,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/playlists"
+	"github.com/contre95/soulsolid/src/features/reorganize"
 	"github.com/contre95/soulsolid/src/features/syncdap"
 	"github.com/contre95/soulsolid/src/infra/database"
 	"github.com/contre95/soulsolid/src/infra/files"
@@ -62,6 +63,8 @@ func main() {
 		log.Fatalf("failed to create watcher: %v", err)
 	}
 	importingService := importing.NewService(db, tagReader, fingerprintReader, fileOrganizer, cfgManager, jobService, importQueue, dirWatcher)
+
+	reorganizeService := reorganize.NewService(db, fileOrganizer, cfgManager, jobService)
 
 	directoryImportTask := importing.NewDirectoryImportTask(importingService)
 	jobService.RegisterHandler("directory_import", jobs.NewBaseTaskHandler(directoryImportTask))
@@ -120,7 +123,7 @@ func main() {
 	lyricsTask := lyrics.NewLyricsJobTask(lyricsService)
 	jobService.RegisterHandler("analyze_lyrics", jobs.NewBaseTaskHandler(lyricsTask))
 
-	reorganizeTask := importing.NewReorganizeJobTask(importingService)
+	reorganizeTask := reorganize.NewReorganizeJobTask(reorganizeService)
 	jobService.RegisterHandler("analyze_reorganize", jobs.NewBaseTaskHandler(reorganizeTask))
 
 	var telegramBot *hosting.TelegramBot
@@ -135,7 +138,7 @@ func main() {
 		}
 	}
 
-	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, syncService, downloadingService, jobService, tagService, lyricsService, metricsService)
+	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, syncService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped: %v", "error", err)
