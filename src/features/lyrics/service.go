@@ -17,6 +17,7 @@ type Service struct {
 	libraryRepo     music.Library
 	lyricsProviders map[string]LyricsProvider
 	config          *config.Manager
+	jobService      music.JobService
 }
 
 // TagWriter interface for writing tags
@@ -30,13 +31,14 @@ type TagReader interface {
 }
 
 // NewService creates a new lyrics service
-func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, lyricsProviders map[string]LyricsProvider, config *config.Manager) *Service {
+func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, lyricsProviders map[string]LyricsProvider, config *config.Manager, jobService music.JobService) *Service {
 	return &Service{
 		tagWriter:       tagWriter,
 		tagReader:       tagReader,
 		libraryRepo:     libraryRepo,
 		lyricsProviders: lyricsProviders,
 		config:          config,
+		jobService:      jobService,
 	}
 }
 
@@ -180,4 +182,17 @@ func (s *Service) SearchLyrics(ctx context.Context, trackID string, providerName
 	}
 
 	return lyrics, nil
+}
+
+// StartLyricsAnalysis starts a job to analyze all tracks for lyrics
+func (s *Service) StartLyricsAnalysis(ctx context.Context, provider string) (string, error) {
+	slog.Info("Starting lyrics analysis job", "provider", provider)
+	jobID, err := s.jobService.StartJob("analyze_lyrics", "Analyze Lyrics for Library", map[string]any{
+		"provider": provider,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to start lyrics analysis job: %w", err)
+	}
+	slog.Info("Lyrics analysis job started", "jobID", jobID, "provider", provider)
+	return jobID, nil
 }

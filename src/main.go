@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/contre95/soulsolid/src/features/analyze"
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/features/hosting"
@@ -18,6 +17,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/playlists"
+	"github.com/contre95/soulsolid/src/features/reorganize"
 	"github.com/contre95/soulsolid/src/features/syncdap"
 	"github.com/contre95/soulsolid/src/infra/database"
 	"github.com/contre95/soulsolid/src/infra/files"
@@ -64,6 +64,8 @@ func main() {
 	}
 	importingService := importing.NewService(db, tagReader, fingerprintReader, fileOrganizer, cfgManager, jobService, importQueue, dirWatcher)
 
+	reorganizeService := reorganize.NewService(db, fileOrganizer, cfgManager, jobService)
+
 	directoryImportTask := importing.NewDirectoryImportTask(importingService)
 	jobService.RegisterHandler("directory_import", jobs.NewBaseTaskHandler(directoryImportTask))
 
@@ -99,14 +101,13 @@ func main() {
 	acoustIDService := providers.NewAcoustIDService(cfgManager)
 	lyricsService := lyrics.NewService(tagWriter, tagReader, db, map[string]lyrics.LyricsProvider{
 		"lrclib": lrclibProvider,
-	}, cfgManager)
+	}, cfgManager, jobService)
 	tagService := metadata.NewService(tagWriter, tagReader, db, map[string]metadata.MetadataProvider{
 		"musicbrainz": musicbrainzProvider,
 		"discogs":     discogsProvider,
 		"deezer":      deezerProvider,
-	}, acoustIDService, cfgManager)
+	}, acoustIDService, cfgManager, jobService)
 
-	analyzeService := analyze.NewService(tagService, lyricsService, db, jobService, cfgManager, fileOrganizer) // Now using interfaces
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
 
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)
@@ -116,13 +117,13 @@ func main() {
 	jobService.RegisterHandler("download_tracks", jobs.NewBaseTaskHandler(downloadTask))
 	jobService.RegisterHandler("download_playlist", jobs.NewBaseTaskHandler(downloadTask))
 
-	acoustIDTask := analyze.NewAcoustIDJobTask(analyzeService)
+	acoustIDTask := metadata.NewAcoustIDJobTask(tagService)
 	jobService.RegisterHandler("analyze_acoustid", jobs.NewBaseTaskHandler(acoustIDTask))
 
-	lyricsTask := analyze.NewLyricsJobTask(analyzeService)
+	lyricsTask := lyrics.NewLyricsJobTask(lyricsService)
 	jobService.RegisterHandler("analyze_lyrics", jobs.NewBaseTaskHandler(lyricsTask))
 
-	reorganizeTask := analyze.NewReorganizeJobTask(analyzeService)
+	reorganizeTask := reorganize.NewReorganizeJobTask(reorganizeService)
 	jobService.RegisterHandler("analyze_reorganize", jobs.NewBaseTaskHandler(reorganizeTask))
 
 	var telegramBot *hosting.TelegramBot
@@ -137,7 +138,7 @@ func main() {
 		}
 	}
 
-	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, syncService, downloadingService, jobService, tagService, lyricsService, metricsService, analyzeService)
+	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, syncService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped: %v", "error", err)

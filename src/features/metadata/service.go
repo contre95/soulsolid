@@ -24,10 +24,11 @@ type Service struct {
 	metadataProviders   map[string]MetadataProvider
 	chromaprintAcoustID ChromaprintAcoustID
 	configManager       *config.Manager
+	jobService          music.JobService
 }
 
 // NewService creates a new tag service
-func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, metadataProviders map[string]MetadataProvider, chromaprintAcoustID ChromaprintAcoustID, cfgManager *config.Manager) *Service {
+func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, metadataProviders map[string]MetadataProvider, chromaprintAcoustID ChromaprintAcoustID, cfgManager *config.Manager, jobService music.JobService) *Service {
 	return &Service{
 		configManager:       cfgManager,
 		tagWriter:           tagWriter,
@@ -35,6 +36,7 @@ func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Libr
 		libraryRepo:         libraryRepo,
 		metadataProviders:   metadataProviders,
 		chromaprintAcoustID: chromaprintAcoustID,
+		jobService:          jobService,
 	}
 }
 
@@ -595,4 +597,15 @@ func (s *Service) GetArtists(ctx context.Context) ([]*music.Artist, error) {
 // GetAlbums returns all albums from the library
 func (s *Service) GetAlbums(ctx context.Context) ([]*music.Album, error) {
 	return s.libraryRepo.GetAlbums(ctx)
+}
+
+// StartAcoustIDAnalysis starts a job to analyze all tracks for AcoustID
+func (s *Service) StartAcoustIDAnalysis(ctx context.Context) (string, error) {
+	slog.Info("Starting AcoustID analysis job")
+	jobID, err := s.jobService.StartJob("analyze_acoustid", "Analyze AcoustID for Library", map[string]any{})
+	if err != nil {
+		return "", fmt.Errorf("failed to start AcoustID analysis job: %w", err)
+	}
+	slog.Info("AcoustID analysis job started", "jobID", jobID)
+	return jobID, nil
 }

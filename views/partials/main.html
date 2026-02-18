@@ -42,8 +42,14 @@
                  {{template "sections/tag" .}}
                  {{else if .CurrentDownloader}}
                  {{template "sections/download" .}}
-                 {{else if eq .Section "analyze"}}
-                 {{template "sections/analyze" .}}
+                  {{else if eq .Section "analyze"}}
+                  {{template "sections/analyze" .}}
+                  {{else if eq .Section "analyze_lyrics"}}
+                  {{template "sections/analyze_lyrics" .}}
+                  {{else if eq .Section "analyze_files"}}
+                  {{template "sections/analyze_files" .}}
+                  {{else if eq .Section "analyze_metadata"}}
+                  {{template "sections/analyze_metadata" .}}
                  {{end}}
             </div>
            </div>
