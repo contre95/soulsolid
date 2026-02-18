@@ -36,12 +36,11 @@
              <p><strong>Artists ({{len .Track.Artists}}):</strong> {{if .Track.Artists}}{{range $i, $ar := .Track.Artists}}{{if $i}}, {{end}}{{$ar.Artist.Name}}{{end}}{{end}}</p>
              <p><strong>Album:</strong> {{with .Track.Album}}{{.Title}}{{else}}Unknown Album{{end}}</p>
              <p><strong>Original path:</strong> {{.Track.Path}}</p>
-              {{if .ItemMetadata.error}}
-              <p class="text-red-600 dark:text-red-400"><strong>Validation Error:</strong> {{.ItemMetadata.error}}</p>
-              {{end}}
-              {{if .ItemMetadata.duplicate_path}}
-              <p class="text-violet-600 dark:text-violet-400"><strong>Duplicate Path:</strong> {{.ItemMetadata.duplicate_path}}</p>
-              {{end}}
+              {{if .ItemMetadata}}
+               {{range $key, $value := .ItemMetadata}}
+               <p class="text-gray-600 dark:text-gray-400"><strong>{{$key}}:</strong> {{$value}}</p>
+               {{end}}
+               {{end}}
          </div>
 
          <!-- Actions - Full width with wrapping -->

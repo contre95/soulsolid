@@ -66,12 +66,11 @@
                          <div class="flex-1">
                              <h4 class="text-sm font-medium text-gray-900 dark:text-white">{{.Track.Title}}</h4>
                               <p class="text-xs text-gray-600 dark:text-gray-400">{{with .Track.Album}}{{.Title}}{{else}}Unknown Album{{end}}</p>
-                               {{if .ItemMetadata.error}}
-                               <p class="text-xs text-red-600 dark:text-red-400 font-medium">{{.ItemMetadata.error}}</p>
-                               {{end}}
-                               {{if .ItemMetadata.duplicate_path}}
-                               <p class="text-xs text-violet-600 dark:text-violet-400 font-medium"><strong>Duplicate:</strong> {{.ItemMetadata.duplicate_path}}</p>
-                               {{end}}
+                                {{if .ItemMetadata}}
+                                {{range $key, $value := .ItemMetadata}}
+                                <p class="text-xs text-gray-600 dark:text-gray-400"><strong>{{$key}}:</strong> {{$value}}</p>
+                                {{end}}
+                                {{end}}
                          </div>
                         <div class="flex items-center space-x-1">
                             <span class="text-xs text-gray-500 dark:text-gray-400">{{.Timestamp.Format "Jan 2, 15:04"}}</span>
