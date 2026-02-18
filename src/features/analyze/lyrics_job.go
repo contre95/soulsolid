@@ -46,6 +46,13 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 
 	job.Logger.Info("Enabled lyrics providers", "providers", enabledProviders, "color", "blue")
 
+	// Get initial queue state to track new items added during this job
+	initialQueueItems := t.service.lyricsService.GetLyricsQueueItems()
+	initialQueueIDs := make(map[string]bool)
+	for id := range initialQueueItems {
+		initialQueueIDs[id] = true
+	}
+
 	// Get total track count for progress reporting
 	totalTracks, err := t.service.library.GetTracksCount(ctx)
 	if err != nil {
@@ -96,13 +103,6 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 			progress := (processed * 100) / totalTracks
 			progressUpdater(progress, fmt.Sprintf("Processing track %d/%d: %s", processed+1, totalTracks, track.Title))
 
-			// Skip tracks that already have lyrics
-			if track.Metadata.Lyrics != "" {
-				job.Logger.Info("Skipping track with existing lyrics", "trackID", track.ID, "title", track.Title, "lyricsLength", len(track.Metadata.Lyrics), "color", "orange")
-				skipped++
-				continue
-			}
-
 			// Get the specified provider from job metadata
 			provider, ok := job.Metadata["provider"].(string)
 			if !ok || provider == "" {
@@ -118,8 +118,17 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 				errors++
 				// Continue with other tracks - don't fail the entire job
 			} else {
-				updated++
-				job.Logger.Info("Successfully added lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "green")
+				// Check if the track was added to the queue (existing lyrics, lyric 404, or failed lyrics queued earlier)
+				queueItems := t.service.lyricsService.GetLyricsQueueItems()
+				_, queued := queueItems[track.ID]
+				if queued && !initialQueueIDs[track.ID] {
+					// Track was queued (existing_lyrics or lyric_404), not counted as updated
+					// No increment to updated counter
+				} else {
+					// Lyrics were successfully added
+					updated++
+					job.Logger.Info("Successfully added lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "green")
+				}
 			}
 
 			processed++
@@ -128,20 +137,46 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 
 	job.Logger.Info("Lyrics analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "color", "green")
 
+	// Count new queue items added during this job
+	finalQueueItems := t.service.lyricsService.GetLyricsQueueItems()
+	existingLyricsQueued := 0
+	lyric404Queued := 0
+	failedLyricsQueued := 0
+
+	for id, item := range finalQueueItems {
+		if !initialQueueIDs[id] {
+			switch item.Type {
+			case music.ExistingLyrics:
+				existingLyricsQueued++
+			case music.Lyric404:
+				lyric404Queued++
+			case music.FailedLyrics:
+				failedLyricsQueued++
+			}
+		}
+	}
+
 	// Create completion message for job tagging
-	finalMessage := fmt.Sprintf("Lyrics analysis finished. Processed %d tracks (%d updated, %d skipped, %d errors).",
-		totalTracks, updated, skipped, errors)
+	queueSummary := ""
+	if existingLyricsQueued > 0 || lyric404Queued > 0 || failedLyricsQueued > 0 {
+		queueSummary = fmt.Sprintf(" [Queue: %d existing_lyrics, %d lyric_404, %d failed_lyrics]", existingLyricsQueued, lyric404Queued, failedLyricsQueued)
+	}
+	finalMessage := fmt.Sprintf("Lyrics analysis finished. Processed %d tracks (%d updated, %d skipped, %d errors).%s",
+		totalTracks, updated, skipped, errors, queueSummary)
 	job.Logger.Info(finalMessage)
 
 	progressUpdater(100, fmt.Sprintf("Lyrics analysis completed - totalTracks=%d processed=%d updated=%d skipped=%d errors=%d", totalTracks, processed, updated, skipped, errors))
 
 	return map[string]any{
-		"totalTracks": totalTracks,
-		"processed":   processed,
-		"updated":     updated,
-		"skipped":     skipped,
-		"errors":      errors,
-		"msg":         finalMessage,
+		"totalTracks":          totalTracks,
+		"processed":            processed,
+		"updated":              updated,
+		"skipped":              skipped,
+		"errors":               errors,
+		"existingLyricsQueued": existingLyricsQueued,
+		"lyric404Queued":       lyric404Queued,
+		"failedLyricsQueued":   failedLyricsQueued,
+		"msg":                  finalMessage,
 	}, nil
 }
 

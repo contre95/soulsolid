@@ -107,6 +107,22 @@
         </div>
     </div>
 
+    <!-- Lyrics Queue Section -->
+    <div class="space-y-6 mt-8">
+        <div id="lyrics-queue-header"
+             hx-get="/ui/lyrics/queue/header"
+             hx-trigger="load"
+             hx-swap="innerHTML"
+             class="w-full bg-white/90 dark:bg-gray-900/90 shadow-sm rounded-xl p-4 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50">
+        </div>
+        <div id="lyrics-queue-content"
+             hx-get="/ui/lyrics/queue/items"
+             hx-trigger="load"
+             hx-swap="innerHTML"
+             class="w-full">
+        </div>
+    </div>
+
     <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-6">Analysis Jobs</h2>
 
     <div id="analyze-job-list-container"
