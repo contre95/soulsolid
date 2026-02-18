@@ -30,4 +30,11 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	queue.Post("/group/:groupType/:groupKey/:action", handler.ProcessLyricsQueueGroup)
 	queue.Post("/clear", handler.ClearLyricsQueue)
 	queue.Get("/count", handler.LyricsQueueCount)
+
+	// Analyze routes - lyrics analysis
+	analyze := app.Group("/analyze")
+	analyze.Post("/lyrics", handler.StartLyricsAnalysis)
+
+	// UI routes for lyrics analysis section
+	ui.Get("/analyze/lyrics", handler.RenderLyricsAnalysisSection)
 }

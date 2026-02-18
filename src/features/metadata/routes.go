@@ -18,6 +18,13 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	ui.Get("/tag/edit/:trackId/fingerprint/view", handler.ViewFingerprint)
 	ui.Get("/tag/buttons/metadata/:trackId", handler.RenderMetadataButtons)
 
+	// Analyze routes - metadata analysis
+	analyze := app.Group("/analyze")
+	analyze.Post("/acoustid", handler.StartAcoustIDAnalysis)
+
+	// UI routes for metadata analysis section
+	ui.Get("/analyze/metadata", handler.RenderMetadataAnalysisSection)
+
 	// API routes for data operations
 	tagGroup := app.Group("/tag")
 	tagGroup.Get("/edit/:trackId", handler.RenderTagEditor)

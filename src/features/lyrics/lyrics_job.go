@@ -1,4 +1,4 @@
-package analyze
+package lyrics
 
 import (
 	"context"
@@ -30,7 +30,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 	job.Logger.Info("EXECUTE STARTED: Lyrics job task is running", "color", "pink")
 
 	// Check if any lyrics providers are enabled
-	enabledProviders := t.service.lyricsService.GetEnabledLyricsProviders()
+	enabledProviders := t.service.GetEnabledLyricsProviders()
 	hasEnabledProviders := false
 	for _, enabled := range enabledProviders {
 		if enabled {
@@ -47,14 +47,14 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 	job.Logger.Info("Enabled lyrics providers", "providers", enabledProviders, "color", "blue")
 
 	// Get initial queue state to track new items added during this job
-	initialQueueItems := t.service.lyricsService.GetLyricsQueueItems()
+	initialQueueItems := t.service.GetLyricsQueueItems()
 	initialQueueIDs := make(map[string]bool)
 	for id := range initialQueueItems {
 		initialQueueIDs[id] = true
 	}
 
 	// Get total track count for progress reporting
-	totalTracks, err := t.service.library.GetTracksCount(ctx)
+	totalTracks, err := t.service.libraryRepo.GetTracksCount(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tracks count: %w", err)
 	}
@@ -87,7 +87,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 		}
 
 		// Get next batch of tracks
-		tracks, err := t.service.library.GetTracksPaginated(ctx, batchSize, offset)
+		tracks, err := t.service.libraryRepo.GetTracksPaginated(ctx, batchSize, offset)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get tracks batch (offset %d): %w", offset, err)
 		}
@@ -112,14 +112,14 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 
 			// Try to fetch lyrics for this track using the specified provider
 			job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "provider", provider, "color", "cyan")
-			err := t.service.lyricsService.AddLyrics(ctx, track.ID, provider)
+			err := t.service.AddLyrics(ctx, track.ID, provider)
 			if err != nil {
 				job.Logger.Error("Failed to add lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "error", err.Error(), "manual_fix", "<a href='/ui/library/tag/edit/"+track.ID+"' target='_blank'>track</a>")
 				errors++
 				// Continue with other tracks - don't fail the entire job
 			} else {
 				// Check if the track was added to the queue (existing lyrics, lyric 404, or failed lyrics queued earlier)
-				queueItems := t.service.lyricsService.GetLyricsQueueItems()
+				queueItems := t.service.GetLyricsQueueItems()
 				_, queued := queueItems[track.ID]
 				if queued && !initialQueueIDs[track.ID] {
 					// Track was queued (existing_lyrics or lyric_404), not counted as updated
@@ -138,7 +138,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 	job.Logger.Info("Lyrics analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "color", "green")
 
 	// Count new queue items added during this job
-	finalQueueItems := t.service.lyricsService.GetLyricsQueueItems()
+	finalQueueItems := t.service.GetLyricsQueueItems()
 	existingLyricsQueued := 0
 	lyric404Queued := 0
 	failedLyricsQueued := 0

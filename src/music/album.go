@@ -93,4 +93,3 @@ func (a *Album) Validate() error {
 	}
 	return nil
 }
-
