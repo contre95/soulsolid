@@ -3,18 +3,21 @@ package reorganize
 import (
 	"log/slog"
 
+	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/gofiber/fiber/v2"
 )
 
 // Handler handles HTTP requests for the reorganize feature.
 type Handler struct {
 	service *Service
+	config  *config.Manager
 }
 
 // NewHandler creates a new reorganize handler.
-func NewHandler(service *Service) *Handler {
+func NewHandler(service *Service, config *config.Manager) *Handler {
 	return &Handler{
 		service: service,
+		config:  config,
 	}
 }
 
@@ -46,7 +49,8 @@ func (h *Handler) RenderFilesReorganizationSection(c *fiber.Ctx) error {
 	slog.Debug("Rendering file paths section")
 
 	data := fiber.Map{
-		"Title": "File Paths",
+		"Title":  "File Paths",
+		"Config": h.config.Get(),
 	}
 
 	if c.Get("HX-Request") != "true" {
