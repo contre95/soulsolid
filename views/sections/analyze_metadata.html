@@ -3,9 +3,14 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
         <!-- AcoustID Analysis Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+        <div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-md backdrop-blur-sm transition-all duration-200 hover:bg-white/90 dark:hover:bg-gray-900/80">
             <div class="flex items-center mb-4">
-                <img src="/svg/fingerprint.svg" class="w-8 h-8 mr-3" style="filter: invert(39%) sepia(93%) saturate(1473%) hue-rotate(207deg) brightness(101%) contrast(96%);">
+                <svg class="w-8 h-8 mr-3 text-blue-500 dark:text-blue-400" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <title>Metadata icon</title>
+                  <path
+                    d="M13.1427 20.9999C10.8077 19.5438 9.25254 16.9522 9.25254 13.9968C9.25254 12.4783 10.4833 11.2476 12.0008 11.2476C13.5184 11.2476 14.7491 12.4783 14.7491 13.9968C14.7491 15.5153 15.9798 16.746 17.4974 16.746C19.0149 16.746 20.2457 15.5153 20.2457 13.9968C20.2457 9.44139 16.5544 5.74922 12.0017 5.74922C7.44907 5.74922 3.75781 9.44139 3.75781 13.9968C3.75781 15.0122 3.87145 16.001 4.08038 16.954M8.49027 20.2989C7.23938 18.5138 6.50351 16.3419 6.50351 13.9968C6.50351 10.9599 8.96405 8.49844 11.9992 8.49844C15.0343 8.49844 17.4948 10.9599 17.4948 13.9968M17.7927 19.4806C17.6937 19.4861 17.5966 19.4953 17.4967 19.4953C14.4616 19.4953 12.0011 17.0338 12.0011 13.9969M19.6734 6.47682C17.7993 4.34802 15.0593 3 12.0004 3C8.94141 3 6.20138 4.34802 4.32734 6.47682"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
                 <h3 class="text-xl font-semibold text-slate-800 dark:text-white">AcoustID Analysis</h3>
             </div>
             <p class="text-slate-600 dark:text-slate-400 mb-4">
@@ -15,19 +20,19 @@
                 hx-post="/analyze/acoustid"
                 hx-target="#toast-container"
                 hx-swap="beforeend"
-                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+                class="w-full border border-blue-500 dark:border-blue-400 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-medium py-2 px-4 rounded-md transition-colors duration-200"
             >
                 Start AcoustID Analysis
                 <span class="htmx-indicator ml-2">
-                    <i class="fas fa-spinner fa-spin"></i>
+                    <i class="fas fa-spinner fa-spin text-blue-500 dark:text-blue-400"></i>
                 </span>
             </button>
         </div>
 
         <!-- Metadata Enhancement Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg opacity-50">
+        <div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-md backdrop-blur-sm transition-all duration-200 opacity-50">
             <div class="flex items-center mb-4">
-                <svg class="w-8 h-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-8 h-8 text-gray-400 dark:text-gray-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
                 <h3 class="text-xl font-semibold text-slate-800 dark:text-white">Metadata Enhancement</h3>
@@ -37,7 +42,7 @@
             </p>
             <button
                 disabled
-                class="w-full bg-gray-300 text-gray-500 font-medium py-2 px-4 rounded-md cursor-not-allowed"
+                class="w-full border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-50/50 dark:bg-gray-800/50 font-medium py-2 px-4 rounded-md cursor-not-allowed"
             >
                 Coming Soon
             </button>

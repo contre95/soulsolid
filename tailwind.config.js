@@ -13,6 +13,7 @@ module.exports = {
     "invisible",
     "opacity-0",
     "backdrop-blur-md",
+    "backdrop-blur-sm",
     "bg-opacity-20",
     "border-l-8",
     "border-green-500",

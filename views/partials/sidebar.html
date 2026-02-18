@@ -121,8 +121,22 @@
             <button type="button" class="w-full">
               <a hx-get="/ui/analyze/lyrics" hx-trigger="click" hx-push-url="true" hx-swap="outerHTML"
                 hx-target="#contenido"
-                class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-3 py-1.5 text-base text-gray-500 transition-colors duration-200 transform rounded-md dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-300 hover:text-gray-600 dark:focus:bg-neutral-700 dark:focus:text-pink-400 dark:hover:text-pink-400 focus:outline-none cursor-pointer">
-                <img src="/svg/mic.svg" class="size-4 dark:invert dark:brightness-200" alt="Lyrics icon">
+                class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-3 py-1.5 text-base text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-gray-200 dark:hover:text-gray-200 focus:outline-none cursor-pointer">
+                <svg class="size-4 text-pink-500 dark:text-pink-500" fill="currentColor" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"
+                  xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve">
+                  <title>Lyrics icon</title>
+                  <g>
+                    <g>
+                      <g>
+                        <path
+                          d="M488.413,118.27c0-31.606-12.309-61.323-34.659-83.671C411.664-7.493,345.498-11.175,299.184,23.53l-7.131-7.131 L268.211,40.24l7.12,7.12c-16.405,21.844-24.698,48.595-23.458,76.141L39.935,351.283l38.815,38.815 c-18.243,21.376-21.458,35.552-24.34,48.289c-2.975,13.143-5.545,24.493-30.822,49.771L47.429,512 c32.17-32.171,36.257-50.232,39.865-66.169c2.247-9.924,4.128-18.212,15.358-31.83l34.416,34.416l227.782-211.94 c1.797,0.081,3.593,0.133,5.382,0.133c25.634,0,50.338-8.262,70.754-23.594l7.124,7.124l23.841-23.841l-7.121-7.121 C480.132,168.825,488.413,144.186,488.413,118.27z M137.911,401.577L86.773,350.44l182.909-196.581l64.81,64.811L137.911,401.577 z M366.302,202.793l-80.745-80.745c-0.818-18.069,4.097-35.659,13.96-50.502l117.286,117.287 C401.963,198.697,384.374,203.609,366.302,202.793z M440.649,164.995L323.369,47.714c32.839-21.755,77.634-18.184,106.543,10.725 c15.982,15.982,24.783,37.231,24.783,59.83C454.695,135.143,449.785,151.259,440.649,164.995z">
+                        </path>
+                        <rect x="191.378" y="260.003" transform="matrix(-0.7071 -0.7071 0.7071 -0.7071 165.2732 622.1811)"
+                          width="40.234" height="33.717"></rect>
+                      </g>
+                    </g>
+                  </g>
+                </svg>
                 <span class="mx-2 font-medium">Lyrics</span>
               </a>
             </button>
@@ -131,8 +145,9 @@
             <button type="button" class="w-full">
               <a hx-get="/ui/analyze/files" hx-trigger="click" hx-push-url="true" hx-swap="outerHTML"
                 hx-target="#contenido"
-                class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-3 py-1.5 text-base text-gray-500 transition-colors duration-200 transform rounded-md dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-300 hover:text-gray-600 dark:focus:bg-neutral-700 dark:focus:text-green-400 dark:hover:text-green-400 focus:outline-none cursor-pointer">
-                <svg class="size-4 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-3 py-1.5 text-base text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-gray-200 dark:hover:text-gray-200 focus:outline-none cursor-pointer">
+                <svg class="size-4 text-green-500 dark:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <title>File Paths icon</title>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
                   </path>
@@ -145,8 +160,13 @@
             <button type="button" class="w-full">
               <a hx-get="/ui/analyze/metadata" hx-trigger="click" hx-push-url="true" hx-swap="outerHTML"
                 hx-target="#contenido"
-                class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-3 py-1.5 text-base text-gray-500 transition-colors duration-200 transform rounded-md dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-300 hover:text-gray-600 dark:focus:bg-neutral-700 dark:focus:text-blue-400 dark:hover:text-blue-400 focus:outline-none cursor-pointer">
-                <img src="/svg/fingerprint.svg" class="size-4 dark:invert dark:brightness-200" alt="Metadata icon">
+                class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-3 py-1.5 text-base text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-gray-200 dark:hover:text-gray-200 focus:outline-none cursor-pointer">
+                <svg class="size-4 text-blue-500 dark:text-blue-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <title>Metadata icon</title>
+                  <path
+                    d="M13.1427 20.9999C10.8077 19.5438 9.25254 16.9522 9.25254 13.9968C9.25254 12.4783 10.4833 11.2476 12.0008 11.2476C13.5184 11.2476 14.7491 12.4783 14.7491 13.9968C14.7491 15.5153 15.9798 16.746 17.4974 16.746C19.0149 16.746 20.2457 15.5153 20.2457 13.9968C20.2457 9.44139 16.5544 5.74922 12.0017 5.74922C7.44907 5.74922 3.75781 9.44139 3.75781 13.9968C3.75781 15.0122 3.87145 16.001 4.08038 16.954M8.49027 20.2989C7.23938 18.5138 6.50351 16.3419 6.50351 13.9968C6.50351 10.9599 8.96405 8.49844 11.9992 8.49844C15.0343 8.49844 17.4948 10.9599 17.4948 13.9968M17.7927 19.4806C17.6937 19.4861 17.5966 19.4953 17.4967 19.4953C14.4616 19.4953 12.0011 17.0338 12.0011 13.9969M19.6734 6.47682C17.7993 4.34802 15.0593 3 12.0004 3C8.94141 3 6.20138 4.34802 4.32734 6.47682"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
                 <span class="mx-2 font-medium">Metadata</span>
               </a>
             </button>
