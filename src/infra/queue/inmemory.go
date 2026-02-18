@@ -1,36 +1,35 @@
 package queue
 
 import (
-	"errors"
 	"sync"
 
-	"github.com/contre95/soulsolid/src/features/importing"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // InMemoryQueue is an in-memory implementation of the Queue interface
 type InMemoryQueue struct {
-	items sync.Map // map[string]importing.QueueItem
+	items sync.Map // map[string]music.QueueItem
 }
 
 // NewInMemoryQueue creates a new in-memory queue
-func NewInMemoryQueue() importing.Queue {
+func NewInMemoryQueue() music.Queue {
 	return &InMemoryQueue{}
 }
 
 // Add adds a new item to the queue
-func (q *InMemoryQueue) Add(item importing.QueueItem) error {
+func (q *InMemoryQueue) Add(item music.QueueItem) error {
 	if _, exists := q.items.Load(item.ID); exists {
-		return importing.ErrAlreadyExists
+		return music.ErrTrackInTheQueueAlready
 	}
 	q.items.Store(item.ID, item)
 	return nil
 }
 
 // GetAll returns all items in the queue
-func (q *InMemoryQueue) GetAll() map[string]importing.QueueItem {
-	items := make(map[string]importing.QueueItem)
+func (q *InMemoryQueue) GetAll() map[string]music.QueueItem {
+	items := make(map[string]music.QueueItem)
 	q.items.Range(func(key, value any) bool {
-		if item, ok := value.(importing.QueueItem); ok {
+		if item, ok := value.(music.QueueItem); ok {
 			if keyStr, ok := key.(string); ok {
 				items[keyStr] = item
 			}
@@ -41,19 +40,19 @@ func (q *InMemoryQueue) GetAll() map[string]importing.QueueItem {
 }
 
 // GetByID returns a specific item by ID
-func (q *InMemoryQueue) GetByID(id string) (importing.QueueItem, error) {
+func (q *InMemoryQueue) GetByID(id string) (music.QueueItem, error) {
 	if value, ok := q.items.Load(id); ok {
-		if item, ok := value.(importing.QueueItem); ok {
+		if item, ok := value.(music.QueueItem); ok {
 			return item, nil
 		}
 	}
-	return importing.QueueItem{}, errors.New("item not found")
+	return music.QueueItem{}, music.ErrTrackNotFoundInQueue
 }
 
 // Remove removes an item from the queue by ID
 func (q *InMemoryQueue) Remove(id string) error {
 	if _, ok := q.items.Load(id); !ok {
-		return errors.New("item not found")
+		return music.ErrTrackNotFoundInQueue
 	}
 	q.items.Delete(id)
 	return nil
@@ -69,12 +68,13 @@ func (q *InMemoryQueue) Clear() error {
 }
 
 // GetGroupedByArtist returns items grouped by primary artist
-func (q *InMemoryQueue) GetGroupedByArtist() map[string][]importing.QueueItem {
-	groups := make(map[string][]importing.QueueItem)
+func (q *InMemoryQueue) GetGroupedByArtist() map[string][]music.QueueItem {
+	allItems := q.GetAll()
+	groups := make(map[string][]music.QueueItem)
 
-	q.items.Range(func(key, value any) bool {
-		if item, ok := value.(importing.QueueItem); ok {
-			if item.Track != nil && len(item.Track.Artists) > 0 {
+	for _, item := range allItems {
+		if item.Track != nil {
+			if len(item.Track.Artists) > 0 {
 				artistName := item.Track.Artists[0].Artist.Name
 				groups[artistName] = append(groups[artistName], item)
 			} else {
@@ -83,32 +83,30 @@ func (q *InMemoryQueue) GetGroupedByArtist() map[string][]importing.QueueItem {
 				groups[unknownArtist] = append(groups[unknownArtist], item)
 			}
 		}
-		return true
-	})
+		// Skip items without track
+	}
 
 	return groups
 }
 
 // GetGroupedByAlbum returns items grouped by album
-func (q *InMemoryQueue) GetGroupedByAlbum() map[string][]importing.QueueItem {
-	groups := make(map[string][]importing.QueueItem)
+func (q *InMemoryQueue) GetGroupedByAlbum() map[string][]music.QueueItem {
+	allItems := q.GetAll()
+	groups := make(map[string][]music.QueueItem)
 
-	q.items.Range(func(key, value any) bool {
-		if item, ok := value.(importing.QueueItem); ok {
-			if item.Track != nil && item.Track.Album != nil {
-				albumKey := item.Track.Album.Title
-				if len(item.Track.Album.Artists) > 0 {
-					albumKey += " - " + item.Track.Album.Artists[0].Artist.Name
-				}
-				groups[albumKey] = append(groups[albumKey], item)
-			} else {
-				// Fallback for tracks without albums
-				unknownAlbum := "Unknown Album"
-				groups[unknownAlbum] = append(groups[unknownAlbum], item)
+	for _, item := range allItems {
+		if item.Track != nil && item.Track.Album != nil {
+			albumKey := item.Track.Album.Title
+			if len(item.Track.Album.Artists) > 0 {
+				albumKey += " - " + item.Track.Album.Artists[0].Artist.Name
 			}
+			groups[albumKey] = append(groups[albumKey], item)
+		} else {
+			// Fallback for tracks without albums
+			unknownAlbum := "Unknown Album"
+			groups[unknownAlbum] = append(groups[unknownAlbum], item)
 		}
-		return true
-	})
+	}
 
 	return groups
 }
