@@ -27,6 +27,12 @@ type queueItemView struct {
 	ItemMetadata map[string]string
 }
 
+// groupView is a view model for grouped queue items
+type groupView struct {
+	Items         []queueItemView
+	HasImportable bool // true if at least one item's type is NOT "failed_import" AND NOT "missing_metadata"
+}
+
 // convertQueueItem converts a music.QueueItem to queueItemView
 func convertQueueItem(item music.QueueItem) (queueItemView, error) {
 	if item.Track == nil {
@@ -353,9 +359,10 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 	}
 
 	// Convert groups to view models
-	viewGroups := make(map[string][]queueItemView)
+	viewGroups := make(map[string]groupView)
 	for groupKey, items := range groups {
 		viewItems := make([]queueItemView, 0, len(items))
+		hasImportable := false
 		for _, item := range items {
 			view, err := convertQueueItem(item)
 			if err != nil {
@@ -363,12 +370,19 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 				continue
 			}
 			viewItems = append(viewItems, view)
+			// Check if this item is importable (not failed_import and not missing_metadata)
+			if view.Type != "failed_import" && view.Type != "missing_metadata" {
+				hasImportable = true
+			}
 		}
 		// Sort items within each group by timestamp
 		sort.Slice(viewItems, func(i, j int) bool {
 			return viewItems[i].Timestamp.Before(viewItems[j].Timestamp)
 		})
-		viewGroups[groupKey] = viewItems
+		viewGroups[groupKey] = groupView{
+			Items:         viewItems,
+			HasImportable: hasImportable,
+		}
 	}
 
 	return c.Render(templateName, fiber.Map{

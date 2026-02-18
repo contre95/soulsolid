@@ -115,8 +115,8 @@
                          hx-post="/import/queue/{{.ID}}/import"
                          hx-target="#toast-container"
                          hx-swap="innerHTML"
-                          {{if .ItemMetadata.error}}disabled{{end}}
-                          class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 {{if .ItemMetadata.error}}bg-gray-500/10 backdrop-blur-md border border-gray-400/30 text-gray-600 dark:text-gray-300 cursor-not-allowed{{else}}bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-md shadow-green-500/10 hover:shadow-green-500/20 hover:bg-green-500/20 dark:hover:bg-green-500/30{{end}}">
+                           {{if or (eq .Type "failed_import") (.ItemMetadata.error)}}disabled title="Track has errors"{{end}}
+                            class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo {{if or (eq .Type "failed_import") (.ItemMetadata.error)}}bg-gray-500/10 backdrop-blur-md border border-gray-400/30 text-gray-600 dark:text-gray-300 cursor-not-allowed{{else}}bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-md shadow-green-500/10 hover:-translate-y-0.5 hover:shadow-green-500/20 hover:bg-green-500/20 dark:hover:bg-green-500/30{{end}}">
                          <i class="fas fa-plus mr-1"></i>
                          Import
                          <span class="htmx-indicator ml-2">
