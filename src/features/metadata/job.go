@@ -1,4 +1,4 @@
-package analyze
+package metadata
 
 import (
 	"context"
@@ -28,7 +28,7 @@ func (t *AcoustIDJobTask) MetadataKeys() []string {
 // Execute performs the AcoustID analysis operation
 func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
 	// Get total track count for progress reporting
-	totalTracks, err := t.service.library.GetTracksCount(ctx)
+	totalTracks, err := t.service.libraryRepo.GetTracksCount(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tracks count: %w", err)
 	}
@@ -63,7 +63,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, progressU
 		}
 
 		// Get next batch of tracks
-		tracks, err := t.service.library.GetTracksPaginated(ctx, batchSize, offset)
+		tracks, err := t.service.libraryRepo.GetTracksPaginated(ctx, batchSize, offset)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get tracks batch (offset %d): %w", offset, err)
 		}
@@ -92,13 +92,13 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, progressU
 
 			// Call the existing AddChromaprintAndAcoustID method
 			job.Logger.Info("Analyzing track fingerprint", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "color", "cyan")
-			err := t.service.taggingService.AddChromaprintAndAcoustID(ctx, track.ID)
+			err := t.service.AddChromaprintAndAcoustID(ctx, track.ID)
 			if err != nil {
 				job.Logger.Warn("Failed to add fingerprint and AcoustID for track", "trackID", track.ID, "title", track.Title, "error", err, "color", "orange")
 				// Continue with other tracks - don't fail the entire job
 			} else {
 				// Check if AcoustID was actually added
-				updatedTrack, err := t.service.library.GetTrack(ctx, track.ID)
+				updatedTrack, err := t.service.libraryRepo.GetTrack(ctx, track.ID)
 				if err != nil {
 					job.Logger.Warn("Failed to verify AcoustID addition for track", "trackID", track.ID, "title", track.Title, "error", err, "color", "orange")
 					fingerprintsAdded++ // Assume fingerprint was added

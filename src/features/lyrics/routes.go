@@ -17,4 +17,11 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	// Library routes for lyrics
 	library := app.Group("/library")
 	library.Get("/tracks/:id/lyrics", handler.GetTrackLyrics)
+
+	// Analyze routes - lyrics analysis
+	analyze := app.Group("/analyze")
+	analyze.Post("/lyrics", handler.StartLyricsAnalysis)
+
+	// UI routes for lyrics analysis section
+	ui.Get("/analyze/lyrics", handler.RenderLyricsAnalysisSection)
 }

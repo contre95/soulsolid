@@ -15,6 +15,9 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	ui.Get("/", handler.RenderDashboard)
 	ui.Get("/dashboard", handler.RenderDashboard)
 
+	// Analyze section - all analyze jobs
+	ui.Get("/analyze", handler.RenderAnalyzeSection)
+
 	// Dashboard card endpoints
 	ui.Get("/quick-actions-card", handler.GetQuickActionsCard)
 

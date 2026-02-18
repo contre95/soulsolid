@@ -86,3 +86,56 @@ func (h *Handler) GetTrackLyrics(c *fiber.Ctx) error {
 	}
 	return c.SendString(track.Metadata.Lyrics)
 }
+
+// StartLyricsAnalysis handles starting the lyrics analysis job
+func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
+	slog.Info("Starting lyrics analysis via HTTP request")
+
+	// Get provider from form data
+	provider := c.FormValue("provider")
+	if provider == "" {
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": "Please select a lyrics provider",
+		})
+	}
+
+	jobID, err := h.service.StartLyricsAnalysis(c.Context(), provider)
+	if err != nil {
+		slog.Error("Failed to start lyrics analysis", "error", err)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": "Failed to start lyrics analysis: " + err.Error(),
+		})
+	}
+
+	slog.Info("Lyrics analysis job started successfully", "jobID", jobID, "provider", provider)
+
+	// Trigger HTMX to refresh the job list
+	c.Set("HX-Trigger", "refreshJobList")
+
+	if c.Get("HX-Request") == "true" {
+		return c.Render("toast/toastOk", fiber.Map{
+			"Msg": "Lyrics analysis started successfully",
+		})
+	}
+
+	return c.Redirect("/ui/analyze/lyrics")
+}
+
+// RenderLyricsAnalysisSection renders the lyrics analysis section page
+func (h *Handler) RenderLyricsAnalysisSection(c *fiber.Ctx) error {
+	slog.Debug("Rendering lyrics analysis section")
+
+	data := fiber.Map{
+		"Title": "Lyrics Analysis",
+	}
+
+	// Get lyrics providers info for the UI
+	data["LyricsProviders"] = h.service.GetLyricsProvidersInfo()
+
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "analyze_lyrics"
+		return c.Render("main", data)
+	}
+
+	return c.Render("sections/analyze_lyrics", data)
+}

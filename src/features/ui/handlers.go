@@ -38,3 +38,19 @@ func (h *Handler) GetQuickActionsCard(c *fiber.Ctx) error {
 	slog.Debug("GetQuickActionsCard handler called")
 	return c.Render("cards/quick_actions", fiber.Map{})
 }
+
+// RenderAnalyzeSection renders the all analyze jobs page
+func (h *Handler) RenderAnalyzeSection(c *fiber.Ctx) error {
+	slog.Debug("Rendering all analyze jobs page")
+
+	data := fiber.Map{
+		"Title": "All Analyze Jobs",
+	}
+
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "analyze"
+		return c.Render("main", data)
+	}
+
+	return c.Render("sections/analyze", data)
+}

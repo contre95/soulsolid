@@ -390,3 +390,45 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 		"GroupType": groupType,
 	})
 }
+
+// StartReorganizeAnalysis handles starting the file reorganization job
+func (h *Handler) StartReorganizeAnalysis(c *fiber.Ctx) error {
+	slog.Info("Starting file reorganization via HTTP request")
+
+	jobID, err := h.service.StartReorganizeAnalysis(c.Context())
+	if err != nil {
+		slog.Error("Failed to start file reorganization", "error", err)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": "Failed to start file reorganization: " + err.Error(),
+		})
+	}
+
+	slog.Info("File reorganization job started successfully", "jobID", jobID)
+
+	// Trigger HTMX to refresh the job list
+	c.Set("HX-Trigger", "refreshJobList")
+
+	if c.Get("HX-Request") == "true" {
+		return c.Render("toast/toastOk", fiber.Map{
+			"Msg": "File reorganization started successfully",
+		})
+	}
+
+	return c.Redirect("/ui/analyze/files")
+}
+
+// RenderFilesReorganizationSection renders the file paths section page
+func (h *Handler) RenderFilesReorganizationSection(c *fiber.Ctx) error {
+	slog.Debug("Rendering file paths section")
+
+	data := fiber.Map{
+		"Title": "File Paths",
+	}
+
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "analyze_files"
+		return c.Render("main", data)
+	}
+
+	return c.Render("sections/analyze_files", data)
+}

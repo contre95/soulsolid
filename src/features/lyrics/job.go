@@ -1,4 +1,4 @@
-package analyze
+package lyrics
 
 import (
 	"context"
@@ -30,7 +30,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 	job.Logger.Info("EXECUTE STARTED: Lyrics job task is running", "color", "pink")
 
 	// Check if any lyrics providers are enabled
-	enabledProviders := t.service.lyricsService.GetEnabledLyricsProviders()
+	enabledProviders := t.service.GetEnabledLyricsProviders()
 	hasEnabledProviders := false
 	for _, enabled := range enabledProviders {
 		if enabled {
@@ -47,7 +47,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 	job.Logger.Info("Enabled lyrics providers", "providers", enabledProviders, "color", "blue")
 
 	// Get total track count for progress reporting
-	totalTracks, err := t.service.library.GetTracksCount(ctx)
+	totalTracks, err := t.service.libraryRepo.GetTracksCount(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tracks count: %w", err)
 	}
@@ -80,7 +80,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 		}
 
 		// Get next batch of tracks
-		tracks, err := t.service.library.GetTracksPaginated(ctx, batchSize, offset)
+		tracks, err := t.service.libraryRepo.GetTracksPaginated(ctx, batchSize, offset)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get tracks batch (offset %d): %w", offset, err)
 		}
@@ -112,7 +112,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 
 			// Try to fetch lyrics for this track using the specified provider
 			job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "provider", provider, "color", "cyan")
-			err := t.service.lyricsService.AddLyrics(ctx, track.ID, provider)
+			err := t.service.AddLyrics(ctx, track.ID, provider)
 			if err != nil {
 				job.Logger.Error("Failed to add lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "error", err.Error(), "manual_fix", "<a href='/ui/library/tag/edit/"+track.ID+"' target='_blank'>track</a>")
 				errors++

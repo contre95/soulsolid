@@ -1,4 +1,4 @@
-package analyze
+package importing
 
 import (
 	"context"
