@@ -4,7 +4,8 @@ package importing
 type QueueItemType string
 
 const (
-	ManualReview QueueItemType = "manual_review"
-	Duplicate    QueueItemType = "duplicate"
-	FailedImport QueueItemType = "failed_import"
+	ManualReview    QueueItemType = "manual_review"
+	Duplicate       QueueItemType = "duplicate"
+	FailedImport    QueueItemType = "failed_import"
+	MissingMetadata QueueItemType = "missing_metadata"
 )

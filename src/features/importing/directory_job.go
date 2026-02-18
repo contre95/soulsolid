@@ -99,55 +99,59 @@ func countSupportedFiles(pathToImport string) int {
 	return totalFiles
 }
 
-// determineAction determines what action to take for a track based on config and existing tracks
-func determineAction(track *music.Track, existingTrack *music.Track, config config.Import, logger *slog.Logger) (ImportAction, QueueItemType) {
+// determineAction determines what action to take for a track based on config and duplicate tracks
+func determineAction(track *music.Track, duplicateTrack *music.Track, config config.Import, logger *slog.Logger) (ImportAction, QueueItemType, map[string]string) {
+	if err := track.ValidateRequiredMetadata(); err != nil {
+		return QueueTrack, MissingMetadata, map[string]string{"error": err.Error()}
+	}
 	if config.AlwaysQueue {
-		if existingTrack != nil {
-			logger.Info("Service.runDirectoryImport: track queued for manual review", "reason", "always_queue enabled", "duplicate", "true", "title", track.Title, "existing_path", existingTrack.Path)
-			return QueueTrack, Duplicate
+		if duplicateTrack != nil {
+			logger.Info("Service.runDirectoryImport: track queued for manual review", "reason", "always_queue enabled", "duplicate", "true", "title", track.Title, "duplicate_path", duplicateTrack.Path)
+			return QueueTrack, Duplicate, map[string]string{"duplicate_path": duplicateTrack.Path}
 		} else {
 			logger.Info("Service.runDirectoryImport: track queued for manual review", "reason", "always_queue enabled", "duplicate", "true", "title", track.Title)
-			return QueueTrack, ManualReview
+			return QueueTrack, ManualReview, nil
 		}
 	}
-	if existingTrack != nil {
+	if duplicateTrack != nil {
 		switch config.Duplicates {
 		case "skip":
-			logger.Info("Service.runDirectoryImport: Decided to skip duplicate track", "reason", "skip enabled for duplicates", "duplicate", "true", "existing_path", existingTrack.Path, "title", track.Title)
-			return SkipTrack, ""
+			logger.Info("Service.runDirectoryImport: Decided to skip duplicate track", "reason", "skip enabled for duplicates", "duplicate", "true", "duplicate_path", duplicateTrack.Path, "title", track.Title)
+			return SkipTrack, "", nil
 		case "replace":
-			logger.Info("Service.runDirectoryImport: Decided to replace existing track", "reason", "replace enabled for duplicates", "duplicate", "true", "existing_path", existingTrack.Path, "new_path", track.Path, "title", track.Title)
-			return ReplaceTrack, ""
+			logger.Info("Service.runDirectoryImport: Decided to replace duplicate track", "reason", "replace enabled for duplicates", "duplicate", "true", "duplicate_path", duplicateTrack.Path, "new_path", track.Path, "title", track.Title)
+			return ReplaceTrack, "", nil
 		case "queue":
-			logger.Info("Service.runDirectoryImport: Decided to queue as duplicate", "reason", "queue enabled for duplicates", "duplicate", "true", "existing_path", existingTrack.Path, "title", track.Title)
-			return QueueTrack, Duplicate
+			logger.Info("Service.runDirectoryImport: Decided to queue as duplicate", "reason", "queue enabled for duplicates", "duplicate", "true", "duplicate_path", duplicateTrack.Path, "title", track.Title)
+			return QueueTrack, Duplicate, map[string]string{"duplicate_path": duplicateTrack.Path}
 		default:
-			logger.Warn("Service.runDirectoryImport: Decided queued as duplicate", "reason", "unknown duplicates setting, defaulting to queue", "duplicate", "true", "existing_path", existingTrack.Path, "title", track.Title)
-			return QueueTrack, Duplicate
+			logger.Warn("Service.runDirectoryImport: Decided queued as duplicate", "reason", "unknown duplicates setting, defaulting to queue", "duplicate", "true", "duplicate_path", duplicateTrack.Path, "title", track.Title)
+			return QueueTrack, ManualReview, map[string]string{"error": duplicateTrack.Path}
 		}
 	}
 	logger.Info("Service.runDirectoryImport: Decided to import track", "reason", "track didn't exists in the library", "duplicate", "false", "title", track.Title, "artist", track.Artists)
-	return ImportTrack, ""
+	return ImportTrack, "", nil
 }
 
 // addTrackToQueue adds a track to the queue
-func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType QueueItemType, jobID string, existingTrack *music.Track, logger *slog.Logger) error {
+func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType QueueItemType, jobID string, duplicateTrack *music.Track, logger *slog.Logger, metadata map[string]string) error {
 	if track == nil {
 		return fmt.Errorf("track cannot be nil")
 	}
-	if existingTrack != nil {
-		track.ID = existingTrack.ID
+	if duplicateTrack != nil {
+		track.ID = duplicateTrack.ID
 	}
 	if track.ID == "" {
 		return fmt.Errorf("track ID cannot be empty")
 	}
 
 	item := music.QueueItem{
-		ID:        track.ID,
-		Type:      string(queueType),
-		Track:     track,
-		Timestamp: time.Now(),
-		JobID:     jobID,
+		ID:           track.ID,
+		Type:         string(queueType),
+		Track:        track,
+		Timestamp:    time.Now(),
+		JobID:        jobID,
+		ItemMetadata: metadata,
 	}
 	err := e.service.queue.Add(item)
 	if err != nil {
@@ -176,20 +180,20 @@ func (e *DirectoryImportTask) importFile(ctx context.Context, track *music.Track
 	return newPath, nil
 }
 
-func (e *DirectoryImportTask) findExistingTrack(ctx context.Context, trackToImport *music.Track, fingerprint string, logger *slog.Logger) (*music.Track, error) {
+func (e *DirectoryImportTask) findDuplicateTrack(ctx context.Context, trackToImport *music.Track, fingerprint string, logger *slog.Logger) (*music.Track, error) {
 	trackID := music.GenerateTrackID(fingerprint)
-	existingTrack, err := e.service.library.GetTrack(ctx, trackID)
+	duplicateTrack, err := e.service.library.GetTrack(ctx, trackID)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
-			existingTrack = nil // Not found, not an error
+			duplicateTrack = nil // Not found, not an error
 		} else {
 			logger.Error("Service.runDirectoryImport: error checking if track exists by ID", "error", err, "trackID", trackToImport.ID)
 			return nil, err
 		}
 	}
 
-	// Also check for existing track by library path to catch duplicates that have already been imported
-	if existingTrack == nil {
+	// Also check for duplicate track by library path to catch duplicates that have already been imported
+	if duplicateTrack == nil {
 		// Generate the library path that this track would get
 		libraryPath, err := e.service.fileManager.GetLibraryPath(ctx, trackToImport)
 		if err != nil {
@@ -197,10 +201,10 @@ func (e *DirectoryImportTask) findExistingTrack(ctx context.Context, trackToImpo
 			// Don't fail the import, just skip this check
 		} else {
 			// Check if a track with this library path already exists
-			existingTrack, err = e.service.library.FindTrackByPath(ctx, libraryPath)
+			duplicateTrack, err = e.service.library.FindTrackByPath(ctx, libraryPath)
 			if err != nil {
 				if err.Error() == "sql: no rows in result set" {
-					existingTrack = nil // Not found, not an error
+					duplicateTrack = nil // Not found, not an error
 				} else {
 					logger.Error("Service.runDirectoryImport: error checking if track exists by library path", "error", err, "path", libraryPath)
 					return nil, err
@@ -208,7 +212,7 @@ func (e *DirectoryImportTask) findExistingTrack(ctx context.Context, trackToImpo
 			}
 		}
 	}
-	return existingTrack, nil
+	return duplicateTrack, nil
 }
 
 func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImport string, progressUpdater func(int, string), logger *slog.Logger, job *music.Job) (ImportStats, error) {
@@ -245,15 +249,15 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 				nullTrackForQueue.Title = path
 				nullTrackForQueue.Path = path
 				nullTrackForQueue.EnsureMetadataDefaults()
-				nullTrackForQueue.ID = generateTrackIDFromPath(path)
-				if err := e.addTrackToQueue(&nullTrackForQueue, FailedImport, job.ID, nil, logger); err != nil {
+				nullTrackForQueue.ID = generateTrackIDFromPath(path) // ID generate for queue duplicates.
+				if err := e.addTrackToQueue(&nullTrackForQueue, FailedImport, job.ID, nil, logger, map[string]string{"error": err.Error()}); err != nil {
 					logger.Error("Service.runDirectoryImport: failed to add metadata-failed track to queue", "error", err)
-				} else {
-					stats.Queued++
-					logger.Info("Service.runDirectoryImport: metadata-failed track queued for manual review", "path", path)
 				}
 				processedFiles++
 				return nil
+			}
+			if config.AllowMissingMetadata {
+				trackToImport.EnsureMetadataDefaults()
 			}
 			slog.Info("Read metadata from file", "path", path, "track", trackToImport)
 
@@ -269,11 +273,8 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 				stats.Errors++
 				// Set track ID from path and add to queue for manual review
 				trackToImport.ID = generateTrackIDFromPath(path)
-				if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, nil, logger); err != nil {
+				if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, nil, logger, map[string]string{"error": err.Error()}); err != nil {
 					logger.Error("Service.runDirectoryImport: failed to add fingerprint-failed track to queue", "error", err)
-				} else {
-					stats.Queued++
-					logger.Info("Service.runDirectoryImport: fingerprint-failed track queued for manual review", "path", path)
 				}
 				processedFiles++
 				return nil
@@ -283,65 +284,60 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 			trackToImport.ChromaprintFingerprint = fingerprint
 			trackToImport.ID = music.GenerateTrackID(fingerprint)
 			slog.Info("Generated track id", "id", trackToImport.ID)
-
-			existingTrack, err := e.findExistingTrack(ctx, trackToImport, fingerprint, logger)
+			duplicateTrack, err := e.findDuplicateTrack(ctx, trackToImport, fingerprint, logger)
 			if err != nil {
-				logger.Error("Service.runDirectoryImport: failed to find existing track", "error", err)
+				logger.Error("Service.runDirectoryImport: failed to find duplicate track", "error", err)
 				stats.Errors++
-				// Add track to queue for manual review due to database error
-				if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, nil, logger); err != nil {
+				if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, nil, logger, map[string]string{"error": err.Error()}); err != nil {
 					logger.Error("Service.runDirectoryImport: failed to add database-error track to queue", "error", err)
-				} else {
-					stats.Queued++
-					logger.Info("Service.runDirectoryImport: database-error track queued for manual review", "path", path)
 				}
 				processedFiles++
 				return nil
 			}
 			var action ImportAction
 			var queueType QueueItemType
-			action, queueType = determineAction(trackToImport, existingTrack, config, logger)
+			var itemMetadata map[string]string
+			action, queueType, itemMetadata = determineAction(trackToImport, duplicateTrack, config, logger)
 
 			switch action {
 			case SkipTrack:
 				stats.Skipped++
-				logger.Info("Service.runDirectoryImport: Skipping duplicate track", "reason", "track already exists", "existing_path", path, "title", trackToImport.Title, "color", "blue")
+				logger.Info("Service.runDirectoryImport: Skipping duplicate track", "reason", "track already exists", "duplicate_path", path, "title", trackToImport.Title, "color", "blue")
 			case QueueTrack:
-				if err := e.addTrackToQueue(trackToImport, queueType, job.ID, existingTrack, logger); err != nil {
+				if err := e.addTrackToQueue(trackToImport, queueType, job.ID, duplicateTrack, logger, itemMetadata); err != nil {
 					stats.Errors++
 				} else {
 					stats.Queued++
-					logger.Info("Service.runDirectoryImport: track queued as duplicate", "reason", "existing track found", "existing_path", path, "title", trackToImport.Title, "color", "violet")
+					logger.Info("Service.runDirectoryImport: track queued as duplicate", "reason", "duplicate track found", "duplicate_path", path, "title", trackToImport.Title, "color", "violet")
 				}
 			case ReplaceTrack:
-				if err := e.service.replaceTrack(ctx, trackToImport, existingTrack, moveFiles, logger); err != nil {
+				if err := e.service.replaceTrack(ctx, trackToImport, duplicateTrack, moveFiles, logger); err != nil {
 					logger.Error("Service.runDirectoryImport: failed to replace track", "error", err)
 					stats.Errors++
 					// Add failed track to queue for manual review
-					if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, existingTrack, logger); err != nil {
+					if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, duplicateTrack, logger, map[string]string{"error": err.Error()}); err != nil {
 						logger.Error("Service.runDirectoryImport: failed to add failed replace track to queue", "error", err)
-					} else {
-						stats.Queued++
-						logger.Info("Service.runDirectoryImport: failed replace track queued for manual review", "title", trackToImport.Title)
 					}
 				} else {
 					stats.TracksImported++
-					logger.Info("Service.runDirectoryImport: Existing track replaced", "title", trackToImport.Title, "color", "orange")
+					logger.Info("Service.runDirectoryImport: duplicate track replaced", "title", trackToImport.Title, "color", "orange")
 				}
 			case ImportTrack:
 				// Apply default metadata if configured to allow missing metadata
-				if config.AllowMissingMetadata {
-					trackToImport.EnsureMetadataDefaults()
+				if err := trackToImport.ValidateRequiredMetadata(); err != nil {
+					logger.Error("Service.runDirectoryImport: failed to validate required metadata", "error", err, "title", trackToImport.Title, "path", trackToImport.Path)
+					stats.Errors++
+					// Add failed track to queue for manual review
+					if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, nil, logger, map[string]string{"error": err.Error()}); err != nil {
+						logger.Error("Service.runDirectoryImport: failed to add failed import track to queue", "error", err)
+					}
 				}
 				if err := e.service.importTrack(ctx, trackToImport, moveFiles, logger); err != nil {
 					logger.Error("Service.runDirectoryImport: failed to import track", "error", err, "title", trackToImport.Title, "path", trackToImport.Path)
 					stats.Errors++
 					// Add failed track to queue for manual review
-					if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, nil, logger); err != nil {
+					if err := e.addTrackToQueue(trackToImport, FailedImport, job.ID, nil, logger, map[string]string{"error": err.Error()}); err != nil {
 						logger.Error("Service.runDirectoryImport: failed to add failed import track to queue", "error", err)
-					} else {
-						stats.Queued++
-						logger.Info("Service.runDirectoryImport: failed import track queued for manual review", "title", trackToImport.Title)
 					}
 				} else {
 					stats.TracksImported++
@@ -352,10 +348,7 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 			// Update progress after processing each file
 			processedFiles++
 			if progressUpdater != nil && totalFiles > 0 {
-				progress := (processedFiles * 100) / totalFiles
-				if progress > 100 {
-					progress = 100
-				}
+				progress := min((processedFiles*100)/totalFiles, 100)
 				progressUpdater(progress, fmt.Sprintf("Processed: %s", filepath.Base(path)))
 			}
 		}

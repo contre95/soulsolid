@@ -225,7 +225,7 @@ func (t *Track) Pretty() string {
 	return builder.String()
 }
 
-// EnsureMetadataDefaults adds fallback values for missing metadata fields
+// EnsureMetadataDefaults adds fallback values for missing metadata fields. This function doesn't mean track struct completeness
 func (t *Track) EnsureMetadataDefaults() {
 	// Fallback for missing artist
 	if len(t.Artists) == 0 || t.Artists[0].Artist.Name == "" {
@@ -264,6 +264,9 @@ func (t *Track) ValidateRequiredMetadata() error {
 	}
 	if t.Album == nil || t.Album.Title == "" {
 		missingFields = append(missingFields, "Album")
+	}
+	if t.Title == "" {
+		missingFields = append(missingFields, "Title")
 	}
 	if t.Metadata.Year == 0 {
 		missingFields = append(missingFields, "Year")

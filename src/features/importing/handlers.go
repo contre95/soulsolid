@@ -19,11 +19,12 @@ type Handler struct {
 
 // queueItemView is a view model for queue items that includes the track
 type queueItemView struct {
-	ID        string
-	Type      string
-	Timestamp time.Time
-	JobID     string
-	Track     *music.Track
+	ID           string
+	Type         string
+	Timestamp    time.Time
+	JobID        string
+	Track        *music.Track
+	ItemMetadata map[string]string
 }
 
 // convertQueueItem converts a music.QueueItem to queueItemView
@@ -32,11 +33,12 @@ func convertQueueItem(item music.QueueItem) (queueItemView, error) {
 		return queueItemView{}, errors.New("queue item has no track")
 	}
 	return queueItemView{
-		ID:        item.ID,
-		Type:      item.Type,
-		Timestamp: item.Timestamp,
-		JobID:     item.JobID,
-		Track:     item.Track,
+		ID:           item.ID,
+		Type:         item.Type,
+		Timestamp:    item.Timestamp,
+		JobID:        item.JobID,
+		Track:        item.Track,
+		ItemMetadata: item.ItemMetadata,
 	}, nil
 }
 
@@ -93,7 +95,7 @@ func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
 	if err != nil {
 		slog.Error("Failed to process queue item", "error", err, "itemID", itemID, "action", action)
 		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Failed to process queue item",
+			"Msg": fmt.Sprintf("Failed to process queue item: %s", err.Error()),
 		})
 	}
 	// Return success response that updates the UI
