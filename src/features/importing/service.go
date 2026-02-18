@@ -194,7 +194,7 @@ func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action st
 		return fmt.Errorf("queue item does not contain a valid track")
 	}
 	// Validate action based on item type
-	if item.Type == string(FailedImport) && (action == "import" || action == "replace") {
+	if item.Type == FailedImport && (action == "import" || action == "replace") {
 		return fmt.Errorf("action '%s' not allowed for failed import items (only skip/cancel and delete)", action)
 	}
 	track := item.Track

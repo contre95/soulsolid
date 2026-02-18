@@ -34,11 +34,11 @@ func convertQueueItem(item music.QueueItem) (queueItemView, error) {
 	}
 	return queueItemView{
 		ID:           item.ID,
-		Type:         item.Type,
+		Type:         string(item.Type),
 		Timestamp:    item.Timestamp,
 		JobID:        item.JobID,
 		Track:        item.Track,
-		ItemMetadata: item.ItemMetadata,
+		ItemMetadata: item.Metadata,
 	}, nil
 }
 

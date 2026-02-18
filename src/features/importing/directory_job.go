@@ -100,7 +100,7 @@ func countSupportedFiles(pathToImport string) int {
 }
 
 // determineAction determines what action to take for a track based on config and duplicate tracks
-func determineAction(track *music.Track, duplicateTrack *music.Track, config config.Import, logger *slog.Logger) (ImportAction, QueueItemType, map[string]string) {
+func determineAction(track *music.Track, duplicateTrack *music.Track, config config.Import, logger *slog.Logger) (ImportAction, music.QueueItemType, map[string]string) {
 	if err := track.ValidateRequiredMetadata(); err != nil {
 		return QueueTrack, MissingMetadata, map[string]string{"error": err.Error()}
 	}
@@ -134,11 +134,7 @@ func determineAction(track *music.Track, duplicateTrack *music.Track, config con
 }
 
 // addTrackToQueue adds a track to the queue
-<<<<<<< Updated upstream
-func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType QueueItemType, jobID string, duplicateTrack *music.Track, logger *slog.Logger, metadata map[string]string) error {
-=======
-func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType music.QueueItemType, jobID string, existingTrack *music.Track, logger *slog.Logger) error {
->>>>>>> Stashed changes
+func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType music.QueueItemType, jobID string, duplicateTrack *music.Track, logger *slog.Logger, metadata map[string]string) error {
 	if track == nil {
 		return fmt.Errorf("track cannot be nil")
 	}
@@ -150,12 +146,12 @@ func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType musi
 	}
 
 	item := music.QueueItem{
-		ID:           track.ID,
-		Type:         string(queueType),
-		Track:        track,
-		Timestamp:    time.Now(),
-		JobID:        jobID,
-		ItemMetadata: metadata,
+		ID:        track.ID,
+		Type:      queueType,
+		Track:     track,
+		Timestamp: time.Now(),
+		JobID:     jobID,
+		Metadata:  metadata,
 	}
 	err := e.service.queue.Add(item)
 	if err != nil {
@@ -299,14 +295,9 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 				return nil
 			}
 			var action ImportAction
-<<<<<<< Updated upstream
-			var queueType QueueItemType
+			var queueType music.QueueItemType
 			var itemMetadata map[string]string
 			action, queueType, itemMetadata = determineAction(trackToImport, duplicateTrack, config, logger)
-=======
-			var queueType music.QueueItemType
-			action, queueType = determineAction(trackToImport, existingTrack, config, logger)
->>>>>>> Stashed changes
 
 			switch action {
 			case SkipTrack:

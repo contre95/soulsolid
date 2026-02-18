@@ -290,9 +290,9 @@ func (h *TelegramHandler) formatQueueItemMessage(item music.QueueItem, totalCoun
 	}
 
 	typeText := "Manual Review"
-	if item.Type == string(Duplicate) {
+	if item.Type == Duplicate {
 		typeText = "Duplicate"
-	} else if item.Type == string(FailedImport) {
+	} else if item.Type == FailedImport {
 		typeText = "Failed Import"
 	}
 
@@ -354,13 +354,13 @@ func (h *TelegramHandler) createInlineKeyboard(item music.QueueItem) tgbotapi.In
 	var buttons [][]tgbotapi.InlineKeyboardButton
 
 	// Action buttons based on type
-	if item.Type == string(Duplicate) {
+	if item.Type == Duplicate {
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("✴️ Replace", fmt.Sprintf("queue_replace_%s", item.ID)),
 			tgbotapi.NewInlineKeyboardButtonData("⏭️ Skip", fmt.Sprintf("queue_cancel_%s", item.ID)),
 			tgbotapi.NewInlineKeyboardButtonData("🗑️ Delete", fmt.Sprintf("queue_delete_%s", item.ID)),
 		})
-	} else if item.Type == string(FailedImport) {
+	} else if item.Type == FailedImport {
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("⏭️ Skip", fmt.Sprintf("queue_cancel_%s", item.ID)),
 			tgbotapi.NewInlineKeyboardButtonData("🗑️ Delete", fmt.Sprintf("queue_delete_%s", item.ID)),
