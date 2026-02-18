@@ -134,7 +134,11 @@ func determineAction(track *music.Track, duplicateTrack *music.Track, config con
 }
 
 // addTrackToQueue adds a track to the queue
+<<<<<<< Updated upstream
 func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType QueueItemType, jobID string, duplicateTrack *music.Track, logger *slog.Logger, metadata map[string]string) error {
+=======
+func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType music.QueueItemType, jobID string, existingTrack *music.Track, logger *slog.Logger) error {
+>>>>>>> Stashed changes
 	if track == nil {
 		return fmt.Errorf("track cannot be nil")
 	}
@@ -295,9 +299,14 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 				return nil
 			}
 			var action ImportAction
+<<<<<<< Updated upstream
 			var queueType QueueItemType
 			var itemMetadata map[string]string
 			action, queueType, itemMetadata = determineAction(trackToImport, duplicateTrack, config, logger)
+=======
+			var queueType music.QueueItemType
+			action, queueType = determineAction(trackToImport, existingTrack, config, logger)
+>>>>>>> Stashed changes
 
 			switch action {
 			case SkipTrack:
