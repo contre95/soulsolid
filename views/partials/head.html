@@ -84,6 +84,35 @@
     .dark .ss-arrow {
       color: #f9fafb !important;
     }
+
+    /* Path templates scrollbar styling */
+    .path-templates-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
+    .path-templates-scroll::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    .path-templates-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .path-templates-scroll::-webkit-scrollbar-thumb {
+      background: transparent;
+      border-radius: 4px;
+    }
+    .path-templates-scroll:hover::-webkit-scrollbar-thumb {
+      background: #9ca3af;
+    }
+    .path-templates-scroll:hover {
+      scrollbar-color: #9ca3af transparent;
+    }
+    .dark .path-templates-scroll:hover::-webkit-scrollbar-thumb {
+      background: #6b7280;
+    }
+    .dark .path-templates-scroll:hover {
+      scrollbar-color: #6b7280 transparent;
+    }
   </style>
 </head>
 {{end}}
