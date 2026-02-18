@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/music"
 )
 
@@ -36,13 +35,13 @@ type Service struct {
 	metadataReader    TagReader
 	fingerprintReader FingerprintProvider
 	config            *config.Manager
-	jobService        jobs.JobService // TODO: Move this to domain job service
+	jobService        music.JobService // TODO: Move this to domain job service
 	queue             Queue
 	watcher           Watcher
 }
 
 // NewService creates a new organizing service.
-func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, fileManager music.FileManager, cfg *config.Manager, jobService jobs.JobService, queue Queue, watcher Watcher) *Service {
+func NewService(lib music.Library, tagReader TagReader, fingerprintReader FingerprintProvider, fileManager music.FileManager, cfg *config.Manager, jobService music.JobService, queue Queue, watcher Watcher) *Service {
 	s := &Service{
 		config:            cfg,
 		library:           lib,

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -16,7 +17,7 @@ type Handler struct {
 
 // JobResponse is a wrapper for the Job struct to include API links
 type JobResponse struct {
-	*Job
+	*music.Job
 	Links map[string]string `json:"_links"`
 }
 
@@ -127,7 +128,7 @@ func (h *Handler) HandleJobProgress(c *fiber.Ctx) error {
 		return c.Status(404).SendString("Job not found.")
 	}
 
-	if job.Status == JobStatusCompleted || job.Status == JobStatusFailed || job.Status == JobStatusCancelled {
+	if job.Status == music.JobStatusCompleted || job.Status == music.JobStatusFailed || job.Status == music.JobStatusCancelled {
 		c.Set("HX-Trigger", "done")
 	}
 
@@ -213,9 +214,9 @@ func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 
 	// Filter out completed/failed/cancelled jobs to show only active ones
-	activeJobs := make([]*Job, 0)
+	activeJobs := make([]*music.Job, 0)
 	for _, job := range jobs {
-		if job.Status == JobStatusRunning || job.Status == JobStatusPending {
+		if job.Status == music.JobStatusRunning || job.Status == music.JobStatusPending {
 			activeJobs = append(activeJobs, job)
 		}
 	}
@@ -236,7 +237,7 @@ func (h *Handler) HandleFilteredJobsList(c *fiber.Ctx) error {
 	// Filter jobs by type if specified
 	jobTypeFilter := c.Query("prefix")
 	if jobTypeFilter != "" {
-		filteredJobs := make([]*Job, 0)
+		filteredJobs := make([]*music.Job, 0)
 		for _, job := range jobs {
 			if strings.HasPrefix(job.Type, jobTypeFilter) {
 				filteredJobs = append(filteredJobs, job)
@@ -274,7 +275,7 @@ func (h *Handler) HandleJobsCount(c *fiber.Ctx) error {
 	count := 0
 
 	for _, job := range jobs {
-		if filter == "active" && (job.Status == JobStatusRunning || job.Status == JobStatusPending) {
+		if filter == "active" && (job.Status == music.JobStatusRunning || job.Status == music.JobStatusPending) {
 			count++
 		} else if filter == "all" {
 			count++

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/music"
 )
 
@@ -41,7 +40,7 @@ func (e *DirectoryImportTask) MetadataKeys() []string {
 }
 
 // Execute runs the directory import logic.
-func (e *DirectoryImportTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
+func (e *DirectoryImportTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
 	path := job.Metadata["path"].(string)
 
 	stats, err := e.runDirectoryImport(ctx, path, progressUpdater, job.Logger, job)
@@ -75,7 +74,7 @@ func (e *DirectoryImportTask) Execute(ctx context.Context, job *jobs.Job, progre
 }
 
 // Cleanup does nothing for directory imports.
-func (e *DirectoryImportTask) Cleanup(job *jobs.Job) error {
+func (e *DirectoryImportTask) Cleanup(job *music.Job) error {
 	return nil
 }
 
@@ -206,7 +205,7 @@ func (e *DirectoryImportTask) findExistingTrack(ctx context.Context, trackToImpo
 	return existingTrack, nil
 }
 
-func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImport string, progressUpdater func(int, string), logger *slog.Logger, job *jobs.Job) (ImportStats, error) {
+func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImport string, progressUpdater func(int, string), logger *slog.Logger, job *music.Job) (ImportStats, error) {
 	logger.Info("Service.runDirectoryImport: starting import", "path", pathToImport)
 	var stats ImportStats
 	moveFiles := e.service.config.Get().Import.Move

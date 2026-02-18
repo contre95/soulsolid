@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/contre95/soulsolid/src/features/jobs"
+	"github.com/contre95/soulsolid/src/music"
 )
 
 // MetricsCalculationTask implements jobs.Task for calculating library metrics.
@@ -26,7 +26,7 @@ func (t *MetricsCalculationTask) MetadataKeys() []string {
 }
 
 // Execute runs the metrics calculation logic.
-func (t *MetricsCalculationTask) Execute(ctx context.Context, job *jobs.Job, progressUpdater func(int, string)) (map[string]any, error) {
+func (t *MetricsCalculationTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
 	slog.Info("Starting metrics calculation")
 
 	// Clear existing metrics
@@ -68,7 +68,7 @@ func (t *MetricsCalculationTask) Execute(ctx context.Context, job *jobs.Job, pro
 }
 
 // Cleanup performs cleanup after job execution.
-func (t *MetricsCalculationTask) Cleanup(job *jobs.Job) error {
+func (t *MetricsCalculationTask) Cleanup(job *music.Job) error {
 	// No cleanup needed
 	return nil
 }
