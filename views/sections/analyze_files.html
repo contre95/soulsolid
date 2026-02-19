@@ -1,17 +1,20 @@
 <div id="contenido" class="animate__animated animate__fadeIn">
     <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">File Paths</h1>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-4">
         <!-- File Paths Card -->
-        <div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-md backdrop-blur-sm transition-all duration-200 hover:bg-white/90 dark:hover:bg-gray-900/80">
-            <div class="flex items-center mb-4">
+        <div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-md backdrop-blur-sm transition-all duration-200 hover:bg-white/90 dark:hover:bg-gray-900/80 md:col-span-1 lg:col-span-1">
+            <div class="flex items-center mb-3">
                 <svg class="w-8 h-8 mr-3 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                 </svg>
                 <h3 class="text-xl font-semibold text-slate-800 dark:text-white">File Paths</h3>
             </div>
-            <p class="text-slate-600 dark:text-slate-400 mb-4">
+            <p class="text-slate-600 dark:text-slate-400 mb-3">
                 Reorganize all library files according to the current path configuration. Moves files that don't match the configured paths.
+            </p>
+            <p class="text-slate-600 dark:text-slate-400 mb-3">
+                Current path templates used for organizing files. Configure in <a href="/settings" class="text-blue-500 hover:text-blue-400 underline">Settings</a>.
             </p>
             <button
                 hx-post="/analyze/reorganize"
@@ -19,11 +22,45 @@
                 hx-swap="beforeend"
                 class="w-full border border-green-500 dark:border-green-400 text-green-500 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 font-medium py-2 px-4 rounded-md transition-colors duration-200"
             >
-                Start File Paths Reorganization
+                Apply templates
                 <span class="htmx-indicator ml-2">
                     <i class="fas fa-spinner fa-spin text-green-500 dark:text-green-400"></i>
                 </span>
             </button>
+            <div class="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                <a href="https://soulsolid.contre.io/docs/paths/#available-placeholders" target="_blank" class="text-blue-500 hover:text-blue-400 underline">View documentation for placeholders</a>
+            </div>
+        </div>
+
+        <!-- Path Templates Card -->
+        <div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-md backdrop-blur-sm transition-all duration-200 hover:bg-white/90 dark:hover:bg-gray-900/80 md:col-span-1 lg:col-span-2 flex flex-col">
+            <div class="flex items-center mb-3">
+                <i class="fas fa-folder-tree w-8 h-8 mr-3 text-indigo-500 dark:text-indigo-400"></i>
+                <h3 class="text-xl font-semibold text-slate-800 dark:text-white">Path Templates</h3>
+            </div>
+
+            <div class="flex-grow overflow-y-auto space-y-1.5 pr-2 path-templates-scroll">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-0.5">Default Path</label>
+                    <pre class="text-xs font-mono bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 p-2 rounded border border-slate-200 dark:border-slate-700 overflow-x-auto whitespace-nowrap overflow-y-hidden h-8">{{.Config.Import.PathOptions.DefaultPath}}</pre>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-0.5">Compilations Path</label>
+                    <pre class="text-xs font-mono bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 p-2 rounded border border-slate-200 dark:border-slate-700 overflow-x-auto whitespace-nowrap overflow-y-hidden h-8">{{.Config.Import.PathOptions.Compilations}}</pre>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-0.5">Soundtrack Path</label>
+                    <pre class="text-xs font-mono bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 p-2 rounded border border-slate-200 dark:border-slate-700 overflow-x-auto whitespace-nowrap overflow-y-hidden h-8">{{.Config.Import.PathOptions.AlbumSoundtrack}}</pre>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-0.5">Single Path</label>
+                    <pre class="text-xs font-mono bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 p-2 rounded border border-slate-200 dark:border-slate-700 overflow-x-auto whitespace-nowrap overflow-y-hidden h-8">{{.Config.Import.PathOptions.AlbumSingle}}</pre>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-0.5">EP Path</label>
+                    <pre class="text-xs font-mono bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 p-2 rounded border border-slate-200 dark:border-slate-700 overflow-x-auto whitespace-nowrap overflow-y-hidden h-8">{{.Config.Import.PathOptions.AlbumEP}}</pre>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -21,7 +21,8 @@ logger:
 downloaders:
   plugins:
     - name: dummy
-      path: ../soulsolid-dummy-plugin/plugin.so
+      url: https://github.com/contre95/soulsolid-dummy-plugin 
+      # path: ../soulsolid-dummy-plugin/plugin.so # Optional if building the plugin
       icon: https://demo2.contre.io/img/galaxy.png
       config: {} # Plugin specific config. See https://git.sr.ht/~canuslector/soulsolid-deemix-plugin
   artwork:

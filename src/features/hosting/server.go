@@ -137,7 +137,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	metadata.RegisterRoutes(app, tagService)
 	lyricsHandler := lyrics.NewHandler(lyricsService, tagService)
 	lyrics.RegisterRoutes(app, lyricsHandler)
-	reorganizeHandler := reorganize.NewHandler(reorganizeService)
+	reorganizeHandler := reorganize.NewHandler(reorganizeService, cfg)
 	reorganize.RegisterRoutes(app, reorganizeHandler)
 
 	return &Server{app: app, port: cfg.Get().Server.Port}
