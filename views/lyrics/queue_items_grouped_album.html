@@ -49,17 +49,23 @@
                         </div>
                         <div class="flex items-center space-x-0.5 ml-1">
                             {{if eq .Type "existing_lyrics"}}
-                            <span class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 border border-blue-400/30 text-blue-700 dark:text-blue-300">
-                                Existing
-                            </span>
+                              {{ $tooltip := "" }}{{if len .ItemMetadata}}{{range $key, $value := .ItemMetadata}}{{ $tooltip = printf "%s%s: %s\n" $tooltip $key $value }}{{end}}{{end}}
+                              <span class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 border border-blue-400/30 text-blue-700 dark:text-blue-300 {{if len .ItemMetadata}}cursor-help{{end}}"
+                                    {{if len .ItemMetadata}}title="{{$tooltip}}" data-tooltip="{{$tooltip}}"{{end}}>
+                                  Existing
+                              </span>
                             {{else if eq .Type "lyric_404"}}
-                            <span class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-orange-500/20 border border-orange-400/30 text-orange-700 dark:text-orange-300">
-                                404
-                            </span>
+                              {{ $tooltip := "" }}{{if len .ItemMetadata}}{{range $key, $value := .ItemMetadata}}{{ $tooltip = printf "%s%s: %s\n" $tooltip $key $value }}{{end}}{{end}}
+                              <span class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-orange-500/20 border border-orange-400/30 text-orange-700 dark:text-orange-300 {{if len .ItemMetadata}}cursor-help{{end}}"
+                                    {{if len .ItemMetadata}}title="{{$tooltip}}" data-tooltip="{{$tooltip}}"{{end}}>
+                                  404
+                              </span>
                             {{else if eq .Type "failed_lyrics"}}
-                            <span class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-red-500/20 border border-red-400/30 text-red-700 dark:text-red-300">
-                                Failed
-                            </span>
+                              {{ $tooltip := "" }}{{if len .ItemMetadata}}{{range $key, $value := .ItemMetadata}}{{ $tooltip = printf "%s%s: %s\n" $tooltip $key $value }}{{end}}{{end}}
+                              <span class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-red-500/20 border border-red-400/30 text-red-700 dark:text-red-300 {{if len .ItemMetadata}}cursor-help{{end}}"
+                                    {{if len .ItemMetadata}}title="{{$tooltip}}" data-tooltip="{{$tooltip}}"{{end}}>
+                                  Failed
+                              </span>
                             {{end}}
                         </div>
                     </div>
