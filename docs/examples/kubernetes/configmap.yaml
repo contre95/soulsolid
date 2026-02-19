@@ -19,13 +19,11 @@ data:
       htmx_debug: false
     downloaders:
       plugins:
-        - name: deezer
-          path: /app/plugins/deemix/plugin.so
-          icon: https://demo2.contre.io/img/deezer.png
-          config:
-            arl: !env_var DEEZER_ARL
-            preferred_quality: FLAC
-            fallback_quality: MP3_320
+      - name: dummy
+        url: https://github.com/contre95/soulsolid-dummy-plugin
+        # path: # Optional if you are building the plugin 
+        icon: https://soulsolid-demo.contre.io/img/galaxy.png
+        config: {}
       artwork:
         embedded:
           enabled: true
