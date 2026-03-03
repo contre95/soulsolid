@@ -79,7 +79,7 @@ func createTables(db *sql.DB) error {
 			original_year INTEGER,
 			lyrics TEXT,
 			explicit_lyrics BOOLEAN DEFAULT FALSE,
-			has_lyrics BOOLEAN DEFAULT FALSE,
+			has_lyrics BOOLEAN DEFAULT TRUE,
 			bpm REAL,
 			gain REAL,
 			source TEXT,
@@ -185,7 +185,7 @@ func createTables(db *sql.DB) error {
 	_, err = db.Exec(`
 		ALTER TABLE tracks ADD COLUMN source TEXT;
 		ALTER TABLE tracks ADD COLUMN source_url TEXT;
-		ALTER TABLE tracks ADD COLUMN has_lyrics BOOLEAN DEFAULT FALSE;
+		ALTER TABLE tracks ADD COLUMN has_lyrics BOOLEAN DEFAULT TRUE;
 	`)
 	// Ignore errors if columns already exist
 	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {

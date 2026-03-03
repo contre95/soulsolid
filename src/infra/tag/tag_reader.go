@@ -93,6 +93,7 @@ func (r *TagReader) ReadFileTags(ctx context.Context, filePath string) (*music.T
 			DiscNumber:  discNumber,
 			Composer:    tags.Composer(),
 		},
+		HasLyrics: true,
 	}
 
 	// Add track artists with "main" role
@@ -137,6 +138,7 @@ func (r *TagReader) readAdditionalMetadata(tags tag.Metadata, track *music.Track
 	if lyrics := r.readLyrics(tags, filePath); lyrics != "" {
 		slog.Debug("Found lyrics in file", "path", track.Path, "lyrics", lyrics)
 		track.Metadata.Lyrics = lyrics
+		track.HasLyrics = true
 	} else {
 		slog.Debug("No lyrics found in file", "path", track.Path)
 	}
