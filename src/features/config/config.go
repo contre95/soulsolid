@@ -51,8 +51,9 @@ type Database struct {
 
 // Server hold the configuration for the Fiber server Config
 type Server struct {
-	PrintRoutes bool   `yaml:"show_routes"`
-	Port        uint32 `yaml:"port"`
+	PrintRoutes       bool   `yaml:"show_routes"`
+	Port              uint32 `yaml:"port"`
+	PrometheusEnabled bool   `yaml:"prometheus_enabled"`
 }
 
 // Logger holds the configuration for the app logging

@@ -20,7 +20,10 @@ import (
 	"github.com/contre95/soulsolid/src/features/ui"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/template/html/v2"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Server is the HTTP server for the application.
@@ -139,6 +142,12 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	lyrics.RegisterRoutes(app, lyricsHandler)
 	reorganizeHandler := reorganize.NewHandler(reorganizeService, cfg)
 	reorganize.RegisterRoutes(app, reorganizeHandler)
+
+	if cfg.Get().Server.PrometheusEnabled {
+		collector := metrics.NewPrometheusCollector(metricsService.GetLibraryMetrics(), jobService)
+		prometheus.MustRegister(collector)
+		app.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
+	}
 
 	return &Server{app: app, port: cfg.Get().Server.Port}
 }
