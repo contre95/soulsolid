@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
@@ -179,16 +180,16 @@ func (s *Service) buildTrackFromFormData(ctx context.Context, originalTrack *mus
 
 	// Handle artists - support both existing and temporary IDs
 	if artistIDsStr := strings.TrimSpace(formData["artist_ids"]); artistIDsStr != "" {
-		artistIDs := strings.Split(artistIDsStr, ",")
-		for _, artistID := range artistIDs {
+		artistIDs := strings.SplitSeq(artistIDsStr, ",")
+		for artistID := range artistIDs {
 			artistID = strings.TrimSpace(artistID)
 			if artistID != "" {
 				var artist *music.Artist
 				var err error
 
-				if strings.HasPrefix(artistID, "temp_") {
+				if after, ok := strings.CutPrefix(artistID, "temp_"); ok {
 					// Handle temporary ID - validate artist exists by name
-					artistName := strings.TrimPrefix(artistID, "temp_")
+					artistName := after
 					// First check if artist exists by name (without creating)
 					existingArtist, err := s.libraryRepo.GetArtistByName(ctx, artistName)
 					if err != nil {
@@ -291,10 +292,16 @@ func (s *Service) buildTrackFromFormData(ctx context.Context, originalTrack *mus
 	// Copy attributes including AcoustID
 	if originalTrack.Attributes != nil {
 		track.Attributes = make(map[string]string)
-		for k, v := range originalTrack.Attributes {
-			track.Attributes[k] = v
-		}
+		maps.Copy(track.Attributes, originalTrack.Attributes)
 	}
+	// Set HasLyrics based on form data (checkbox)
+	track.HasLyrics = formData["has_lyrics"] == "true"
+	// Preserve other fields not in form
+	track.ExplicitContent = originalTrack.ExplicitContent
+	track.PreviewURL = originalTrack.PreviewURL
+	track.Thumbnail = originalTrack.Thumbnail
+	track.Metadata.ExplicitLyrics = originalTrack.Metadata.ExplicitLyrics
+	track.Metadata.OriginalYear = originalTrack.Metadata.OriginalYear
 	return track, nil
 }
 
@@ -520,6 +527,11 @@ func (s *Service) MergeFetchedData(existing, fetched *music.Track) *music.Track 
 				result.Attributes[k] = v
 			}
 		}
+	}
+	// Preserve HasLyrics from existing unless fetched explicitly has it true
+	result.HasLyrics = existing.HasLyrics
+	if fetched.HasLyrics {
+		result.HasLyrics = true
 	}
 	// Note: ExplicitContent is a boolean, so we don't merge it - we use the fetched value
 	// If we wanted to preserve existing explicit content, we would need to decide on the logic

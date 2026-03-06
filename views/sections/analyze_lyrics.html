@@ -1,7 +1,15 @@
 <div id="contenido" class="animate__animated animate__fadeIn">
+    <style>
+        .lyrics-queue-header-compact h2 {
+            display: none !important;
+        }
+        .lyrics-queue-header-compact .flex.flex-col.gap-4 {
+            gap: 0.5rem !important;
+        }
+    </style>
     <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">Lyrics Analysis</h1>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
         <!-- Lyrics Analysis Card -->
         <div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-md backdrop-blur-sm transition-all duration-200 hover:bg-white/90 dark:hover:bg-gray-900/80">
             <div class="flex items-center mb-4">
@@ -53,6 +61,38 @@
                     </span>
                 </button>
             </form>
+        </div>
+
+        <!-- Lyrics Queue Card -->
+        <div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-xl p-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-white/90 dark:hover:bg-gray-900/80 flex flex-col">
+            <div class="flex items-center mb-2">
+                <i class="fas fa-microphone text-purple-500 dark:text-purple-400 text-lg mr-2"></i>
+                <h3 class="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                    Lyrics Queue
+                    <span
+                      hx-get="/lyrics/queue/count"
+                      hx-target="this"
+                      hx-swap="innerHTML"
+                      hx-trigger="updateLyricsQueueCount from:body"
+                      class="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-full">
+                      0 items
+                    </span>
+                </h3>
+            </div>
+            <div class="space-y-2 flex-grow flex flex-col min-h-0">
+                <div id="lyrics-queue-header"
+                     hx-get="/ui/lyrics/queue/header"
+                     hx-trigger="load"
+                     hx-swap="innerHTML"
+                     class="w-full lyrics-queue-header-compact">
+                </div>
+                <div id="lyrics-queue-content"
+                     hx-get="/ui/lyrics/queue/items"
+                     hx-trigger="load"
+                     hx-swap="innerHTML"
+                     class="w-full flex-grow overflow-y-auto max-h-[250px]">
+                </div>
+            </div>
         </div>
     </div>
 

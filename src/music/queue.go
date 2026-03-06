@@ -12,6 +12,23 @@ var (
 
 type QueueItemType string
 
+const (
+	// ManualReview indicates a track that needs manual review before import
+	ManualReview QueueItemType = "manual_review"
+	// Duplicate indicates a track that is a duplicate of an existing track
+	Duplicate QueueItemType = "duplicate"
+	// FailedImport indicates a track that failed to import
+	FailedImport QueueItemType = "failed_import"
+	// MissingMetadata indicates a track that is missing required metadata
+	MissingMetadata QueueItemType = "missing_metadata"
+	// ExistingLyrics indicates a track that already has lyrics
+	ExistingLyrics QueueItemType = "existing_lyrics"
+	// Lyric404 indicates a track where lyrics were not found (404)
+	Lyric404 QueueItemType = "lyric_404"
+	// FailedLyrics indicates a track where lyrics fetch failed due to error
+	FailedLyrics QueueItemType = "failed_lyrics"
+)
+
 // QueueItem represents an item in the import queue
 type QueueItem struct {
 	ID        string            `json:"id"`

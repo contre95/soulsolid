@@ -58,6 +58,7 @@ func main() {
 	tagWriter := tag.NewTagWriter(cfgManager.Get().Downloaders.Artwork.Embedded)
 
 	importQueue := queue.NewInMemoryQueue()
+	lyricsQueue := queue.NewInMemoryQueue()
 	dirWatcher, err := watcher.NewWatcher()
 	if err != nil {
 		log.Fatalf("failed to create watcher: %v", err)
@@ -101,7 +102,7 @@ func main() {
 	acoustIDService := providers.NewAcoustIDService(cfgManager)
 	lyricsService := lyrics.NewService(tagWriter, tagReader, db, map[string]lyrics.LyricsProvider{
 		"lrclib": lrclibProvider,
-	}, cfgManager, jobService)
+	}, cfgManager, lyricsQueue, jobService)
 	tagService := metadata.NewService(tagWriter, tagReader, db, map[string]metadata.MetadataProvider{
 		"musicbrainz": musicbrainzProvider,
 		"discogs":     discogsProvider,

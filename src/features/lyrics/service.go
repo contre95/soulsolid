@@ -17,6 +17,7 @@ type Service struct {
 	libraryRepo     music.Library
 	lyricsProviders map[string]LyricsProvider
 	config          *config.Manager
+	queue           music.Queue
 	jobService      music.JobService
 }
 
@@ -31,15 +32,209 @@ type TagReader interface {
 }
 
 // NewService creates a new lyrics service
-func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, lyricsProviders map[string]LyricsProvider, config *config.Manager, jobService music.JobService) *Service {
+func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Library, lyricsProviders map[string]LyricsProvider, config *config.Manager, queue music.Queue, jobService music.JobService) *Service {
 	return &Service{
 		tagWriter:       tagWriter,
 		tagReader:       tagReader,
 		libraryRepo:     libraryRepo,
 		lyricsProviders: lyricsProviders,
 		config:          config,
+		queue:           queue,
 		jobService:      jobService,
 	}
+}
+
+// AddLyricsQueueItem adds a track to the lyrics queue
+func (s *Service) AddLyricsQueueItem(track *music.Track, qType music.QueueItemType, metadata map[string]string) error {
+	if track == nil {
+		return fmt.Errorf("track cannot be nil")
+	}
+	item := music.QueueItem{
+		ID:        track.ID,
+		Type:      qType,
+		Track:     track,
+		Timestamp: time.Now(),
+		Metadata:  metadata,
+	}
+	return s.queue.Add(item)
+}
+
+// GetLyricsQueueItems returns all items in the lyrics queue
+func (s *Service) GetLyricsQueueItems() map[string]music.QueueItem {
+	return s.queue.GetAll()
+}
+
+// ProcessLyricsQueueItem processes a lyrics queue item with the given action
+func (s *Service) ProcessLyricsQueueItem(ctx context.Context, itemID string, action string) error {
+	item, err := s.queue.GetByID(itemID)
+	if err != nil {
+		return fmt.Errorf("queue item not found: %w", err)
+	}
+	if item.Track == nil {
+		return fmt.Errorf("queue item does not contain a valid track")
+	}
+
+	track := item.Track
+	switch item.Type {
+	case ExistingLyrics:
+		switch action {
+		case "override":
+			// Delete existing lyrics and retry fetching with another provider
+			// Get current provider from metadata
+			currentProvider := item.Metadata["provider"]
+			// Try other enabled providers
+			for name, provider := range s.lyricsProviders {
+				if name == currentProvider || !provider.IsEnabled() {
+					continue
+				}
+				// Clear existing lyrics
+				track.Metadata.Lyrics = ""
+				track.HasLyrics = false
+				track.ModifiedDate = time.Now()
+				// Try fetching with this provider
+				searchParams := music.LyricsSearchParams{
+					TrackID: track.ID,
+					Title:   track.Title,
+				}
+				if len(track.Artists) > 0 && track.Artists[0].Artist != nil {
+					searchParams.Artist = track.Artists[0].Artist.Name
+				}
+				if track.Album != nil {
+					searchParams.Album = track.Album.Title
+					if len(track.Album.Artists) > 0 && track.Album.Artists[0].Artist != nil {
+						searchParams.AlbumArtist = track.Album.Artists[0].Artist.Name
+					}
+				}
+				lyrics, err := provider.SearchLyrics(ctx, searchParams)
+				if err != nil {
+					slog.Warn("Failed to fetch lyrics with alternative provider", "provider", name, "trackID", track.ID, "error", err)
+					continue // try next provider
+				}
+				if lyrics == "" {
+					continue // try next provider
+				}
+				// Found lyrics with alternative provider
+				track.Metadata.Lyrics = lyrics
+				track.HasLyrics = true
+				track.ModifiedDate = time.Now()
+				// Write to file tags
+				if err := s.tagWriter.WriteFileTags(ctx, track.Path, track); err != nil {
+					slog.Warn("Failed to write lyrics to file tags", "error", err, "trackID", track.ID)
+				}
+				// Update database
+				if err := s.libraryRepo.UpdateTrack(ctx, track); err != nil {
+					return fmt.Errorf("failed to update track with new lyrics: %w", err)
+				}
+				slog.Info("Successfully overridden lyrics with alternative provider", "trackID", track.ID, "provider", name)
+				return s.queue.Remove(itemID)
+			}
+			// If no other provider worked, keep in queue? Or maybe skip?
+			// For now, skip (remove from queue)
+			slog.Info("No alternative provider found lyrics, removing from queue", "trackID", track.ID)
+			return s.queue.Remove(itemID)
+		case "keep_old":
+			// Just remove from queue
+			return s.queue.Remove(itemID)
+		default:
+			return fmt.Errorf("invalid action '%s' for existing_lyrics, expected 'override' or 'keep_old'", action)
+		}
+	case Lyric404:
+		switch action {
+		case "no_lyrics":
+			// Clear lyrics field and set HasLyrics=false
+			track.Metadata.Lyrics = ""
+			track.HasLyrics = false
+			track.ModifiedDate = time.Now()
+			// Write to file tags (clear lyrics)
+			if err := s.tagWriter.WriteFileTags(ctx, track.Path, track); err != nil {
+				slog.Warn("Failed to clear lyrics in file tags", "error", err, "trackID", track.ID)
+			}
+			// Update database
+			if err := s.libraryRepo.UpdateTrack(ctx, track); err != nil {
+				return fmt.Errorf("failed to update track with cleared lyrics: %w", err)
+			}
+			slog.Info("Marked track as having no lyrics", "trackID", track.ID)
+			return s.queue.Remove(itemID)
+		default:
+			return fmt.Errorf("invalid action '%s' for lyric_404, expected 'no_lyrics'", action)
+		}
+	case FailedLyrics:
+		switch action {
+		case "skip":
+			// Remove from queue without changes
+			return s.queue.Remove(itemID)
+		case "edit_manual":
+			// Remove from queue, user will edit manually
+			return s.queue.Remove(itemID)
+		case "no_lyrics":
+			// Clear lyrics field and set HasLyrics=false
+			track.Metadata.Lyrics = ""
+			track.HasLyrics = false
+			track.ModifiedDate = time.Now()
+			// Write to file tags (clear lyrics)
+			if err := s.tagWriter.WriteFileTags(ctx, track.Path, track); err != nil {
+				slog.Warn("Failed to clear lyrics in file tags", "error", err, "trackID", track.ID)
+			}
+			// Update database
+			if err := s.libraryRepo.UpdateTrack(ctx, track); err != nil {
+				return fmt.Errorf("failed to update track with cleared lyrics: %w", err)
+			}
+			slog.Info("Marked track as having no lyrics", "trackID", track.ID)
+			return s.queue.Remove(itemID)
+		default:
+			return fmt.Errorf("invalid action '%s' for failed_lyrics, expected 'skip', 'edit_manual', or 'no_lyrics'", action)
+		}
+	default:
+		return fmt.Errorf("unsupported queue item type: %s", item.Type)
+	}
+}
+
+// ProcessLyricsQueueGroup processes all items in a group with the given action
+func (s *Service) ProcessLyricsQueueGroup(ctx context.Context, groupKey string, groupType string, action string) error {
+	// Get the group items first to process them individually
+	var groupItems []music.QueueItem
+
+	if groupType == "artist" {
+		groups := s.GetLyricsGroupedByArtist()
+		groupItems = groups[groupKey]
+	} else if groupType == "album" {
+		groups := s.GetLyricsGroupedByAlbum()
+		groupItems = groups[groupKey]
+	} else {
+		return fmt.Errorf("invalid group type: %s", groupType)
+	}
+
+	if len(groupItems) == 0 {
+		return fmt.Errorf("no items found in group %s", groupKey)
+	}
+
+	// Validate action based on item types (we could do per-item validation but each item type may have different allowed actions)
+	// We'll rely on ProcessLyricsQueueItem to validate per item.
+
+	// Process each item in the group
+	for _, item := range groupItems {
+		if err := s.ProcessLyricsQueueItem(ctx, item.ID, action); err != nil {
+			slog.Warn("Failed to process lyrics queue item in group", "itemID", item.ID, "action", action, "error", err)
+			// Continue processing other items even if one fails
+		}
+	}
+
+	return nil
+}
+
+// ClearLyricsQueue removes all items from the lyrics queue
+func (s *Service) ClearLyricsQueue() error {
+	return s.queue.Clear()
+}
+
+// GetLyricsGroupedByArtist returns lyrics queue items grouped by artist
+func (s *Service) GetLyricsGroupedByArtist() map[string][]music.QueueItem {
+	return s.queue.GetGroupedByArtist()
+}
+
+// GetLyricsGroupedByAlbum returns lyrics queue items grouped by album
+func (s *Service) GetLyricsGroupedByAlbum() map[string][]music.QueueItem {
+	return s.queue.GetGroupedByAlbum()
 }
 
 // AddLyrics searches for and adds lyrics to a track using a specific provider
@@ -49,9 +244,22 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 	if err != nil {
 		return fmt.Errorf("failed to get track: %w", err)
 	}
-	// Skip if lyrics already exist
+	// If lyrics already exist, add to queue for manual decision
 	if track.Metadata.Lyrics != "" {
-		slog.Debug("Track already has lyrics", "trackID", trackID)
+		slog.Info("Track already has lyrics, adding to queue", "trackID", trackID, "lyricsLength", len(track.Metadata.Lyrics))
+		if err := s.AddLyricsQueueItem(track, ExistingLyrics, map[string]string{"provider": providerName}); err != nil {
+			slog.Warn("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
+		} else {
+			slog.Debug("Successfully added track to existing_lyrics queue", "trackID", trackID)
+		}
+		// Ensure HasLyrics is set to true if lyrics exist
+		if !track.HasLyrics {
+			track.HasLyrics = true
+			track.ModifiedDate = time.Now()
+			if err := s.libraryRepo.UpdateTrack(ctx, track); err != nil {
+				slog.Warn("Failed to update track HasLyrics flag", "trackID", trackID, "error", err)
+			}
+		}
 		return nil
 	}
 	// Build search parameters from current track data
@@ -82,12 +290,20 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 	lyrics, err := targetProvider.SearchLyrics(ctx, searchParams)
 	if err != nil {
 		slog.Warn("Failed to search lyrics with provider", "provider", targetProvider.Name(), "trackID", trackID, "title", searchParams.Title, "artist", searchParams.Artist, "error", err.Error())
+		// Add to failed_lyrics queue for manual decision
+		if err := s.AddLyricsQueueItem(track, FailedLyrics, map[string]string{"provider": providerName, "error": err.Error()}); err != nil {
+			slog.Warn("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
+		}
 		return fmt.Errorf("failed to search lyrics with provider '%s': %w", providerName, err)
 	}
 
 	if lyrics == "" {
 		slog.Info("No lyrics found for track with provider", "trackID", trackID, "title", track.Title, "artist", searchParams.Artist, "provider", providerName)
-		return nil // Not an error if no lyrics found, just return
+		// Add to lyric_404 queue for manual decision
+		if err := s.AddLyricsQueueItem(track, Lyric404, map[string]string{"provider": providerName}); err != nil {
+			slog.Warn("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
+		}
+		return nil
 	}
 
 	slog.Info("Found lyrics with provider", "provider", targetProvider.Name(), "trackID", trackID, "lyricsLength", len(lyrics))
@@ -100,6 +316,7 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 
 	// Update the track with the lyrics
 	track.Metadata.Lyrics = lyrics
+	track.HasLyrics = true
 	track.ModifiedDate = time.Now()
 
 	// Write lyrics to file tags
