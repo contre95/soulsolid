@@ -96,7 +96,7 @@
     class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg lg:col-span-2"
     style="height: 300px"
     hx-get="/ui/metrics/charts/year"
-    hx-trigger="load"
+    hx-trigger="apexcharts-ready from:body, load"
     hx-swap="innerHTML"
     hx-indicator="#yearChartLoading"
   >
@@ -113,7 +113,7 @@
     class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg lg:col-span-1"
     style="height: 300px"
     hx-get="/ui/metrics/charts/genre"
-    hx-trigger="load"
+    hx-trigger="apexcharts-ready from:body, load"
     hx-swap="innerHTML"
     hx-indicator="#genreChartLoading"
   >
@@ -130,7 +130,7 @@
     class="bg-white/80 dark:bg-gray-900/70 p-3 rounded-lg shadow-lg lg:col-span-1"
     style="height: 300px"
     hx-get="/ui/metrics/charts/format"
-    hx-trigger="load"
+    hx-trigger="apexcharts-ready from:body, load"
     hx-swap="innerHTML"
     hx-indicator="#formatChartLoading"
   >
@@ -147,7 +147,7 @@
     class="bg-white/80 dark:bg-gray-900/70 p-3 rounded-lg shadow-lg lg:col-span-2"
     style="height: 300px"
     hx-get="/ui/metrics/charts/metadata"
-    hx-trigger="load"
+    hx-trigger="apexcharts-ready from:body, load"
     hx-swap="innerHTML"
     hx-indicator="#metadataChartLoading"
   >
@@ -162,12 +162,17 @@
 
 <script>
     // Conditionally load ApexCharts to avoid SES issues
+    function triggerCharts() {
+      htmx.trigger(document.body, 'apexcharts-ready');
+    }
+
     if (typeof ApexCharts === 'undefined') {
       try {
         const script = document.createElement('script');
         script.src = '/js/apexcharts.min.js';
         script.onload = function() {
           console.log('ApexCharts loaded successfully');
+          triggerCharts();
         };
         script.onerror = function() {
           console.warn('ApexCharts failed to load');
@@ -178,6 +183,8 @@
         console.warn('ApexCharts loading failed:', e);
         showChartFallbacks();
       }
+    } else {
+      triggerCharts();
     }
 
     function showChartFallbacks() {
