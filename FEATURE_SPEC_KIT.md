@@ -363,6 +363,234 @@ Jobs are triggered through the service layer, not directly from handlers:
 - Handlers return appropriate responses (HTMX toast or JSON with job ID)
 - **Important**: This maintains clean architecture where handlers don't directly access job services
 
+### 4. Jobs and Queue Together
+
+Jobs and queue work together - see [Queue Integration](#queue-integration) for details:
+- Jobs add items to queue when encountering edge cases needing user decision
+- Queue items are processed by user actions, not automatically
+- Example: Import job finds duplicate → adds to queue → user reviews and decides
+
+## Queue Integration
+
+For items requiring manual user decision, integrate with the queue system:
+
+### 1. Overview: Queue vs Jobs
+
+The queue and job system serve different purposes:
+
+| Aspect | Jobs | Queue |
+|--------|------|-------|
+| **Purpose** | Automated background processing | Manual user decisions |
+| **Trigger** | User initiates, runs automatically | Job encounters edge case |
+| **Execution** | Background goroutine | User visits UI and takes action |
+| **Example** | "Download album", "Analyze library" | "Duplicate track found", "Lyrics not found" |
+
+**Pattern**: Features use both - jobs do the work, queue captures edge cases needing review.
+
+### 2. QueueItemType Definitions
+
+**Reference**: `src/music/queue.go:13-30`
+
+QueueItemType differentiates what created the queue item and what actions are available:
+
+| QueueItemType | Value | Purpose | Used By |
+|---------------|-------|---------|---------|
+| `ManualReview` | `"manual_review"` | Track needs manual review before import | importing |
+| `Duplicate` | `"duplicate"` | Track is a duplicate of existing track | importing |
+| `FailedImport` | `"failed_import"` | Track failed to import | importing |
+| `MissingMetadata` | `"missing_metadata"` | Track is missing required metadata | importing |
+| `ExistingLyrics` | `"existing_lyrics"` | Track already has lyrics | lyrics |
+| `Lyric404` | `"lyric_404"` | Lyrics not found (404) | lyrics |
+| `FailedLyrics` | `"failed_lyrics"` | Lyrics fetch failed due to error | lyrics |
+
+### 3. The Action Flow
+
+The queue system follows an event-driven pull pattern:
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Job runs       │────▶│  User visits    │────▶│  User submits   │
+│  (background)   │     │  /feature/queue  │     │  action         │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+        │                                                │
+        ▼                                                ▼
+┌─────────────────┐                              ┌─────────────────┐
+│  queue.Add()    │                              │  Service.Process│
+│  QueueItem      │────▶ (items)                 │  QueueItem()    │
+└─────────────────┘                              └─────────────────┘
+                                                        │
+                                                        ▼
+                                               ┌─────────────────┐
+                                               │  queue.Remove() │
+                                               │  (item processed)│
+                                               └─────────────────┘
+```
+
+**Step-by-step**:
+1. **Job runs** - Background job processes tracks
+2. **Encounters issue** - Finds duplicate, missing metadata, failed, etc.
+3. **Adds to queue** - Calls `queue.Add(QueueItem{Type, Track, Metadata})`
+4. **User visits queue** - Goes to `/feature/queue` (e.g., `/lyrics/queue`)
+5. **User takes action** - POST to `/feature/queue/:id/:action` (e.g., `override`)
+6. **Service processes** - `Service.ProcessQueueItem()` executes action
+7. **Item removed** - `queue.Remove()` after processing
+
+### 4. Adding Items to Queue
+
+**Reference**: `src/features/importing/directory_job.go:148-165`
+
+From within a job, add items when encountering issues:
+
+```go
+func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType music.QueueItemType, jobID string, metadata map[string]string) error {
+    if track.ID == "" {
+        return fmt.Errorf("track ID cannot be empty")
+    }
+    item := music.QueueItem{
+        ID:        track.ID,
+        Type:      queueType,
+        Track:     track,
+        Timestamp: time.Now(),
+        JobID:     jobID,
+        Metadata:  metadata,
+    }
+    return e.service.queue.Add(item)
+}
+```
+
+**Important**: Only add to queue when user decision is needed - not for normal processing failures.
+
+### 5. Processing Queue Items
+
+**Reference**: `src/features/lyrics/service.go:68-190`
+
+Each feature defines its own processing logic in the service layer:
+
+```go
+func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action string) error {
+    item, err := s.queue.GetByID(itemID)
+    if err != nil {
+        return fmt.Errorf("queue item not found: %w", err)
+    }
+
+    switch item.Type {
+    case ExistingLyrics:
+        switch action {
+        case "override":
+            // Fetch from another provider
+        case "keep_old":
+            // Just remove from queue
+        }
+    case Lyric404:
+        switch action {
+        case "no_lyrics":
+            // Mark track as having no lyrics
+        }
+    // ... other types
+    }
+
+    // After processing, remove from queue
+    return s.queue.Remove(itemID)
+}
+```
+
+The service contains:
+1. **Get item** from queue by ID
+2. **Switch on QueueItemType** - different types have different valid actions
+3. **Switch on action** - execute the appropriate logic
+4. **Remove from queue** - item is processed
+
+### 6. Queue Routes
+
+**Reference**: `src/features/lyrics/routes.go:26-31`
+
+Register routes for queue UI and actions:
+
+```go
+// Queue routes
+queue := app.Group("/lyrics/queue")
+queue.Get("/items", handler.RenderLyricsQueueItems)
+queue.Get("/items/grouped", handler.RenderGroupedLyricsQueueItems)
+queue.Post("/:id/:action", handler.ProcessQueueItem)
+queue.Post("/group/:groupType/:groupKey/:action", handler.ProcessQueueGroup)
+queue.Post("/clear", handler.ClearQueue)
+```
+
+Typical routes:
+- `GET /feature/queue/items` - List all items
+- `GET /feature/queue/items/grouped` - List items grouped by artist/album
+- `POST /feature/queue/:id/:action` - Process single item with action
+- `POST /feature/queue/group/:type/:key/:action` - Process group
+- `POST /feature/queue/clear` - Clear all items
+
+### 7. Adding Queue to a New Feature
+
+To add queue support to a feature that doesn't have it:
+
+1. **Add queue dependency to service**:
+```go
+type Service struct {
+    // ... other deps
+    queue music.Queue
+}
+
+func NewService(..., queue music.Queue) *Service {
+    return &Service{
+        // ... other fields
+        queue: queue,
+    }
+}
+```
+
+2. **Add queue to main.go**:
+```go
+queue := queue.NewInMemoryQueue()
+importingService := importing.NewService(..., queue, ...)
+```
+
+3. **Add items during job execution** (when encountering edge cases)
+
+4. **Add ProcessQueueItem method** to service with switch on QueueItemType
+
+5. **Add route handlers** for queue display and actions
+
+6. **Create queue UI templates** in `views/feature/`
+
+### 8. Job → Queue Relationship
+
+Jobs and queue work together:
+
+```
+Job (background task)
+    │
+    ├── normal case ──────▶ Job completes successfully
+    │
+    └── edge case ──────▶ queue.Add(QueueItem) 
+                              │
+                              ▼
+                        User reviews
+                              │
+                              ▼
+                        POST action
+                              │
+                              ▼
+                        Service.ProcessQueueItem()
+                              │
+                              ▼
+                        queue.Remove()
+```
+
+**Jobs add items to queue** when encountering:
+- Duplicates
+- Missing required metadata
+- Processing failures that need user decision
+- Existing data that might need override
+
+**Jobs do NOT add to queue** for:
+- Normal processing (just complete)
+- Expected failures (network timeout, etc.) - log and continue
+- Items that can be auto-retried
+
 ## Telegram Bot Integration (Optional)
 
 If your feature needs Telegram bot support:
