@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/contre95/soulsolid/src/music"
 )
@@ -106,26 +105,14 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 
 			job.Logger.Debug("Processing track", "trackID", track.ID, "title", track.Title, "hasLyrics", track.HasLyrics, "lyricsLength", len(track.Metadata.Lyrics))
 
-			// Fix inconsistent state where lyrics exist but HasLyrics is false
-			if !track.HasLyrics && track.Metadata.Lyrics != "" {
-				job.Logger.Warn("Track has lyrics but marked as no lyrics - fixing inconsistency", "trackID", track.ID, "title", track.Title, "lyricsLength", len(track.Metadata.Lyrics))
-				// Update track to reflect that it has lyrics
-				track.HasLyrics = true
-				track.ModifiedDate = time.Now()
-				if err := t.service.libraryRepo.UpdateTrack(ctx, track); err != nil {
-					job.Logger.Error("Failed to update track HasLyrics flag", "trackID", track.ID, "error", err)
-					errors++
-					processed++
-					continue
-				}
-				job.Logger.Info("Fixed inconsistent HasLyrics flag", "trackID", track.ID, "title", track.Title)
-			}
-
 			// Skip tracks explicitly marked as having no lyrics (has_lyrics = false and no lyrics)
-			if !track.HasLyrics && track.Metadata.Lyrics == "" {
+			if !track.HasLyrics {
 				job.Logger.Info("Track explicitly marked as having no lyrics - skipping", "trackID", track.ID, "title", track.Title, "has_lyrics", track.HasLyrics)
 				skipped++
 				processed++
+				if track.Metadata.Lyrics != "" {
+					job.Logger.Warn("Track has lyrics but marked as without lyrics - fix inconsistency", "trackID", track.ID, "title", track.Title, "lyricsLength", len(track.Metadata.Lyrics))
+				}
 				continue
 			}
 
