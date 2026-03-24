@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
@@ -236,14 +237,21 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 		}
 
 		if newLyrics != "" {
-			slog.Info("Track already has lyrics, new lyrics found, adding to queue", "trackID", trackID, "existingLength", len(track.Metadata.Lyrics), "newLength", len(newLyrics))
-			if err := s.AddLyricsQueueItem(track, ExistingLyrics, map[string]string{
-				"provider":   providerName,
-				"new_lyrics": newLyrics,
-			}); err != nil {
-				slog.Warn("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
+			existingTrimmed := strings.TrimSpace(track.Metadata.Lyrics)
+			newTrimmed := strings.TrimSpace(newLyrics)
+			slog.Info("Track already has lyrics, comparing with fetched", "trackID", trackID, "existingLength", len(track.Metadata.Lyrics), "newLength", len(newLyrics), "identical", existingTrimmed == newTrimmed)
+			if existingTrimmed != newTrimmed {
+				slog.Info("Track already has lyrics, new lyrics differ, adding to queue", "trackID", trackID)
+				if err := s.AddLyricsQueueItem(track, ExistingLyrics, map[string]string{
+					"provider":   providerName,
+					"new_lyrics": newLyrics,
+				}); err != nil {
+					slog.Warn("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
+				} else {
+					slog.Debug("Successfully added track to existing_lyrics queue with new lyrics", "trackID", trackID)
+				}
 			} else {
-				slog.Debug("Successfully added track to existing_lyrics queue with new lyrics", "trackID", trackID)
+				slog.Info("Track already has lyrics, new lyrics are identical, skipping queue", "trackID", trackID)
 			}
 		} else {
 			slog.Info("Track already has lyrics, no new lyrics found", "trackID", trackID)

@@ -104,6 +104,8 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 			progress := (processed * 100) / totalTracks
 			progressUpdater(progress, fmt.Sprintf("Processing track %d/%d: %s", processed+1, totalTracks, track.Title))
 
+			job.Logger.Debug("Processing track", "trackID", track.ID, "title", track.Title, "hasLyrics", track.HasLyrics, "lyricsLength", len(track.Metadata.Lyrics))
+
 			// Fix inconsistent state where lyrics exist but HasLyrics is false
 			if !track.HasLyrics && track.Metadata.Lyrics != "" {
 				job.Logger.Warn("Track has lyrics but marked as no lyrics - fixing inconsistency", "trackID", track.ID, "title", track.Title, "lyricsLength", len(track.Metadata.Lyrics))
@@ -127,6 +129,14 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 				continue
 			}
 
+			// Skip tracks that already have lyrics
+			if track.Metadata.Lyrics != "" {
+				job.Logger.Info("Track already has lyrics - skipping", "trackID", track.ID, "title", track.Title)
+				skipped++
+				processed++
+				continue
+			}
+
 			// Get the specified provider from job metadata
 			provider, ok := job.Metadata["provider"].(string)
 			if !ok || provider == "" {
@@ -142,17 +152,9 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 				errors++
 				// Continue with other tracks - don't fail the entire job
 			} else {
-				// Check if the track was added to the queue (existing lyrics, lyric 404, or failed lyrics queued earlier)
-				queueItems := t.service.GetLyricsQueueItems()
-				_, queued := queueItems[track.ID]
-				if queued && !initialQueueIDs[track.ID] {
-					// Track was queued (existing_lyrics or lyric_404), not counted as updated
-					// No increment to updated counter
-				} else {
-					// Lyrics were successfully added
-					updated++
-					job.Logger.Info("Successfully added lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "green")
-				}
+				// Lyrics operation succeeded
+				updated++
+				job.Logger.Info("Successfully added lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "green")
 			}
 
 			processed++
