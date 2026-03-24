@@ -129,14 +129,6 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 				continue
 			}
 
-			// Skip tracks that already have lyrics
-			if track.Metadata.Lyrics != "" {
-				job.Logger.Info("Track already has lyrics - skipping", "trackID", track.ID, "title", track.Title)
-				skipped++
-				processed++
-				continue
-			}
-
 			// Get the specified provider from job metadata
 			provider, ok := job.Metadata["provider"].(string)
 			if !ok || provider == "" {
@@ -146,15 +138,20 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 
 			// Try to fetch lyrics for this track using the specified provider
 			job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "provider", provider, "color", "cyan")
-			err := t.service.AddLyrics(ctx, track.ID, provider)
+			result, err := t.service.AddLyrics(ctx, track.ID, provider)
 			if err != nil {
 				job.Logger.Error("Failed to add lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "error", err.Error(), "manual_fix", "<a href='/ui/library/tag/edit/"+track.ID+"' target='_blank'>track</a>")
 				errors++
 				// Continue with other tracks - don't fail the entire job
 			} else {
-				// Lyrics operation succeeded
-				updated++
-				job.Logger.Info("Successfully added lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "green")
+				switch result {
+				case LyricsAdded, LyricsQueued:
+					updated++
+					job.Logger.Info("Successfully processed lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "result", result, "color", "green")
+				case LyricsSkipped:
+					skipped++
+					job.Logger.Info("Skipped lyrics for track (identical to existing)", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "yellow")
+				}
 			}
 
 			processed++

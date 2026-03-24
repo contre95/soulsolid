@@ -11,6 +11,15 @@ import (
 	"github.com/contre95/soulsolid/src/music"
 )
 
+// AddLyricsResult represents the outcome of an AddLyrics operation
+type AddLyricsResult int
+
+const (
+	LyricsAdded   AddLyricsResult = iota // Lyrics were added to a track without lyrics
+	LyricsQueued                         // Lyrics were queued for existing track (different or failed)
+	LyricsSkipped                        // Lyrics were skipped (identical to existing)
+)
+
 // Service provides lyrics functionality
 type Service struct {
 	tagWriter       TagWriter
@@ -203,11 +212,11 @@ func (s *Service) GetLyricsGroupedByAlbum() map[string][]music.QueueItem {
 }
 
 // AddLyrics searches for and adds lyrics to a track using a specific provider
-func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName string) error {
+func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName string) (AddLyricsResult, error) {
 	// Get current track data
 	track, err := s.libraryRepo.GetTrack(ctx, trackID)
 	if err != nil {
-		return fmt.Errorf("failed to get track: %w", err)
+		return LyricsSkipped, fmt.Errorf("failed to get track: %w", err)
 	}
 	// If lyrics already exist, fetch new lyrics and add to queue for manual decision
 	if track.Metadata.Lyrics != "" {
@@ -227,13 +236,13 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 
 		targetProvider, exists := s.lyricsProviders[providerName]
 		if !exists || targetProvider == nil || !targetProvider.IsEnabled() {
-			return fmt.Errorf("lyrics provider '%s' not found or not enabled", providerName)
+			return LyricsSkipped, fmt.Errorf("lyrics provider '%s' not found or not enabled", providerName)
 		}
 
 		newLyrics, err := targetProvider.SearchLyrics(ctx, searchParams)
 		if err != nil {
 			slog.Warn("Failed to search new lyrics for existing lyrics queue", "provider", providerName, "trackID", trackID, "error", err)
-			return nil
+			return LyricsSkipped, nil
 		}
 
 		if newLyrics != "" {
@@ -256,7 +265,7 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 		} else {
 			slog.Info("Track already has lyrics, no new lyrics found", "trackID", trackID)
 		}
-		return nil
+		return LyricsSkipped, nil
 	}
 	// Build search parameters from current track data
 	searchParams := music.LyricsSearchParams{
@@ -278,7 +287,7 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 	// Find the specific provider
 	targetProvider, exists := s.lyricsProviders[providerName]
 	if !exists || targetProvider == nil || !targetProvider.IsEnabled() {
-		return fmt.Errorf("lyrics provider '%s' not found or not enabled", providerName)
+		return LyricsSkipped, fmt.Errorf("lyrics provider '%s' not found or not enabled", providerName)
 	}
 
 	// Search for lyrics using the specified provider
@@ -290,7 +299,7 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 		if err := s.AddLyricsQueueItem(track, FailedLyrics, map[string]string{"provider": providerName, "error": err.Error()}); err != nil {
 			slog.Warn("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
 		}
-		return fmt.Errorf("failed to search lyrics with provider '%s': %w", providerName, err)
+		return LyricsQueued, fmt.Errorf("failed to search lyrics with provider '%s': %w", providerName, err)
 	}
 
 	if lyrics == "" {
@@ -299,7 +308,7 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 		if err := s.AddLyricsQueueItem(track, Lyric404, map[string]string{"provider": providerName}); err != nil {
 			slog.Warn("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
 		}
-		return nil
+		return LyricsQueued, nil
 	}
 
 	slog.Info("Found lyrics with provider", "provider", targetProvider.Name(), "trackID", trackID, "lyricsLength", len(lyrics))
@@ -324,11 +333,11 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 	// Update track in database
 	err = s.libraryRepo.UpdateTrack(ctx, track)
 	if err != nil {
-		return fmt.Errorf("failed to update track with lyrics: %w", err)
+		return LyricsSkipped, fmt.Errorf("failed to update track with lyrics: %w", err)
 	}
 
 	slog.Info("Successfully added lyrics for track", "trackID", trackID, "provider", providerName, "lyricsLength", len(lyrics))
-	return nil
+	return LyricsAdded, nil
 }
 
 // GetEnabledLyricsProviders returns a map of enabled lyrics providers
