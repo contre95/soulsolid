@@ -238,6 +238,7 @@ func (p *DiscogsProvider) convertDiscogsResultToTrack(result discogsResult) *mus
 			Year:  year,
 			Genre: genre,
 		},
+		HasLyrics: true,
 	}
 
 	// Ensure the URI is a full URL
@@ -299,6 +300,7 @@ func (p *DiscogsProvider) convertDiscogsTrackToTrack(discogsTrack discogsTrack, 
 			Genre:       genre,
 			TrackNumber: trackNumber,
 		},
+		HasLyrics: true,
 	}
 
 	// Ensure the URI is a full URL

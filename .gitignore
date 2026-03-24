@@ -48,6 +48,7 @@ node_modules/
 
 # Soulsolid
 pocs
+music
 **/*.db
 **/*.db-journal
 downloads

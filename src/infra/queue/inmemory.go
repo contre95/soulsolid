@@ -74,7 +74,7 @@ func (q *InMemoryQueue) GetGroupedByArtist() map[string][]music.QueueItem {
 
 	for _, item := range allItems {
 		if item.Track != nil {
-			if len(item.Track.Artists) > 0 {
+			if len(item.Track.Artists) > 0 && item.Track.Artists[0].Artist != nil {
 				artistName := item.Track.Artists[0].Artist.Name
 				groups[artistName] = append(groups[artistName], item)
 			} else {
@@ -97,7 +97,7 @@ func (q *InMemoryQueue) GetGroupedByAlbum() map[string][]music.QueueItem {
 	for _, item := range allItems {
 		if item.Track != nil && item.Track.Album != nil {
 			albumKey := item.Track.Album.Title
-			if len(item.Track.Album.Artists) > 0 {
+			if len(item.Track.Album.Artists) > 0 && item.Track.Album.Artists[0].Artist != nil {
 				albumKey += " - " + item.Track.Album.Artists[0].Artist.Name
 			}
 			groups[albumKey] = append(groups[albumKey], item)

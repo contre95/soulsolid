@@ -37,6 +37,9 @@ module.exports = {
           900: "#4c1d95",
           950: "#2e1065",
         },
+        accent: {
+          DEFAULT: "#397CAF",
+        },
       },
     },
   },

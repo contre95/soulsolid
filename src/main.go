@@ -57,6 +57,7 @@ func main() {
 	tagWriter := tag.NewTagWriter(cfgManager.Get().Downloaders.Artwork.Embedded)
 
 	importQueue := queue.NewInMemoryQueue()
+	lyricsQueue := queue.NewInMemoryQueue()
 	dirWatcher, err := watcher.NewWatcher()
 	if err != nil {
 		log.Fatalf("failed to create watcher: %v", err)
@@ -91,7 +92,7 @@ func main() {
 	acoustIDService := providers.NewAcoustIDService(cfgManager)
 	lyricsService := lyrics.NewService(tagWriter, tagReader, db, map[string]lyrics.LyricsProvider{
 		"lrclib": lrclibProvider,
-	}, cfgManager, jobService)
+	}, cfgManager, lyricsQueue, jobService)
 	tagService := metadata.NewService(tagWriter, tagReader, db, map[string]metadata.MetadataProvider{
 		"musicbrainz": musicbrainzProvider,
 		"discogs":     discogsProvider,
@@ -135,14 +136,27 @@ func main() {
 	}
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
-	<-quit
-	slog.Info("Shutting down server...")
+	serverErr := make(chan error, 1)
+	go func() {
+		slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
+		if err := server.Start(); err != nil {
+			serverErr <- err
+		}
+	}()
+
+	select {
+	case <-quit:
+		slog.Info("Shutting down server...")
+	case err := <-serverErr:
+		slog.Error("server stopped", "error", err)
+	}
 
 	if telegramBot != nil {
 		telegramBot.Stop()
 		slog.Info("Telegram bot stopped")
 	}
 
+	importingService.StopWatcher()
 	if err := server.Shutdown(); err != nil {
 		log.Fatalf("failed to shutdown server: %v", err)
 	}

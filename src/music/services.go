@@ -35,6 +35,7 @@ type LyricsService interface {
 	GetEnabledLyricsProviders() map[string]bool
 	GetLyricsProvidersInfo() []LyricsProviderInfo
 	SearchLyrics(ctx context.Context, trackID string, providerName string) (string, error)
+	GetLyricsQueueItems() map[string]QueueItem
 }
 
 // JobService defines the interface for job management
