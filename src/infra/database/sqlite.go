@@ -79,6 +79,7 @@ func createTables(db *sql.DB) error {
 			original_year INTEGER,
 			lyrics TEXT,
 			explicit_lyrics BOOLEAN DEFAULT FALSE,
+			has_lyrics BOOLEAN DEFAULT TRUE,
 			bpm REAL,
 			gain REAL,
 			source TEXT,
@@ -184,6 +185,7 @@ func createTables(db *sql.DB) error {
 	_, err = db.Exec(`
 		ALTER TABLE tracks ADD COLUMN source TEXT;
 		ALTER TABLE tracks ADD COLUMN source_url TEXT;
+		ALTER TABLE tracks ADD COLUMN has_lyrics BOOLEAN DEFAULT TRUE;
 	`)
 	// Ignore errors if columns already exist
 	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
@@ -212,12 +214,12 @@ func (d *SqliteLibrary) AddTrack(ctx context.Context, track *music.Track) error 
     INSERT INTO tracks (id, path, title, title_version, duration, track_number, disc_number,
       isrc, chromaprint_fingerprint, bitrate, format, sample_rate, bit_depth, channels,
       explicit_content, preview_url, composer, genre, year, original_year, lyrics,
-      explicit_lyrics, bpm, gain, source, source_url, added_date, modified_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      explicit_lyrics, has_lyrics, bpm, gain, source, source_url, added_date, modified_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, track.ID, track.Path, track.Title, track.TitleVersion, track.Metadata.Duration, track.Metadata.TrackNumber, track.Metadata.DiscNumber,
 		track.ISRC, track.ChromaprintFingerprint, track.Bitrate, track.Format, track.SampleRate, track.BitDepth, track.Channels,
 		track.ExplicitContent, track.PreviewURL, track.Metadata.Composer, track.Metadata.Genre, track.Metadata.Year,
-		track.Metadata.OriginalYear, track.Metadata.Lyrics, track.Metadata.ExplicitLyrics, track.Metadata.BPM, track.Metadata.Gain,
+		track.Metadata.OriginalYear, track.Metadata.Lyrics, track.Metadata.ExplicitLyrics, track.HasLyrics, track.Metadata.BPM, track.Metadata.Gain,
 		track.MetadataSource.Source, track.MetadataSource.MetadataSourceURL, track.AddedDate.Format(time.RFC3339), track.ModifiedDate.Format(time.RFC3339))
 	if err != nil {
 		return err
@@ -437,7 +439,7 @@ func (d *SqliteLibrary) GetTrack(ctx context.Context, id string) (*music.Track, 
 	row := tx.QueryRowContext(ctx, `
     SELECT id, path, title, title_version, duration, track_number, disc_number,
       isrc, chromaprint_fingerprint, bitrate, format, sample_rate, bit_depth, channels, explicit_content,
-      preview_url, composer, genre, year, original_year, lyrics, explicit_lyrics,
+      preview_url, composer, genre, year, original_year, lyrics, explicit_lyrics, has_lyrics,
       bpm, gain, source, source_url, added_date, modified_date
     FROM tracks
     WHERE id = ?
@@ -452,7 +454,7 @@ func (d *SqliteLibrary) GetTrack(ctx context.Context, id string) (*music.Track, 
 		&track.ISRC, &track.ChromaprintFingerprint, &track.Bitrate, &track.Format, &track.SampleRate, &track.BitDepth,
 		&track.Channels, &track.ExplicitContent, &track.PreviewURL,
 		&track.Metadata.Composer, &track.Metadata.Genre, &track.Metadata.Year,
-		&track.Metadata.OriginalYear, &track.Metadata.Lyrics, &track.Metadata.ExplicitLyrics,
+		&track.Metadata.OriginalYear, &track.Metadata.Lyrics, &track.Metadata.ExplicitLyrics, &track.HasLyrics,
 		&track.Metadata.BPM, &track.Metadata.Gain, &sourceNull, &sourceURLNull, &addedDateStr, &modifiedDateStr)
 
 	// Handle nullable source fields
@@ -788,12 +790,12 @@ func (d *SqliteLibrary) UpdateTrack(ctx context.Context, track *music.Track) err
     SET path = ?, title = ?, title_version = ?, duration = ?, track_number = ?, disc_number = ?,
       isrc = ?, bitrate = ?, format = ?, chromaprint_fingerprint = ?, sample_rate = ?, bit_depth = ?, channels = ?,
       explicit_content = ?, preview_url = ?, composer = ?, genre = ?, year = ?,
-      original_year = ?, lyrics = ?, explicit_lyrics = ?, bpm = ?, gain = ?, source = ?, source_url = ?, modified_date = ?
+      original_year = ?, lyrics = ?, explicit_lyrics = ?, has_lyrics = ?, bpm = ?, gain = ?, source = ?, source_url = ?, modified_date = ?
     WHERE id = ?
   `, track.Path, track.Title, track.TitleVersion, track.Metadata.Duration, track.Metadata.TrackNumber, track.Metadata.DiscNumber,
 		track.ISRC, track.Bitrate, track.Format, track.ChromaprintFingerprint, track.SampleRate, track.BitDepth, track.Channels,
 		track.ExplicitContent, track.PreviewURL, track.Metadata.Composer, track.Metadata.Genre, track.Metadata.Year,
-		track.Metadata.OriginalYear, track.Metadata.Lyrics, track.Metadata.ExplicitLyrics, track.Metadata.BPM, track.Metadata.Gain,
+		track.Metadata.OriginalYear, track.Metadata.Lyrics, track.Metadata.ExplicitLyrics, track.HasLyrics, track.Metadata.BPM, track.Metadata.Gain,
 		track.MetadataSource.Source, track.MetadataSource.MetadataSourceURL, track.ModifiedDate.Format(time.RFC3339), track.ID)
 	if err != nil {
 		return err

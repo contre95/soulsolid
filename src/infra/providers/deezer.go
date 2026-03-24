@@ -229,6 +229,7 @@ func (p *DeezerProvider) convertDeezerTrackToTrack(deezerTrack deezerTrack, albu
 			Source:            "deezer",
 			MetadataSourceURL: deezerTrack.Link,
 		},
+		HasLyrics: true,
 	}
 
 	return track

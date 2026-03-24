@@ -8,24 +8,33 @@
             <div class="flex items-center space-x-2 ml-2">
                 <span class="text-xs text-gray-500 dark:text-gray-400">{{.Timestamp.Format "Jan 2, 15:04"}}</span>
                  {{if eq .Type "duplicate"}}
-                 <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium tracking-wider bg-violet-500/10 backdrop-blur-md border border-violet-400/30 text-violet-600 dark:text-violet-300">
-                     Duplicate
-                 </span>
-                  {{else if eq .Type "missing_metadata"}}
+                  {{ $tooltip := "" }}{{if len .ItemMetadata}}{{range $key, $value := .ItemMetadata}}{{ $tooltip = printf "%s%s: %s\n" $tooltip $key $value }}{{end}}{{end}}
                   <span 
-                      class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium tracking-wider bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 cursor-help"
-                       title="{{if .ItemMetadata.error}}{{.ItemMetadata.error}}{{end}}"
-                       data-tooltip="{{if .ItemMetadata.error}}{{.ItemMetadata.error}}{{end}}">
-                      Missing Metadata
+                      class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium tracking-wider bg-violet-500/10 backdrop-blur-md border border-violet-400/30 text-violet-600 dark:text-violet-300 {{if len .ItemMetadata}}cursor-help{{end}}"
+                      {{if len .ItemMetadata}}title="{{$tooltip}}" data-tooltip="{{$tooltip}}"{{end}}>
+                      Duplicate
                   </span>
+                  {{else if eq .Type "missing_metadata"}}
+                    {{ $tooltip := "" }}{{if len .ItemMetadata}}{{range $key, $value := .ItemMetadata}}{{ $tooltip = printf "%s%s: %s\n" $tooltip $key $value }}{{end}}{{end}}
+                    <span 
+                        class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium tracking-wider bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 {{if len .ItemMetadata}}cursor-help{{end}}"
+                         {{if len .ItemMetadata}}title="{{$tooltip}}" data-tooltip="{{$tooltip}}"{{end}}>
+                       Missing Metadata
+                    </span>
                  {{else if eq .Type "failed_import"}}
-                 <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium tracking-wider bg-orange-500/10 backdrop-blur-md border border-orange-400/30 text-orange-600 dark:text-orange-300">
-                     Failed Import
-                 </span>
+                  {{ $tooltip := "" }}{{if len .ItemMetadata}}{{range $key, $value := .ItemMetadata}}{{ $tooltip = printf "%s%s: %s\n" $tooltip $key $value }}{{end}}{{end}}
+                  <span 
+                      class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium tracking-wider bg-orange-500/10 backdrop-blur-md border border-orange-400/30 text-orange-600 dark:text-orange-300 {{if len .ItemMetadata}}cursor-help{{end}}"
+                      {{if len .ItemMetadata}}title="{{$tooltip}}" data-tooltip="{{$tooltip}}"{{end}}>
+                      Failed Import
+                  </span>
                  {{else}}
-                 <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium tracking-wider bg-blue-500/10 backdrop-blur-md border border-blue-400/30 text-blue-600 dark:text-blue-300">
-                     Manual Review
-                 </span>
+                  {{ $tooltip := "" }}{{if len .ItemMetadata}}{{range $key, $value := .ItemMetadata}}{{ $tooltip = printf "%s%s: %s\n" $tooltip $key $value }}{{end}}{{end}}
+                  <span 
+                      class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium tracking-wider bg-blue-500/10 backdrop-blur-md border border-blue-400/30 text-blue-600 dark:text-blue-300 {{if len .ItemMetadata}}cursor-help{{end}}"
+                      {{if len .ItemMetadata}}title="{{$tooltip}}" data-tooltip="{{$tooltip}}"{{end}}>
+                      Manual Review
+                  </span>
                  {{end}}
             </div>
         </div>
@@ -36,7 +45,7 @@
              <p><strong>Artists ({{len .Track.Artists}}):</strong> {{if .Track.Artists}}{{range $i, $ar := .Track.Artists}}{{if $i}}, {{end}}{{$ar.Artist.Name}}{{end}}{{end}}</p>
              <p><strong>Album:</strong> {{with .Track.Album}}{{.Title}}{{else}}Unknown Album{{end}}</p>
              <p><strong>Original path:</strong> {{.Track.Path}}</p>
-              {{if .ItemMetadata}}
+              {{if len .ItemMetadata}}
                {{range $key, $value := .ItemMetadata}}
                <p class="text-gray-600 dark:text-gray-400"><strong>{{$key}}:</strong> {{$value}}</p>
                {{end}}

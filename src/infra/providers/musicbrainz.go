@@ -203,6 +203,7 @@ func (p *MusicBrainzProvider) convertMBRecordingToTrack(recording mbRecording) *
 			Source:            "musicbrainz",
 			MetadataSourceURL: fmt.Sprintf("https://musicbrainz.org/recording/%s", recording.ID),
 		},
+		HasLyrics: true,
 	}
 
 	return track

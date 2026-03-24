@@ -1,0 +1,89 @@
+{{if .Groups}}
+{{range $groupKey, $group := .Groups}}
+<div class="w-full bg-white/90 dark:bg-gray-900/90 rounded p-2 border border-gray-200/50 dark:border-gray-700/50 mb-2">
+    <div class="flex flex-col space-y-1">
+        <!-- Compact group header -->
+        <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-1">
+                <i class="fas fa-compact-disc text-purple-500 text-xs"></i>
+                <span class="truncate">{{$groupKey}}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">({{len $group.Items}})</span>
+            </h3>
+        </div>
+
+        <!-- Compact group actions -->
+        <div class="flex flex-wrap gap-1 justify-start">
+            <button type="button"
+                hx-post="/lyrics/queue/group/album/{{$groupKey | urlquery}}/override"
+                hx-target="#toast-container"
+                hx-swap="innerHTML"
+                hx-confirm="Override lyrics for all {{len $group.Items}} tracks in '{{$groupKey}}'?"
+                class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-500/10 border border-green-400/30 text-green-600 dark:text-green-300 hover:bg-green-500/20 dark:hover:bg-green-500/30">
+                <i class="fas fa-sync-alt mr-0.5"></i>
+                Override All
+            </button>
+            <button type="button"
+                hx-post="/lyrics/queue/group/album/{{$groupKey | urlquery}}/no_lyrics"
+                hx-target="#toast-container"
+                hx-swap="innerHTML"
+                hx-confirm="Mark all {{len $group.Items}} tracks in '{{$groupKey}}' as having no lyrics?"
+                class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-500/10 border border-gray-400/30 text-gray-600 dark:text-gray-300 hover:bg-gray-500/20 dark:hover:bg-gray-500/30">
+                <i class="fas fa-times mr-0.5"></i>
+                No Lyrics All
+            </button>
+        </div>
+
+        <!-- Individual tracks (collapsed by default) -->
+        <details class="group">
+            <summary class="cursor-pointer text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-1">
+                <i class="fas fa-chevron-right group-open:rotate-90 transition-transform text-xs"></i>
+                Show tracks
+            </summary>
+            <div class="mt-1 space-y-1 pl-4 border-l border-gray-200 dark:border-gray-700">
+                {{range $group.Items}}
+                <div class="{{if eq .Type "existing_lyrics"}}bg-blue-500/10 dark:bg-blue-500/10{{else if eq .Type "lyric_404"}}bg-orange-500/10 dark:bg-orange-500/10{{else if eq .Type "failed_lyrics"}}bg-red-500/10 dark:bg-red-500/10{{end}} rounded p-1.5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-xs font-medium text-gray-900 dark:text-white truncate">{{.Track.Title}}</h4>
+                            <p class="text-[10px] text-gray-600 dark:text-gray-400 truncate">{{with .Track.Album}}{{.Title}}{{else}}Unknown Album{{end}}</p>
+                        </div>
+                        <div class="flex items-center space-x-0.5 ml-1">
+                            {{if eq .Type "existing_lyrics"}}
+                              {{ $tooltip := "" }}{{if len .ItemMetadata}}{{range $key, $value := .ItemMetadata}}{{ $tooltip = printf "%s%s: %s\n" $tooltip $key $value }}{{end}}{{end}}
+                              <span class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 border border-blue-400/30 text-blue-700 dark:text-blue-300 {{if len .ItemMetadata}}cursor-help{{end}}"
+                                    {{if len .ItemMetadata}}title="{{$tooltip}}" data-tooltip="{{$tooltip}}"{{end}}>
+                                  Existing
+                              </span>
+                            {{else if eq .Type "lyric_404"}}
+                              {{ $tooltip := "" }}{{if len .ItemMetadata}}{{range $key, $value := .ItemMetadata}}{{ $tooltip = printf "%s%s: %s\n" $tooltip $key $value }}{{end}}{{end}}
+                              <span class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-orange-500/20 border border-orange-400/30 text-orange-700 dark:text-orange-300 {{if len .ItemMetadata}}cursor-help{{end}}"
+                                    {{if len .ItemMetadata}}title="{{$tooltip}}" data-tooltip="{{$tooltip}}"{{end}}>
+                                  404
+                              </span>
+                            {{else if eq .Type "failed_lyrics"}}
+                              {{ $tooltip := "" }}{{if len .ItemMetadata}}{{range $key, $value := .ItemMetadata}}{{ $tooltip = printf "%s%s: %s\n" $tooltip $key $value }}{{end}}{{end}}
+                              <span class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-red-500/20 border border-red-400/30 text-red-700 dark:text-red-300 {{if len .ItemMetadata}}cursor-help{{end}}"
+                                    {{if len .ItemMetadata}}title="{{$tooltip}}" data-tooltip="{{$tooltip}}"{{end}}>
+                                  Failed
+                              </span>
+                            {{end}}
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </details>
+    </div>
+</div>
+{{end}}
+{{else}}
+<div class="w-full bg-white/90 dark:bg-gray-900/90 rounded p-3 text-center border border-gray-200/50 dark:border-gray-700/50">
+    <svg class="mx-auto h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+    </svg>
+    <h3 class="mt-1 text-xs font-medium text-gray-900 dark:text-white">No queued items</h3>
+    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+        Lyrics queue is empty.
+    </p>
+</div>
+{{end}}

@@ -140,6 +140,9 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 		tag.AddTextFrame("TBPM", id3v2.EncodingUTF8, fmt.Sprintf("%.0f", track.Metadata.BPM))
 	}
 
+	// Delete all existing TXXX frames to avoid duplicates
+	tag.DeleteFrames("TXXX")
+
 	// Replay Gain
 	if track.Metadata.Gain != 0 {
 		tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
@@ -332,9 +335,10 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 		vorbisComment.Add("COMPOSER", track.Metadata.Composer)
 	}
 
+	// Always remove existing LYRICS field
+	removeExistingFields(vorbisComment, "LYRICS")
 	if track.Metadata.Lyrics != "" {
 		fmt.Printf("DEBUG: Writing lyrics to FLAC file %s: %s\n", filePath, track.Metadata.Lyrics)
-		removeExistingFields(vorbisComment, "LYRICS")
 		vorbisComment.Add("LYRICS", track.Metadata.Lyrics)
 	} else {
 		fmt.Printf("DEBUG: No lyrics to write to FLAC file %s\n", filePath)
