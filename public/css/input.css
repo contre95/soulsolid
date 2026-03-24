@@ -8,43 +8,40 @@
     cursor: pointer;
   }
 
-  a:link,
-  a:visited {
+  a:link, a:visited {
     color: #93c5fd !important;
   }
 
-  a:hover,
-  a:active {
+  a:hover, a:active {
     color: #60a5fa !important;
   }
 }
-
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
-body,
-aside,
-#navbar-menu {
-  background-color: #ffffff;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 1000'%3E%3Cg %3E%3Ccircle fill='%23FFFFFF' cx='50' cy='0' r='50'/%3E%3Cg fill='%23fdfdfe' %3E%3Ccircle cx='0' cy='50' r='50'/%3E%3Ccircle cx='100' cy='50' r='50'/%3E%3C/g%3E%3Ccircle fill='%23fafbfd' cx='50' cy='100' r='50'/%3E%3Cg fill='%23f8f8fc' %3E%3Ccircle cx='0' cy='150' r='50'/%3E%3Ccircle cx='100' cy='150' r='50'/%3E%3C/g%3E%3Ccircle fill='%23f6f6fb' cx='50' cy='200' r='50'/%3E%3Cg fill='%23f3f4fa' %3E%3Ccircle cx='0' cy='250' r='50'/%3E%3Ccircle cx='100' cy='250' r='50'/%3E%3C/g%3E%3Ccircle fill='%23f1f1f9' cx='50' cy='300' r='50'/%3E%3Cg fill='%23efeff8' %3E%3Ccircle cx='0' cy='350' r='50'/%3E%3Ccircle cx='100' cy='350' r='50'/%3E%3C/g%3E%3Ccircle fill='%23ecedf7' cx='50' cy='400' r='50'/%3E%3Cg fill='%23eaeaf6' %3E%3Ccircle cx='0' cy='450' r='50'/%3E%3Ccircle cx='100' cy='450' r='50'/%3E%3C/g%3E%3Ccircle fill='%23e7e8f5' cx='50' cy='500' r='50'/%3E%3Cg fill='%23e5e5f4' %3E%3Ccircle cx='0' cy='550' r='50'/%3E%3Ccircle cx='100' cy='550' r='50'/%3E%3C/g%3E%3Ccircle fill='%23e2e3f3' cx='50' cy='600' r='50'/%3E%3Cg fill='%23e0e0f2' %3E%3Ccircle cx='0' cy='650' r='50'/%3E%3Ccircle cx='100' cy='650' r='50'/%3E%3C/g%3E%3Ccircle fill='%23dddef0' cx='50' cy='700' r='50'/%3E%3Cg fill='%23dbdbef' %3E%3Ccircle cx='0' cy='750' r='50'/%3E%3Ccircle cx='100' cy='750' r='50'/%3E%3C/g%3E%3Ccircle fill='%23d8d9ee' cx='50' cy='800' r='50'/%3E%3Cg fill='%23d5d6ed' %3E%3Ccircle cx='0' cy='850' r='50'/%3E%3Ccircle cx='100' cy='850' r='50'/%3E%3C/g%3E%3Ccircle fill='%23d3d3ec' cx='50' cy='900' r='50'/%3E%3Cg fill='%23d0d1eb' %3E%3Ccircle cx='0' cy='950' r='50'/%3E%3Ccircle cx='100' cy='950' r='50'/%3E%3C/g%3E%3Ccircle fill='%23CDCEEA' cx='50' cy='1000' r='50'/%3E%3C/g%3E%3C/svg%3E");
-  background-attachment: fixed;
-  background-size: contain;
+body, aside, #navbar-menu {
+  background-image: 
+    linear-gradient(135deg, rgba(57, 124, 175, 0.03) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9 0h2v20H9V0zm25.134.84l1.732 1-10 17.32-1.732-1 10-17.32zm-20 20l1.732 1-10 17.32-1.732-1 10-17.32zM58.16 4.134l1 1.732-17.32 10-1-1.732 17.32-10zm-40 40l1 1.732-17.32 10-1-1.732 17.32-10zM80 9v2H60V9h20zM20 69v2H0v-2h20zm79.32-55l-1 1.732-17.32-10L82 4l17.32 10zm-80 80l-1 1.732-17.32-10L2 84l17.32 10zm96.546-75.84l-1.732 1-10-17.32 1.732-1 10 17.32zm-100 100l-1.732 1-10-17.32 1.732-1 10 17.32zM38.16 24.134l1 1.732-17.32 10-1-1.732 17.32-10zM60 29v2H40v-2h20zm19.32 5l-1 1.732-17.32-10L62 24l17.32 10zm16.546 4.16l-1.732 1-10-17.32 1.732-1 10 17.32zM111 40h-2V20h2v20zm3.134.84l1.732 1-10 17.32-1.732-1 10-17.32zM40 49v2H20v-2h20zm19.32 5l-1 1.732-17.32-10L42 44l17.32 10zm16.546 4.16l-1.732 1-10-17.32 1.732-1 10 17.32zM91 60h-2V40h2v20zm3.134.84l1.732 1-10 17.32-1.732-1 10-17.32zm24.026 3.294l1 1.732-17.32 10-1-1.732 17.32-10zM39.32 74l-1 1.732-17.32-10L22 64l17.32 10zm16.546 4.16l-1.732 1-10-17.32 1.732-1 10 17.32zM71 80h-2V60h2v20zm3.134.84l1.732 1-10 17.32-1.732-1 10-17.32zm24.026 3.294l1 1.732-17.32 10-1-1.732 17.32-10zM120 89v2h-20v-2h20zm-84.134 9.16l-1.732 1-10-17.32 1.732-1 10 17.32zM51 100h-2V80h2v20zm3.134.84l1.732 1-10 17.32-1.732-1 10-17.32zm24.026 3.294l1 1.732-17.32 10-1-1.732 17.32-10zM100 109v2H80v-2h20zm19.32 5l-1 1.732-17.32-10 1-1.732 17.32 10zM31 120h-2v-20h2v20z' fill='%23848484' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E");
 }
 
-body:where(.dark, .dark *),
-aside:where(.dark, .dark *) {
-  background-color: #0e163a;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1200 800'%3E%3Cdefs%3E%3CradialGradient id='a' cx='0' cy='800' r='800' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23070b1d'/%3E%3Cstop offset='1' stop-color='%23070b1d' stop-opacity='0'/%3E%3C/radialGradient%3E%3CradialGradient id='b' cx='1200' cy='800' r='800' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23070b1d'/%3E%3Cstop offset='1' stop-color='%23070b1d' stop-opacity='0'/%3E%3C/radialGradient%3E%3CradialGradient id='c' cx='600' cy='0' r='600' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23000000'/%3E%3Cstop offset='1' stop-color='%23000000' stop-opacity='0'/%3E%3C/radialGradient%3E%3CradialGradient id='d' cx='600' cy='800' r='600' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%230E163A'/%3E%3Cstop offset='1' stop-color='%230E163A' stop-opacity='0'/%3E%3C/radialGradient%3E%3CradialGradient id='e' cx='0' cy='0' r='800' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23000000'/%3E%3Cstop offset='1' stop-color='%23000000' stop-opacity='0'/%3E%3C/radialGradient%3E%3CradialGradient id='f' cx='1200' cy='0' r='800' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23000000'/%3E%3Cstop offset='1' stop-color='%23000000' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect fill='url(%23a)' width='1200' height='800'/%3E%3Crect fill='url(%23b)' width='1200' height='800'/%3E%3Crect fill='url(%23c)' width='1200' height='800'/%3E%3Crect fill='url(%23d)' width='1200' height='800'/%3E%3Crect fill='url(%23e)' width='1200' height='800'/%3E%3Crect fill='url(%23f)' width='1200' height='800'/%3E%3C/svg%3E");
-  background-attachment: fixed;
-  background-size: cover;
+body, aside {
+  background-color: #f8fafc;
+}
+
+body:where(.dark, .dark *), aside:where(.dark, .dark *), #navbar-menu:where(.dark, .dark *) {
+  background-image: 
+    linear-gradient(135deg, rgba(57, 124, 175, 0.05) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9 0h2v20H9V0zm25.134.84l1.732 1-10 17.32-1.732-1 10-17.32zm-20 20l1.732 1-10 17.32-1.732-1 10-17.32zM58.16 4.134l1 1.732-17.32 10-1-1.732 17.32-10zm-40 40l1 1.732-17.32 10-1-1.732 17.32-10zM80 9v2H60V9h20zM20 69v2H0v-2h20zm79.32-55l-1 1.732-17.32-10L82 4l17.32 10zm-80 80l-1 1.732-17.32-10L2 84l17.32 10zm96.546-75.84l-1.732 1-10-17.32 1.732-1 10 17.32zm-100 100l-1.732 1-10-17.32 1.732-1 10 17.32zM38.16 24.134l1 1.732-17.32 10-1-1.732 17.32-10zM60 29v2H40v-2h20zm19.32 5l-1 1.732-17.32-10L62 24l17.32 10zm16.546 4.16l-1.732 1-10-17.32 1.732-1 10 17.32zM111 40h-2V20h2v20zm3.134.84l1.732 1-10 17.32-1.732-1 10-17.32zM40 49v2H20v-2h20zm19.32 5l-1 1.732-17.32-10L42 44l17.32 10zm16.546 4.16l-1.732 1-10-17.32 1.732-1 10 17.32zM91 60h-2V40h2v20zm3.134.84l1.732 1-10 17.32-1.732-1 10-17.32zm24.026 3.294l1 1.732-17.32 10-1-1.732 17.32-10zM39.32 74l-1 1.732-17.32-10L22 64l17.32 10zm16.546 4.16l-1.732 1-10-17.32 1.732-1 10 17.32zM71 80h-2V60h2v20zm3.134.84l1.732 1-10 17.32-1.732-1 10-17.32zm24.026 3.294l1 1.732-17.32 10-1-1.732 17.32-10zM120 89v2h-20v-2h20zm-84.134 9.16l-1.732 1-10-17.32 1.732-1 10 17.32zM51 100h-2V80h2v20zm3.134.84l1.732 1-10 17.32-1.732-1 10-17.32zm24.026 3.294l1 1.732-17.32 10-1-1.732 17.32-10zM100 109v2H80v-2h20zm19.32 5l-1 1.732-17.32-10 1-1.732 17.32 10zM31 120h-2v-20h2v20z' fill='%23848484' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+body:where(.dark, .dark *), aside:where(.dark, .dark *) {
+  background-color: #000000;
 }
 
 @layer utilities {
   .glowy-blue {
-    text-shadow:
-      0 0 5px rgba(0, 172, 238, 0.8),
-      0 0 10px rgba(0, 172, 238, 0.6),
-      0 0 20px rgba(0, 172, 238, 0.4);
+    text-shadow: 0 0 5px rgba(0, 172, 238, 0.8), 0 0 10px rgba(0, 172, 238, 0.6), 0 0 20px rgba(0, 172, 238, 0.4);
   }
 
   .htmx-indicator {
@@ -63,41 +60,43 @@ aside:where(.dark, .dark *) {
   .log-error {
     color: #ef4444;
   }
-
+  
   .log-warning {
     color: #f59e0b;
   }
-
+  
   .log-green {
     color: #22c55e;
   }
-
+  
   .log-blue {
     color: #3b82f6;
   }
-
+  
   .log-orange {
     color: #fb923c;
   }
-
+  
   .log-violet {
     color: #a78bfa;
   }
+  
+   .log-cyan {
+     color: #06b6d4;
+   }
 
-  .log-cyan {
-    color: #06b6d4;
-  }
+   .log-yellow {
+     color: #eab308;
+   }
 
-  .log-yellow {
-    color: #eab308;
-  }
-
-  .log-pink {
-    color: #ec4899;
-  }
+   .log-pink {
+     color: #ec4899;
+   }
 }
 
 /* Hyperscript */
 @source inline("hidden");
 @source inline("invisible");
 @source inline("opacity-0");
+
+
