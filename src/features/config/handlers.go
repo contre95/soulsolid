@@ -112,10 +112,6 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 			Format:    c.FormValue("logger.format"),
 			HTMXDebug: c.FormValue("logger.htmx_debug") == "true",
 		},
-		Sync: Sync{
-			Enabled: currentConfig.Sync.Enabled,
-			Devices: currentConfig.Sync.Devices,
-		},
 		Jobs: Jobs{
 			Log:      c.FormValue("jobs.log") == "true",
 			LogPath:  c.FormValue("jobs.log_path"),

@@ -23,8 +23,7 @@ func NewHandler(configManager *config.Manager) *Handler {
 func (h *Handler) RenderDashboard(c *fiber.Ctx) error {
 	slog.Debug("RenderDashboard handler called")
 	data := fiber.Map{
-		"Title":       "Dashboard",
-		"SyncEnabled": h.configManager.Get().Sync.Enabled,
+		"Title": "Dashboard",
 	}
 	if c.Get("HX-Request") != "true" {
 		data["Section"] = "dashboard"

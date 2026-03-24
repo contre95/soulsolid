@@ -18,7 +18,6 @@ import (
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/playlists"
 	"github.com/contre95/soulsolid/src/features/reorganize"
-	"github.com/contre95/soulsolid/src/features/syncdap"
 	"github.com/contre95/soulsolid/src/infra/database"
 	"github.com/contre95/soulsolid/src/infra/files"
 	"github.com/contre95/soulsolid/src/infra/fingerprint"
@@ -73,15 +72,6 @@ func main() {
 	metricsTask := metrics.NewMetricsCalculationTask(db)
 	jobService.RegisterHandler("calculate_metrics", jobs.NewBaseTaskHandler(metricsTask))
 
-	syncService := syncdap.NewService(cfgManager, jobService)
-	if cfgManager.Get().Sync.Enabled {
-		syncService.Start()
-		defer syncService.Stop()
-	}
-
-	syncTask := syncdap.NewSyncDapTask(syncService)
-	jobService.RegisterHandler("dap_sync", jobs.NewBaseTaskHandler(syncTask))
-
 	pluginManager := downloading.NewPluginManager()
 	err = pluginManager.LoadPlugins(cfgManager.Get())
 	if err != nil {
@@ -130,7 +120,7 @@ func main() {
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {
 		var err error
-		telegramBot, err = hosting.NewTelegramBot(cfgManager, libraryService, jobService, syncService, importingService)
+		telegramBot, err = hosting.NewTelegramBot(cfgManager, libraryService, jobService, importingService)
 		if err != nil {
 			slog.Error("Failed to initialize Telegram bot", "error", err)
 		} else {
@@ -139,8 +129,11 @@ func main() {
 		}
 	}
 
-	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, syncService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService)
-
+	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService)
+	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
+	if err := server.Start(); err != nil {
+		slog.Error("server stopped: %v", "error", err)
+	}
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 	serverErr := make(chan error, 1)
@@ -164,10 +157,6 @@ func main() {
 	}
 
 	importingService.StopWatcher()
-	if cfgManager.Get().Sync.Enabled {
-		syncService.Stop()
-	}
-
 	if err := server.Shutdown(); err != nil {
 		log.Fatalf("failed to shutdown server: %v", err)
 	}

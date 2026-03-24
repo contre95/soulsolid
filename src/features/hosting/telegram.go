@@ -10,7 +10,6 @@ import (
 	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
-	"github.com/contre95/soulsolid/src/features/syncdap"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -32,7 +31,7 @@ type TelegramBot struct {
 }
 
 // NewTelegramBot creates a new Telegram bot instance
-func NewTelegramBot(cfg *config.Manager, libraryService *library.Service, jobService *jobs.Service, syncService *syncdap.Service, importingService *importing.Service) (*TelegramBot, error) {
+func NewTelegramBot(cfg *config.Manager, libraryService *library.Service, jobService *jobs.Service, importingService *importing.Service) (*TelegramBot, error) {
 	telegramConfig := cfg.Get().Telegram
 
 	if !telegramConfig.Enabled {
@@ -69,7 +68,6 @@ func NewTelegramBot(cfg *config.Manager, libraryService *library.Service, jobSer
 	telegramBot.RegisterHandler("library", library.NewTelegramHandler(libraryService))
 	telegramBot.RegisterHandler("config", config.NewTelegramHandler(cfg))
 	telegramBot.RegisterHandler("jobs", jobs.NewTelegramHandler(jobService))
-	telegramBot.RegisterHandler("syncdap", syncdap.NewTelegramHandler(syncService))
 	telegramBot.RegisterHandler("importing", importing.NewTelegramHandler(importingService, cfg))
 
 	return telegramBot, nil
@@ -184,7 +182,6 @@ func (t *TelegramBot) routeCommand(command, args string, chatID int64) error {
 		"tree":        "library",
 		"config":      "config",
 		"jobs":        "jobs",
-		"dap":         "syncdap",
 		"import":      "importing",
 		"queue":       "importing",
 		"queue_clear": "importing",
@@ -277,7 +274,6 @@ Choose an action below or use commands directly:`
 		},
 		{
 			tgbotapi.NewInlineKeyboardButtonData("📥 Import", "menu_import"),
-			tgbotapi.NewInlineKeyboardButtonData("🔄 Sync DAP", "menu_sync"),
 		},
 	}
 
@@ -310,8 +306,6 @@ func (t *TelegramBot) handleMenuCallback(callback *tgbotapi.CallbackQuery) {
 		t.routeMenuCommand("config", "", chatID)
 	case "menu_import":
 		t.showImportMenu(chatID)
-	case "menu_sync":
-		t.routeMenuCommand("dap", "", chatID)
 	case "menu_back":
 		t.handleHelp(chatID)
 	case "menu_lib_stats", "menu_lib_tree", "menu_import_queue", "menu_import_artists", "menu_import_albums", "menu_import_clear":
@@ -475,7 +469,6 @@ func (t *TelegramBot) routeMenuCommand(command, args string, chatID int64) {
 	commandMap := map[string]string{
 		"jobs":                "jobs",
 		"config":              "config",
-		"dap":                 "syncdap",
 		"menu_lib_stats":      "library",
 		"menu_lib_tree":       "library",
 		"menu_dl_search":      "downloading",

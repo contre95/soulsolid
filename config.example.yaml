@@ -64,12 +64,6 @@ lyrics:
     lrclib:
       enabled: true
       prefer_synced: false # Some programs like navidrome require synced lyrics
-sync:
-  enabled: true
-  devices:
-    - uuid: 8722-177E
-      name: iPod
-      sync_path: Soulsolid
 jobs:
   log: true
   log_path: ./logs/jobs
@@ -78,5 +72,4 @@ jobs:
     job_types:
       - directory_import
       - download_album
-      - dap_sync
     command: "echo hi"
