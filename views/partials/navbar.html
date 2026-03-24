@@ -80,28 +80,9 @@
                  <span id="import-queue-count-nav" class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-orange-300 dark:drop-shadow-[0_0_10px_rgba(255,165,0,0.8)]"></span>
                </div>
              </a>
-          </button>
-        </li>
-        <li>
-          <button type="button" class="w-full">
-           <a
-             hx-get="/ui/sync"
-             hx-trigger="click,reloadSync from:body{{ .SyncTrigger }}"
-             hx-push-url="true"
-             hx-swap="outerHTML"
-             hx-target="#contenido"
-             class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer"
-           >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
-                <rect x="6" y="2" width="12" height="20" rx="2" ry="2" stroke="currentColor" fill="none"/>
-                <circle cx="12" cy="17" r="2.5" stroke="currentColor" fill="none"/>
-                <rect x="8" y="4" width="8" height="6" fill="none" stroke="currentColor"/>
-             </svg>
-             <span class="mx-4">DAP Sync</span>
-           </a>
-         </button>
-       </li>
-          <li>
+           </button>
+         </li>
+           <li>
             <button type="button" class="w-full">
               <a hx-get="/ui/analyze" hx-trigger="click" hx-push-url="true" hx-swap="outerHTML" hx-target="#contenido"
                  class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">

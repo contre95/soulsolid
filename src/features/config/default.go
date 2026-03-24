@@ -71,10 +71,6 @@ var defaultConfig = Config{
 			},
 		},
 	},
-	Sync: Sync{
-		Enabled: false,
-		Devices: []Device{},
-	},
 	Jobs: Jobs{
 		Log:     true,
 		LogPath: "./logs/jobs",

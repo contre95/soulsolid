@@ -59,15 +59,9 @@ data:
           enabled: true
     lyrics:
       providers:
-        lrclib:
-          enabled: true
-    sync:
-      enabled: false
-      devices:
-        - uuid: 8722-177E
-          name: iPod
-          sync_path: Soulsolid
-    jobs:
+         lrclib:
+           enabled: true
+     jobs:
       log: true
       log_path: ./logs/jobs
       webhooks:

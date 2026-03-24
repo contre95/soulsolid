@@ -12,7 +12,6 @@ type Config struct {
 	Import       Import      `yaml:"import"`
 	Metadata     Metadata    `yaml:"metadata"`
 	Lyrics       Lyrics      `yaml:"lyrics"`
-	Sync         Sync        `yaml:"sync"`
 	Jobs         Jobs        `yaml:"jobs"`
 }
 type Jobs struct {
@@ -96,19 +95,6 @@ type Lyrics struct {
 type LyricsProvider struct {
 	Enabled      bool `yaml:"enabled"`
 	PreferSynced bool `yaml:"prefer_synced,omitempty"`
-}
-
-// Sync holds configuration for device synchronization
-type Sync struct {
-	Enabled bool     `yaml:"enabled"`
-	Devices []Device `yaml:"devices"`
-}
-
-// Device holds configuration for individual sync devices
-type Device struct {
-	UUID     string `yaml:"uuid"`
-	Name     string `yaml:"name"`
-	SyncPath string `yaml:"sync_path"`
 }
 
 // Artwork holds configuration for artwork handling

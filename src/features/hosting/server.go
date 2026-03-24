@@ -16,7 +16,6 @@ import (
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/playlists"
 	"github.com/contre95/soulsolid/src/features/reorganize"
-	"github.com/contre95/soulsolid/src/features/syncdap"
 	"github.com/contre95/soulsolid/src/features/ui"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
@@ -30,7 +29,7 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server.
-func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, playlistsService *playlists.Service, syncService *syncdap.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, reorganizeService *reorganize.Service) *Server {
+func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, playlistsService *playlists.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, reorganizeService *reorganize.Service) *Server {
 	engine := html.New("./views", ".html")
 	engine.Debug(cfg.Get().Logger.Level == "debug")
 	// Add custom template functions
@@ -109,7 +108,6 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 		}
 		c.Locals("Version", version)
 		c.Locals("Downloaders", downloaders)
-		c.Locals("SyncEnabled", cfgData.Sync.Enabled)
 		c.Locals("Telegram", cfgData.Telegram)
 		return c.Next()
 	})
@@ -130,9 +128,6 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	jobs.RegisterRoutes(app, jobService)
 	metricsHandler := metrics.NewHandler(metricsService)
 	metrics.RegisterRoutes(app, metricsHandler)
-	if cfg.Get().Sync.Enabled {
-		syncdap.RegisterRoutes(app, syncService)
-	}
 	downloading.RegisterRoutes(app, downloadingService)
 	metadata.RegisterRoutes(app, tagService)
 	lyricsHandler := lyrics.NewHandler(lyricsService, tagService)

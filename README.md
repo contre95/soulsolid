@@ -26,7 +26,6 @@ A work in progress, feature rich music organization app built for the music hoar
 - **Downloading**: Download tracks and albums. 
 - **Importing**: Import music from directories with automatic fingerprinting
 - **Metadata Tagging**: Auto-tag using MusicBrainz and Discogs APIs
-- **Sync with DAP**: Sync library with digital audio players
 - **Telegram Integration**: Control via Telegram bot
 - **Web UI**: Mobile-friendly interface for all operations 
 - **Job Management**: Background processing for downloads, imports, and synced lyrics and more. 

@@ -11,7 +11,6 @@ jobs:
     job_types:
       - directory_import
       - download_album
-      - dap_sync
     command: | # ntfy
       curl -d "Backup successful 😀" ntfy.sh/mytopic
 ```
