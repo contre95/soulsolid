@@ -65,6 +65,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 			"totalTracks": 0,
 			"processed":   0,
 			"updated":     0,
+			"queued":      0,
 		}, nil
 	}
 
@@ -74,7 +75,6 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 	processed := 0
 	updated := 0
 	skipped := 0
-	queued := 0
 	errors := 0
 
 	// Process tracks in batches to avoid loading all into memory
@@ -138,19 +138,15 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 					updated++
 					job.Logger.Info("Added lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "green")
 				case LyricsQueued:
-					queued++
-					job.Logger.Info("Queued lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "blue")
+					job.Logger.Info("Queued lyrics for track (differ from existing)", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "blue")
 				case LyricsSkipped:
 					skipped++
 					job.Logger.Info("Skipped lyrics for track (identical to existing)", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "yellow")
 				}
 			}
-
 			processed++
 		}
 	}
-
-	job.Logger.Info("Lyrics analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "queued", queued, "color", "green")
 
 	// Count new queue items added during this job
 	finalQueueItems := t.service.GetLyricsQueueItems()
@@ -173,8 +169,10 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 			}
 		}
 	}
+	queued := existingLyricsQueued + lyric404Queued + failedLyricsQueued
+	job.Logger.Info("Lyrics analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "queued", queued, "color", "green")
 
-	job.Logger.Debug("Final counters", "totalTracks", totalTracks, "updated", updated, "skipped", skipped, "queued", queued, "errors", errors, "existingQueued", existingLyricsQueued, "404Queued", lyric404Queued, "failedQueued", failedLyricsQueued)
+	job.Logger.Debug("Final counters", "totalTracks", totalTracks, "updated", updated, "skipped", skipped, "errors", errors, "existingQueued", existingLyricsQueued, "404Queued", lyric404Queued, "failedQueued", failedLyricsQueued)
 
 	queueSummary := ""
 	if existingLyricsQueued > 0 || lyric404Queued > 0 || failedLyricsQueued > 0 {
@@ -184,14 +182,13 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 		totalTracks, updated, skipped, queued, queueSummary)
 	job.Logger.Info(finalMessage)
 
-	progressUpdater(100, fmt.Sprintf("Lyrics analysis completed - totalTracks=%d processed=%d updated=%d skipped=%d queued=%d", totalTracks, processed, updated, skipped, queued))
+	progressUpdater(100, fmt.Sprintf("Lyrics analysis completed - totalTracks=%d processed=%d updated=%d skipped=%d errors=%d", totalTracks, processed, updated, skipped, errors))
 
 	return map[string]any{
 		"totalTracks":          totalTracks,
 		"processed":            processed,
 		"updated":              updated,
 		"skipped":              skipped,
-		"queued":               queued,
 		"errors":               errors,
 		"existingLyricsQueued": existingLyricsQueued,
 		"lyric404Queued":       lyric404Queued,

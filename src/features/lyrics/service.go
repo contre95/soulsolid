@@ -216,10 +216,11 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 	// Get current track data
 	track, err := s.libraryRepo.GetTrack(ctx, trackID)
 	if err != nil {
+		// We are skipping the Track here cause we can not even get it to Queue it, normally, any other feailure should be queued for review, ths is just logged.
 		return LyricsSkipped, fmt.Errorf("failed to get track: %w", err)
 	}
 	// If lyrics already exist, fetch new lyrics and add to queue for manual decision
-	if track.Metadata.Lyrics != "" {
+	if track.HasLyrics {
 		searchParams := music.LyricsSearchParams{
 			TrackID: track.ID,
 			Title:   track.Title,
@@ -245,100 +246,55 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 			return LyricsSkipped, nil
 		}
 
-		if newLyrics != "" {
-			existingTrimmed := strings.TrimSpace(track.Metadata.Lyrics)
-			newTrimmed := strings.TrimSpace(newLyrics)
-			slog.Info("Track already has lyrics, comparing with fetched", "trackID", trackID, "existingLength", len(track.Metadata.Lyrics), "newLength", len(newLyrics), "identical", existingTrimmed == newTrimmed)
+		existingTrimmed := strings.TrimSpace(track.Metadata.Lyrics)
+		newTrimmed := strings.TrimSpace(newLyrics)
+		if newTrimmed == "" {
+			slog.Info("Provider returned empty lyrics. Skipping", "trackID", trackID)
+			return LyricsSkipped, nil
+		}
+		// We want to directly add the lyrics without manual review if the track has lyrics and the lyrics metadata is empty. Better something than nothing
+		if existingTrimmed != "" {
 			if existingTrimmed != newTrimmed {
-				slog.Info("Track already has lyrics, new lyrics differ, adding to queue", "trackID", trackID)
+				slog.Info("Track already has lyrics but new lyrics differ, adding to queue for manual review", "trackID", trackID)
 				if err := s.AddLyricsQueueItem(track, ExistingLyrics, map[string]string{
 					"provider":   providerName,
 					"new_lyrics": newLyrics,
 				}); err != nil {
-					slog.Warn("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
+					slog.Error("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
 				} else {
-					slog.Debug("Successfully added track to existing_lyrics queue with new lyrics", "trackID", trackID)
+					slog.Info("Successfully added track to existing_lyrics queue with new lyrics", "trackID", trackID)
+					return LyricsQueued, nil
 				}
-				return LyricsQueued, nil
 			} else {
-				slog.Info("Track already has lyrics, new lyrics are identical, skipping queue", "trackID", trackID)
+				slog.Info("Track already has lyrics, new lyrics are identical, skipping", "trackID", trackID)
+				return LyricsSkipped, nil
 			}
-		} else {
-			slog.Info("Track already has lyrics, no new lyrics found", "trackID", trackID)
 		}
-		return LyricsSkipped, nil
-	}
-	// Build search parameters from current track data
-	searchParams := music.LyricsSearchParams{
-		TrackID: track.ID,
-		Title:   track.Title,
-	}
-	// Add artist if available
-	// NOTE: Do we really need to check for Artists and Album?
-	if len(track.Artists) > 0 && track.Artists[0].Artist != nil {
-		searchParams.Artist = track.Artists[0].Artist.Name
-	}
-	// Add album and album artist if available
-	if track.Album != nil {
-		searchParams.Album = track.Album.Title
-		if len(track.Album.Artists) > 0 && track.Album.Artists[0].Artist != nil {
-			searchParams.AlbumArtist = track.Album.Artists[0].Artist.Name
+		preview := newLyrics
+		if len(preview) > 50 {
+			preview = preview[:50] + "..."
 		}
-	}
-	// Find the specific provider
-	targetProvider, exists := s.lyricsProviders[providerName]
-	if !exists || targetProvider == nil || !targetProvider.IsEnabled() {
-		return LyricsSkipped, fmt.Errorf("lyrics provider '%s' not found or not enabled", providerName)
-	}
+		slog.Info("Adding lyrics for track", "provider", providerName, "trackID", trackID, "lyricsLength", len(newLyrics), "lyricsPreview", preview)
 
-	// Search for lyrics using the specified provider
-	slog.Debug("Trying lyrics provider", "provider", targetProvider.Name(), "trackID", trackID, "title", searchParams.Title, "artist", searchParams.Artist)
-	lyrics, err := targetProvider.SearchLyrics(ctx, searchParams)
-	if err != nil {
-		slog.Warn("Failed to search lyrics with provider", "provider", targetProvider.Name(), "trackID", trackID, "title", searchParams.Title, "artist", searchParams.Artist, "error", err.Error())
-		// Add to failed_lyrics queue for manual decision
-		if err := s.AddLyricsQueueItem(track, FailedLyrics, map[string]string{"provider": providerName, "error": err.Error()}); err != nil {
-			slog.Warn("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
+		// Update the track with the lyrics
+		track.Metadata.Lyrics = newLyrics
+		track.HasLyrics = true
+		track.ModifiedDate = time.Now()
+
+		// Write lyrics to file tags
+		if err := s.tagWriter.WriteFileTags(ctx, track.Path, track); err != nil {
+			slog.Warn("Failed to write lyrics to file tags", "error", err, "trackID", trackID, "path", track.Path)
+			// Continue - we still want to update the database
 		}
-		return LyricsQueued, nil
-	}
 
-	if lyrics == "" {
-		slog.Info("No lyrics found for track with provider", "trackID", trackID, "title", track.Title, "artist", searchParams.Artist, "provider", providerName)
-		// Add to lyric_404 queue for manual decision
-		if err := s.AddLyricsQueueItem(track, Lyric404, map[string]string{"provider": providerName}); err != nil {
-			slog.Warn("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
+		// Update track in database
+		err = s.libraryRepo.UpdateTrack(ctx, track)
+		if err != nil {
+			return LyricsSkipped, fmt.Errorf("failed to update track with lyrics: %w", err)
 		}
-		return LyricsQueued, nil
+		return LyricsAdded, nil
 	}
-
-	slog.Info("Found lyrics with provider", "provider", targetProvider.Name(), "trackID", trackID, "lyricsLength", len(lyrics))
-
-	preview := lyrics
-	if len(preview) > 50 {
-		preview = preview[:50] + "..."
-	}
-	slog.Info("Adding lyrics for track", "provider", providerName, "trackID", trackID, "lyricsLength", len(lyrics), "lyricsPreview", preview)
-
-	// Update the track with the lyrics
-	track.Metadata.Lyrics = lyrics
-	track.HasLyrics = true
-	track.ModifiedDate = time.Now()
-
-	// Write lyrics to file tags
-	if err := s.tagWriter.WriteFileTags(ctx, track.Path, track); err != nil {
-		slog.Warn("Failed to write lyrics to file tags", "error", err, "trackID", trackID, "path", track.Path)
-		// Continue - we still want to update the database
-	}
-
-	// Update track in database
-	err = s.libraryRepo.UpdateTrack(ctx, track)
-	if err != nil {
-		return LyricsSkipped, fmt.Errorf("failed to update track with lyrics: %w", err)
-	}
-
-	slog.Info("Successfully added lyrics for track", "trackID", trackID, "provider", providerName, "lyricsLength", len(lyrics))
-	return LyricsAdded, nil
+	return LyricsSkipped, nil
 }
 
 // GetEnabledLyricsProviders returns a map of enabled lyrics providers
