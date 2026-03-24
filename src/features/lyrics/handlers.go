@@ -197,7 +197,7 @@ func (h *Handler) ProcessLyricsQueueItem(c *fiber.Ctx) error {
 	case "skip":
 		actionMsg = "skipped"
 	}
-	c.Response().Header.Set("HX-Trigger", "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount")
+	c.Response().Header.Set("HX-Trigger", "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount,activateIndividualGroupingLyrics")
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": fmt.Sprintf("Track %s successfully", actionMsg),
 	})
@@ -221,7 +221,7 @@ func (h *Handler) ClearLyricsQueue(c *fiber.Ctx) error {
 			"Msg": "Failed to clear lyrics queue",
 		})
 	}
-	c.Response().Header.Set("HX-Trigger", "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount")
+	c.Response().Header.Set("HX-Trigger", "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount,activateIndividualGroupingLyrics")
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": "Lyrics queue cleared successfully",
 	})
@@ -289,32 +289,21 @@ func (h *Handler) ProcessLyricsQueueGroup(c *fiber.Ctx) error {
 		})
 	}
 
-	// Validate action based on queue item types (we'll need to implement group processing in service)
-	// For now, we'll process each item individually
-	var groupItems []music.QueueItem
-	if groupType == "artist" {
-		groups := h.service.GetLyricsGroupedByArtist()
-		groupItems = groups[decodedGroupKey]
-	} else {
-		groups := h.service.GetLyricsGroupedByAlbum()
-		groupItems = groups[decodedGroupKey]
-	}
-
-	if len(groupItems) == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "no items found in group",
+	err = h.service.ProcessLyricsQueueGroup(c.Context(), decodedGroupKey, groupType, action)
+	if err != nil {
+		slog.Error("Failed to process lyrics queue group", "error", err, "groupKey", decodedGroupKey, "groupType", groupType, "action", action)
+		return c.Render("toast/toastErr", fiber.Map{
+			"Msg": fmt.Sprintf("Failed to process group %s", decodedGroupKey),
 		})
 	}
 
-	// Process each item in the group
-	for _, item := range groupItems {
-		if err := h.service.ProcessLyricsQueueItem(c.Context(), item.ID, action); err != nil {
-			slog.Error("Failed to process lyrics queue item in group", "itemID", item.ID, "action", action, "error", err)
-			// Continue processing other items even if one fails
-		}
+	trigger := "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount"
+	if groupType == "artist" {
+		trigger += ",activateArtistGroupingLyrics"
+	} else if groupType == "album" {
+		trigger += ",activateAlbumGroupingLyrics"
 	}
-
-	c.Response().Header.Set("HX-Trigger", "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount")
+	c.Response().Header.Set("HX-Trigger", trigger)
 	return c.Render("toast/toastOk", fiber.Map{
 		"Msg": fmt.Sprintf("Group '%s' processed successfully", decodedGroupKey),
 	})
