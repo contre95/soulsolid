@@ -2,6 +2,7 @@ package hosting
 
 import (
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,8 +19,12 @@ func HTMXMiddleware() fiber.Handler {
 		// Process the request
 		err := c.Next()
 
-		// Log HTMX-specific information
+		// Log HTMX-specific information (skip high-frequency paths to prevent spam)
 		if isHTMX {
+			path := c.Path()
+			if strings.Contains(path, "/jobs/list") || strings.Contains(path, "/jobs/count") || strings.Contains(path, "/queue/count") {
+				return err // skip logging for polling endpoints
+			}
 			duration := time.Since(start)
 
 			slog.Debug("HTMX request",

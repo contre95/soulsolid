@@ -140,18 +140,32 @@ func main() {
 	}
 
 	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, syncService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService)
-	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
-	if err := server.Start(); err != nil {
-		slog.Error("server stopped: %v", "error", err)
-	}
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
-	<-quit
-	slog.Info("Shutting down server...")
+	serverErr := make(chan error, 1)
+	go func() {
+		slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
+		if err := server.Start(); err != nil {
+			serverErr <- err
+		}
+	}()
+
+	select {
+	case <-quit:
+		slog.Info("Shutting down server...")
+	case err := <-serverErr:
+		slog.Error("server stopped", "error", err)
+	}
 
 	if telegramBot != nil {
 		telegramBot.Stop()
 		slog.Info("Telegram bot stopped")
+	}
+
+	importingService.StopWatcher()
+	if cfgManager.Get().Sync.Enabled {
+		syncService.Stop()
 	}
 
 	if err := server.Shutdown(); err != nil {

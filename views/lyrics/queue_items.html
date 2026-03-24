@@ -40,7 +40,7 @@
         <!-- Compact action buttons -->
         <div class="flex flex-wrap gap-1 justify-start">
             {{if eq .Type "existing_lyrics"}}
-            <button
+            <button type="button"
                 hx-post="/lyrics/queue/{{.ID}}/override"
                 hx-target="#toast-container"
                 hx-swap="innerHTML"
@@ -65,7 +65,7 @@
                 <i class="fas fa-edit mr-0.5"></i>
                 Edit
             </a>
-            <button
+            <button type="button"
                 hx-post="/lyrics/queue/{{.ID}}/no_lyrics"
                 hx-target="#toast-container"
                 hx-swap="innerHTML"
@@ -83,7 +83,7 @@
                 <i class="fas fa-edit mr-0.5"></i>
                 Edit
             </a>
-            <button
+            <button type="button"
                 hx-post="/lyrics/queue/{{.ID}}/skip"
                 hx-target="#toast-container"
                 hx-swap="innerHTML"
@@ -93,7 +93,7 @@
                 <i class="fas fa-forward mr-0.5"></i>
                 Skip
             </button>
-            <button
+            <button type="button"
                 hx-post="/lyrics/queue/{{.ID}}/no_lyrics"
                 hx-target="#toast-container"
                 hx-swap="innerHTML"

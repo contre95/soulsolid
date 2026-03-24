@@ -54,9 +54,14 @@
 
   // Re-initialize after HTMX swaps, but only for the main content area
   document.addEventListener("htmx:afterSettle", function (event) {
-    // Only reinitialize if the target is the main content area
-    if (event.target && event.target.id === "contenido") {
-      initSlimSelect();
+    // Re-process HTMX on queue content and main area for dynamic buttons
+    if (event.target) {
+      if (event.target.id === "contenido" || event.target.id === "lyrics-queue-content" || event.target.id === "queue-content") {
+        htmx.process(event.target);
+      }
+      if (event.target.id === "contenido") {
+        initSlimSelect();
+      }
     }
   });
 
@@ -70,6 +75,29 @@
 
     // Add active state to target button
     const targetBtn = document.getElementById(`view-${groupingType}`);
+    if (targetBtn) {
+      targetBtn.classList.add('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm');
+      targetBtn.classList.remove('text-gray-600', 'dark:text-gray-400');
+    }
+  }
+
+  // Lyrics-specific grouping (matches queue_header.html IDs)
+  function activateLyricsGroupingButton(groupingType) {
+    const idMap = {
+      'individual': 'view-individual-lyrics',
+      'artist-groups': 'view-artist-groups-lyrics',
+      'album-groups': 'view-album-groups-lyrics'
+    };
+    const id = idMap[groupingType];
+    if (!id) return activateGroupingButton(groupingType); // fallback
+
+    // Remove active state from all buttons
+    document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+      btn.classList.remove('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm');
+      btn.classList.add('text-gray-600', 'dark:text-gray-400');
+    });
+
+    const targetBtn = document.getElementById(id);
     if (targetBtn) {
       targetBtn.classList.add('active', 'bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300', 'shadow-sm');
       targetBtn.classList.remove('text-gray-600', 'dark:text-gray-400');

@@ -13,7 +13,7 @@
 
         <!-- Compact group actions -->
         <div class="flex flex-wrap gap-1 justify-start">
-            <button
+            <button type="button"
                 hx-post="/lyrics/queue/group/album/{{$groupKey | urlquery}}/override"
                 hx-target="#toast-container"
                 hx-swap="innerHTML"
@@ -22,7 +22,7 @@
                 <i class="fas fa-sync-alt mr-0.5"></i>
                 Override All
             </button>
-            <button
+            <button type="button"
                 hx-post="/lyrics/queue/group/album/{{$groupKey | urlquery}}/no_lyrics"
                 hx-target="#toast-container"
                 hx-swap="innerHTML"

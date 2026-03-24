@@ -161,6 +161,7 @@ func (h *Handler) RenderLyricsQueueItems(c *fiber.Ctx) error {
 func (h *Handler) ProcessLyricsQueueItem(c *fiber.Ctx) error {
 	itemID := c.Params("id")
 	action := c.Params("action")
+	slog.Info("Processing lyrics queue item", "itemID", itemID, "action", action)
 	err := h.service.ProcessLyricsQueueItem(c.Context(), itemID, action)
 	if err != nil {
 		slog.Error("Failed to process lyrics queue item", "error", err, "itemID", itemID, "action", action)
