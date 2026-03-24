@@ -259,6 +259,7 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 				} else {
 					slog.Debug("Successfully added track to existing_lyrics queue with new lyrics", "trackID", trackID)
 				}
+				return LyricsQueued, nil
 			} else {
 				slog.Info("Track already has lyrics, new lyrics are identical, skipping queue", "trackID", trackID)
 			}
@@ -299,7 +300,7 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 		if err := s.AddLyricsQueueItem(track, FailedLyrics, map[string]string{"provider": providerName, "error": err.Error()}); err != nil {
 			slog.Warn("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
 		}
-		return LyricsQueued, fmt.Errorf("failed to search lyrics with provider '%s': %w", providerName, err)
+		return LyricsQueued, nil
 	}
 
 	if lyrics == "" {

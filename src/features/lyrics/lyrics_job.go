@@ -74,6 +74,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 	processed := 0
 	updated := 0
 	skipped := 0
+	queued := 0
 	errors := 0
 
 	// Process tracks in batches to avoid loading all into memory
@@ -137,8 +138,8 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 					updated++
 					job.Logger.Info("Added lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "green")
 				case LyricsQueued:
-					updated++
-					job.Logger.Info("Queued lyrics for track (differ from existing)", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "blue")
+					queued++
+					job.Logger.Info("Queued lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "blue")
 				case LyricsSkipped:
 					skipped++
 					job.Logger.Info("Skipped lyrics for track (identical to existing)", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "yellow")
@@ -149,7 +150,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 		}
 	}
 
-	job.Logger.Info("Lyrics analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "color", "green")
+	job.Logger.Info("Lyrics analysis completed", "totalTracks", totalTracks, "processed", processed, "updated", updated, "skipped", skipped, "queued", queued, "color", "green")
 
 	// Count new queue items added during this job
 	finalQueueItems := t.service.GetLyricsQueueItems()
@@ -160,37 +161,37 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 	for id, item := range finalQueueItems {
 		if !initialQueueIDs[id] {
 			switch item.Type {
-			case music.ExistingLyrics:
+			case ExistingLyrics:
 				existingLyricsQueued++
 				job.Logger.Info("New existing_lyrics queue item added", "trackID", id, "color", "cyan")
-			case music.Lyric404:
+			case Lyric404:
 				lyric404Queued++
 				job.Logger.Info("New lyric_404 queue item added", "trackID", id, "color", "cyan")
-			case music.FailedLyrics:
+			case FailedLyrics:
 				failedLyricsQueued++
 				job.Logger.Info("New failed_lyrics queue item added", "trackID", id, "color", "cyan")
 			}
 		}
 	}
 
-	job.Logger.Debug("Final counters", "totalTracks", totalTracks, "updated", updated, "skipped", skipped, "errors", errors, "existingQueued", existingLyricsQueued, "404Queued", lyric404Queued, "failedQueued", failedLyricsQueued)
+	job.Logger.Debug("Final counters", "totalTracks", totalTracks, "updated", updated, "skipped", skipped, "queued", queued, "errors", errors, "existingQueued", existingLyricsQueued, "404Queued", lyric404Queued, "failedQueued", failedLyricsQueued)
 
-	// Create completion message for job tagging
 	queueSummary := ""
 	if existingLyricsQueued > 0 || lyric404Queued > 0 || failedLyricsQueued > 0 {
 		queueSummary = fmt.Sprintf(" [Queue: %d existing_lyrics, %d lyric_404, %d failed_lyrics]", existingLyricsQueued, lyric404Queued, failedLyricsQueued)
 	}
-	finalMessage := fmt.Sprintf("Lyrics analysis finished. Processed %d tracks (%d updated, %d skipped, %d errors).%s",
-		totalTracks, updated, skipped, errors, queueSummary)
+	finalMessage := fmt.Sprintf("Lyrics analysis finished. Processed %d tracks (%d updated, %d skipped, %d queued).%s",
+		totalTracks, updated, skipped, queued, queueSummary)
 	job.Logger.Info(finalMessage)
 
-	progressUpdater(100, fmt.Sprintf("Lyrics analysis completed - totalTracks=%d processed=%d updated=%d skipped=%d errors=%d", totalTracks, processed, updated, skipped, errors))
+	progressUpdater(100, fmt.Sprintf("Lyrics analysis completed - totalTracks=%d processed=%d updated=%d skipped=%d queued=%d", totalTracks, processed, updated, skipped, queued))
 
 	return map[string]any{
 		"totalTracks":          totalTracks,
 		"processed":            processed,
 		"updated":              updated,
 		"skipped":              skipped,
+		"queued":               queued,
 		"errors":               errors,
 		"existingLyricsQueued": existingLyricsQueued,
 		"lyric404Queued":       lyric404Queued,
