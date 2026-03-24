@@ -144,10 +144,14 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 				errors++
 				// Continue with other tracks - don't fail the entire job
 			} else {
+				job.Logger.Debug("AddLyrics result", "trackID", track.ID, "result", int(result))
 				switch result {
-				case LyricsAdded, LyricsQueued:
+				case LyricsAdded:
 					updated++
-					job.Logger.Info("Successfully processed lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "result", result, "color", "green")
+					job.Logger.Info("Added lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "green")
+				case LyricsQueued:
+					updated++
+					job.Logger.Info("Queued lyrics for track (differ from existing)", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "blue")
 				case LyricsSkipped:
 					skipped++
 					job.Logger.Info("Skipped lyrics for track (identical to existing)", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "yellow")
@@ -171,13 +175,18 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 			switch item.Type {
 			case music.ExistingLyrics:
 				existingLyricsQueued++
+				job.Logger.Info("New existing_lyrics queue item added", "trackID", id, "color", "cyan")
 			case music.Lyric404:
 				lyric404Queued++
+				job.Logger.Info("New lyric_404 queue item added", "trackID", id, "color", "cyan")
 			case music.FailedLyrics:
 				failedLyricsQueued++
+				job.Logger.Info("New failed_lyrics queue item added", "trackID", id, "color", "cyan")
 			}
 		}
 	}
+
+	job.Logger.Debug("Final counters", "totalTracks", totalTracks, "updated", updated, "skipped", skipped, "errors", errors, "existingQueued", existingLyricsQueued, "404Queued", lyric404Queued, "failedQueued", failedLyricsQueued)
 
 	// Create completion message for job tagging
 	queueSummary := ""
