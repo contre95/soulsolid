@@ -181,15 +181,33 @@ func createTables(db *sql.DB) error {
 		return err
 	}
 
-	// Add new columns to existing tables if they don't exist
-	_, err = db.Exec(`
-		ALTER TABLE tracks ADD COLUMN source TEXT;
-		ALTER TABLE tracks ADD COLUMN source_url TEXT;
-		ALTER TABLE tracks ADD COLUMN has_lyrics BOOLEAN DEFAULT TRUE;
-	`)
-	// Ignore errors if columns already exist
-	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-		return err
+	// Migrate #1
+	type colDef struct{ name, typ string }
+	for _, col := range []colDef{{"source", "TEXT"}, {"source_url", "TEXT"}, {"has_lyrics", "BOOLEAN DEFAULT TRUE"}} {
+		var count int
+		if err := db.QueryRow("SELECT count(*) FROM pragma_table_info('tracks') WHERE name=?", col.name).Scan(&count); err != nil || count > 0 {
+			continue
+		}
+		sql := fmt.Sprintf("ALTER TABLE tracks ADD COLUMN %s %s", col.name, col.typ)
+		var addErr error
+		for i := 0; i < 3; i++ {
+			_, addErr = db.Exec(sql)
+			if addErr == nil {
+				break
+			}
+			slog.Warn("Column add retry", "col", col.name, "attempt", i+1, "err", addErr)
+			db.Exec("PRAGMA wal_checkpoint(FULL); PRAGMA synchronous = NORMAL;")
+			time.Sleep(time.Second * time.Duration(i+1))
+		}
+		if addErr != nil {
+			return fmt.Errorf("failed to add %s: %w", col.name, addErr)
+		}
+		slog.Info("Added missing column", "col", col.name)
+	}
+	// Verify critical
+	var verifyCount int
+	if err := db.QueryRow("SELECT count(*) FROM pragma_table_info('tracks') WHERE name='has_lyrics'").Scan(&verifyCount); err != nil || verifyCount == 0 {
+		return fmt.Errorf("has_lyrics migration failed post-check")
 	}
 
 	return nil
