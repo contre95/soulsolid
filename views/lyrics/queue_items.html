@@ -16,7 +16,7 @@
             </div>
             <div class="flex items-center gap-1 ml-1">
                 {{if eq .Type "existing_lyrics"}}
-                  {{ $tooltip := "" }}{{if len .ItemMetadata}}{{range $key, $value := .ItemMetadata}}{{ $tooltip = printf "%s%s: %s\n" $tooltip $key $value }}{{end}}{{end}}
+                  {{ $tooltip := "" }}{{if len .ItemMetadata}}{{range $key, $value := .ItemMetadata}}{{if ne $key "new_lyrics"}}{{ $tooltip = printf "%s%s: %s\n" $tooltip $key $value }}{{end}}{{end}}{{end}}
                   <span class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 border border-blue-400/30 text-blue-700 dark:text-blue-300 {{if len .ItemMetadata}}cursor-help{{end}}"
                         {{if len .ItemMetadata}}title="{{$tooltip}}" data-tooltip="{{$tooltip}}"{{end}}>
                       Existing
@@ -36,6 +36,13 @@
                 {{end}}
             </div>
         </div>
+
+        {{if eq .Type "existing_lyrics"}}
+        <div class="text-[10px] text-blue-600 dark:text-blue-400 pl-1 mt-0.5">
+          (<a href="/library/tracks/{{.Track.ID}}/lyrics" target="_blank" class="hover:underline">old</a>)
+          (<a href="/lyrics/queue/{{.ID}}/new_lyrics" target="_blank" class="hover:underline">new</a>)
+        </div>
+        {{end}}
 
         <!-- Compact action buttons -->
         <div class="flex flex-wrap gap-1 justify-start">

@@ -121,6 +121,20 @@ func (h *Handler) GetTrackLyrics(c *fiber.Ctx) error {
 	return c.SendString(track.Metadata.Lyrics)
 }
 
+// GetQueueNewLyrics returns the new lyrics from a queue item's metadata.
+func (h *Handler) GetQueueNewLyrics(c *fiber.Ctx) error {
+	itemID := c.Params("id")
+	queueItemsMap := h.service.GetLyricsQueueItems()
+	item, ok := queueItemsMap[itemID]
+	if !ok {
+		return c.Status(fiber.StatusNotFound).SendString("Queue item not found")
+	}
+	if newLyrics, ok := item.Metadata["new_lyrics"]; ok && newLyrics != "" {
+		return c.SendString(newLyrics)
+	}
+	return c.SendString("No new lyrics available")
+}
+
 // RenderLyricsQueueItems renders the lyrics queue content for HTMX
 func (h *Handler) RenderLyricsQueueItems(c *fiber.Ctx) error {
 	slog.Debug("RenderLyricsQueueItems handler called")
