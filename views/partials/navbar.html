@@ -1,13 +1,13 @@
 {{define "navbar"}}
-<nav id="top-navbar" class="top-0 left-0 z-100 w-full border-gray-200  transition-transform sm:hidden pt-6">
+<nav id="top-navbar" class="top-0 left-0 z-100 w-full border-gray-200  transition-transform sm:hidden pt-2">
   <div class="max-w-screen-xl flex flex-wrap items-center justify-start p-2 mx-auto w-full gap-4">
      <a href="/" class="flex items-center space-x-3 rtl:space-x-reverse">
-        <img id="logo-ship" src="/img/galaxy.png" class="h-12 animate__animated animate__rotateIn" alt="Soulsolid">
+        <img id="logo-ship" src="/img/galaxy.png" class="h-16 animate__animated animate__rotateIn" alt="Soulsolid">
         <span class="self-center whitespace-nowrap text-gray-800 dark:text-blue-300 dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.8)] hover:text-blue-300 hover:drop-shadow-[0_0_15px_rgba(96,165,250,0.9)] transition-all duration-300">
           <span class="text-3xl font-semibold">Soulsolid</span><br>
-          <span id="song-count-navbar" class="text-base font-semibold text-gray-500 dark:text-gray-400" hx-get="/library/tracks/count" hx-push-url="false" hx-trigger="load, every 30s" hx-swap="innerHTML"></span>
+          <span id="song-count-navbar" class="text-base font-semibold text-gray-500 dark:text-gray-400" hx-get="/library/tracks/count" hx-push-url="false" hx-trigger="load" hx-swap="innerHTML"></span>
           <span class="text-base font-semibold text-gray-500 dark:text-gray-400"> · </span>
-          <span id="storage-size-navbar" class="text-base font-semibold text-gray-500 dark:text-gray-400" hx-get="/library/storage/size" hx-push-url="false" hx-trigger="load, every 60s" hx-swap="innerHTML"></span>
+          <span id="storage-size-navbar" class="text-base font-semibold text-gray-500 dark:text-gray-400" hx-get="/library/storage/size" hx-push-url="false" hx-trigger="load" hx-swap="innerHTML"></span>
         </span>
      </a>
      <button id="navbar-toggle" type="button"
@@ -57,6 +57,12 @@
                     <path d="M9 13H15M15 13L13 11M15 13L13 15M12.0627 6.06274L11.9373 5.93726C11.5914 5.59135 11.4184 5.4184 11.2166 5.29472C11.0376 5.18506 10.8425 5.10425 10.6385 5.05526C10.4083 5 10.1637 5 9.67452 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V15.8C3 16.9201 3 17.4802 3.21799 17.908C3.40973 18.2843 3.71569 18.5903 4.09202 18.782C4.51984 19 5.07989 19 6.2 19H17.8C18.9201 19 19.4802 19 19.908 18.782C20.2843 18.5903 20.5903 18.2843 20.782 17.908C21 17.4802 21 16.9201 21 15.8V10.2C21 9.0799 21 8.51984 20.782 8.09202C20.5903 7.71569 20.2843 7.40973 19.908 7.21799C19.4802 7 18.9201 7 17.8 7H14.3255C13.8363 7 13.5917 7 13.3615 6.94474C13.1575 6.89575 12.9624 6.81494 12.7834 6.70528C12.5816 6.5816 12.4086 6.40865 12.0627 6.06274Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
                   </svg>
                   <span class="mx-2 font-medium">Importing</span>
+                  <div id="import-queue-badge-nav" hx-get="/import/queue/count" hx-push-url="false"
+                    hx-trigger="load, every 1s, refreshImportQueueBadge from:body" hx-target="#import-queue-count-nav"
+                    hx-swap="innerHTML">
+                    <span id="import-queue-count-nav"
+                      class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-orange-300 dark:drop-shadow-[0_0_10px_rgba(255,165,0,0.8)]"></span>
+                  </div>
                 </a>
               </button>
             </li>

@@ -5,11 +5,10 @@
   aria-label="Sidebar" aria-hidden="true">
   <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
     <a href="/" class="flex items-center space-x-2 rtl:space-x-reverse">
-      <img id="logo-ship" src="/img/galaxy.png" class="h-12 animate__animated animate__rotateIn" alt="Soulsolid" />
+      <img id="logo-ship" src="/img/galaxy.png" class="h-14 animate__animated animate__rotateIn" alt="Soulsolid" />
       <span class="self-center whitespace-nowrap text-gray-800 dark:text-blue-300 dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.8)] hover:text-blue-300 hover:drop-shadow-[0_0_15px_rgba(96,165,250,0.9)] transition-all duration-300">
         <span class="text-3xl font-semibold mt-2">Soulsolid</span><br>
         <span id="song-count-sidebar" class="text-xs font-semibold text-gray-500 dark:text-gray-400" hx-get="/library/tracks/count" hx-push-url="false" hx-trigger="load, every 30s" hx-swap="innerHTML"></span>
-        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400"> · </span>
         <span id="storage-size-sidebar" class="text-xs font-semibold text-gray-500 dark:text-gray-400" hx-get="/library/storage/size" hx-push-url="false" hx-trigger="load, every 60s" hx-swap="innerHTML"></span>
       </span>
     </a>
