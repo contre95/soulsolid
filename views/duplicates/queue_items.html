@@ -1,0 +1,63 @@
+{{if .QueueItems}}
+{{range .QueueItems}}
+<div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 shadow-md backdrop-blur-sm mb-8 w-full">
+    <div class="flex items-start gap-6">
+        <!-- Track Info -->
+        <div class="flex-1">
+            <div class="flex items-center gap-4 mb-6">
+                <i class="fas fa-copy text-4xl text-violet-500"></i>
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800 dark:text-white">{{.Track.Title}}</h2>
+                    <p class="text-lg text-gray-500">{{with .Track.Artists}}{{range $i, $ar := .}}{{if lt $i 1}}{{with $ar.Artist}}{{.Name}}{{else}}Unknown{{end}}{{end}}{{end}}{{end}}</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-6 text-sm">
+                <div>
+                    <div class="font-medium text-gray-500 dark:text-gray-400 mb-1">Path 1</div>
+                    <div class="font-mono text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">{{.Track.Path}}</div>
+                </div>
+                <div>
+                    <div class="font-medium text-gray-500 dark:text-gray-400 mb-1">Path 2</div>
+                    <div class="font-mono text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">/dupe/path.flac</div>
+                </div>
+            </div>
+            <div class="mt-4 text-sm">
+                Similarity: <span class="font-semibold text-violet-600">{{.Metadata.similarity}}%</span>
+            </div>
+        </div>
+        
+        <!-- Decision & Comparison -->
+        <div class="w-80 border-l border-gray-100 dark:border-gray-700 pl-8">
+            <div class="mb-6">
+                <div class="uppercase text-xs tracking-widest text-gray-400 mb-2">Review & Decide</div>
+                <div class="text-xs bg-violet-50 dark:bg-violet-900/20 p-4 rounded-xl space-y-3">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-500">Paths differ</span>
+                        <span class="text-emerald-500">✓ Confirmed</span>
+                    </div>
+                    <div class="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div class="h-1.5 bg-violet-500 rounded-full" style="width: {{.Metadata.similarity}}%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col gap-2">
+                <button hx-post="/duplicates/queue/{{.ID}}/keep" hx-target="#toast-container" hx-swap="innerHTML"
+                        class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-emerald-500/10 border border-emerald-400/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20">
+                    <i class="fas fa-check mr-2"></i> Keep This Track
+                </button>
+                <button hx-post="/duplicates/queue/{{.ID}}/delete" hx-target="#toast-container" hx-swap="innerHTML"
+                        class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-red-500/10 border border-red-400/30 text-red-700 dark:text-red-300 hover:bg-red-500/20">
+                    <i class="fas fa-trash mr-2"></i> Delete This Track
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+{{else}}
+<div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-12 text-center">
+    <i class="fas fa-copy text-6xl text-gray-300 dark:text-gray-700 mb-6"></i>
+    <h3 class="text-2xl font-semibold text-gray-400 dark:text-gray-500">No duplicates found</h3>
+    <p class="text-gray-500 mt-2">Run analysis to populate the review queue</p>
+</div>
+{{end}}

@@ -1,0 +1,34 @@
+{{if .Groups}}
+{{range .Groups}}
+<div class="mb-4 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+    <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 flex items-center justify-between border-b">
+        <div class="font-medium text-sm">
+            {{.Key}} ({{len .Items}} tracks)
+            {{if .Similarity}}• {{.Similarity}}% similar{{end}}
+        </div>
+        <div class="flex gap-2">
+            <button hx-post="/duplicates/queue/group/fp/{{.Key}}/keep" 
+                    hx-target="#toast-container"
+                    hx-confirm="Keep all in this group?"
+                    class="text-xs px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">Keep All</button>
+            <button hx-post="/duplicates/queue/group/fp/{{.Key}}/delete" 
+                    hx-target="#toast-container"
+                    hx-confirm="Delete all duplicates in group?"
+                    class="text-xs px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">Delete All</button>
+        </div>
+    </div>
+    <div class="p-3 space-y-2">
+        {{range .Items}}
+        <div class="text-xs p-2 bg-white dark:bg-gray-900 rounded border">
+            {{.Track.Title}} - {{with .Track.Artists}}{{range $i, $ar := .}}{{if lt $i 1}}{{with $ar.Artist}}{{.Name}}{{else}}Unknown{{end}}{{end}}{{end}}{{end}}
+        </div>
+        {{end}}
+    </div>
+</div>
+{{end}}
+{{else}}
+<div class="text-center py-12 text-gray-400">
+    <i class="fas fa-layer-group text-5xl mb-4 opacity-20"></i>
+    <p>No duplicate groups found</p>
+</div>
+{{end}}

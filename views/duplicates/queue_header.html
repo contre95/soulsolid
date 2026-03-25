@@ -1,0 +1,55 @@
+<div class="flex flex-col gap-2">
+  <!-- Main header row - compact -->
+  <div class="flex items-center justify-between gap-2">
+     <div class="flex flex-row gap-1">
+       <button
+         hx-get="/ui/duplicates/queue/items"
+         hx-target="#duplicates-queue-content"
+         hx-swap="innerHTML"
+         hx-trigger="click, duplicatesQueueUpdated from:body, refreshDuplicatesQueueBadge from:body"
+         class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-500/10 border border-orange-400/30 text-orange-600 dark:text-orange-300 hover:bg-orange-500/20 dark:hover:bg-orange-500/30"
+         title="Refresh Queue">
+         <i class="fas fa-sync-alt"></i>
+       </button>
+       <button
+         hx-post="/duplicates/queue/clear"
+         hx-target="#toast-container"
+         hx-trigger="click"
+         hx-confirm="Are you sure you want to clear the entire duplicates queue?"
+         class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100/80 dark:bg-red-900/30 border border-red-200/50 dark:border-red-700/50 text-red-800 dark:text-red-200 hover:bg-red-200/80 dark:hover:bg-red-800/30"
+         title="Clear Queue">
+         <i class="fas fa-trash-alt"></i>
+       </button>
+     </div>
+  </div>
+
+  <!-- View toggle buttons row - compact -->
+  <div class="flex justify-center">
+     <div class="flex gap-1 bg-gray-100/50 dark:bg-gray-800/50 rounded p-0.5">
+        <button
+          id="view-individual-duplicates"
+          hx-get="/ui/duplicates/queue/items"
+          hx-target="#duplicates-queue-content"
+          hx-swap="innerHTML"
+          hx-trigger="click, activateIndividualGroupingDuplicates from:body, duplicatesQueueUpdated from:body, refreshDuplicatesQueueBadge from:body"
+          hx-on:click="activateDuplicatesGroupingButton('individual');"
+          hx-on:htmx:after-request="if (event.detail.xhr && event.detail.xhr.getResponseHeader && event.detail.xhr.getResponseHeader('HX-Trigger')?.includes('activateIndividualGroupingDuplicates')) { activateDuplicatesGroupingButton('individual'); }"
+          class="view-toggle-btn active inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+          title="Individual View">
+          <i class="fas fa-list text-xs"></i>
+        </button>
+        <button
+          id="view-fp-groups-duplicates"
+          hx-get="/ui/duplicates/queue/items/grouped"
+          hx-target="#duplicates-queue-content"
+          hx-swap="innerHTML"
+          hx-trigger="click, activateFPGroupingDuplicates from:body, duplicatesQueueUpdated from:body, refreshDuplicatesQueueBadge from:body"
+          hx-on:click="activateDuplicatesGroupingButton('fp-groups');"
+          hx-on:htmx:after-request="if (event.detail.xhr && event.detail.xhr.getResponseHeader && event.detail.xhr.getResponseHeader('HX-Trigger')?.includes('activateFPGroupingDuplicates')) { activateDuplicatesGroupingButton('fp-groups'); }"
+          class="view-toggle-btn inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200"
+          title="Group by Fingerprint">
+          <i class="fas fa-layer-group text-xs"></i>
+        </button>
+     </div>
+  </div>
+</div>

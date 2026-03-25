@@ -1,0 +1,71 @@
+<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" id="compare-modal">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-auto">
+        <div class="p-6 border-b dark:border-gray-700 flex items-center justify-between">
+            <h3 class="text-xl font-semibold text-slate-800 dark:text-white">Duplicate Comparison</h3>
+            <button onclick="this.closest('#compare-modal').remove()" 
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+        
+        <div class="p-6 grid grid-cols-2 gap-6">
+            <!-- Original / Primary -->
+            <div>
+                <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl mb-4">
+                    <h4 class="font-medium text-green-700 dark:text-green-400 mb-2 flex items-center gap-2">
+                        <i class="fas fa-check"></i> Original (Recommended Keep)
+                    </h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Primary track from library (based on similarity match).</p>
+                    <div class="mt-4 text-xs space-y-1 text-gray-500">
+                        <div><strong>Path:</strong> /library/original.mp3</div>
+                        <div><strong>Duration:</strong> 3:45</div>
+                        <div><strong>Year:</strong> 1990</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Duplicate (Current Item) -->
+            <div>
+                <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-xl mb-4">
+                    <h4 class="font-medium text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-2">
+                        <i class="fas fa-copy"></i> Duplicate
+                    </h4>
+                    <div class="text-sm">
+                        <strong>{{.Item.Track.Title}}</strong><br>
+                         {{with .Item.Track.Artists}}{{range $i, $ar := .}}{{if lt $i 1}}{{with $ar.Artist}}{{.Name}}{{else}}Unknown{{end}}{{end}}{{end}}{{end}} • {{.Item.Track.Album.Title}}
+                    </div>
+                    <div class="mt-4 text-xs space-y-1 text-gray-500">
+                        <div><strong>Path:</strong> {{.Item.Track.Path}}</div>
+                        <div><strong>Similarity:</strong> {{.Item.Metadata.similarity}}%</div>
+                        <div><strong>Year:</strong> {{.Item.Track.Metadata.Year}}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6 border-t dark:border-gray-700 flex gap-3 justify-end">
+            <button onclick="this.closest('#compare-modal').remove()" 
+                    class="px-6 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50">
+                Close
+            </button>
+            <button hx-post="/duplicates/queue/{{.Item.ID}}/keep" hx-target="#toast-container" onclick="this.closest('#compare-modal').remove()"
+                    class="px-6 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700">
+                Keep Original
+            </button>
+            <button hx-post="/duplicates/queue/{{.Item.ID}}/delete" hx-target="#toast-container" onclick="this.closest('#compare-modal').remove()"
+                    class="px-6 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700">
+                Delete Duplicate
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Close on escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('compare-modal');
+            if (modal) modal.remove();
+        }
+    });
+</script>

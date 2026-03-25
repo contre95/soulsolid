@@ -71,6 +71,19 @@ features/yourfeature/
 - Return HTML partials for UI, JSON for API
 - Consistent error handling for both response types
 
+**Section Rendering Pattern for Sidebar Features** (`Render*Section` methods):
+- For sections in sidebar (e.g., analyze_duplicates), always set `data["Section"] = "your_section_name"` and conditionally render full layout:
+  ```go
+  data := fiber.Map{"Section": "analyze_duplicates"}
+  if c.Get("HX-Request") != "true" {
+      // Full page for F5/direct navigation (navbar + sidebar via main.html)
+      return c.Render("main", data)
+  }
+  return c.Render("sections/analyze_duplicates", data)
+  ```
+- Matches `views/partials/main.html` if/else chain. Critical for new analyze sections to appear on refresh.
+- Reference: `src/features/duplicates/handlers.go:20-29` (duplicates example).
+
 **Error Response Pattern**: 
 - HTMX errors: `src/features/downloading/handlers.go:43-46`
 - API errors: `src/features/downloading/handlers.go:47-50`

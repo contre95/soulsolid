@@ -12,6 +12,7 @@ type Config struct {
 	Import       Import      `yaml:"import"`
 	Metadata     Metadata    `yaml:"metadata"`
 	Lyrics       Lyrics      `yaml:"lyrics"`
+	Duplicates   Duplicates  `yaml:"duplicates"`
 	Jobs         Jobs        `yaml:"jobs"`
 }
 type Jobs struct {
@@ -95,6 +96,14 @@ type Lyrics struct {
 type LyricsProvider struct {
 	Enabled      bool `yaml:"enabled"`
 	PreferSynced bool `yaml:"prefer_synced,omitempty"`
+}
+
+type Duplicates struct {
+	Enabled          bool    `yaml:"enabled"`
+	FpExactThreshold float64 `yaml:"fp_exact_threshold"`
+	FpFuzzyThreshold float64 `yaml:"fp_fuzzy_threshold"`
+	DefaultAction    string  `yaml:"default_action"`
+	MaxGroupSize     int     `yaml:"max_group_size"`
 }
 
 // Artwork holds configuration for artwork handling
