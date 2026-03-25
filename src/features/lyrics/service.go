@@ -212,7 +212,8 @@ func (s *Service) GetLyricsGroupedByAlbum() map[string][]music.QueueItem {
 }
 
 // AddLyrics searches for and adds lyrics to a track using a specific provider
-func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName string) (AddLyricsResult, error) {
+// overrideNoQueue: if true, directly overwrite existing lyrics instead of queuing for manual review
+func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName string, overrideNoQueue bool) (AddLyricsResult, error) {
 	// Get current track data
 	track, err := s.libraryRepo.GetTrack(ctx, trackID)
 	if err != nil {
@@ -255,15 +256,19 @@ func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName st
 		// We want to directly add the lyrics without manual review if the track has lyrics and the lyrics metadata is empty. Better something than nothing
 		if existingTrimmed != "" {
 			if existingTrimmed != newTrimmed {
-				slog.Info("Track already has lyrics but new lyrics differ, adding to queue for manual review", "trackID", trackID)
-				if err := s.AddLyricsQueueItem(track, ExistingLyrics, map[string]string{
-					"provider":   providerName,
-					"new_lyrics": newLyrics,
-				}); err != nil {
-					slog.Error("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
+				if overrideNoQueue {
+					slog.Info("Track already has lyrics but new lyrics differ, overriding without queuing", "trackID", trackID)
 				} else {
-					slog.Info("Successfully added track to existing_lyrics queue with new lyrics", "trackID", trackID)
-					return LyricsQueued, nil
+					slog.Info("Track already has lyrics but new lyrics differ, adding to queue for manual review", "trackID", trackID)
+					if err := s.AddLyricsQueueItem(track, ExistingLyrics, map[string]string{
+						"provider":   providerName,
+						"new_lyrics": newLyrics,
+					}); err != nil {
+						slog.Error("Failed to add track to lyrics queue", "trackID", trackID, "error", err)
+					} else {
+						slog.Info("Successfully added track to existing_lyrics queue with new lyrics", "trackID", trackID)
+						return LyricsQueued, nil
+					}
 				}
 			} else {
 				slog.Info("Track already has lyrics, new lyrics are identical, skipping", "trackID", trackID)
@@ -364,10 +369,12 @@ func (s *Service) SearchLyrics(ctx context.Context, trackID string, providerName
 }
 
 // StartLyricsAnalysis starts a job to analyze all tracks for lyrics
-func (s *Service) StartLyricsAnalysis(ctx context.Context, provider string) (string, error) {
-	slog.Info("Starting lyrics analysis job", "provider", provider)
+func (s *Service) StartLyricsAnalysis(ctx context.Context, provider string, skipExistingLyrics bool, overrideNoQueue bool) (string, error) {
+	slog.Info("Starting lyrics analysis job", "provider", provider, "skipExistingLyrics", skipExistingLyrics, "overrideNoQueue", overrideNoQueue)
 	jobID, err := s.jobService.StartJob("analyze_lyrics", "Analyze Lyrics for Library", map[string]any{
-		"provider": provider,
+		"provider":          provider,
+		"skip_existing":     skipExistingLyrics,
+		"override_no_queue": overrideNoQueue,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to start lyrics analysis job: %w", err)

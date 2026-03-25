@@ -51,6 +51,36 @@
                         {{end}}
                     </select>
                 </div>
+                <div class="mb-4 space-y-3">
+                    <div class="flex items-center">
+                        <input
+                            type="checkbox"
+                            id="skip_existing_lyrics"
+                            name="skip_existing_lyrics"
+                            value="true"
+                            checked
+                            class="w-4 h-4 text-pink-500 border-gray-300 rounded focus:ring-pink-500 dark:border-gray-600 dark:bg-gray-700"
+                            hx-on:click="this.checked ? (document.getElementById('override_no_queue').setAttribute('disabled', ''), document.getElementById('override_no_queue').classList.add('opacity-50'), document.getElementById('override_no_queue-label').classList.add('opacity-50'), document.getElementById('override_no_queue').checked = false) : (document.getElementById('override_no_queue').removeAttribute('disabled'), document.getElementById('override_no_queue').classList.remove('opacity-50'), document.getElementById('override_no_queue-label').classList.remove('opacity-50'))"
+                        >
+                        <label id="skip_existing_lyrics-label" for="skip_existing_lyrics" class="ml-2 text-sm text-slate-700 dark:text-slate-300">
+                            Skip tracks that already have lyrics
+                        </label>
+                    </div>
+                    <div class="flex items-center">
+                        <input
+                            type="checkbox"
+                            id="override_no_queue"
+                            name="override_no_queue"
+                            value="true"
+                            disabled
+                            class="w-4 h-4 text-pink-500 border-gray-300 rounded focus:ring-pink-500 dark:border-gray-600 dark:bg-gray-700 opacity-50"
+                            hx-on:click="this.checked ? (document.getElementById('skip_existing_lyrics').setAttribute('disabled', ''), document.getElementById('skip_existing_lyrics').classList.add('opacity-50'), document.getElementById('skip_existing_lyrics-label').classList.add('opacity-50'), document.getElementById('skip_existing_lyrics').checked = false) : (document.getElementById('skip_existing_lyrics').removeAttribute('disabled'), document.getElementById('skip_existing_lyrics').classList.remove('opacity-50'), document.getElementById('skip_existing_lyrics-label').classList.remove('opacity-50'))"
+                        >
+                        <label id="override_no_queue-label" for="override_no_queue" class="ml-2 text-sm text-slate-700 dark:text-slate-300 opacity-50">
+                            Override without queuing
+                        </label>
+                    </div>
+                </div>
                 <button
                     type="submit"
                     class="w-full border border-pink-500 dark:border-pink-400 text-pink-500 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/30 font-medium py-2 px-4 rounded-md transition-colors duration-200"
