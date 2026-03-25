@@ -334,6 +334,11 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 	skipExistingLyrics := c.FormValue("skip_existing_lyrics") == "true"
 	overrideNoQueue := c.FormValue("override_no_queue") == "true"
 
+	// If skip is enabled, override is not applicable
+	if skipExistingLyrics {
+		overrideNoQueue = false
+	}
+
 	jobID, err := h.service.StartLyricsAnalysis(c.Context(), provider, skipExistingLyrics, overrideNoQueue)
 	if err != nil {
 		slog.Error("Failed to start lyrics analysis", "error", err)
