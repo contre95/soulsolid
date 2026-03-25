@@ -1,0 +1,299 @@
+{
+  "repo_notes": [
+    {
+      "content": ""
+    }
+  ],
+  "pages": [
+    {
+      "title": "Overview",
+      "purpose": "Introduce Soulsolid: what it is, what problems it solves, its major features (library management, downloading, importing, metadata tagging, DAP sync, Telegram integration), and links to sub-pages for deeper coverage.",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Getting Started",
+      "purpose": "Cover how to run Soulsolid for the first time: running locally with Go, container-based deployment with Podman or Docker Compose, mounting volumes, and accessing the web UI.",
+      "parent": "Overview",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "System Architecture",
+      "purpose": "Describe the overall architecture: how main.go wires together all services, the dependency injection pattern, the Fiber HTTP server, the role of the job system as a central dispatcher, and the layered structure of features, domain, and infra packages.",
+      "parent": "Overview",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Configuration",
+      "purpose": "Document the configuration system: the Config struct and all its fields, the config.yaml file format, how the Manager loads and saves config, the !env_var YAML tag for environment variable injection, default values, and the web-based settings UI.",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Configuration Reference",
+      "purpose": "A complete field-by-field reference for every configuration section: libraryPath, downloadPath, server, logger, telegram, database, import, downloaders, metadata providers, lyrics providers, sync devices, and jobs webhooks.",
+      "parent": "Configuration",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Core Domain Models",
+      "purpose": "Introduce the core music domain entities (Track, Album, Artist, ArtistRole) and explain how they relate to each other. Cover the music package role as the central set of interfaces and data structures used throughout the application.",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Track",
+      "purpose": "Document the Track struct in full: all fields (ID, Path, Title, Artists, Album, Metadata, ISRC, ChromaprintFingerprint, Bitrate, Format, etc.), the Validate method, EnsureMetadataDefaults, ValidateRequiredMetadata, GenerateTrackID, and the MetadataSource and Metadata sub-structs.",
+      "parent": "Core Domain Models",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Album and Artist",
+      "purpose": "Document the Album struct (ID, Title, Type, Artists, Tracks, ReleaseDate, artwork fields), AlbumType enumeration (compilation, soundtrack, ep, single, default), ArtistRole, and the Artist struct with its Validate method.",
+      "parent": "Core Domain Models",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Music Library and Database",
+      "purpose": "Document the music.Library interface (all Track, Album, Artist CRUD and query methods), the SqliteLibrary implementation, the library.Service business logic layer, and the library.Handler HTTP endpoints for browsing, searching, and managing library entries.",
+      "parent": "Core Domain Models",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Import Queue",
+      "purpose": "Document the music.Queue interface, QueueItem struct (ID, Type, Track, Timestamp, JobID, Metadata), QueueItemType values (duplicate, failed_import, missing_metadata, manual_review), and the InMemoryQueue implementation including grouped retrieval methods.",
+      "parent": "Core Domain Models",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Importing Music",
+      "purpose": "Overview of the importing feature: how music files are brought into the library from the download path or any local directory, the role of background jobs, the queue-based review workflow, and the file system watcher for automated importing.",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Import Service and HTTP API",
+      "purpose": "Document the importing.Service public methods (ImportDirectory, GetQueuedItems, ClearQueue, PruneDownloadPath, ProcessQueueItem, ProcessQueueGroup, StartWatcher, StopWatcher, GetWatcherStatus) and all Handler HTTP endpoints with their request and response formats.",
+      "parent": "Importing Music",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Directory Import Job",
+      "purpose": "Document how the DirectoryImportTask background job works: directory walking, supported file extensions, tag reading, fingerprint generation, duplicate detection logic, the ImportAction enumeration (SkipTrack, ReplaceTrack, QueueTrack, ImportTrack), and ImportStats tracking.",
+      "parent": "Importing Music",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Import Queue UI",
+      "purpose": "Document the import queue user interface: the individual items view with per-type action buttons for duplicate/failed_import/missing_metadata/manual_review items, the grouped-by-artist and grouped-by-album views, bulk actions, and HTMX update patterns.",
+      "parent": "Importing Music",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "File System Watcher",
+      "purpose": "Document the Watcher component: how it uses fsnotify to monitor a directory recursively, the debouncing mechanism for file creation events, the FileEvent struct and FileEventType enum, the importing.Watcher interface, and how it integrates with the import service.",
+      "parent": "Importing Music",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Path Management and File Organization",
+      "purpose": "Document how TemplatePathParser generates destination file paths from track metadata using config-defined templates, and how FileOrganizer moves or copies tracks into the library directory structure.",
+      "parent": "Importing Music",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Downloading Music",
+      "purpose": "Overview of the downloading feature: plugin-based architecture for integrating external music sources, search across albums/tracks/artists/links, download job execution, and the tag writer integration for post-download metadata embedding.",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Download Service and HTTP API",
+      "purpose": "Document the downloading.Service, downloading.Handler HTTP endpoints (search, download track/album/artist/tracks/playlist, capabilities, user info, chart tracks), the request structs, and the DownloadJobTask execution flow including post-download tagging.",
+      "parent": "Downloading Music",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Downloader Plugin System",
+      "purpose": "Document the Downloader interface (all methods: SearchAlbums, SearchTracks, GetAlbumTracks, DownloadTrack, DownloadAlbum, GetUserInfo, GetStatus, Name, Capabilities), the PluginManager (LoadPlugins, GetDownloader, AddDownloader), and the two plugin loading mechanisms: Git repository auto-build vs. pre-built .so file.",
+      "parent": "Downloading Music",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Download UI",
+      "purpose": "Document the download section UI: user info and downloader status display, search form with type selection, album tracks view, and artist results view.",
+      "parent": "Downloading Music",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Metadata and Tagging",
+      "purpose": "Overview of the metadata and tagging system: reading tags from files, writing tags back after enrichment, fetching metadata from external providers, the tag editor UI, and the acoustic fingerprinting pipeline.",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Tag Reader and Writer",
+      "purpose": "Document TagReader (ReadFileTags, parsing artists, reading ISRC/BPM/lyrics/ChromaprintFingerprint/AcoustID from ID3v2 and Vorbis tags) and TagWriter (WriteFileTags, tagMP3, tagFLAC, artwork embedding and resizing, TXXX frames, VorbisComment blocks).",
+      "parent": "Metadata and Tagging",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Metadata Providers",
+      "purpose": "Document the MetadataProvider interface and concrete implementations for MusicBrainz, Discogs, and Deezer: how each is queried, the data structures returned, and how results are merged into the Track model.",
+      "parent": "Metadata and Tagging",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Audio Fingerprinting and AcoustID",
+      "purpose": "Document Chromaprint fingerprint generation using fpcalc (fingerprint.Service, GenerateFingerprint, CompareFingerprints), the AcoustID API service (LookupAcoustID, GenerateChromaprint, CompareChromaprints), and the importing.ChromaprintProvider and metadata.ChromaprintAcoustID interfaces.",
+      "parent": "Metadata and Tagging",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Tag Editor UI",
+      "purpose": "Document the tag editor section UI: the tag.html shell, metadata provider buttons, lyrics provider buttons, search results modal, and lyrics results modal. Cover the hx-post form submission flow for saving tag changes.",
+      "parent": "Metadata and Tagging",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Lyrics",
+      "purpose": "Document the lyrics feature: the LyricsService interface (AddLyrics, GetEnabledLyricsProviders, SearchLyrics), the lrclib and Tekstowo providers, the lyrics HTTP endpoints, and the lyrics analysis background job.",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Analysis",
+      "purpose": "Document the three analysis job types: analyze_reorganize (reorganizing library files according to path templates), analyze_lyrics (bulk lyrics fetching), and analyze_acoustid (bulk Chromaprint and AcoustID generation). Cover the analyze section UI and sub-section views.",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Playlists",
+      "purpose": "Document playlist management: creating and updating playlists, adding tracks/artists/albums, removing tracks, exporting as M3U, the playlists section UI, and HTMX-driven interaction patterns.",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Background Jobs",
+      "purpose": "Document the job system: the JobService interface (StartJob, UpdateJobProgress, GetJob, CancelJob, GetJobs, ClearFinishedJobs), the Job struct and JobStatus enum, job log files, handler endpoints, and the jobs section UI.",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Job Log Formatting",
+      "purpose": "Document how job log output is stored to disk, how log lines are colorized (ParseAndColorLogContent, log_colors.go), and how logs are served and rendered in the UI.",
+      "parent": "Background Jobs",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    }
+  ]
+}
