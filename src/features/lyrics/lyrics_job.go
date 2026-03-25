@@ -106,8 +106,20 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 
 			job.Logger.Debug("Processing track", "trackID", track.ID, "title", track.Title, "hasLyrics", track.HasLyrics, "lyricsLength", len(track.Metadata.Lyrics))
 
-			// Skip tracks explicitly marked as having no lyrics (has_lyrics = false and no lyrics)
-			if !track.HasLyrics {
+			// Get job options
+			skipExisting, _ := job.Metadata["skip_existing"].(bool)
+			overrideNoQueue, _ := job.Metadata["override_no_queue"].(bool)
+
+			// Skip tracks that already have lyrics if option is enabled
+			if skipExisting && track.HasLyrics {
+				job.Logger.Info("Track already has lyrics - skipping", "trackID", track.ID, "title", track.Title)
+				skipped++
+				processed++
+				continue
+			}
+
+			// Skip tracks explicitly marked as having no lyrics (has_lyrics = false and no lyrics) - only when not overriding
+			if !overrideNoQueue && !track.HasLyrics {
 				job.Logger.Info("Track explicitly marked as having no lyrics - skipping", "trackID", track.ID, "title", track.Title, "has_lyrics", track.HasLyrics)
 				skipped++
 				processed++
@@ -125,8 +137,8 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 			}
 
 			// Try to fetch lyrics for this track using the specified provider
-			job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "provider", provider, "color", "cyan")
-			result, err := t.service.AddLyrics(ctx, track.ID, provider)
+			job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "provider", provider, "overrideNoQueue", overrideNoQueue, "color", "cyan")
+			result, err := t.service.AddLyrics(ctx, track.ID, provider, overrideNoQueue)
 			if err != nil {
 				job.Logger.Error("Failed to add lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "error", err.Error(), "manual_fix", "<a href='/ui/library/tag/edit/"+track.ID+"' target='_blank'>track</a>")
 				errors++

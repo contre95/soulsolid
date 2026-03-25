@@ -330,7 +330,11 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 		})
 	}
 
-	jobID, err := h.service.StartLyricsAnalysis(c.Context(), provider)
+	// Get options from form data
+	skipExistingLyrics := c.FormValue("skip_existing_lyrics") == "true"
+	overrideNoQueue := c.FormValue("override_no_queue") == "true"
+
+	jobID, err := h.service.StartLyricsAnalysis(c.Context(), provider, skipExistingLyrics, overrideNoQueue)
 	if err != nil {
 		slog.Error("Failed to start lyrics analysis", "error", err)
 		return c.Render("toast/toastErr", fiber.Map{
