@@ -18,6 +18,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	library.Get("/artists/count", handler.GetArtistsCount)
 	library.Get("/albums/count", handler.GetAlbumsCount)
 	library.Get("/tracks/count", handler.GetTracksCount)
+	library.Get("/storage/size", handler.GetStorageSize)
 	library.Get("/artists/:id", handler.GetArtist)
 	library.Get("/albums/:id", handler.GetAlbum)
 	library.Get("/tracks/:id", handler.GetTrack)

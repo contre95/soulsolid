@@ -9,11 +9,14 @@
           d="M1 1h15M1 7h15M1 13h15" />
       </svg>
     </button>
-     <a href="/" class="flex items-center space-x-3 rtl:space-x-reverse ml-auto">
-        <img id="logo-ship" src="/img/galaxy.png" class="h-12 h-12 animate__animated animate__rotateIn" alt="Soulsolid">
-        <span
-          class="self-center mt-2 text-2xl font-semibold whitespace-nowrap text-right text-gray-800 dark:text-blue-300 dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.8)] hover:text-blue-300 hover:drop-shadow-[0_0_15px_rgba(96,165,250,0.9)] transition-all duration-300">
-        Soulsolid</span>
+     <a href="/" class="flex items-center space-x-2 rtl:space-x-reverse ml-auto">
+        <img id="logo-ship" src="/img/galaxy.png" class="h-10 animate__animated animate__rotateIn" alt="Soulsolid">
+        <span class="self-center whitespace-nowrap text-gray-800 dark:text-blue-300 dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.8)] hover:text-blue-300 hover:drop-shadow-[0_0_15px_rgba(96,165,250,0.9)] transition-all duration-300">
+          <span class="text-xl font-semibold">Soulsolid</span><br>
+          <span id="song-count-navbar" class="text-xs font-semibold text-gray-500 dark:text-gray-400" hx-get="/library/tracks/count" hx-push-url="false" hx-trigger="load, every 30s" hx-swap="innerHTML"></span>
+          <span class="text-xs font-semibold text-gray-500 dark:text-gray-400"> · </span>
+          <span id="storage-size-navbar" class="text-xs font-semibold text-gray-500 dark:text-gray-400" hx-get="/library/storage/size" hx-push-url="false" hx-trigger="load, every 60s" hx-swap="innerHTML"></span>
+        </span>
      </a>
         <div id="navbar-menu"
           class="fixed w-fit hidden z-50 bg-gray-200 dark:bg-gray-800 p-4 rounded-lg border-t border-gray-200 dark:border-gray-700 shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out left-1 top-5">

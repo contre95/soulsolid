@@ -3,8 +3,11 @@ package library
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log/slog"
+	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/contre95/soulsolid/src/features/config"
 	library "github.com/contre95/soulsolid/src/music"
@@ -51,6 +54,33 @@ func (s *Service) GetDownloadsFileTree() (string, error) {
 func (s *Service) GetLibraryFileTree() (string, error) {
 	libraryPath := s.configManager.Get().LibraryPath
 	return s.getFileTree(libraryPath)
+}
+
+// GetStorageSize returns the total storage size in bytes of the library.
+func (s *Service) GetStorageSize(ctx context.Context) (int64, error) {
+	libraryPath := s.configManager.Get().LibraryPath
+	var totalSize int64
+
+	err := filepath.Walk(libraryPath, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			stat, err := os.Stat(path)
+			if err != nil {
+				return err
+			}
+			totalSize += stat.Size()
+		}
+		return nil
+	})
+
+	if err != nil {
+		slog.Error("Failed to calculate storage size", "error", err)
+		return 0, err
+	}
+
+	return totalSize, nil
 }
 
 // GetArtists returns all artists from the library.

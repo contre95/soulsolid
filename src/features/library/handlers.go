@@ -3,7 +3,7 @@ package library
 import (
 	"fmt"
 	"log/slog"
-
+	"math"
 	"strings"
 
 	"github.com/contre95/soulsolid/src/music"
@@ -144,12 +144,38 @@ func (h *Handler) GetAlbumsCount(c *fiber.Ctx) error {
 // GetTracksCount returns the count of tracks in the library.
 func (h *Handler) GetTracksCount(c *fiber.Ctx) error {
 	slog.Debug("GetTracksCount handler called")
-	tracks, err := h.service.GetTracks(c.Context())
+	count, err := h.service.GetTracksCount(c.Context())
 	if err != nil {
 		slog.Error("Error loading tracks count", "error", err)
 		return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks count")
 	}
-	return c.SendString(fmt.Sprintf("%d", len(tracks)))
+	return c.SendString(fmt.Sprintf("%d tracks", count))
+}
+
+// GetStorageSize returns the storage size of the library.
+func (h *Handler) GetStorageSize(c *fiber.Ctx) error {
+	slog.Debug("GetStorageSize handler called")
+	size, err := h.service.GetStorageSize(c.Context())
+	if err != nil {
+		slog.Error("Error loading storage size", "error", err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Error loading storage size")
+	}
+
+	// Format the size
+	var formatted string
+	if size >= 1_000_000_000_000 {
+		formatted = fmt.Sprintf("%.1f TB", float64(size)/math.Pow(10, 12))
+	} else if size >= 1_000_000_000 {
+		formatted = fmt.Sprintf("%.1f GB", float64(size)/math.Pow(10, 9))
+	} else if size >= 1_000_000 {
+		formatted = fmt.Sprintf("%.1f MB", float64(size)/math.Pow(10, 6))
+	} else if size >= 1_000 {
+		formatted = fmt.Sprintf("%.1f KB", float64(size)/math.Pow(10, 3))
+	} else {
+		formatted = fmt.Sprintf("%d B", size)
+	}
+
+	return c.SendString(formatted)
 }
 
 // GetLibraryTable renders the library table section with tabs.
