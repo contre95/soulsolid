@@ -10,7 +10,7 @@
       "purpose": "Introduce Soulsolid: what it is, what problems it solves, its major features (library management, downloading, importing, metadata tagging, DAP sync, Telegram integration), and links to sub-pages for deeper coverage.",
       "page_notes": [
         {
-          "content": ""
+          "content": "Reference README.md for the project tagline, feature list (lines 27-33), screenshots (lines 14-24), and links to docs/demo. Mention it is a Go + Fiber web app with HTMX UI, SQLite database, and plugin-based downloader architecture. Highlight the key selling points: self-hosted, mobile-friendly UI, background job processing, and Telegram bot control."
         }
       ]
     },
@@ -20,7 +20,7 @@
       "parent": "Overview",
       "page_notes": [
         {
-          "content": ""
+          "content": "Reference README.md Quick Start section (lines 39-110). Cover two paths: container usage with Podman/Docker (build + run with volume mounts for music, downloads, logs, library.db, config.yaml) and local development (npm run dev + go run ./src/main.go). Mention the Nix dev shell option from dev.nix. Note the config.yaml auto-creation behavior if missing. Default port is 3535 (config.example.yaml line 35). Environment variable support via !env_var tag (config.example.yaml lines 3-6)."
         }
       ]
     },
@@ -30,7 +30,7 @@
       "parent": "Overview",
       "page_notes": [
         {
-          "content": ""
+          "content": "Reference src/main.go:30-164 for the full wiring sequence. The codebase follows a 3-layer architecture: src/music/ (domain interfaces and models), src/features/ (business logic per feature), src/infra/ (infrastructure implementations). main.go manually wires all dependencies without a DI framework. The job system (src/features/jobs/) acts as a central dispatcher - features register TaskHandlers (main.go lines 69-118). The Fiber HTTP server is created in hosting.NewServer (main.go line 132). Reference FEATURE_SPEC_KIT.md for the feature structure pattern (handlers.go, routes.go, service.go per feature)."
         }
       ]
     },
@@ -39,7 +39,7 @@
       "purpose": "Document the configuration system: the Config struct and all its fields, the config.yaml file format, how the Manager loads and saves config, the !env_var YAML tag for environment variable injection, default values, and the web-based settings UI.",
       "page_notes": [
         {
-          "content": ""
+          "content": "Reference src/features/config/config.go:4-16 for the Config struct with all sub-structs (Telegram, Logger, Downloaders, Server, Database, Import, Metadata, Lyrics, Jobs). The Manager is in src/features/config/manager.go - it uses sync.RWMutex for thread safety, supports !env_var YAML tag for secret injection (manager.go lines 22-86), auto-creates default config if missing (manager.go lines 149-163). Default values are in src/features/config/default.go. Example config is config.example.yaml. The settings UI is in views/sections/settings.html."
         }
       ]
     },
@@ -49,7 +49,7 @@
       "parent": "Configuration",
       "page_notes": [
         {
-          "content": ""
+          "content": "Reference config.example.yaml for the full YAML format with inline comments. Config struct fields map directly: libraryPath (string), downloadPath (string), telegram (enabled, token, allowedUsers, bot_handle - config.go:65-70), logger (enabled, level, format, htmx_debug - config.go:58-63), downloaders (plugins array with name/path/url/icon/config, artwork.embedded with enabled/size/quality - config.go:73-76, 100-118), server (show_routes, port - config.go:52-55), database (path - config.go:47-49), import (move, always_queue, duplicates, paths, auto_start_watcher, allow_missing_metadata - config.go:29-36), metadata.providers map with enabled/secret per provider (config.go:79-87), lyrics.providers map with enabled/prefer_synced (config.go:90-98), jobs (log, log_path, webhooks with enabled/job_types/command - config.go:17-27)."
         }
       ]
     },
@@ -58,7 +58,7 @@
       "purpose": "Introduce the core music domain entities (Track, Album, Artist, ArtistRole) and explain how they relate to each other. Cover the music package role as the central set of interfaces and data structures used throughout the application.",
       "page_notes": [
         {
-          "content": ""
+          "content": "The src/music/ package defines all domain models and service interfaces. Key types: Track (track.go:18-41), Album (album.go:27-51), Artist (artist.go:12-22), ArtistRole (album.go:21-24). Relationships: Track has []ArtistRole and a pointer to Album. Album has []ArtistRole and []*Track. ArtistRole links an Artist pointer with a Role string (main, featured, remixer). Also define service interfaces: Library (library.go:16-54), Queue (queue.go:43-58), FileManager (files.go:8-17), MetadataService/LyricsService/JobService (services.go:26-49), Playlist (playlists.go)."
         }
       ]
     },
@@ -68,7 +68,7 @@
       "parent": "Core Domain Models",
       "page_notes": [
         {
-          "content": ""
+          "content": "Track struct at src/music/track.go:18-41. Fields: ID (UUID string), Path, Title, TitleVersion, Artists ([]ArtistRole), Album (*Album), Metadata (struct at lines 43-55 with Composer, Genre, Year, Duration, OriginalYear, DiscNumber, TrackNumber, Lyrics, ExplicitLyrics, BPM, Gain), ISRC, ChromaprintFingerprint, Bitrate, Format, SampleRate, BitDepth, Channels, ExplicitContent, Attributes (map), PreviewURL, Thumbnail, MetadataSource (struct at lines 12-15 with Source and MetadataSourceURL), HasLyrics, AddedDate, ModifiedDate. Key methods: Validate() at line 58 (checks title length <=500, path <=1000, required artists/album, ISRC <=12, etc.), EnsureMetadataDefaults() at line 230 (fills Unknown Artist/Album/Genre fallbacks), ValidateRequiredMetadata() at line 261 (checks artist, album, title, year), GenerateTrackID() at line 282 (UUID from fingerprint using SHA1). Pretty() at line 155 for debug output."
         }
       ]
     },
@@ -78,7 +78,7 @@
       "parent": "Core Domain Models",
       "page_notes": [
         {
-          "content": ""
+          "content": "Album struct at src/music/album.go:27-51. Fields: ID, Title, Type (AlbumType), Artists ([]ArtistRole), Tracks ([]*Track), ReleaseDate, ReleaseGroupID, Label, CatalogNumber, Country, Status, Barcode, Attributes (map), AddedDate, ModifiedDate, ImageSmall/Medium/Large/XL (URLs for plugin search results), ArtworkData ([]byte), Genre, Genres ([]string). AlbumType enum at lines 10-18: compilation, soundtrack, ep, single, default. ArtistRole at lines 21-24: Artist (*Artist) + Role (string). Album.Validate() at line 54 checks title, artists, field lengths. Artist struct at src/music/artist.go:12-22: ID, Name, SortName, Attributes (map), Image URLs. VariousArtistsName constant 'Various Artists' at line 9. Artist.Validate() at line 25 checks name non-empty and <=500 chars."
         }
       ]
     },
@@ -88,7 +88,7 @@
       "parent": "Core Domain Models",
       "page_notes": [
         {
-          "content": ""
+          "content": "Library interface at src/music/library.go:16-54 defines Track CRUD (Add, Get, Update, Delete, GetPaginated, FindByMetadata, FindByPath), Album CRUD (Add, Update, Delete, Get, GetPaginated, FindByArtistAndName), Artist CRUD (Add, Delete, Get, GetPaginated, FindByName, FindOrCreate). SQLite implementation at src/infra/database/sqlite.go:18-34 (NewSqliteLibrary). Database has tables: artists, albums, tracks, track_artists, album_artists, track_albums, track_attributes, album_attributes, artist_attributes, playlists, playlist_tracks, library_metrics. Migrations at sqlite.go lines 184-213. Business logic in src/features/library/service.go. HTTP handlers in src/features/library/handler.go. Templates in views/library/ and views/sections/library.html."
         }
       ]
     },
@@ -98,7 +98,7 @@
       "parent": "Core Domain Models",
       "page_notes": [
         {
-          "content": ""
+          "content": "Queue interface at src/music/queue.go:43-58. Methods: Add, GetAll, GetByID, Remove, Clear, GetGroupedByArtist, GetGroupedByAlbum. QueueItem struct at lines 33-40: ID, Type (QueueItemType), Track (*Track), Timestamp, JobID, Metadata (map[string]string). QueueItemType enum at lines 13-30: manual_review, duplicate, failed_import, missing_metadata, existing_lyrics, lyric_404, failed_lyrics. Error sentinels: ErrTrackInTheQueueAlready, ErrTrackNotFoundInQueue (lines 8-11). In-memory implementation at src/infra/queue/inmemory.go. Two separate queue instances are used: one for imports (main.go line 59) and one for lyrics (main.go line 60)."
         }
       ]
     },
@@ -107,7 +107,7 @@
       "purpose": "Overview of the importing feature: how music files are brought into the library from the download path or any local directory, the role of background jobs, the queue-based review workflow, and the file system watcher for automated importing.",
       "page_notes": [
         {
-          "content": ""
+          "content": "Importing is in src/features/importing/. Key components: importing.Service (business logic, wired at main.go line 65), DirectoryImportTask (background job registered at main.go line 70), import queue (InMemoryQueue at main.go line 59), file watcher (main.go line 61). The import flow: user triggers directory import → DirectoryImportTask walks directory → reads tags, generates fingerprints → detects duplicates → either imports directly or queues for review → FileOrganizer moves/copies to library path. Config controls: move (copy vs move), always_queue, duplicates (queue/skip/replace), allow_missing_metadata, auto_start_watcher (config.go:29-36). Existing docs at docs/importing.md."
         }
       ]
     },
@@ -117,7 +117,7 @@
       "parent": "Importing Music",
       "page_notes": [
         {
-          "content": ""
+          "content": "Service in src/features/importing/service.go, handler in src/features/importing/handler.go. Service is wired with dependencies: library (music.Library), tagReader (tag.Reader), fingerprintReader (fingerprint.Service), fileOrganizer (files.FileOrganizer), config (config.Manager), jobService (music.JobService), queue (music.Queue), watcher (watching.Watcher) - see main.go line 65. The handler supports dual response: HTMX HTML partials when HX-Request header is present, JSON otherwise. Routes registered in src/features/importing/routes.go. Templates in views/importing/ and views/sections/import.html."
         }
       ]
     },
@@ -127,7 +127,7 @@
       "parent": "Importing Music",
       "page_notes": [
         {
-          "content": ""
+          "content": "DirectoryImportTask in src/features/importing/task.go. Registered as job type 'directory_import' at main.go line 70. Implements jobs.Task interface (MetadataKeys, Execute, Cleanup). The task walks the target directory, reads audio file tags via tag.Reader, generates Chromaprint fingerprints, checks for duplicates against existing library. ImportAction decisions depend on config.duplicates setting (queue/skip/replace) and config.always_queue. Tracks with missing metadata may be queued as 'missing_metadata' type. ImportStats tracks total/imported/skipped/queued/failed counts. Progress is reported via the job progress channel."
         }
       ]
     },
@@ -137,7 +137,7 @@
       "parent": "Importing Music",
       "page_notes": [
         {
-          "content": ""
+          "content": "Templates in views/importing/. The queue UI shows items categorized by QueueItemType with different action buttons per type. Supports grouped views: by artist (GetGroupedByArtist) and by album (GetGroupedByAlbum). Uses HTMX for dynamic updates - items are added/removed without full page reload. Action buttons trigger hx-post to handler endpoints for ProcessQueueItem and ProcessQueueGroup. Toast notifications via views/toast/ partials for success/error feedback. The import section is rendered in views/sections/import.html."
         }
       ]
     },
@@ -147,7 +147,7 @@
       "parent": "Importing Music",
       "page_notes": [
         {
-          "content": ""
+          "content": "Watcher in src/infra/watcher/. Uses fsnotify library for recursive directory monitoring. The importing.Watcher interface defines Start, Stop, Events channel. FileEvent struct and FileEventType enum track file creation/modification events. Debouncing mechanism prevents rapid-fire imports when many files are added at once. Watcher is created at main.go line 61 and integrated into importing.Service at line 65. Config auto_start_watcher (config.go line 34) controls whether watching starts on app launch. Service provides StartWatcher/StopWatcher/GetWatcherStatus methods for runtime control."
         }
       ]
     },
@@ -157,7 +157,7 @@
       "parent": "Importing Music",
       "page_notes": [
         {
-          "content": ""
+          "content": "Path management in src/infra/files/. TemplatePathParser (files.NewTemplatePathParser at main.go line 43) generates destination paths using template strings from config.import.paths (config.go lines 38-44). Templates support placeholders like $albumartist, $album, $year, $original_year, $track, $title and functions like %asciify{} and %if{}. Path templates are defined per album type: compilations, album:soundtrack, album:single, album:ep, default_path. FileOrganizer (files.NewFileOrganizer at main.go line 44) uses the path parser to move or copy files to the library directory. Reference docs/paths.md for the full placeholder/function reference."
         }
       ]
     },
@@ -166,7 +166,7 @@
       "purpose": "Overview of the downloading feature: plugin-based architecture for integrating external music sources, search across albums/tracks/artists/links, download job execution, and the tag writer integration for post-download metadata embedding.",
       "page_notes": [
         {
-          "content": ""
+          "content": "Downloading is in src/features/downloading/. Plugin-based architecture: downloaders are loaded as Go plugins (.so files) or built from git repos. downloading.Service is wired at main.go line 102 with config, jobService, pluginManager, and tagWriter. Five download job types registered at main.go lines 105-109: download_track, download_album, download_artist, download_tracks, download_playlist - all use the same DownloadJobTask. Post-download, tagWriter embeds metadata and artwork into files. Reference docs/downloading.md for more details."
         }
       ]
     },
@@ -176,7 +176,7 @@
       "parent": "Downloading Music",
       "page_notes": [
         {
-          "content": ""
+          "content": "Service in src/features/downloading/service.go, handler in src/features/downloading/handler.go. Handler endpoints: search (albums/tracks/artists/links), download track/album/artist/tracks/playlist, get capabilities, get user info, get chart tracks. DownloadJobTask in src/features/downloading/task.go implements jobs.Task interface. The task flow: resolve downloader plugin → call appropriate Download method → tag downloaded files with tagWriter → report progress. Routes in src/features/downloading/routes.go. Templates in views/downloading/ and views/sections/download.html."
         }
       ]
     },
@@ -186,7 +186,7 @@
       "parent": "Downloading Music",
       "page_notes": [
         {
-          "content": ""
+          "content": "Downloader interface at src/features/downloading/downloader.go:18-38. Methods: SearchAlbums, SearchTracks, SearchArtists, SearchLinks, GetAlbumTracks, GetArtistAlbums, GetChartTracks, DownloadTrack, DownloadAlbum, DownloadArtist, DownloadLink, GetUserInfo, GetStatus, Name, Capabilities. Supporting types: UserInfo (lines 41-51), DownloaderCapabilities (lines 54-59), LinkResult (lines 10-15), ErrMethodNotSupported (line 62). PluginManager at src/features/downloading/plugins.go:25-318. Loading mechanisms: (1) Git URL - clones repo, builds with go build -buildmode=plugin, opens .so file; (2) Local/remote .so file path. Plugins are configured via config.downloaders.plugins array (config.go:73-76, PluginConfig at lines 112-118). Each plugin must export NewDownloader function. Reference docs/plugins.md for plugin development guide."
         }
       ]
     },
@@ -196,7 +196,7 @@
       "parent": "Downloading Music",
       "page_notes": [
         {
-          "content": ""
+          "content": "Templates in views/downloading/ and views/sections/download.html. UI shows: downloader status and user info at top, search form with type selection (albums/tracks/artists/links), results displayed inline via HTMX. Album results show tracks list when expanded. Artist results show discography. Each result has download buttons that trigger download job creation. Plugin icons from config.downloaders.plugins[].icon are displayed. HTMX patterns: hx-post for search, hx-get for album tracks, hx-trigger for download actions."
         }
       ]
     },
@@ -205,7 +205,7 @@
       "purpose": "Overview of the metadata and tagging system: reading tags from files, writing tags back after enrichment, fetching metadata from external providers, the tag editor UI, and the acoustic fingerprinting pipeline.",
       "page_notes": [
         {
-          "content": ""
+          "content": "Metadata feature in src/features/metadata/. tag.Service is wired at main.go line 96 with tagWriter, tagReader, library, provider map (musicbrainz, discogs, deezer), acoustIDService, config, jobService. Two analysis jobs: analyze_acoustid (main.go line 112) for bulk fingerprint generation, and per-track metadata enrichment via the tag editor UI. The flow: read existing tags from file → query metadata providers → merge results → write enriched tags back. Providers can be individually enabled/disabled in config.metadata.providers."
         }
       ]
     },
@@ -215,7 +215,7 @@
       "parent": "Metadata and Tagging",
       "page_notes": [
         {
-          "content": ""
+          "content": "Tag reader/writer in src/infra/tag/. TagReader created at main.go line 55 (tag.NewTagReader). ReadFileTags reads ID3v2 (MP3) and VorbisComment (FLAC/OGG) tags, parsing: title, artists, album, genre, year, track number, disc number, duration, ISRC, BPM, lyrics, Chromaprint fingerprint, AcoustID. TagWriter created at main.go line 57 (tag.NewTagWriter with embedded artwork config). WriteFileTags handles: tagMP3 (ID3v2 frames including TXXX for custom fields), tagFLAC (VorbisComment blocks), artwork embedding with resize to configured size/quality (config.go lines 106-109)."
         }
       ]
     },
@@ -225,7 +225,7 @@
       "parent": "Metadata and Tagging",
       "page_notes": [
         {
-          "content": ""
+          "content": "MetadataProvider interface at src/features/metadata/metadata.go:20-28: SearchTracks(ctx, SearchParams) ([]*music.Track, error), Name() string, IsEnabled() bool. Implementations in src/infra/providers/: MusicBrainzProvider (musicbrainz.go:60-67, free, no API key needed), DiscogsProvider (discogs.go:67-75, requires API secret via config), DeezerProvider (deezer.go:65-72, free). Providers instantiated at main.go lines 82-88. Each provider queries its respective API and returns tracks with populated metadata. Results are merged into the existing Track model by the tag.Service."
         }
       ]
     },
@@ -235,7 +235,7 @@
       "parent": "Metadata and Tagging",
       "page_notes": [
         {
-          "content": ""
+          "content": "Fingerprint service in src/infra/fingerprint/ created at main.go line 56 (fingerprint.NewFingerprintService). Uses external fpcalc binary for Chromaprint fingerprint generation. AcoustID API service in src/infra/providers/acoustid.go created at main.go line 92 (providers.NewAcoustIDService). Requires ACOUSTID_CLIENT_KEY via !env_var (config.example.yaml line 54). AcoustID job (analyze_acoustid) registered at main.go line 112 - bulk processes library tracks to generate fingerprints and look up AcoustID identifiers. ChromaprintFingerprint stored on Track struct (track.go line 27). AcoustID stored in Track.Attributes['acoustid']."
         }
       ]
     },
@@ -245,7 +245,7 @@
       "parent": "Metadata and Tagging",
       "page_notes": [
         {
-          "content": ""
+          "content": "Tag editor templates in views/tag/ and views/sections/tag.html. UI layout: tag form showing all editable metadata fields, provider buttons (MusicBrainz, Discogs, Deezer) that trigger metadata search, lyrics provider buttons (LRCLib) for lyrics search. Search results displayed in modals. User selects a result to populate the form fields. Form submission via hx-post to save changes, which triggers tagWriter to write tags to the file. Toast notifications for success/error feedback. The tag section is accessible from the library track detail view."
         }
       ]
     },
@@ -254,7 +254,7 @@
       "purpose": "Document the lyrics feature: the LyricsService interface (AddLyrics, GetEnabledLyricsProviders, SearchLyrics), the lrclib and Tekstowo providers, the lyrics HTTP endpoints, and the lyrics analysis background job.",
       "page_notes": [
         {
-          "content": ""
+          "content": "Lyrics feature in src/features/lyrics/. LyricsProvider interface at src/features/lyrics/lyrics.go:10-22: SearchLyrics(ctx, LyricsSearchParams) (string, error), Name(), DisplayName(), IsEnabled(). LyricsService wired at main.go line 93 with tagWriter, tagReader, library, provider map (currently only lrclib), config, lyricsQueue, jobService. LRCLib provider in src/infra/providers/lrclib.go:28-36 with prefer_synced option (config.example.yaml line 66). Lyrics analysis job (analyze_lyrics) registered at main.go line 115 - bulk fetches lyrics for library tracks. Lyrics queue (InMemoryQueue) at main.go line 60 for items needing review (existing_lyrics, lyric_404, failed_lyrics types). Reference docs/lyrics.md."
         }
       ]
     },
@@ -263,7 +263,7 @@
       "purpose": "Document the three analysis job types: analyze_reorganize (reorganizing library files according to path templates), analyze_lyrics (bulk lyrics fetching), and analyze_acoustid (bulk Chromaprint and AcoustID generation). Cover the analyze section UI and sub-section views.",
       "page_notes": [
         {
-          "content": ""
+          "content": "Three analysis jobs registered in main.go: analyze_acoustid (line 112, metadata.NewAcoustIDJobTask) bulk generates Chromaprint fingerprints and AcoustID lookups for all library tracks; analyze_lyrics (line 115, lyrics.NewLyricsJobTask) bulk fetches lyrics from providers for tracks missing lyrics; analyze_reorganize (line 118, reorganize.NewReorganizeJobTask) moves/renames library files according to current path templates. Reorganize service in src/features/reorganize/ wired at main.go line 67. Analysis UI in views/sections/analyze.html with sub-sections: analyze_lyrics.html, analyze_files.html, analyze_metadata.html. Each sub-section provides a button to trigger the corresponding analysis job."
         }
       ]
     },
@@ -272,7 +272,7 @@
       "purpose": "Document playlist management: creating and updating playlists, adding tracks/artists/albums, removing tracks, exporting as M3U, the playlists section UI, and HTMX-driven interaction patterns.",
       "page_notes": [
         {
-          "content": ""
+          "content": "Playlist interface at src/music/playlists.go. Playlists.Service in src/features/playlists/ wired at main.go line 51 with library (music.Library), playlistStore, and config. Supports creating playlists, adding tracks/artists/albums to playlists, removing tracks, updating playlist metadata. SQLite stores playlists and playlist_tracks tables. Templates in views/playlists/ and views/sections/playlists.html. HTMX patterns for dynamic track addition/removal without page reload. M3U export functionality for compatibility with media players."
         }
       ]
     },
@@ -281,7 +281,7 @@
       "purpose": "Document the job system: the JobService interface (StartJob, UpdateJobProgress, GetJob, CancelJob, GetJobs, ClearFinishedJobs), the Job struct and JobStatus enum, job log files, handler endpoints, and the jobs section UI.",
       "page_notes": [
         {
-          "content": ""
+          "content": "Job system in src/features/jobs/. JobService interface at src/music/services.go:42-49. Service struct at service.go:114-127 with in-memory jobs map and handlers map. Key interfaces: TaskHandler (Execute with progressChan, Cancel) at service.go:26-29, Task (MetadataKeys, Execute with progressUpdater, Cleanup) at service.go:32-36. BaseTaskHandler wraps a Task to implement TaskHandler (service.go:38-46). Job lifecycle at service.go lines 182-233: pending → running (or queued if job active) → completed/failed/cancelled. Only one job runs at a time; others queue. Webhooks execute on job completion (config.jobs.webhooks). Job types registered: directory_import, calculate_metrics, download_track/album/artist/tracks/playlist, analyze_acoustid, analyze_lyrics, analyze_reorganize. Log files written to config.jobs.log_path. Templates in views/jobs/ and views/sections/jobs.html. Reference docs/jobs.md."
         }
       ]
     },
@@ -291,7 +291,7 @@
       "parent": "Background Jobs",
       "page_notes": [
         {
-          "content": ""
+          "content": "Job logs are written to disk at config.jobs.log_path (config.go line 19). Log colorization in src/features/jobs/log_colors.go - ParseAndColorLogContent parses log lines and applies ANSI color codes based on log level (info=blue, warn=yellow, error=red, success=green). Logs are served via handler endpoints and rendered in the jobs section UI with preserved formatting. The jobs.log config flag (config.go line 18) controls whether logs are persisted. Job progress updates are streamed via the progress channel and written to both the log file and the in-memory job state."
         }
       ]
     }
