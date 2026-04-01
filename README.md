@@ -65,8 +65,8 @@ podman build -t soulsolid .
 podman run -d \
   --name soulsolid \
   -p 3535:3535 \
-  -v /host/music:/app/library \
-  -v /host/downloads:/app/downloads \
+  -v /host/music:/app/library \ <-- Music will be imported (copied/moved) TO this folder 
+  -v /host/downloads:/app/downloads \ <-- Music will be import FROM this folder
   -v /host/logs:/app/logs \ # optional
   -v /host/library.db:/data/library.db \
   -v /host/config.yaml:/config/config.yaml \
