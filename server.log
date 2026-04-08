@@ -1,0 +1,8 @@
+2026/02/16 00:24:02 INFO Required directories created/verified library=./music downloads=./downloads
+12:24AM INFO <logging/logger.go:47> Soulsolid: Logger initialized
+12:24AM INFO <downloading/plugins.go:172> Soulsolid: Loading downloader plugins
+12:24AM INFO <downloading/plugins.go:198> Soulsolid: Building plugin from git repository name=deezer url=https://git.sr.ht/~canuslector/soulsolid-deemix-plugin
+12:24AM WARN <deezer/deezer_client.go:97> Soulsolid: Failed to check user options error="ARL token is invalid or expired (no user ID returned)"
+12:24AM INFO <downloading/plugins.go:278> Soulsolid: Successfully loaded plugin name=deezer downloader_name=Deezer total_downloaders=1
+12:24AM INFO <downloading/plugins.go:184> Soulsolid: Plugin loading completed total_downloaders=1
+12:24AM INFO <src/main.go:141> Soulsolid: Starting server port=3536
