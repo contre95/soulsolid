@@ -7,7 +7,7 @@
   "pages": [
     {
       "title": "Overview",
-      "purpose": "Introduce Soulsolid: what it is, what problems it solves, its major features (library management, downloading, importing, metadata tagging, DAP sync, Telegram integration), and links to sub-pages for deeper coverage.",
+      "purpose": "Introduce Soulsolid: what it is, what problems it solves, its major features (library management, downloading, importing, metadata tagging, Telegram integration), and links to sub-pages for deeper coverage.",
       "page_notes": [
         {
           "content": "Reference README.md for the project tagline, feature list (lines 27-33), screenshots (lines 14-24), and links to docs/demo. Mention it is a Go + Fiber web app with HTMX UI, SQLite database, and plugin-based downloader architecture. Highlight the key selling points: self-hosted, mobile-friendly UI, background job processing, and Telegram bot control."
