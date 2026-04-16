@@ -6,9 +6,10 @@ import (
 
 // TrackFilter represents the filter criteria for tracks.
 type TrackFilter struct {
-	Title     string
-	ArtistIDs []string
-	AlbumIDs  []string
+	Title      string
+	ArtistIDs  []string
+	AlbumIDs   []string
+	TextSearch string // OR-match across track title, artist name, and album title
 }
 
 // Library is the interface for managing the music library.
@@ -37,6 +38,7 @@ type Library interface {
 	GetAlbumsFilteredPaginated(ctx context.Context, limit, offset int, titleFilter string, artistIDs []string) ([]*Album, error)
 	GetAlbumsCount(ctx context.Context) (int, error)
 	GetAlbumsFilteredCount(ctx context.Context, titleFilter string, artistIDs []string) (int, error)
+	SearchAlbums(ctx context.Context, query string, limit, offset int) ([]*Album, error)
 	GetAlbumByArtistAndName(ctx context.Context, artistID, name string) (*Album, error)
 	FindOrCreateAlbum(ctx context.Context, artist *Artist, albumTitle string, year int) (*Album, error)
 

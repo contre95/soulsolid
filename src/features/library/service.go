@@ -251,6 +251,18 @@ func (s *Service) GetAlbumsFilteredCount(ctx context.Context, titleFilter string
 	return count, nil
 }
 
+// SearchAlbums returns albums matching query using a single lightweight JOIN query.
+func (s *Service) SearchAlbums(ctx context.Context, query string, limit, offset int) ([]*library.Album, error) {
+	slog.Debug("SearchAlbums service called", "query", query, "limit", limit, "offset", offset)
+	albums, err := s.library.SearchAlbums(ctx, query, limit, offset)
+	if err != nil {
+		slog.Error("SearchAlbums failed", "error", err)
+		return nil, err
+	}
+	slog.Debug("SearchAlbums completed", "count", len(albums))
+	return albums, nil
+}
+
 // GetAlbumsCount returns the total count of albums in the library.
 func (s *Service) GetAlbumsCount(ctx context.Context) (int, error) {
 	slog.Debug("GetAlbumsCount service called")
