@@ -124,6 +124,22 @@
           </li>
           <li>
             <button type="button" class="w-full">
+              <a hx-get="/ui/analyze/duplicates" hx-trigger="click" hx-push-url="true" hx-swap="outerHTML"
+                hx-target="#contenido"
+                class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-3 py-1.5 text-base text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-gray-200 dark:hover:text-gray-200 focus:outline-none cursor-pointer">
+                <i class="fas fa-copy size-4 text-orange-500 dark:text-orange-400 mr-3"></i>
+                <span class="mx-2 font-medium">Duplicates</span>
+                <div id="duplicates-queue-badge" hx-get="/duplicates/queue/count" hx-push-url="false"
+                  hx-trigger="load, every 1s, refreshDuplicatesQueueBadge from:body" hx-target="#duplicates-queue-count"
+                  hx-swap="innerHTML">
+                  <span id="duplicates-queue-count"
+                    class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-orange-300 dark:drop-shadow-[0_0_10px_rgba(251,146,60,0.8)]"></span>
+                </div>
+              </a>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="w-full">
               <a hx-get="/ui/analyze/files" hx-trigger="click" hx-push-url="true" hx-swap="outerHTML"
                 hx-target="#contenido"
                 class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-3 py-1.5 text-base text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-gray-200 dark:hover:text-gray-200 focus:outline-none cursor-pointer">

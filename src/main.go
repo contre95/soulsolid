@@ -8,6 +8,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
+	"github.com/contre95/soulsolid/src/features/duplicates"
 	"github.com/contre95/soulsolid/src/features/hosting"
 	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/contre95/soulsolid/src/features/jobs"
@@ -58,6 +59,7 @@ func main() {
 
 	importQueue := queue.NewInMemoryQueue()
 	lyricsQueue := queue.NewInMemoryQueue()
+	duplicatesQueue := queue.NewInMemoryQueue()
 	dirWatcher, err := watcher.NewWatcher()
 	if err != nil {
 		log.Fatalf("failed to create watcher: %v", err)
@@ -93,6 +95,9 @@ func main() {
 	lyricsService := lyrics.NewService(tagWriter, tagReader, db, map[string]lyrics.LyricsProvider{
 		"lrclib": lrclibProvider,
 	}, cfgManager, lyricsQueue, jobService)
+	similarityService := fingerprint.NewSimilarityService()
+	duplicatesService := duplicates.NewService(tagWriter, db, cfgManager, duplicatesQueue, jobService, similarityService)
+
 	tagService := metadata.NewService(tagWriter, tagReader, db, map[string]metadata.MetadataProvider{
 		"musicbrainz": musicbrainzProvider,
 		"discogs":     discogsProvider,
@@ -114,6 +119,9 @@ func main() {
 	lyricsTask := lyrics.NewLyricsJobTask(lyricsService)
 	jobService.RegisterHandler("analyze_lyrics", jobs.NewBaseTaskHandler(lyricsTask))
 
+	duplicatesTask := duplicates.NewDuplicatesJobTask(duplicatesService)
+	jobService.RegisterHandler("analyze_duplicates", jobs.NewBaseTaskHandler(duplicatesTask))
+
 	reorganizeTask := reorganize.NewReorganizeJobTask(reorganizeService)
 	jobService.RegisterHandler("analyze_reorganize", jobs.NewBaseTaskHandler(reorganizeTask))
 
@@ -129,7 +137,7 @@ func main() {
 		}
 	}
 
-	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService)
+	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService, duplicatesService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped: %v", "error", err)

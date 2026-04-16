@@ -73,13 +73,13 @@ func (h *Handler) CreatePlaylist(c *fiber.Ctx) error {
 	description := c.FormValue("description")
 
 	if name == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Playlist name is required")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Playlist name is required"})
 	}
 
 	_, err := h.service.CreatePlaylist(c.Context(), name, description)
 	if err != nil {
 		slog.Error("Error creating playlist", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to create playlist")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Failed to create playlist"})
 	}
 
 	// Trigger playlist refresh and return success toast
@@ -96,16 +96,16 @@ func (h *Handler) UpdatePlaylist(c *fiber.Ctx) error {
 	description := c.FormValue("description")
 
 	if name == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Playlist name is required")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Playlist name is required"})
 	}
 
 	playlist, err := h.service.GetPlaylist(c.Context(), playlistID)
 	if err != nil {
 		slog.Error("Error loading playlist for update", "error", err, "id", playlistID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load playlist")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Failed to load playlist"})
 	}
 	if playlist == nil {
-		return c.Status(fiber.StatusNotFound).SendString("Playlist not found")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Playlist not found"})
 	}
 
 	playlist.Name = name
@@ -114,7 +114,7 @@ func (h *Handler) UpdatePlaylist(c *fiber.Ctx) error {
 	err = h.service.UpdatePlaylist(c.Context(), playlist)
 	if err != nil {
 		slog.Error("Error updating playlist", "error", err, "id", playlistID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to update playlist")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Failed to update playlist"})
 	}
 
 	// Return success toast
@@ -128,7 +128,7 @@ func (h *Handler) DeletePlaylist(c *fiber.Ctx) error {
 	err := h.service.DeletePlaylist(c.Context(), c.Params("id"))
 	if err != nil {
 		slog.Error("Error deleting playlist", "error", err, "id", c.Params("id"))
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete playlist")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Failed to delete playlist"})
 	}
 
 	// Trigger playlist refresh and return success toast
@@ -146,13 +146,13 @@ func (h *Handler) AddItemToPlaylist(c *fiber.Ctx) error {
 
 	if playlistID == "" || itemType == "" || itemID == "" {
 		slog.Error("AddItemToPlaylist: missing required parameters", "playlistID", playlistID, "itemType", itemType, "itemID", itemID)
-		return c.Status(fiber.StatusBadRequest).SendString("Playlist ID, item type, and item ID are required")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Playlist ID, item type, and item ID are required"})
 	}
 
 	err := h.service.AddItemToPlaylist(c.Context(), playlistID, itemType, itemID)
 	if err != nil {
 		slog.Error("Error adding item to playlist", "error", err, "playlistID", playlistID, "itemType", itemType, "itemID", itemID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to add item to playlist")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Failed to add item to playlist"})
 	}
 
 	// Get item name for success message
@@ -199,13 +199,13 @@ func (h *Handler) RemoveTrackFromPlaylist(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
 
 	if playlistID == "" || trackID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Playlist ID and Track ID are required")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Playlist ID and Track ID are required"})
 	}
 
 	err := h.service.RemoveTrackFromPlaylist(c.Context(), playlistID, trackID)
 	if err != nil {
 		slog.Error("Error removing track from playlist", "error", err, "playlistID", playlistID, "trackID", trackID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to remove track from playlist")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Failed to remove track from playlist"})
 	}
 
 	// Trigger playlist refresh and return success toast

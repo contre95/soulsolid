@@ -1,0 +1,106 @@
+<div id="contenido" class="animate__animated animate__fadeIn">
+    <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">Duplicates Analysis</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+
+        <!-- How it works -->
+        <div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-md backdrop-blur-sm transition-all duration-200 hover:bg-white/90 dark:hover:bg-gray-900/80">
+            <div class="flex items-center mb-4">
+                <i class="fas fa-copy w-8 h-8 mr-3 text-2xl text-orange-500 dark:text-orange-400"></i>
+                <h3 class="text-xl font-semibold text-slate-800 dark:text-white">How Duplicates Are Detected</h3>
+            </div>
+            <p class="text-slate-600 dark:text-slate-400 mb-3">
+                Tracks are compared using <strong class="text-slate-700 dark:text-slate-300">Chromaprint fingerprints</strong> and
+                <strong class="text-slate-700 dark:text-slate-300">Hamming distance</strong> — a bitwise comparison of the raw audio
+                fingerprint. This means duplicates are detected by audio content, regardless of filename, tags, or format (MP3 vs FLAC).
+            </p>
+            <ul class="text-sm text-slate-500 dark:text-slate-400 space-y-1.5 mb-4">
+                <li class="flex items-start gap-2">
+                    <span class="text-violet-500 mt-0.5">●</span>
+                    <span><strong class="text-slate-600 dark:text-slate-300">Exact</strong> — same recording, possibly different encoding (e.g. MP3 + FLAC of the same master)</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-orange-400 mt-0.5">●</span>
+                    <span><strong class="text-slate-600 dark:text-slate-300">Fuzzy</strong> — likely the same song but slightly different (remaster, different cut, live version)</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-blue-400 mt-0.5">●</span>
+                    <span>Pairs with duration differences over 10 s are skipped automatically</span>
+                </li>
+            </ul>
+            <div class="flex items-start gap-2 bg-amber-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700/40 rounded-xl p-3 text-xs text-gray-700 dark:text-gray-300">
+                <i class="fas fa-info text-blue-500 mt-0.5 shrink-0"></i>
+                <span>To also match by <strong class="text-blue-500 dark:text-blue-400">AcoustID</strong> recording ID, run the AcoustID analysis first so tracks have a recording ID assigned.</span>
+            </div>
+        </div>
+
+        <!-- Settings + trigger -->
+        <div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-md backdrop-blur-sm transition-all duration-200 hover:bg-white/90 dark:hover:bg-gray-900/80">
+            <div class="flex items-center mb-4">
+                <svg class="w-8 h-8 mr-3 text-orange-500 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                </svg>
+                <h3 class="text-xl font-semibold text-slate-800 dark:text-white">Detection Settings</h3>
+            </div>
+            <form hx-post="/analyze/duplicates" hx-target="#toast-container" hx-swap="beforeend">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                            Exact threshold
+                        </label>
+                        <input type="number" name="fp_exact_thresh" value="0.95" step="0.01" min="0.5" max="1.0"
+                               class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-white text-sm">
+                        <p class="text-xs text-slate-400 mt-1">≥ this → exact duplicate</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                            Fuzzy threshold
+                        </label>
+                        <input type="number" name="fp_fuzzy_thresh" value="0.75" step="0.01" min="0.5" max="1.0"
+                               class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-white text-sm">
+                        <p class="text-xs text-slate-400 mt-1">≥ this → fuzzy duplicate</p>
+                    </div>
+                </div>
+                <label class="flex items-center gap-3 mb-4 cursor-pointer group">
+                    <input type="checkbox" name="use_acoustid" value="true"
+                           class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-orange-500 focus:ring-orange-500 dark:bg-gray-700 cursor-pointer">
+                    <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                        Also match by <strong>AcoustID</strong> recording ID
+                    </span>
+                </label>
+                <button type="submit"
+                        class="w-full border border-orange-500 dark:border-orange-400 text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 font-medium py-2 px-4 rounded-md transition-colors duration-200">
+                    Start Duplicates Analysis
+                    <span class="htmx-indicator ml-2">
+                        <i class="fas fa-spinner fa-spin text-orange-500 dark:text-orange-400"></i>
+                    </span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Full-width queue -->
+    <div id="duplicates-queue-header"
+         hx-get="/ui/duplicates/queue/header"
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         class="mb-4">
+    </div>
+    <div id="duplicates-queue-content"
+         hx-get="/ui/duplicates/queue/items"
+         hx-trigger="load, duplicatesQueueUpdated from:body"
+         hx-swap="innerHTML"
+         class="w-full">
+    </div>
+
+    <!-- Jobs -->
+    <h2 class="text-2xl font-bold text-slate-800 dark:text-white mt-12 mb-6">Duplicates Jobs</h2>
+    <div id="duplicates-job-list-container"
+         hx-get="/ui/jobs/list?prefix=analyze_duplicates"
+         hx-trigger="load, refreshJobList from:body"
+         hx-swap="innerHTML">
+        <div class="text-center py-8">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Loading duplicates jobs…</p>
+        </div>
+    </div>
+</div>

@@ -71,6 +71,14 @@ var defaultConfig = Config{
 			},
 		},
 	},
+
+	Duplicates: Duplicates{
+		Enabled:          true,
+		FpExactThreshold: 1.0,
+		FpFuzzyThreshold: 0.95,
+		DefaultAction:    "queue",
+		MaxGroupSize:     0,
+	},
 	Jobs: Jobs{
 		Log:     true,
 		LogPath: "./logs/jobs",

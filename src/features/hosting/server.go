@@ -8,6 +8,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
+	"github.com/contre95/soulsolid/src/features/duplicates"
 	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
@@ -29,7 +30,7 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server.
-func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, playlistsService *playlists.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, reorganizeService *reorganize.Service) *Server {
+func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, playlistsService *playlists.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, reorganizeService *reorganize.Service, duplicatesService *duplicates.Service) *Server {
 	engine := html.New("./views", ".html")
 	engine.Debug(cfg.Get().Logger.Level == "debug")
 	// Add custom template functions
@@ -134,6 +135,9 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	lyrics.RegisterRoutes(app, lyricsHandler)
 	reorganizeHandler := reorganize.NewHandler(reorganizeService, cfg)
 	reorganize.RegisterRoutes(app, reorganizeHandler)
+
+	duplicatesHandler := duplicates.NewHandler(duplicatesService)
+	duplicates.RegisterRoutes(app, duplicatesHandler)
 
 	return &Server{app: app, port: cfg.Get().Server.Port}
 }

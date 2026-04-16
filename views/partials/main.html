@@ -22,34 +22,36 @@
 
             <div id="contenido">
                  {{if eq .Section "dashboard"}}
-                 {{template "sections/dashboard" .}}
-                 {{else if eq .Section "library"}}
-                 {{template "sections/library" .}}
-                 {{else if eq .Section "import"}}
-                 {{template "sections/import" .}}
-                 {{else if eq .Section "jobs"}}
-                 {{template "sections/jobs" .}}
-                 {{else if eq .Section "settings"}}
-                 {{template "sections/settings" .}}
-                  {{else if eq .Section "playlists"}}
-                  {{template "sections/playlists" .}}
+                   {{template "sections/dashboard" .}}
+                   {{else if eq .Section "library"}}
+                   {{template "sections/library" .}}
+                   {{else if eq .Section "import"}}
+                   {{template "sections/import" .}}
+                   {{else if eq .Section "jobs"}}
+                   {{template "sections/jobs" .}}
+                   {{else if eq .Section "settings"}}
+                   {{template "sections/settings" .}}
+                   {{else if eq .Section "playlists"}}
+                   {{template "sections/playlists" .}}
                    {{else if .Playlist}}
                    {{template "playlists/playlist" .}}
-                  {{else if eq .Section "download"}}
-                 {{template "sections/download" .}}
-                 {{else if .IsTagEdit}}
-                 {{template "sections/tag" .}}
-                 {{else if .CurrentDownloader}}
-                 {{template "sections/download" .}}
-                  {{else if eq .Section "analyze"}}
-                  {{template "sections/analyze" .}}
-                  {{else if eq .Section "analyze_lyrics"}}
-                  {{template "sections/analyze_lyrics" .}}
-                  {{else if eq .Section "analyze_files"}}
-                  {{template "sections/analyze_files" .}}
-                  {{else if eq .Section "analyze_metadata"}}
-                  {{template "sections/analyze_metadata" .}}
-                 {{end}}
+                   {{else if eq .Section "download"}}
+                   {{template "sections/download" .}}
+                   {{else if .IsTagEdit}}
+                   {{template "sections/tag" .}}
+                   {{else if .CurrentDownloader}}
+                   {{template "sections/download" .}}
+                   {{else if eq .Section "analyze"}}
+                   {{template "sections/analyze" .}}
+                   {{else if eq .Section "analyze_lyrics"}}
+                   {{template "sections/analyze_lyrics" .}}
+                   {{else if eq .Section "analyze_files"}}
+                   {{template "sections/analyze_files" .}}
+                    {{else if eq .Section "analyze_metadata"}}
+                    {{template "sections/analyze_metadata" .}}
+                    {{else if eq .Section "analyze_duplicates"}}
+                    {{template "sections/analyze_duplicates" .}}
+                  {{end}}
             </div>
            </div>
         </div>

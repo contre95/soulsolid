@@ -1,0 +1,99 @@
+<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" id="compare-modal">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-auto">
+
+        <div class="p-6 border-b dark:border-gray-700 flex items-center justify-between">
+            <h3 class="text-xl font-semibold text-slate-800 dark:text-white">Duplicate Comparison</h3>
+            <button onclick="document.getElementById('compare-modal').remove()"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <div class="p-6 grid grid-cols-2 gap-6">
+
+            <!-- Primary track -->
+            <div class="bg-emerald-50 dark:bg-emerald-900/20 p-5 rounded-xl">
+                <h4 class="font-medium text-emerald-700 dark:text-emerald-400 mb-3 flex items-center gap-2">
+                    <i class="fas fa-star"></i> Primary (recommended keep)
+                </h4>
+                <div class="space-y-2 text-sm">
+                    <div><span class="text-gray-500">Title:</span> <span class="font-medium">{{index .Item.Metadata "primary_title"}}</span></div>
+                    <div><span class="text-gray-500">Artist:</span> {{index .Item.Metadata "primary_artist"}}</div>
+                    <div><span class="text-gray-500">Path:</span>
+                        <div class="font-mono text-xs bg-white dark:bg-gray-800 p-2 rounded mt-1 break-all">{{index .Item.Metadata "primary_path"}}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Duplicate track -->
+            <div class="bg-orange-50 dark:bg-orange-900/20 p-5 rounded-xl">
+                <h4 class="font-medium text-orange-700 dark:text-orange-400 mb-3 flex items-center gap-2">
+                    <i class="fas fa-copy"></i> Duplicate (this track)
+                </h4>
+                <div class="space-y-2 text-sm">
+                    <div><span class="text-gray-500">Title:</span> <span class="font-medium">{{.Item.Track.Title}}</span></div>
+                    <div><span class="text-gray-500">Artist:</span>
+                        {{with .Item.Track.Artists}}{{range $i, $ar := .}}{{if lt $i 1}}{{with $ar.Artist}}{{.Name}}{{else}}Unknown{{end}}{{end}}{{end}}{{end}}
+                    </div>
+                    <div><span class="text-gray-500">Path:</span>
+                        <div class="font-mono text-xs bg-white dark:bg-gray-800 p-2 rounded mt-1 break-all">{{.Item.Track.Path}}</div>
+                    </div>
+                    <div><span class="text-gray-500">Year:</span> {{.Item.Track.Metadata.Year}}</div>
+                    <div><span class="text-gray-500">Format:</span> {{.Item.Track.Format}}</div>
+                    <div><span class="text-gray-500">Bitrate:</span> {{.Item.Track.Bitrate}}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Similarity bar -->
+        <div class="px-6 pb-4 flex items-center gap-3 text-sm">
+            <span class="text-gray-500">Similarity</span>
+            <div class="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div class="h-2 rounded-full {{if eq (index .Item.Metadata "match_type") "exact"}}bg-violet-500{{else}}bg-orange-400{{end}}"
+                     style="width: {{index .Item.Metadata "similarity"}}%"></div>
+            </div>
+            <span class="font-semibold text-violet-600 dark:text-violet-400">{{index .Item.Metadata "similarity"}}%</span>
+            <span class="text-xs px-2 py-0.5 rounded-full
+                {{if eq (index .Item.Metadata "match_type") "exact"}}bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300
+                {{else}}bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300{{end}}">
+                {{index .Item.Metadata "match_type"}}
+            </span>
+        </div>
+
+        <div class="p-6 border-t dark:border-gray-700 flex gap-3 justify-end flex-wrap">
+            <button onclick="document.getElementById('compare-modal').remove()"
+                    class="px-5 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                Close
+            </button>
+            <button hx-post="/duplicates/queue/{{.Item.ID}}/keep_both"
+                    hx-target="#toast-container"
+                    onclick="document.getElementById('compare-modal').remove()"
+                    class="px-5 py-2 text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
+                <i class="fas fa-check-double mr-1"></i> Keep Both
+            </button>
+            <button hx-post="/duplicates/queue/{{.Item.ID}}/delete_this"
+                    hx-target="#toast-container"
+                    hx-confirm="Delete this duplicate and keep the primary?"
+                    onclick="document.getElementById('compare-modal').remove()"
+                    class="px-5 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+                <i class="fas fa-star mr-1"></i> Keep Primary
+            </button>
+            <button hx-post="/duplicates/queue/{{.Item.ID}}/delete_primary"
+                    hx-target="#toast-container"
+                    hx-confirm="Delete the primary and keep this one instead?"
+                    onclick="document.getElementById('compare-modal').remove()"
+                    class="px-5 py-2 text-sm font-medium bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+                <i class="fas fa-exchange-alt mr-1"></i> Keep This One
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('keydown', function handler(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('compare-modal');
+            if (modal) { modal.remove(); document.removeEventListener('keydown', handler); }
+        }
+    });
+</script>

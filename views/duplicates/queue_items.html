@@ -1,0 +1,94 @@
+{{if .QueueItems}}
+{{range .QueueItems}}
+<div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 shadow-md backdrop-blur-sm mb-8 w-full">
+    <div class="flex items-start gap-6">
+
+        <!-- Track comparison -->
+        <div class="flex-1">
+            <div class="flex items-center gap-4 mb-6">
+                <i class="fas fa-copy text-4xl text-violet-500"></i>
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800 dark:text-white">{{.Track.Title}}</h2>
+                    <p class="text-lg text-gray-500">
+                        {{with .Track.Artists}}{{range $i, $ar := .}}{{if lt $i 1}}{{with $ar.Artist}}{{.Name}}{{else}}Unknown{{end}}{{end}}{{end}}{{end}}
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 text-sm mb-4">
+                <div>
+                    <div class="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400 mb-1">
+                        <i class="fas fa-star text-xs"></i> Primary (recommended keep)
+                    </div>
+                    <div class="text-xs text-gray-400 mb-1">{{index .Metadata "primary_title"}} — {{index .Metadata "primary_artist"}}</div>
+                    <div class="font-mono text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded-lg break-all">{{index .Metadata "primary_path"}}</div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-1 font-medium text-orange-500 dark:text-orange-400 mb-1">
+                        <i class="fas fa-copy text-xs"></i> Duplicate (this track)
+                    </div>
+                    <div class="text-xs text-gray-400 mb-1">{{.Track.Title}} — {{with .Track.Artists}}{{range $i, $ar := .}}{{if lt $i 1}}{{with $ar.Artist}}{{.Name}}{{else}}Unknown{{end}}{{end}}{{end}}{{end}}</div>
+                    <div class="font-mono text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded-lg break-all">{{.Track.Path}}</div>
+                </div>
+            </div>
+
+            <!-- Similarity bar -->
+            <div class="text-sm flex items-center gap-3">
+                <span class="text-gray-500">Similarity</span>
+                <div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-1.5 rounded-full {{if eq (index .Metadata "match_type") "exact"}}bg-violet-500{{else}}bg-orange-400{{end}}"
+                         style="width: {{index .Metadata "similarity"}}%"></div>
+                </div>
+                <span class="font-semibold text-violet-600 dark:text-violet-400">{{index .Metadata "similarity"}}%</span>
+                <span class="text-xs px-2 py-0.5 rounded-full {{if eq (index .Metadata "match_type") "exact"}}bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300{{else}}bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300{{end}}">
+                    {{index .Metadata "match_type"}}
+                </span>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="w-72 border-l border-gray-100 dark:border-gray-700 pl-8 shrink-0">
+            <div class="uppercase text-xs tracking-widest text-gray-400 mb-3">Decide</div>
+            <div class="flex flex-col gap-2">
+
+                <!-- Keep both -->
+                <button hx-post="/duplicates/queue/{{.ID}}/keep_both"
+                        hx-target="#toast-container" hx-swap="innerHTML"
+                        class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-gray-500/10 border border-gray-400/30 text-gray-700 dark:text-gray-300 hover:bg-gray-500/20">
+                    <i class="fas fa-check-double mr-2"></i> Keep Both
+                </button>
+
+                <!-- Keep primary, delete this -->
+                <button hx-post="/duplicates/queue/{{.ID}}/delete_this"
+                        hx-target="#toast-container" hx-swap="innerHTML"
+                        hx-confirm="Delete this duplicate track and keep the primary?"
+                        class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-emerald-500/10 border border-emerald-400/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20">
+                    <i class="fas fa-star mr-2"></i> Keep Primary
+                </button>
+
+                <!-- Keep this, delete primary -->
+                <button hx-post="/duplicates/queue/{{.ID}}/delete_primary"
+                        hx-target="#toast-container" hx-swap="innerHTML"
+                        hx-confirm="Delete the primary track and keep this one instead?"
+                        class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-orange-500/10 border border-orange-400/30 text-orange-700 dark:text-orange-300 hover:bg-orange-500/20">
+                    <i class="fas fa-exchange-alt mr-2"></i> Keep This One
+                </button>
+
+                <!-- Compare detail -->
+                <button hx-get="/ui/duplicates/compare/{{.ID}}"
+                        hx-target="#modal-container" hx-swap="innerHTML"
+                        class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-violet-500/10 border border-violet-400/30 text-violet-700 dark:text-violet-300 hover:bg-violet-500/20">
+                    <i class="fas fa-search mr-2"></i> Compare Details
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+{{else}}
+<div class="bg-white/80 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 rounded-2xl p-12 text-center">
+    <i class="fas fa-copy text-6xl text-gray-300 dark:text-gray-700 mb-6"></i>
+    <h3 class="text-2xl font-semibold text-gray-400 dark:text-gray-500">No duplicates in queue</h3>
+    <p class="text-gray-500 mt-2">Run analysis to populate the review queue</p>
+</div>
+{{end}}
