@@ -1369,6 +1369,13 @@ func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, o
 		args = append(args, "%"+filter.Title+"%")
 	}
 
+	// Add text search: OR-match across track title, artist name, album title
+	if filter.TextSearch != "" {
+		like := "%" + filter.TextSearch + "%"
+		conditions = append(conditions, `(t.title LIKE ? OR EXISTS (SELECT 1 FROM track_artists ta2 JOIN artists a2 ON ta2.artist_id = a2.id WHERE ta2.track_id = t.id AND a2.name LIKE ?) OR EXISTS (SELECT 1 FROM track_albums tal2 JOIN albums al2 ON tal2.album_id = al2.id WHERE tal2.track_id = t.id AND al2.title LIKE ?))`)
+		args = append(args, like, like, like)
+	}
+
 	// Add artist filter
 	if len(filter.ArtistIDs) > 0 {
 		placeholders := strings.Repeat("?,", len(filter.ArtistIDs))
@@ -1438,6 +1445,13 @@ func (d *SqliteLibrary) GetTracksFilteredCount(ctx context.Context, filter *musi
 		args = append(args, "%"+filter.Title+"%")
 	}
 
+	// Add text search: OR-match across track title, artist name, album title
+	if filter.TextSearch != "" {
+		like := "%" + filter.TextSearch + "%"
+		conditions = append(conditions, `(t.title LIKE ? OR EXISTS (SELECT 1 FROM track_artists ta2 JOIN artists a2 ON ta2.artist_id = a2.id WHERE ta2.track_id = t.id AND a2.name LIKE ?) OR EXISTS (SELECT 1 FROM track_albums tal2 JOIN albums al2 ON tal2.album_id = al2.id WHERE tal2.track_id = t.id AND al2.title LIKE ?))`)
+		args = append(args, like, like, like)
+	}
+
 	// Add artist filter
 	if len(filter.ArtistIDs) > 0 {
 		placeholders := strings.Repeat("?,", len(filter.ArtistIDs))
@@ -1468,6 +1482,45 @@ func (d *SqliteLibrary) GetTracksFilteredCount(ctx context.Context, filter *musi
 		return 0, err
 	}
 	return count, nil
+}
+
+// SearchAlbums returns albums matching the query with a single JOIN query (no N+1).
+// Only fields needed for search display are populated: ID, Title, ReleaseDate, Artists[].Artist.Name.
+func (d *SqliteLibrary) SearchAlbums(ctx context.Context, query string, limit, offset int) ([]*music.Album, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT a.id, a.title, a.release_date,
+		       GROUP_CONCAT(ar.name, '|||') as artist_names
+		FROM albums a
+		LEFT JOIN album_artists aa ON a.id = aa.album_id
+		LEFT JOIN artists ar ON aa.artist_id = ar.id
+		WHERE a.title LIKE ?
+		GROUP BY a.id
+		ORDER BY a.title
+		LIMIT ? OFFSET ?
+	`, "%"+query+"%", limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var albums []*music.Album
+	for rows.Next() {
+		album := &music.Album{}
+		var releaseDateStr string
+		var artistNamesNull sql.NullString
+		if err := rows.Scan(&album.ID, &album.Title, &releaseDateStr, &artistNamesNull); err != nil {
+			return nil, err
+		}
+		album.ReleaseDate, _ = time.Parse(time.RFC3339, releaseDateStr)
+		if artistNamesNull.Valid && artistNamesNull.String != "" {
+			for _, name := range strings.Split(artistNamesNull.String, "|||") {
+				n := name // copy for pointer
+				album.Artists = append(album.Artists, music.ArtistRole{Artist: &music.Artist{Name: n}})
+			}
+		}
+		albums = append(albums, album)
+	}
+	return albums, rows.Err()
 }
 
 // GetTracksCount gets the total count of tracks in the database.

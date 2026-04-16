@@ -212,6 +212,29 @@ type SearchResult struct {
 	ImageURL    string // Image for display
 }
 
+// trackToSearchResult converts a music.Track to a SearchResult.
+func trackToSearchResult(track *music.Track) SearchResult {
+	var artistNames strings.Builder
+	for i, ar := range track.Artists {
+		if i > 0 {
+			artistNames.WriteString(", ")
+		}
+		artistNames.WriteString(ar.Artist.Name)
+	}
+	albumTitle := ""
+	if track.Album != nil {
+		albumTitle = track.Album.Title
+	}
+	return SearchResult{
+		Type:        "track",
+		ID:          track.ID,
+		PrimaryName: track.Title,
+		Secondary:   artistNames.String(),
+		Tertiary:    albumTitle,
+		Duration:    track.Metadata.Duration,
+	}
+}
+
 // GetUnifiedSearch performs a unified search across artists, albums, and tracks.
 func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 	slog.Debug("GetUnifiedSearch handler called")
@@ -355,26 +378,22 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 					ID:          artist.ID,
 					PrimaryName: artist.Name,
 					Secondary:   artist.ID,
-					Tertiary:    "",
-					ImageURL:    "",
 				})
 			}
 		}
 
-		// Search albums
-		albums, err := h.service.GetAlbumsFilteredPaginated(c.Context(), 20, 0, query, []string{})
+		// Search albums (lightweight: single JOIN query, no N+1)
+		albums, err := h.service.SearchAlbums(c.Context(), query, 20, 0)
 		if err != nil {
 			slog.Error("Error searching albums", "error", err)
 		} else {
 			for _, album := range albums {
 				var artistNames strings.Builder
-				if len(album.Artists) > 0 {
-					for i, ar := range album.Artists {
-						if i > 0 {
-							artistNames.WriteString(", ")
-						}
-						artistNames.WriteString(ar.Artist.Name)
+				for i, ar := range album.Artists {
+					if i > 0 {
+						artistNames.WriteString(", ")
 					}
+					artistNames.WriteString(ar.Artist.Name)
 				}
 				year := ""
 				if !album.ReleaseDate.IsZero() {
@@ -386,44 +405,17 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 					PrimaryName: album.Title,
 					Secondary:   artistNames.String(),
 					Tertiary:    year,
-					ImageURL:    album.ImageSmall,
 				})
 			}
 		}
 
-		// Search tracks
-		filter := &music.TrackFilter{
-			Title:     query,
-			ArtistIDs: []string{},
-			AlbumIDs:  []string{},
-		}
-		tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), 20, 0, filter)
+		// Search tracks: single query OR-matching title, artist name, and album title
+		tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), 500, 0, &music.TrackFilter{TextSearch: query})
 		if err != nil {
 			slog.Error("Error searching tracks", "error", err)
 		} else {
 			for _, track := range tracks {
-				var artistNames strings.Builder
-				if len(track.Artists) > 0 {
-					for i, ar := range track.Artists {
-						if i > 0 {
-							artistNames.WriteString(", ")
-						}
-						artistNames.WriteString(ar.Artist.Name)
-					}
-				}
-				albumTitle := ""
-				if track.Album != nil {
-					albumTitle = track.Album.Title
-				}
-				results = append(results, SearchResult{
-					Type:        "track",
-					ID:          track.ID,
-					PrimaryName: track.Title,
-					Secondary:   artistNames.String(),
-					Tertiary:    albumTitle,
-					Duration:    track.Metadata.Duration,
-					ImageURL:    "",
-				})
+				results = append(results, trackToSearchResult(track))
 			}
 		}
 
