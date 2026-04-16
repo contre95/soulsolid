@@ -12,12 +12,12 @@ import (
 	"github.com/contre95/soulsolid/src/music"
 )
 
-// TagWriter interface for writing tags
+// TagWriter interface for writing tags.
 type TagWriter interface {
 	WriteFileTags(ctx context.Context, path string, track *music.Track) error
 }
 
-// Service provides duplicates analysis functionality
+// Service provides duplicates analysis functionality.
 type Service struct {
 	tagWriter  TagWriter
 	library    music.Library
@@ -27,7 +27,7 @@ type Service struct {
 	similarity *fingerprint.SimilarityService
 }
 
-// NewService creates a new duplicates service
+// NewService creates a new duplicates service.
 func NewService(tagWriter TagWriter, library music.Library, config *config.Manager, queue music.Queue, jobService music.JobService, similarity *fingerprint.SimilarityService) *Service {
 	return &Service{
 		tagWriter:  tagWriter,
@@ -39,144 +39,185 @@ func NewService(tagWriter TagWriter, library music.Library, config *config.Manag
 	}
 }
 
-// AddQueueItem adds a track to the duplicates queue
+// AddQueueItem adds a track to the duplicates queue.
 func (s *Service) AddQueueItem(track *music.Track, qType music.QueueItemType, metadata map[string]string) error {
 	if track.ID == "" {
 		return fmt.Errorf("track ID cannot be empty")
 	}
-	item := music.QueueItem{
+	return s.queue.Add(music.QueueItem{
 		ID:        track.ID,
 		Type:      qType,
 		Track:     track,
 		Timestamp: time.Now(),
 		Metadata:  metadata,
-	}
-	return s.queue.Add(item)
+	})
 }
 
-// GetQueueItems returns all items in the duplicates queue
+// GetQueueItems returns all items in the duplicates queue.
 func (s *Service) GetQueueItems() map[string]music.QueueItem {
 	return s.queue.GetAll()
 }
 
-// QueueCount returns the number of duplicates queue items
+// QueueCount returns the number of pending duplicate queue items.
 func (s *Service) QueueCount() int {
-	items := s.GetQueueItems()
 	count := 0
-	for _, item := range items {
-		if item.Type == "duplicate_fp_exact" || item.Type == "duplicate_fp_fuzzy" {
+	for _, item := range s.queue.GetAll() {
+		if item.Type == DuplicateFPExact || item.Type == DuplicateFPFuzzy {
 			count++
 		}
 	}
 	return count
 }
 
-// ClearQueue removes all items from the duplicates queue
+// ClearQueue removes all items from the duplicates queue.
 func (s *Service) ClearQueue() error {
 	return s.queue.Clear()
 }
 
-// GetGroupedByFP returns queue items grouped by fingerprint group_key
-func (s *Service) GetGroupedByFP() map[string][]music.QueueItem {
-	items := s.GetQueueItems()
-	groups := make(map[string][]music.QueueItem)
+// GetGroupedByKey returns queue items grouped by group_key (the primary track's ID).
+// Each group is enriched with display-ready fields for templates.
+func (s *Service) GetGroupedByKey() []DuplicateGroup {
+	items := s.queue.GetAll()
+	raw := make(map[string][]music.QueueItem)
 	for _, item := range items {
-		if fp, ok := item.Metadata["group_fp"]; ok {
-			groups[fp] = append(groups[fp], item)
+		if key, ok := item.Metadata["group_key"]; ok {
+			raw[key] = append(raw[key], item)
 		}
+	}
+
+	groups := make([]DuplicateGroup, 0, len(raw))
+	for key, groupItems := range raw {
+		// Best similarity across the group (max value stored in metadata).
+		bestSim := ""
+		matchType := ""
+		for _, it := range groupItems {
+			if s := it.Metadata["similarity"]; s != "" && (bestSim == "" || s > bestSim) {
+				bestSim = s
+			}
+			if mt := it.Metadata["match_type"]; mt != "" {
+				matchType = mt
+			}
+		}
+		groups = append(groups, DuplicateGroup{
+			Key:        key,
+			Items:      groupItems,
+			PrimaryID:  key,
+			Similarity: bestSim,
+			MatchType:  matchType,
+		})
 	}
 	return groups
 }
 
-// ProcessQueueItem processes a duplicates queue item
+// ProcessQueueItem executes an action on a single queue item.
+//
+// Actions:
+//   - keep_both      — remove from queue, keep both files untouched
+//   - delete_this    — delete this (duplicate) track file + DB record, keep primary
+//   - delete_primary — delete the primary track file + DB record, keep this one;
+//     also removes all sibling queue items that referenced the same primary
 func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action string) error {
 	item, err := s.queue.GetByID(itemID)
 	if err != nil {
 		return fmt.Errorf("queue item not found: %w", err)
 	}
 	if item.Track == nil {
-		return fmt.Errorf("queue item does not contain a valid track")
+		return fmt.Errorf("queue item has no associated track")
 	}
-	track := item.Track
-	switch item.Type {
-	case "duplicate_fp_exact", "duplicate_fp_fuzzy":
-		switch action {
-		case "delete":
-			if err := os.Remove(track.Path); err != nil {
-				slog.Warn("Failed to delete duplicate file", "path", track.Path, "error", err)
-			}
-			if err := s.library.DeleteTrack(ctx, track.ID); err != nil {
-				return fmt.Errorf("failed to delete track: %w", err)
-			}
-			slog.Info("Deleted duplicate track", "trackID", track.ID)
-		case "keep":
-			slog.Info("Keeping duplicate track", "trackID", track.ID)
-		case "merge_to_primary":
-			primaryID := item.Metadata["primary_id"]
-			if primaryID == "" {
-				return fmt.Errorf("no primary_id in metadata")
-			}
-			primary, err := s.library.GetTrack(ctx, primaryID)
-			if err != nil {
-				return fmt.Errorf("failed to get primary track: %w", err)
-			}
-			primary.Metadata = track.Metadata
-			primary.ModifiedDate = time.Now()
-			if err := s.tagWriter.WriteFileTags(ctx, primary.Path, primary); err != nil {
-				slog.Warn("Failed to write merged tags to primary", "error", err)
-			}
-			if err := s.library.UpdateTrack(ctx, primary); err != nil {
-				return fmt.Errorf("failed to update primary track: %w", err)
-			}
-			if err := os.Remove(track.Path); err != nil {
-				slog.Warn("Failed to delete dupe file after merge", "error", err)
-			}
-			if err := s.library.DeleteTrack(ctx, track.ID); err != nil {
-				slog.Warn("Failed to delete dupe track after merge", "error", err)
-			}
-			slog.Info("Merged dupe to primary", "dupeID", track.ID, "primaryID", primaryID)
-		default:
-			return fmt.Errorf("invalid action '%s' for duplicate_fp", action)
+
+	switch action {
+	case "keep_both":
+		slog.Info("Keeping both tracks", "trackID", item.Track.ID)
+		// No file operations — just remove from queue.
+
+	case "delete_this":
+		if err := os.Remove(item.Track.Path); err != nil {
+			slog.Warn("Failed to remove duplicate file", "path", item.Track.Path, "error", err)
 		}
+		if err := s.library.DeleteTrack(ctx, item.Track.ID); err != nil {
+			return fmt.Errorf("failed to delete track from library: %w", err)
+		}
+		slog.Info("Deleted duplicate track", "trackID", item.Track.ID)
+
+	case "delete_primary":
+		primaryID := item.Metadata["primary_id"]
+		if primaryID == "" {
+			return fmt.Errorf("queue item has no primary_id in metadata")
+		}
+		primary, err := s.library.GetTrack(ctx, primaryID)
+		if err != nil {
+			return fmt.Errorf("failed to get primary track: %w", err)
+		}
+		if err := os.Remove(primary.Path); err != nil {
+			slog.Warn("Failed to remove primary file", "path", primary.Path, "error", err)
+		}
+		if err := s.library.DeleteTrack(ctx, primaryID); err != nil {
+			return fmt.Errorf("failed to delete primary track from library: %w", err)
+		}
+		slog.Info("Deleted primary track, keeping duplicate", "primaryID", primaryID, "keptID", item.Track.ID)
+
+		// Remove all sibling queue items that pointed to the same primary,
+		// since the primary no longer exists.
+		for id, sibling := range s.queue.GetAll() {
+			if sibling.Metadata["primary_id"] == primaryID && id != itemID {
+				if err := s.queue.Remove(id); err != nil {
+					slog.Warn("Failed to remove sibling queue item", "id", id, "error", err)
+				}
+			}
+		}
+
 	default:
-		return fmt.Errorf("unsupported queue item type: %s", item.Type)
+		return fmt.Errorf("unknown action %q", action)
 	}
+
 	return s.queue.Remove(itemID)
 }
 
-// ProcessQueueGroup processes all items in an FP group
-func (s *Service) ProcessQueueGroup(ctx context.Context, groupFP string, action string) error {
-	groups := s.GetGroupedByFP()
-	groupItems, ok := groups[groupFP]
-	if !ok || len(groupItems) == 0 {
-		return fmt.Errorf("no items in group %s", groupFP)
+// ProcessQueueGroup executes a bulk action on all items in a fingerprint group.
+//
+// Actions:
+//   - keep_all         — keep every file, clear the group from the queue
+//   - delete_duplicates — delete all non-primary tracks, keep the primary
+func (s *Service) ProcessQueueGroup(ctx context.Context, groupKey string, action string) error {
+	var groupItems []music.QueueItem
+	for _, item := range s.queue.GetAll() {
+		if item.Metadata["group_key"] == groupKey {
+			groupItems = append(groupItems, item)
+		}
 	}
+	if len(groupItems) == 0 {
+		return fmt.Errorf("no items found in group %q", groupKey)
+	}
+
+	// Map group actions to per-item actions.
+	perItemAction := ""
+	switch action {
+	case "keep_all":
+		perItemAction = "keep_both"
+	case "delete_duplicates":
+		perItemAction = "delete_this"
+	default:
+		return fmt.Errorf("unknown group action %q", action)
+	}
+
 	for _, item := range groupItems {
-		if err := s.ProcessQueueItem(ctx, item.ID, action); err != nil {
-			slog.Warn("Failed to process group item", "itemID", item.ID, "groupFP", groupFP, "action", action, "error", err)
+		if err := s.ProcessQueueItem(ctx, item.ID, perItemAction); err != nil {
+			slog.Warn("Failed to process group item", "itemID", item.ID, "action", perItemAction, "error", err)
 		}
 	}
 	return nil
 }
 
-// StartDuplicatesAnalysis starts the duplicates analysis job (always enabled, quick scan defaults)
+// StartDuplicatesAnalysis kicks off the background duplicate-detection job.
 func (s *Service) StartDuplicatesAnalysis(ctx context.Context, params map[string]any) (string, error) {
 	if params == nil {
-		params = map[string]any{
-			"fp_exact_thresh": 0.95, // Quick Scan default
-			"fp_fuzzy_thresh": 0.75,
-			"default_action":  "queue",
-		}
+		params = map[string]any{}
 	}
-	// Ensure required params (hardcoded rest)
 	if _, ok := params["fp_exact_thresh"]; !ok {
 		params["fp_exact_thresh"] = 0.95
 	}
 	if _, ok := params["fp_fuzzy_thresh"]; !ok {
 		params["fp_fuzzy_thresh"] = 0.75
-	}
-	if _, ok := params["default_action"]; !ok {
-		params["default_action"] = "queue"
 	}
 	jobID, err := s.jobService.StartJob("analyze_duplicates", "Analyze Library Duplicates (FP)", params)
 	if err != nil {
@@ -186,7 +227,7 @@ func (s *Service) StartDuplicatesAnalysis(ctx context.Context, params map[string
 	return jobID, nil
 }
 
-// GetQueueItem returns a queue item by ID for comparison views
+// GetQueueItem returns a single queue item by ID.
 func (s *Service) GetQueueItem(id string) (music.QueueItem, error) {
 	return s.queue.GetByID(id)
 }

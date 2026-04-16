@@ -1,26 +1,77 @@
 {{if .Groups}}
 {{range .Groups}}
 <div class="mb-4 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-    <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 flex items-center justify-between border-b">
-        <div class="font-medium text-sm">
-            {{.Key}} ({{len .Items}} tracks)
-            {{if .Similarity}}• {{.Similarity}}% similar{{end}}
+
+    <!-- Group header -->
+    <div class="bg-gray-50 dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-layer-group text-violet-500"></i>
+            <span class="font-medium text-sm text-slate-700 dark:text-slate-300">
+                {{len .Items}} duplicate{{if gt (len .Items) 1}}s{{end}}
+            </span>
+            {{if .Similarity}}
+            <span class="text-xs px-2 py-0.5 rounded-full
+                {{if eq .MatchType "exact"}}bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300
+                {{else}}bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300{{end}}">
+                {{.Similarity}}% {{.MatchType}}
+            </span>
+            {{end}}
         </div>
         <div class="flex gap-2">
-            <button hx-post="/duplicates/queue/group/fp/{{.Key}}/keep" 
+            <button hx-post="/duplicates/queue/group/fp/{{.Key}}/keep_all"
                     hx-target="#toast-container"
-                    hx-confirm="Keep all in this group?"
-                    class="text-xs px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">Keep All</button>
-            <button hx-post="/duplicates/queue/group/fp/{{.Key}}/delete" 
+                    hx-confirm="Keep all tracks in this group (no files deleted)?"
+                    class="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
+                <i class="fas fa-check-double mr-1"></i> Keep All
+            </button>
+            <button hx-post="/duplicates/queue/group/fp/{{.Key}}/delete_duplicates"
                     hx-target="#toast-container"
-                    hx-confirm="Delete all duplicates in group?"
-                    class="text-xs px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">Delete All</button>
+                    hx-confirm="Delete all duplicates and keep only the primary?"
+                    class="text-xs px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/50">
+                <i class="fas fa-star mr-1"></i> Keep Primary Only
+            </button>
         </div>
     </div>
-    <div class="p-3 space-y-2">
+
+    <!-- Tracks in group -->
+    <div class="divide-y divide-gray-100 dark:divide-gray-800">
         {{range .Items}}
-        <div class="text-xs p-2 bg-white dark:bg-gray-900 rounded border">
-            {{.Track.Title}} - {{with .Track.Artists}}{{range $i, $ar := .}}{{if lt $i 1}}{{with $ar.Artist}}{{.Name}}{{else}}Unknown{{end}}{{end}}{{end}}{{end}}
+        <div class="px-4 py-3 flex items-center justify-between gap-4 bg-white dark:bg-gray-900">
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium text-slate-800 dark:text-white truncate">{{.Track.Title}}</div>
+                <div class="text-xs text-gray-500 truncate">
+                    {{with .Track.Artists}}{{range $i, $ar := .}}{{if lt $i 1}}{{with $ar.Artist}}{{.Name}}{{else}}Unknown{{end}}{{end}}{{end}}{{end}}
+                </div>
+                <div class="font-mono text-xs text-gray-400 truncate mt-0.5">{{.Track.Path}}</div>
+            </div>
+            <div class="flex gap-1.5 shrink-0">
+                <button hx-post="/duplicates/queue/{{.ID}}/keep_both"
+                        hx-target="#toast-container" hx-swap="innerHTML"
+                        class="text-xs px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
+                        title="Keep both">
+                    <i class="fas fa-check-double"></i>
+                </button>
+                <button hx-post="/duplicates/queue/{{.ID}}/delete_this"
+                        hx-target="#toast-container" hx-swap="innerHTML"
+                        hx-confirm="Delete this duplicate?"
+                        class="text-xs px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200"
+                        title="Keep primary, delete this">
+                    <i class="fas fa-star"></i>
+                </button>
+                <button hx-post="/duplicates/queue/{{.ID}}/delete_primary"
+                        hx-target="#toast-container" hx-swap="innerHTML"
+                        hx-confirm="Delete the primary and keep this one instead?"
+                        class="text-xs px-2.5 py-1 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200"
+                        title="Keep this, delete primary">
+                    <i class="fas fa-exchange-alt"></i>
+                </button>
+                <button hx-get="/ui/duplicates/compare/{{.ID}}"
+                        hx-target="#modal-container" hx-swap="innerHTML"
+                        class="text-xs px-2.5 py-1 rounded-lg bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 hover:bg-violet-200"
+                        title="Compare details">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
         </div>
         {{end}}
     </div>

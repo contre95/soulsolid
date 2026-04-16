@@ -9,18 +9,27 @@ SoulSolid follows a modular, feature-based architecture with clear separation of
 ```
 src/
 ├── features/           # Feature modules (business logic)
-│   ├── analyze/       # Batch analysis operations (AcoustID, lyrics)
 │   ├── config/        # Configuration management
 │   ├── downloading/   # Music download functionality
+│   ├── duplicates/    # Duplicate detection (analyze-section feature)
+│   ├── hosting/       # HTTP server and middleware
 │   ├── importing/     # Library import/processing
 │   ├── jobs/          # Background job management
 │   ├── library/       # Music library operations
-│   ├── hosting/       # HTTP server and middleware
-│   └── ui/           # UI page rendering
+│   ├── logging/       # Logger setup
+│   ├── lyrics/        # Lyrics fetching and analysis (analyze-section feature)
+│   ├── metadata/      # Tag editing and AcoustID analysis (analyze-section feature)
+│   ├── metrics/       # Library metrics
+│   ├── playlists/     # Playlist management
+│   ├── reorganize/    # File reorganization analysis (analyze-section feature)
+│   └── ui/            # UI page rendering
 ├── infra/             # Infrastructure services
 │   ├── database/     # Database layer
-│   ├── metadata/     # External metadata providers
+│   ├── files/        # File system utilities
+│   ├── fingerprint/  # Audio fingerprinting
+│   ├── providers/    # External metadata/lyrics providers
 │   ├── queue/        # Job queue implementation
+│   ├── tag/          # Audio tag reading/writing
 │   └── watcher/      # File system monitoring
 ├── music/            # Core domain models
 └── main.go          # Application entry point
@@ -31,7 +40,7 @@ src/
 - **Backend**: Go 1.25+ with Fiber web framework
 - **Frontend**: HTMX + Hyperscript for dynamic interactions
 - **Styling**: TailwindCSS with dark mode support
-- **Database**: SQLite
+- **Database**: SQLite (no migration system; tables use `CREATE TABLE IF NOT EXISTS`)
 - **Templates**: Go HTML templates with custom functions
 - **Jobs**: In-memory queue system
 - **Dependencies**: Managed via Go modules and npm
@@ -51,151 +60,159 @@ features/yourfeature/
 
 ### 1. Service Layer (`service.go`)
 
-**Reference**: `src/features/downloading/service.go:21-35`
+**Example**: `downloading.Service` struct and `downloading.NewService()` in `src/features/downloading/service.go`
 - Service struct with dependencies injected via constructor
 - Business logic methods with structured logging
 - Clean separation from HTTP concerns
 
-**Example Pattern**: See `src/features/library/service.go:15-25` for service initialization
-
 ### 2. Handler Layer (`handlers.go`)
 
-**Reference**: `src/features/downloading/handlers.go:14-26`
+**Example**: `downloading.Handler` struct and `downloading.NewHandler()` in `src/features/downloading/handlers.go`
 - Handler struct with only feature-specific service dependencies
-- NewHandler constructor pattern with single service parameter
+- `NewHandler` constructor pattern
 - Dual response support (HTMX + JSON)
 - **Important**: Handlers should only receive services from their own feature, not cross-feature dependencies
 
-**HTMX Detection Pattern**: `src/features/downloading/handlers.go:42-50`
+**Cross-feature access via interface**: When a handler truly needs data from another feature, define an interface in the handler's own package and inject it. Example: `lyrics.MetadataService` interface in `src/features/lyrics/handlers.go` exposes only the data the lyrics handler needs from the metadata feature, keeping the coupling explicit and testable.
+
+**Config manager exception**: The config manager (`*config.Manager`) may be injected directly into handlers when runtime config reads are needed — see `reorganize.Handler` in `src/features/reorganize/handlers.go`.
+
+**HTMX Detection Pattern**: See any handler in `src/features/downloading/handlers.go`
 - Check `c.Get("HX-Request") == "true"` for HTMX requests
 - Return HTML partials for UI, JSON for API
 - Consistent error handling for both response types
 
-**Section Rendering Pattern for Sidebar Features** (`Render*Section` methods):
-- For sections in sidebar (e.g., analyze_duplicates), always set `data["Section"] = "your_section_name"` and conditionally render full layout:
-  ```go
-  data := fiber.Map{"Section": "analyze_duplicates"}
-  if c.Get("HX-Request") != "true" {
-      // Full page for F5/direct navigation (navbar + sidebar via main.html)
-      return c.Render("main", data)
-  }
-  return c.Render("sections/analyze_duplicates", data)
-  ```
-- Matches `views/partials/main.html` if/else chain. Critical for new analyze sections to appear on refresh.
-- Reference: `src/features/duplicates/handlers.go:20-29` (duplicates example).
-
-**Error Response Pattern**: 
-- HTMX errors: `src/features/downloading/handlers.go:43-46`
-- API errors: `src/features/downloading/handlers.go:47-50`
-
 ### 3. Routes (`routes.go`)
 
-**Reference**: `src/features/downloading/routes.go:8-40`
-- RegisterRoutes function with app and feature-specific service parameters only
+**Example**: `downloading.RegisterRoutes()` in `src/features/downloading/routes.go`
+- `RegisterRoutes` function receiving app and feature-specific dependencies only
 - API routes grouped under feature prefix
 - UI routes under `/ui` group for HTMX partials
-- Handler instantiation pattern with single service dependency
 - **Important**: Route registration should only pass the feature's own service to handlers
+
+## Analyze-Section Features
+
+A group of features share a common pattern: they appear as sub-sections inside the **Analyze** area of the UI, launch background jobs that iterate over the existing library, and optionally surface a queue for items that require a user decision.
+
+Current analyze-section features:
+
+| Feature | Job type | Has queue? | Section key |
+|---------|----------|-----------|-------------|
+| `lyrics` | `analyze_lyrics` | Yes | `analyze_lyrics` |
+| `metadata` | `analyze_acoustid` | No | `analyze_metadata` |
+| `reorganize` | `analyze_reorganize` | No | `analyze_files` |
+| `duplicates` | `analyze_duplicates` | Yes | `analyze_duplicates` |
+
+All of these follow the same approach:
+1. User triggers a job from the UI section
+2. Job iterates the library doing its work (fetch lyrics, fingerprint, reorganize files, find duplicates…)
+3. Normal outcomes complete silently; edge cases (duplicate found, lyrics already exist, etc.) are added to a queue
+4. User visits the queue sub-section to review and take action on each item
+
+The landing `sections/analyze.html` shows a list of all `analyze_`-prefixed jobs via `/ui/jobs/list?prefix=analyze_`. Adding a new analyze-section feature means registering its job type with `analyze_` prefix so it appears there automatically.
+
+## Section Rendering and the HTMX URL-Push Problem
+
+### The Problem
+
+HTMX can push URLs while swapping content into a target `div`. For example, navigating to the lyrics queue swaps the queue content into `#contenido` and pushes `/lyrics/queue` to the browser history. This works fine for in-app navigation.
+
+However, when the user **refreshes** or navigates directly to `/lyrics/queue`, the server returns only the partial HTML that was originally meant for the `div`. There is no `<html>`, no `<head>` (CSS), no sidebar, no navbar — the page looks broken.
+
+### The Fix
+
+Every handler that owns a navigable URL must detect whether the request is a full page load or an HTMX swap, and respond accordingly:
+
+```go
+func (h *Handler) RenderAnalyzeLyricsSection(c *fiber.Ctx) error {
+    data := fiber.Map{"Section": "analyze_lyrics"}
+    if c.Get("HX-Request") != "true" {
+        // Direct navigation or F5: render the full shell
+        // main.html includes <head>, sidebar, navbar, and uses .Section to pick the right inner template
+        return c.Render("main", data)
+    }
+    // HTMX swap: return only the section partial
+    return c.Render("sections/analyze_lyrics", data)
+}
+```
+
+The `views/partials/main.html` template contains an if/else chain on `.Section` that selects the correct inner template (`views/sections/<name>.html`). **Add a new entry there for every new navigable section.**
+
+Current chain:
+```
+"dashboard"          → sections/dashboard
+"library"            → sections/library
+"import"             → sections/import
+"jobs"               → sections/jobs
+"settings"           → sections/settings
+"playlists"          → sections/playlists
+"download"           → sections/download
+"analyze"            → sections/analyze
+"analyze_lyrics"     → sections/analyze_lyrics
+"analyze_files"      → sections/analyze_files
+"analyze_metadata"   → sections/analyze_metadata
+"analyze_duplicates" → sections/analyze_duplicates
+```
+
+**Checklist when adding a navigable section**:
+1. Set `data["Section"] = "your_section_key"` in the handler
+2. Add the `else if eq .Section "your_section_key"` branch in `views/partials/main.html`
+3. Create `views/sections/your_section_key.html`
+4. In the handler, render `"main"` when `HX-Request` is absent, the section partial otherwise
 
 ## HTMX Integration Patterns
 
-### 1. Detection and Dual Response Handling
+### Detection and Dual Response Handling
 
-**Reference**: `src/features/downloading/handlers.go:42-50`
-All handlers must check for HTMX requests and respond appropriately.
+All handlers must check for HTMX requests and respond appropriately (see any handler in `src/features/downloading/handlers.go`).
 
-### 2. Common HTMX Attributes Used
-
-**Reference**: `views/sections/download.html:7-10`
-- `hx-get` / `hx-post`: Make requests
-- `hx-target`: Target element for content swap
-- `hx-swap`: How to swap content (`innerHTML`, `outerHTML`, etc.)
-- `hx-trigger`: When to trigger request (`load`, `click`, etc.)
-- `hx-indicator`: Loading indicator element
-
-### 3. Loading States
-
-**Reference**: `views/downloading/album_results.html:14-21`
-Use consistent loading patterns with hx-indicator and spinner elements.
-
-### 4. Toast Notifications
-
-**Reference**: `src/features/downloading/handlers.go:57-60`
-Use the toast system for user feedback:
-- Success: `views/toast/toastOk.html`
-- Error: `views/toast/toastErr.html`
-- Info: `views/toast/toastInfo.html`
-
-### 2. Common HTMX Attributes Used
+### Common HTMX Attributes
 
 - `hx-get` / `hx-post`: Make requests
 - `hx-target`: Target element for content swap
 - `hx-swap`: How to swap content (`innerHTML`, `outerHTML`, etc.)
 - `hx-trigger`: When to trigger request (`load`, `click`, etc.)
 - `hx-indicator`: Loading indicator element
+- `hx-push-url`: Push a URL to browser history after swap
 
-### 3. Loading States
-
-Use consistent loading patterns:
+### Loading States
 
 ```html
 <div hx-get="/api/data" hx-indicator="#loading">
     <div id="loading" class="htmx-indicator">
         <div class="spinner"></div>
     </div>
-    <!-- Content will be replaced -->
 </div>
 ```
 
-### 4. Toast Notifications
+### Toast Notifications
 
-Use the toast system for user feedback:
+Toasts are HTMX responses meant to be swapped into the `#toast-container` div. Only use them in **user action handlers** (create, update, delete, start job, process queue item) — not in data-loading handlers that fill content containers, where the toast would land in the wrong place.
 
 ```go
 // Success
-return c.Render("toast/toastOk", fiber.Map{
-    "Msg": "Operation completed successfully!",
-})
+return c.Render("toast/toastOk", fiber.Map{"Msg": "Operation completed successfully!"})
 
 // Error
-return c.Render("toast/toastErr", fiber.Map{
-    "Msg": "Operation failed!",
-})
+return c.Render("toast/toastErr", fiber.Map{"Msg": "Operation failed!"})
 
 // Info
-return c.Render("toast/toastInfo", fiber.Map{
-    "Msg": "Processing...",
-})
+return c.Render("toast/toastInfo", fiber.Map{"Msg": "Processing..."})
 ```
 
 ## Template Structure
 
 ### 1. Main Layout (`views/partials/main.html`)
 
-**Reference**: `views/partials/main.html:21-40`
-The main template uses conditional rendering based on the `.Section` variable.
-
-### 2. Feature Section Template (`views/sections/download.html`)
-
-**Reference**: `views/sections/download.html:1-10`
-Create a section template for your feature with proper HTMX loading triggers.
-
-### 3. Partial Templates (`views/downloading/`)
-
-**Reference**: `views/downloading/album_results.html:6-49`
-Create reusable partials for dynamic content with proper iteration and fallback handling.
+Contains the full HTML shell (head, sidebar, navbar) and the `.Section` if/else chain that picks the inner template. Every navigable section must be registered here.
 
 ### 2. Feature Section Template (`views/sections/yourfeature.html`)
-
-Create a section template for your feature:
 
 ```html
 <div id="contenido" class="animate__animated animate__fadeIn">
     <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">
         Your Feature
     </h1>
-    
-    <!-- Feature content here -->
     <div hx-get="/ui/yourfeature/partial" hx-trigger="load">
         Loading...
     </div>
@@ -204,10 +221,7 @@ Create a section template for your feature:
 
 ### 3. Partial Templates (`views/yourfeature/`)
 
-Create reusable partials for dynamic content:
-
 ```html
-<!-- views/yourfeature/item_list.html -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     {{range .Items}}
     <div class="bg-white dark:bg-gray-800 rounded-lg p-4">
@@ -222,89 +236,31 @@ Create reusable partials for dynamic content:
 
 ## Dependency Injection Pattern
 
-**Reference**: `src/main.go:28-44`
-Dependencies are injected through the main.go file following this pattern:
-- Configuration manager loaded first
-- Infrastructure services created next
-- Feature services created with dependencies
-- Routes registered with feature-specific services only
-- **Important**: Handlers should only receive services from their own feature to maintain clean architecture and avoid tight coupling between features
+**Example**: `main()` in `src/main.go`
+
+Dependencies are wired in this order:
+1. Configuration manager
+2. Infrastructure services (db, queues, tag readers, fingerprint, providers…)
+3. Feature services with their dependencies
+4. Job handler registration (`jobService.RegisterHandler(jobType, handler)`)
+5. Route registration
+
+**Important**: Handlers should only receive services from their own feature to maintain clean architecture.
 
 ## Configuration Management
 
-### 1. Accessing Configuration
-
-**Reference**: `src/features/downloading/handlers.go:753-754`
-Access config via `cfgManager.Get()` and specific fields.
-
-### 2. Configuration Structure
-
-**Reference**: `src/features/config/config.go:15-95`
-Add your feature configuration to Config struct following the existing pattern.
-
-### 3. Adding New Configuration Options
-
-When adding new configuration options that are **not configurable from the config_form UI**, follow these guidelines:
-
-#### Configuration Structure
-Add your configuration fields to the appropriate struct in `src/features/config/config.go`:
-
-```go
-type YourFeature struct {
-    NewOption bool `yaml:"new_option"`
-    // other fields...
-}
-```
-
-#### Default Values
-**Reference**: `src/features/config/loader.go:97-188`
-All new configuration options **must** be added with their default values in the `createDefaultConfig()` function. This ensures that when no `config.yaml` is provided, the application starts with sensible defaults:
-
-```go
-YourFeature: YourFeature{
-    NewOption: false,  // Default value
-    // other fields with defaults...
-},
-```
-
-#### Examples of Non-UI Configuration
-These configuration options are examples of settings that are not configurable from the UI form and should be handled this way:
-
-- `auto_start_watcher` (Import section) - Controls automatic file system watching
-- Internal service configurations
-- Advanced debugging options
-- Performance tuning parameters
-
-#### Important Notes
-- **Do not remove or override** existing configuration options that can't be changed at runtime.
-- Always provide sensible default values in `createDefaultConfig()`
-- Document the purpose and default value in comments
-- Consider whether the option truly needs UI access or is better left as an advanced configuration
-
-## Database Operations
-
-### 1. Using the Database Service
-
-**Reference**: `src/features/library/service.go:35-50`
-Follow the pattern for database operations with proper error handling and resource cleanup.
-
-### 2. Query Patterns
-
-**Reference**: `src/features/library/service.go:67-85`
-Use parameterized queries and proper row scanning patterns.
-
-## Configuration Management
-
-### 1. Accessing Configuration
+### Accessing Configuration
 
 ```go
 config := cfgManager.Get()
 setting := config.YourFeature.SomeSetting
 ```
 
-### 2. Configuration Structure
+### Configuration Structure
 
-Add your feature configuration to the Config struct in `features/config/config.go`:
+**Example**: `Config` struct in `src/features/config/config.go`
+
+Add feature configuration to the `Config` struct:
 
 ```go
 type Config struct {
@@ -318,29 +274,41 @@ type YourFeatureConfig struct {
 }
 ```
 
-## Database Operations
+### Default Values
 
-### 1. Using the Database Service
+**Example**: `createDefaultConfig()` in `src/features/config/loader.go`
+
+All new options **must** have defaults in `createDefaultConfig()`:
 
 ```go
-func (s *Service) SaveItem(item *Item) error {
-    query := `INSERT INTO items (name, description) VALUES (?, ?)`
-    _, err := s.db.DB.Exec(query, item.Name, item.Description)
-    return err
-}
+YourFeature: YourFeatureConfig{
+    Enabled: false,
+    Setting: "default",
+},
+```
 
+Options not exposed in the config UI (e.g. `auto_start_watcher`, internal tuning params) still follow this same pattern.
+
+## Database Operations
+
+No migration system exists. Tables are created via `CREATE TABLE IF NOT EXISTS` in `src/infra/database/sqlite.go`. Add new tables there following the existing pattern.
+
+### Query Patterns
+
+**Example**: `library.Service` query methods in `src/features/library/service.go`
+
+```go
 func (s *Service) GetItems() ([]Item, error) {
-    query := `SELECT id, name, description FROM items`
-    rows, err := s.db.DB.Query(query)
+    rows, err := s.db.DB.Query(`SELECT id, name FROM items`)
     if err != nil {
         return nil, err
     }
     defer rows.Close()
-    
+
     var items []Item
     for rows.Next() {
         var item Item
-        if err := rows.Scan(&item.ID, &item.Name, &item.Description); err != nil {
+        if err := rows.Scan(&item.ID, &item.Name); err != nil {
             return nil, err
         }
         items = append(items, item)
@@ -349,62 +317,58 @@ func (s *Service) GetItems() ([]Item, error) {
 }
 ```
 
+Always use parameterized queries (`?` placeholders) — never interpolate user input into SQL strings.
+
 ## Job Integration
 
 For long-running operations, integrate with the job system:
 
-### 1. Job Task Creation
+### Job Task Creation
 
-**Reference**: `src/features/downloading/download_job.go:12-25`
-Create task structs that implement job execution logic.
+**Example**: `downloading.DownloadJobTask` in `src/features/downloading/download_job.go`
 
-### 2. Job Registration
+Create a struct that implements the job execution interface.
 
-**Reference**: `src/main.go:88-93`
-Register job handlers in main.go following the existing pattern:
-- Create task instances that implement job execution logic
-- Register handlers with jobService.RegisterHandler() for each job type
-- Multiple job types can share the same task handler (e.g., download_track, download_album all use DownloadJobTask)
-- Job types are strings that match the parameters used in service.StartJob() calls
+### Job Registration
 
-### 3. Job Triggering
+**Example**: job handler registration block in `src/main.go`
 
-**Reference**: `src/features/downloading/service.go:106-114`
-Jobs are triggered through the service layer, not directly from handlers:
-- Service methods call `jobService.StartJob()` with job type, title, and parameters
-- Handlers call service methods, which return job IDs
-- Handlers return appropriate responses (HTMX toast or JSON with job ID)
-- **Important**: This maintains clean architecture where handlers don't directly access job services
+```go
+myTask := myfeature.NewMyJobTask(myService)
+jobService.RegisterHandler("analyze_myfeature", jobs.NewBaseTaskHandler(myTask))
+```
 
-### 4. Jobs and Queue Together
+Multiple job types can share a handler (e.g. all download variants use `DownloadJobTask`).
 
-Jobs and queue work together - see [Queue Integration](#queue-integration) for details:
-- Jobs add items to queue when encountering edge cases needing user decision
-- Queue items are processed by user actions, not automatically
-- Example: Import job finds duplicate → adds to queue → user reviews and decides
+### Job Triggering
+
+**Example**: `downloading.Service` job-starting methods in `src/features/downloading/service.go`
+
+Jobs are triggered through the service layer — handlers never call `jobService` directly:
+
+```go
+// In service:
+jobID, err := s.jobService.StartJob("analyze_myfeature", "My Feature Analysis", params)
+
+// In handler: call service method, return toast or JSON with jobID
+```
 
 ## Queue Integration
 
-For items requiring manual user decision, integrate with the queue system:
+For items requiring a user decision, integrate with the queue system:
 
-### 1. Overview: Queue vs Jobs
-
-The queue and job system serve different purposes:
+### Overview: Queue vs Jobs
 
 | Aspect | Jobs | Queue |
 |--------|------|-------|
 | **Purpose** | Automated background processing | Manual user decisions |
 | **Trigger** | User initiates, runs automatically | Job encounters edge case |
 | **Execution** | Background goroutine | User visits UI and takes action |
-| **Example** | "Download album", "Analyze library" | "Duplicate track found", "Lyrics not found" |
+| **Example** | "Analyze lyrics", "Find duplicates" | "Lyrics already exist", "Duplicate track found" |
 
-**Pattern**: Features use both - jobs do the work, queue captures edge cases needing review.
+### QueueItemType Definitions
 
-### 2. QueueItemType Definitions
-
-**Reference**: `src/music/queue.go:13-30`
-
-QueueItemType differentiates what created the queue item and what actions are available:
+**Example**: `music.QueueItemType` constants in `src/music/queue.go`
 
 | QueueItemType | Value | Purpose | Used By |
 |---------------|-------|---------|---------|
@@ -416,68 +380,45 @@ QueueItemType differentiates what created the queue item and what actions are av
 | `Lyric404` | `"lyric_404"` | Lyrics not found (404) | lyrics |
 | `FailedLyrics` | `"failed_lyrics"` | Lyrics fetch failed due to error | lyrics |
 
-### 3. The Action Flow
-
-The queue system follows an event-driven pull pattern:
+### The Action Flow
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Job runs       │────▶│  User visits    │────▶│  User submits   │
-│  (background)   │     │  /feature/queue  │     │  action         │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-        │                                                │
-        ▼                                                ▼
-┌─────────────────┐                              ┌─────────────────┐
-│  queue.Add()    │                              │  Service.Process│
-│  QueueItem      │────▶ (items)                 │  QueueItem()    │
-└─────────────────┘                              └─────────────────┘
-                                                        │
-                                                        ▼
-                                               ┌─────────────────┐
-                                               │  queue.Remove() │
-                                               │  (item processed)│
-                                               └─────────────────┘
+Job runs (background)
+    │
+    ├── normal case ──────▶ completes silently
+    │
+    └── edge case ─────▶ queue.Add(QueueItem)
+                               │
+                         User visits /feature/queue
+                               │
+                         User POSTs action
+                               │
+                         Service.ProcessQueueItem()
+                               │
+                         queue.Remove()
 ```
 
-**Step-by-step**:
-1. **Job runs** - Background job processes tracks
-2. **Encounters issue** - Finds duplicate, missing metadata, failed, etc.
-3. **Adds to queue** - Calls `queue.Add(QueueItem{Type, Track, Metadata})`
-4. **User visits queue** - Goes to `/feature/queue` (e.g., `/lyrics/queue`)
-5. **User takes action** - POST to `/feature/queue/:id/:action` (e.g., `override`)
-6. **Service processes** - `Service.ProcessQueueItem()` executes action
-7. **Item removed** - `queue.Remove()` after processing
+### Adding Items to Queue
 
-### 4. Adding Items to Queue
-
-**Reference**: `src/features/importing/directory_job.go:148-165`
-
-From within a job, add items when encountering issues:
+**Example**: `importing.DirectoryImportTask.addTrackToQueue()` in `src/features/importing/directory_job.go`
 
 ```go
-func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueType music.QueueItemType, jobID string, metadata map[string]string) error {
-    if track.ID == "" {
-        return fmt.Errorf("track ID cannot be empty")
-    }
-    item := music.QueueItem{
-        ID:        track.ID,
-        Type:      queueType,
-        Track:     track,
-        Timestamp: time.Now(),
-        JobID:     jobID,
-        Metadata:  metadata,
-    }
-    return e.service.queue.Add(item)
+item := music.QueueItem{
+    ID:        track.ID,
+    Type:      music.Duplicate,
+    Track:     track,
+    Timestamp: time.Now(),
+    JobID:     jobID,
+    Metadata:  metadata,
 }
+return s.queue.Add(item)
 ```
 
-**Important**: Only add to queue when user decision is needed - not for normal processing failures.
+Only add when user decision is required — not for retriable failures or normal processing.
 
-### 5. Processing Queue Items
+### Processing Queue Items
 
-**Reference**: `src/features/lyrics/service.go:68-190`
-
-Each feature defines its own processing logic in the service layer:
+**Example**: `lyrics.Service.ProcessQueueItem()` in `src/features/lyrics/service.go`
 
 ```go
 func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action string) error {
@@ -485,297 +426,111 @@ func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action st
     if err != nil {
         return fmt.Errorf("queue item not found: %w", err)
     }
-
     switch item.Type {
-    case ExistingLyrics:
+    case music.ExistingLyrics:
         switch action {
         case "override":
-            // Fetch from another provider
+            // fetch from another provider
         case "keep_old":
-            // Just remove from queue
+            // no-op, just remove
         }
-    case Lyric404:
-        switch action {
-        case "no_lyrics":
-            // Mark track as having no lyrics
-        }
-    // ... other types
     }
-
-    // After processing, remove from queue
     return s.queue.Remove(itemID)
 }
 ```
 
-The service contains:
-1. **Get item** from queue by ID
-2. **Switch on QueueItemType** - different types have different valid actions
-3. **Switch on action** - execute the appropriate logic
-4. **Remove from queue** - item is processed
+### Queue Routes
 
-### 6. Queue Routes
-
-**Reference**: `src/features/lyrics/routes.go:26-31`
-
-Register routes for queue UI and actions:
+**Example**: `lyrics.RegisterRoutes()` queue section in `src/features/lyrics/routes.go`
 
 ```go
-// Queue routes
-queue := app.Group("/lyrics/queue")
-queue.Get("/items", handler.RenderLyricsQueueItems)
-queue.Get("/items/grouped", handler.RenderGroupedLyricsQueueItems)
+queue := app.Group("/feature/queue")
+queue.Get("/items", handler.RenderQueueItems)
+queue.Get("/items/grouped", handler.RenderGroupedQueueItems)
 queue.Post("/:id/:action", handler.ProcessQueueItem)
 queue.Post("/group/:groupType/:groupKey/:action", handler.ProcessQueueGroup)
 queue.Post("/clear", handler.ClearQueue)
+queue.Get("/count", handler.QueueCount)
 ```
 
-Typical routes:
-- `GET /feature/queue/items` - List all items
-- `GET /feature/queue/items/grouped` - List items grouped by artist/album
-- `POST /feature/queue/:id/:action` - Process single item with action
-- `POST /feature/queue/group/:type/:key/:action` - Process group
-- `POST /feature/queue/clear` - Clear all items
+### Queue Count Badge
 
-### 7. Adding Queue to a New Feature
+Features with queues expose a `/feature/queue/count` endpoint and wire it to a badge in the sidebar and navbar (see `views/partials/sidebar.html` and `views/partials/navbar.html` for how the importing and lyrics badges are implemented).
 
-To add queue support to a feature that doesn't have it:
+### Adding Queue to a New Feature
 
-1. **Add queue dependency to service**:
-```go
-type Service struct {
-    // ... other deps
-    queue music.Queue
-}
-
-func NewService(..., queue music.Queue) *Service {
-    return &Service{
-        // ... other fields
-        queue: queue,
-    }
-}
-```
-
-2. **Add queue to main.go**:
-```go
-queue := queue.NewInMemoryQueue()
-importingService := importing.NewService(..., queue, ...)
-```
-
-3. **Add items during job execution** (when encountering edge cases)
-
-4. **Add ProcessQueueItem method** to service with switch on QueueItemType
-
-5. **Add route handlers** for queue display and actions
-
-6. **Create queue UI templates** in `views/feature/`
-
-### 8. Job → Queue Relationship
-
-Jobs and queue work together:
-
-```
-Job (background task)
-    │
-    ├── normal case ──────▶ Job completes successfully
-    │
-    └── edge case ──────▶ queue.Add(QueueItem) 
-                              │
-                              ▼
-                        User reviews
-                              │
-                              ▼
-                        POST action
-                              │
-                              ▼
-                        Service.ProcessQueueItem()
-                              │
-                              ▼
-                        queue.Remove()
-```
-
-**Jobs add items to queue** when encountering:
-- Duplicates
-- Missing required metadata
-- Processing failures that need user decision
-- Existing data that might need override
-
-**Jobs do NOT add to queue** for:
-- Normal processing (just complete)
-- Expected failures (network timeout, etc.) - log and continue
-- Items that can be auto-retried
+1. Add `queue music.Queue` to service struct and constructor
+2. Create queue in `main.go`: `myQueue := queue.NewInMemoryQueue()`
+3. Pass it to `NewService(..., myQueue, ...)`
+4. Add `ProcessQueueItem(ctx, id, action)` to service
+5. Register queue routes including `/count` endpoint
+6. Add sidebar/navbar badge polling `/feature/queue/count`
+7. Create queue UI templates in `views/yourfeature/`
 
 ## Telegram Bot Integration (Optional)
 
-If your feature needs Telegram bot support:
+**Example**: `src/features/downloading/telegram.go`
 
-**Reference**: `src/features/downloading/telegram.go:1-20`
 Follow the pattern for registering Telegram command handlers.
 
 ## Frontend Dependencies
 
-### 1. Adding New Dependencies
+**Example**: `package.json` `dependencies` and `scripts` sections
 
-**Reference**: `package.json:18-28`
-Edit package.json and use npm scripts to manage dependencies.
-
-### 2. Asset Building
-
-**Reference**: `package.json:7-11`
-Use the provided npm scripts for building CSS and copying dependencies.
-
-## Testing Your Feature
-
-### 1. Development Setup
-
-**Reference**: `package.json:11`
-Use `npm run dev` for development with asset building.
-
-### 2. Testing HTMX Interactions
-
-- Use browser developer tools to monitor HTMX requests
-- Check Network tab for XHR requests with `HX-Request: true` header
-- Verify toast notifications appear correctly
-
-### 3. Testing API Endpoints
-
-Use curl or similar tools to test JSON endpoints directly.
+Edit `package.json` and use npm scripts to manage dependencies. Use `npm run dev` for development with live CSS rebuilding.
 
 ## Error Handling Patterns
 
-### 1. Service Layer Errors
+### Service Layer
 
-**Reference**: `src/features/downloading/service.go:100-120`
-Define custom error types and handle them consistently.
+Define custom error types where needed (see `src/features/downloading/service.go`).
 
-### 2. Handler Error Responses
+### Handler Error Responses
 
-**Reference**: `src/features/downloading/handlers.go:64-74`
-Handle different error types with appropriate HTTP status codes and user messages.
+User action handlers (create, update, delete, start job, process queue item) use toasts:
+
+```go
+if err != nil {
+    return c.Render("toast/toastErr", fiber.Map{"Msg": err.Error()})
+}
+```
+
+Data-loading handlers that fill a specific container use `SendString` or JSON so the error lands in the right place rather than the toast container.
 
 ## Logging Best Practices
 
-### 1. Structured Logging
+Use `slog` with structured fields throughout (see any handler in `src/features/downloading/handlers.go`):
 
-**Reference**: `src/features/downloading/handlers.go:38`
-Use slog with consistent field names and levels.
-
-### 2. Context Information
-
-**Reference**: `src/features/downloading/handlers.go:341`
-Include relevant context like IDs, operation types, and durations.
+```go
+slog.Info("starting analysis", "trackID", id, "provider", provider)
+slog.Error("failed to fetch lyrics", "error", err, "trackID", id)
+```
 
 ## Security Considerations
 
-### 1. Input Validation
+- Always use parameterized SQL queries (`?` placeholders, never string interpolation)
+- Validate all user inputs before processing
 
-**Reference**: `src/features/downloading/handlers.go:41-50`
-Validate all inputs and provide clear error messages.
+## Middleware and Template Functions
 
-### 2. SQL Injection Prevention
-
-**Reference**: `src/features/library/service.go:70-75`
-Always use parameterized queries with proper variable binding.
-
-## Performance Guidelines
-
-### 1. Database Operations
-
-**Reference**: `src/features/library/service.go:35-50`
-Use transactions, proper indexing, and connection pooling.
-
-### 2. HTTP Responses
-
-**Reference**: `src/features/hosting/server.go:88-89`
-Configure appropriate body limits and response compression.
-
-## Deployment Considerations
-
-### 1. Configuration
-
-**Reference**: `src/features/config/loader.go:15-30`
-Externalize all configuration with environment variable support.
-
-### 2. Database Migrations
-
-Follow the existing database initialization patterns in `src/infra/database/sqlite.go`.
-
-## Code Style Guidelines
-
-### 1. Go Code
-
-- Follow standard Go formatting (`gofmt`)
-- Use meaningful variable names
-- Keep functions small and focused
-- Add package documentation
-- Use interfaces for dependencies
-- **Important**: Handlers should only depend on services from their own feature to maintain loose coupling and clean architecture
-
-### 2. Template Code
-
-**Reference**: `views/downloading/album_results.html:10-48`
-- Use consistent indentation
-- Include proper HTML escaping
-- Follow semantic HTML structure
-- Include accessibility attributes
-
-## Middleware Patterns
-
-**Reference**: `src/features/hosting/middleware.go:1-25`
-Follow existing middleware patterns for logging, HTMX detection, and request handling.
-
-## Template Functions
-
-**Reference**: `src/features/hosting/server.go:32-77`
-Use existing template functions and add new ones following the same pattern.
-
-## Static Asset Management
-
-**Reference**: `src/features/hosting/server.go:113-114`
-Follow the pattern for serving static assets and node_modules.
+- Middleware patterns: `src/features/hosting/middleware.go`
+- Template functions: `hosting.NewServer()` in `src/features/hosting/server.go`
+- Static assets: `hosting.NewServer()` static file setup in `src/features/hosting/server.go`
 
 ## Checklist for New Features
 
-Before submitting a new feature, ensure:
-
 - [ ] Feature follows the standard directory structure
-- [ ] All handlers support both HTMX and API responses (`src/features/downloading/handlers.go:42-50`)
-- [ ] Proper error handling is implemented (`src/features/downloading/handlers.go:64-74`)
-- [ ] Logging is added for important operations (`src/features/downloading/handlers.go:38`)
-- [ ] Configuration is externalized (`src/features/config/config.go:15-95`)
-- [ ] Database operations use parameterized queries (`src/features/library/service.go:70-75`)
-- [ ] Templates are responsive and accessible (`views/downloading/album_results.html:10-48`)
-- [ ] Toast notifications are used for user feedback (`src/features/downloading/handlers.go:57-60`)
-- [ ] Long operations use the job system (`src/main.go:56-66`)
-- [ ] **Handlers only depend on services from their own feature** (clean architecture)
-- [ ] Code is properly documented
-- [ ] Tests are written for critical paths
-- [ ] Dependencies are updated in package.json
-- [ ] CSS is built and committed
-
-## Example: Complete Feature Implementation
-
-See the `downloading` and `analyze` features for complete examples that demonstrate:
-
-### Downloading Feature
-- Service layer: `src/features/downloading/service.go:21-35`
-- Handler layer: `src/features/downloading/handlers.go:14-26` (with single service dependency)
-- HTMX integration: `src/features/downloading/handlers.go:42-50`
-- Job integration: `src/features/downloading/download_job.go:12-25`
-- Template structure: `views/downloading/album_results.html:6-49`
-- Route registration: `src/features/downloading/routes.go:8-40` (with feature-specific service only)
-- Clean architecture: handlers only depend on their own feature's service
-
-### Analyze Feature
-The `analyze` feature demonstrates batch processing operations on the entire library:
-- **Service layer**: `src/features/analyze/service.go:21-30` - Injects multiple services (tagging, lyrics, library, jobs)
-- **Handler layer**: `src/features/analyze/handlers.go:14-19` - Single service dependency pattern
-- **Job integration**: Multiple job types (`analyze_acoustid`, `analyze_lyrics`) with progress tracking
-  - AcoustID analysis: `src/features/analyze/acoustid_job.go:28-134` - Batch fingerprinting and AcoustID lookup
-  - Lyrics analysis: `src/features/analyze/lyrics_job.go:29-146` - Batch lyrics fetching with provider selection
-- **HTMX integration**: `src/features/analyze/handlers.go:38-45` - Dual response support with toast notifications
-- **Template structure**: `views/sections/analyze.html:1-98` - Card-based UI with provider selection
-- **Route registration**: `src/features/analyze/routes.go:8-17` - API and UI routes with feature-specific handler
-- **Clean architecture**: Maintains separation by only accessing cross-feature services through the service layer
-
-This spec kit should be followed consistently when developing new features to maintain code quality, user experience consistency, and architectural coherence across the SoulSolid application.
-
+- [ ] All handlers support both HTMX and API responses
+- [ ] If the feature has a navigable URL: section key set, `main.html` updated, dual render pattern implemented
+- [ ] Proper error handling: user action errors use `toast/toastErr`, data endpoint errors use `SendString`/JSON
+- [ ] Structured logging for important operations
+- [ ] Configuration externalized with defaults in `createDefaultConfig()`
+- [ ] Database operations use parameterized queries
+- [ ] Tables created via `CREATE TABLE IF NOT EXISTS` in `src/infra/database/sqlite.go`
+- [ ] Templates are responsive and accessible
+- [ ] Toast notifications used for user action feedback
+- [ ] Long operations use the job system (triggered via service layer, not handler)
+- [ ] If job type starts with `analyze_`: appears automatically in `sections/analyze.html` job list
+- [ ] If feature has a queue: `/count` endpoint exists, sidebar/navbar badge wired up
+- [ ] Handlers only depend on their own feature's service (cross-feature via local interface)
+- [ ] CSS built and committed

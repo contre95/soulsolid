@@ -463,13 +463,13 @@ func (h *Handler) DeleteTrack(c *fiber.Ctx) error {
 
 	trackID := c.Params("trackId")
 	if trackID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Track ID is required"})
 	}
 
 	err := h.service.DeleteTrack(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to delete track", "error", err, "trackId", trackID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete track")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Failed to delete track"})
 	}
 
 	// Return success toast
@@ -482,13 +482,13 @@ func (h *Handler) DeleteAlbum(c *fiber.Ctx) error {
 
 	albumID := c.Params("albumId")
 	if albumID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Album ID is required")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Album ID is required"})
 	}
 
 	err := h.service.DeleteAlbum(c.Context(), albumID)
 	if err != nil {
 		slog.Error("Failed to delete album", "error", err, "albumId", albumID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete album")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Failed to delete album"})
 	}
 
 	// Return success toast
@@ -501,13 +501,13 @@ func (h *Handler) DeleteArtist(c *fiber.Ctx) error {
 
 	artistID := c.Params("artistId")
 	if artistID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Artist ID is required")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Artist ID is required"})
 	}
 
 	err := h.service.DeleteArtist(c.Context(), artistID)
 	if err != nil {
 		slog.Error("Failed to delete artist", "error", err, "artistId", artistID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete artist")
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "Failed to delete artist"})
 	}
 
 	// Return success toast
