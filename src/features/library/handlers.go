@@ -391,17 +391,33 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 			}
 		}
 
-		// Search tracks
+		// Collect matched artist and album IDs to also fetch their tracks
+		var matchedArtistIDs []string
+		for _, r := range results {
+			if r.Type == "artist" {
+				matchedArtistIDs = append(matchedArtistIDs, r.ID)
+			}
+		}
+		var matchedAlbumIDs []string
+		for _, r := range results {
+			if r.Type == "album" {
+				matchedAlbumIDs = append(matchedAlbumIDs, r.ID)
+			}
+		}
+
+		// Search tracks by title
+		seenTrackIDs := make(map[string]bool)
 		filter := &music.TrackFilter{
 			Title:     query,
 			ArtistIDs: []string{},
 			AlbumIDs:  []string{},
 		}
-		tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), 20, 0, filter)
+		tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), 50, 0, filter)
 		if err != nil {
 			slog.Error("Error searching tracks", "error", err)
 		} else {
 			for _, track := range tracks {
+				seenTrackIDs[track.ID] = true
 				var artistNames strings.Builder
 				if len(track.Artists) > 0 {
 					for i, ar := range track.Artists {
@@ -424,6 +440,86 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 					Duration:    track.Metadata.Duration,
 					ImageURL:    "",
 				})
+			}
+		}
+
+		// Fetch tracks belonging to matched artists
+		if len(matchedArtistIDs) > 0 {
+			artistTracksFilter := &music.TrackFilter{
+				ArtistIDs: matchedArtistIDs,
+			}
+			artistTracks, err := h.service.GetTracksFilteredPaginated(c.Context(), 200, 0, artistTracksFilter)
+			if err != nil {
+				slog.Error("Error fetching tracks for matched artists", "error", err)
+			} else {
+				for _, track := range artistTracks {
+					if seenTrackIDs[track.ID] {
+						continue
+					}
+					seenTrackIDs[track.ID] = true
+					var artistNames strings.Builder
+					if len(track.Artists) > 0 {
+						for i, ar := range track.Artists {
+							if i > 0 {
+								artistNames.WriteString(", ")
+							}
+							artistNames.WriteString(ar.Artist.Name)
+						}
+					}
+					albumTitle := ""
+					if track.Album != nil {
+						albumTitle = track.Album.Title
+					}
+					results = append(results, SearchResult{
+						Type:        "track",
+						ID:          track.ID,
+						PrimaryName: track.Title,
+						Secondary:   artistNames.String(),
+						Tertiary:    albumTitle,
+						Duration:    track.Metadata.Duration,
+						ImageURL:    "",
+					})
+				}
+			}
+		}
+
+		// Fetch tracks belonging to matched albums
+		if len(matchedAlbumIDs) > 0 {
+			albumTracksFilter := &music.TrackFilter{
+				AlbumIDs: matchedAlbumIDs,
+			}
+			albumTracks, err := h.service.GetTracksFilteredPaginated(c.Context(), 200, 0, albumTracksFilter)
+			if err != nil {
+				slog.Error("Error fetching tracks for matched albums", "error", err)
+			} else {
+				for _, track := range albumTracks {
+					if seenTrackIDs[track.ID] {
+						continue
+					}
+					seenTrackIDs[track.ID] = true
+					var artistNames strings.Builder
+					if len(track.Artists) > 0 {
+						for i, ar := range track.Artists {
+							if i > 0 {
+								artistNames.WriteString(", ")
+							}
+							artistNames.WriteString(ar.Artist.Name)
+						}
+					}
+					albumTitle := ""
+					if track.Album != nil {
+						albumTitle = track.Album.Title
+					}
+					results = append(results, SearchResult{
+						Type:        "track",
+						ID:          track.ID,
+						PrimaryName: track.Title,
+						Secondary:   artistNames.String(),
+						Tertiary:    albumTitle,
+						Duration:    track.Metadata.Duration,
+						ImageURL:    "",
+					})
+				}
 			}
 		}
 
