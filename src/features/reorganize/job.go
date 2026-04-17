@@ -49,7 +49,7 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progres
 	job.Logger.Info("Starting file reorganization", "totalTracks", totalTracks, "color", "blue")
 	progressUpdater(0, fmt.Sprintf("Starting reorganization of %d tracks", totalTracks))
 
-	processed := 0
+	attempted := 0
 	moved := 0
 	skipped := 0
 	errors := 0
@@ -59,7 +59,7 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progres
 	for offset := 0; offset < totalTracks; offset += batchSize {
 		select {
 		case <-ctx.Done():
-			job.Logger.Info("File reorganization cancelled", "processed", processed, "moved", moved, "color", "orange")
+			job.Logger.Info("File reorganization cancelled", "attempted", attempted, "moved", moved, "color", "orange")
 			return nil, ctx.Err()
 		default:
 		}
@@ -73,13 +73,14 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progres
 		for _, track := range tracks {
 			select {
 			case <-ctx.Done():
-				job.Logger.Info("File reorganization cancelled", "processed", processed, "moved", moved, "color", "orange")
+				job.Logger.Info("File reorganization cancelled", "attempted", attempted, "moved", moved, "color", "orange")
 				return nil, ctx.Err()
 			default:
 			}
 
-			progress := (processed * 100) / totalTracks
-			progressUpdater(progress, fmt.Sprintf("Processing track %d/%d: %s", processed+1, totalTracks, track.Title))
+			progress := (attempted * 100) / totalTracks
+			progressUpdater(progress, fmt.Sprintf("Processing track %d/%d: %s", attempted+1, totalTracks, track.Title))
+			attempted++
 
 			// Get the desired path for this track based on current config
 			desiredPath, err := t.service.fileManager.GetLibraryPath(ctx, track)
@@ -127,19 +128,19 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progres
 
 			job.Logger.Info("Successfully moved track", "trackID", track.ID, "title", track.Title, "newPath", newPath, "color", "green")
 			moved++
-			processed++
 		}
 	}
 
-	job.Logger.Info("File reorganization completed", "totalTracks", totalTracks, "processed", processed, "moved", moved, "skipped", skipped, "errors", errors, "color", "green")
-	progressUpdater(100, fmt.Sprintf("Reorganization completed - moved %d, skipped %d, errors %d", moved, skipped, errors))
+	finalMsg := fmt.Sprintf("Reorganization completed: %d path(s) modified, %d already correct, %d errors (of %d total tracks)", moved, skipped, errors, totalTracks)
+	job.Logger.Info("File reorganization completed", "totalTracks", totalTracks, "moved", moved, "skipped", skipped, "errors", errors, "color", "green")
+	progressUpdater(100, fmt.Sprintf("Done — %d path(s) modified, %d skipped, %d errors", moved, skipped, errors))
 
 	return map[string]any{
 		"totalTracks": totalTracks,
-		"processed":   processed,
 		"moved":       moved,
 		"skipped":     skipped,
 		"errors":      errors,
+		"msg":         finalMsg,
 	}, nil
 }
 
