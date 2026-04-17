@@ -369,6 +369,53 @@ jobID, err := s.jobService.StartJob("analyze_myfeature", "My Feature Analysis", 
 
 Handlers never call `jobService` directly — that goes through the service layer.
 
+After starting a job the handler **must** set `HX-Trigger: refreshJobList` so the job card appears in the UI immediately without requiring a page reload:
+
+```go
+jobID, err := h.service.StartMyAnalysis(c.Context())
+if err != nil { /* … */ }
+
+c.Set("HX-Trigger", "refreshJobList")   // ← makes the job card appear instantly
+
+if c.Get("HX-Request") == "true" {
+    return c.Render("toast/toastOk", fiber.Map{"Msg": "Analysis started"})
+}
+return c.Redirect("/ui/analyze/myfeature")
+```
+
+The job list containers in section templates listen for this event via `hx-trigger="load, refreshJobList from:body"` and re-fetch their content when it fires.
+
+### Job Summary (completion message)
+
+When a job finishes, the job card footer (`views/jobs/job_card_footer.html`) displays a coloured summary box if `Metadata["msg"]` is set. Every `Task.Execute` implementation **must** return a `"msg"` key in its stats map so the user sees a human-readable outcome.
+
+```go
+finalMsg := fmt.Sprintf("Analysis completed: %d processed, %d skipped, %d errors", processed, skipped, errors)
+return map[string]any{
+    // feature-specific counters…
+    "msg": finalMsg,
+}, nil
+```
+
+The footer picks its colour based on the job type and the counters present in `Metadata`. If your job type needs custom colouring, add a branch to `views/jobs/job_card_footer.html` after the existing `analyze_lyrics` / `analyze_reorganize` cases:
+
+```html
+{{ else if eq $job.Type "analyze_myfeature" }}
+  {{ $myCount := index $job.Metadata "myCounter" }}
+  {{ if and (eq $job.Status "completed") $myCount (gt $myCount 0) }}
+    {{ $colorClass = "bg-green-50/80 dark:bg-green-900/30 border border-green-200/60 dark:border-green-800/60 text-green-700 dark:text-green-300" }}
+  {{ else if eq $job.Status "completed" }}
+    {{ $colorClass = "bg-blue-50/80 dark:bg-blue-900/30 border border-blue-200/60 dark:border-blue-800/60 text-blue-700 dark:text-blue-300" }}
+  {{ end }}
+```
+
+**Progress tracking note**: use a separate `attempted` counter (incremented at the top of the track loop, before any `continue`) to drive `progressUpdater`. Never derive progress from a success-only counter — it causes the bar to advance too slowly.
+
+**Checklist for job summaries**:
+- [ ] `Execute` returns `"msg"` in its stats map for all exit paths (success, partial, cancelled-before-start)
+- [ ] Progress uses an `attempted` counter, not a success counter
+- [ ] Footer colour branch added in `views/jobs/job_card_footer.html` if the default red/green logic doesn't fit the job type
+
 ## Queue Integration
 
 For items requiring a user decision, integrate with the queue system:
