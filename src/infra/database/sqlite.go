@@ -788,6 +788,29 @@ func (d *SqliteLibrary) ClearStoredMetrics(ctx context.Context) error {
 	return err
 }
 
+// GetGenres returns all distinct non-empty genres in the library, sorted alphabetically.
+func (d *SqliteLibrary) GetGenres(ctx context.Context) ([]string, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT DISTINCT genre FROM tracks
+		WHERE genre IS NOT NULL AND genre != ''
+		ORDER BY genre
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var genres []string
+	for rows.Next() {
+		var g string
+		if err := rows.Scan(&g); err != nil {
+			return nil, err
+		}
+		genres = append(genres, g)
+	}
+	return genres, rows.Err()
+}
+
 // UpdateTrack updates a track in the database.
 func (d *SqliteLibrary) UpdateTrack(ctx context.Context, track *music.Track) error {
 	// Validate track using domain validation
@@ -1379,7 +1402,7 @@ func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, o
 	// Add artist filter
 	if len(filter.ArtistIDs) > 0 {
 		placeholders := strings.Repeat("?,", len(filter.ArtistIDs))
-		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+		placeholders = placeholders[:len(placeholders)-1]
 		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = t.id AND ta.artist_id IN ("+placeholders+"))")
 		for _, id := range filter.ArtistIDs {
 			args = append(args, id)
@@ -1389,11 +1412,42 @@ func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, o
 	// Add album filter
 	if len(filter.AlbumIDs) > 0 {
 		placeholders := strings.Repeat("?,", len(filter.AlbumIDs))
-		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+		placeholders = placeholders[:len(placeholders)-1]
 		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_albums ta WHERE ta.track_id = t.id AND ta.album_id IN ("+placeholders+"))")
 		for _, id := range filter.AlbumIDs {
 			args = append(args, id)
 		}
+	}
+
+	// Genre filter
+	if filter.Genre != "" {
+		conditions = append(conditions, "t.genre = ?")
+		args = append(args, filter.Genre)
+	}
+
+	// AcoustID filter
+	if filter.HasAcoustID != nil {
+		if *filter.HasAcoustID {
+			conditions = append(conditions, "EXISTS (SELECT 1 FROM track_attributes ta WHERE ta.track_id = t.id AND ta.key = 'acoustid' AND ta.value != '')")
+		} else {
+			conditions = append(conditions, "NOT EXISTS (SELECT 1 FROM track_attributes ta WHERE ta.track_id = t.id AND ta.key = 'acoustid' AND ta.value != '')")
+		}
+	}
+
+	// Lyrics filter
+	switch filter.LyricsFilter {
+	case "has":
+		conditions = append(conditions, "(t.has_lyrics = 1 AND t.lyrics IS NOT NULL AND t.lyrics != '')")
+	case "empty":
+		conditions = append(conditions, "(t.has_lyrics = 1 AND (t.lyrics IS NULL OR t.lyrics = ''))")
+	case "instrumental":
+		conditions = append(conditions, "t.has_lyrics = 0")
+	}
+
+	// Lyrics text search
+	if filter.LyricsText != "" {
+		conditions = append(conditions, "t.lyrics LIKE ?")
+		args = append(args, "%"+filter.LyricsText+"%")
 	}
 
 	if len(conditions) > 0 {
@@ -1455,7 +1509,7 @@ func (d *SqliteLibrary) GetTracksFilteredCount(ctx context.Context, filter *musi
 	// Add artist filter
 	if len(filter.ArtistIDs) > 0 {
 		placeholders := strings.Repeat("?,", len(filter.ArtistIDs))
-		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+		placeholders = placeholders[:len(placeholders)-1]
 		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = t.id AND ta.artist_id IN ("+placeholders+"))")
 		for _, id := range filter.ArtistIDs {
 			args = append(args, id)
@@ -1465,11 +1519,42 @@ func (d *SqliteLibrary) GetTracksFilteredCount(ctx context.Context, filter *musi
 	// Add album filter
 	if len(filter.AlbumIDs) > 0 {
 		placeholders := strings.Repeat("?,", len(filter.AlbumIDs))
-		placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+		placeholders = placeholders[:len(placeholders)-1]
 		conditions = append(conditions, "EXISTS (SELECT 1 FROM track_albums ta WHERE ta.track_id = t.id AND ta.album_id IN ("+placeholders+"))")
 		for _, id := range filter.AlbumIDs {
 			args = append(args, id)
 		}
+	}
+
+	// Genre filter
+	if filter.Genre != "" {
+		conditions = append(conditions, "t.genre = ?")
+		args = append(args, filter.Genre)
+	}
+
+	// AcoustID filter
+	if filter.HasAcoustID != nil {
+		if *filter.HasAcoustID {
+			conditions = append(conditions, "EXISTS (SELECT 1 FROM track_attributes ta WHERE ta.track_id = t.id AND ta.key = 'acoustid' AND ta.value != '')")
+		} else {
+			conditions = append(conditions, "NOT EXISTS (SELECT 1 FROM track_attributes ta WHERE ta.track_id = t.id AND ta.key = 'acoustid' AND ta.value != '')")
+		}
+	}
+
+	// Lyrics filter
+	switch filter.LyricsFilter {
+	case "has":
+		conditions = append(conditions, "(t.has_lyrics = 1 AND t.lyrics IS NOT NULL AND t.lyrics != '')")
+	case "empty":
+		conditions = append(conditions, "(t.has_lyrics = 1 AND (t.lyrics IS NULL OR t.lyrics = ''))")
+	case "instrumental":
+		conditions = append(conditions, "t.has_lyrics = 0")
+	}
+
+	// Lyrics text search
+	if filter.LyricsText != "" {
+		conditions = append(conditions, "t.lyrics LIKE ?")
+		args = append(args, "%"+filter.LyricsText+"%")
 	}
 
 	if len(conditions) > 0 {
