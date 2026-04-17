@@ -29,6 +29,13 @@ func (t *ReorganizeJobTask) MetadataKeys() []string {
 
 // Execute performs the file reorganization operation
 func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
+	fat32Safe := false
+	if v, ok := job.Metadata["fat32_safe"]; ok {
+		if b, ok := v.(bool); ok {
+			fat32Safe = b
+		}
+	}
+
 	// Get total track count for progress reporting
 	totalTracks, err := t.service.library.GetTracksCount(ctx)
 	if err != nil {
@@ -39,14 +46,14 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progres
 		job.Logger.Info("No tracks found in library")
 		return map[string]any{
 			"totalTracks": 0,
-			"processed":   0,
 			"moved":       0,
 			"skipped":     0,
 			"errors":      0,
+			"msg":         "No tracks found in library",
 		}, nil
 	}
 
-	job.Logger.Info("Starting file reorganization", "totalTracks", totalTracks, "color", "blue")
+	job.Logger.Info("Starting file reorganization", "totalTracks", totalTracks, "fat32Safe", fat32Safe, "color", "blue")
 	progressUpdater(0, fmt.Sprintf("Starting reorganization of %d tracks", totalTracks))
 
 	attempted := 0
@@ -101,6 +108,11 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progres
 			currentPath := filepath.Clean(track.Path)
 			desiredPath = filepath.Clean(desiredPath)
 
+			// Apply FAT32 sanitization to the desired path if requested
+			if fat32Safe {
+				desiredPath = sanitizeFAT32Path(desiredPath)
+			}
+
 			// Check if the track is already in the correct location
 			if currentPath == desiredPath {
 				job.Logger.Info("Track already in correct location", "trackID", track.ID, "title", track.Title, "path", currentPath, "color", "cyan")
@@ -110,7 +122,7 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progres
 
 			// Move the track to the new location
 			job.Logger.Info("Moving track to new location", "trackID", track.ID, "title", track.Title, "from", currentPath, "to", desiredPath, "color", "yellow")
-			newPath, err := t.service.fileManager.MoveTrack(ctx, track)
+			newPath, err := t.service.fileManager.MoveTrackToPath(ctx, track, desiredPath)
 			if err != nil {
 				job.Logger.Warn("Failed to move track", "trackID", track.ID, "title", track.Title, "error", err, "color", "red")
 				errors++

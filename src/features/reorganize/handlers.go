@@ -25,7 +25,8 @@ func NewHandler(service *Service, config *config.Manager) *Handler {
 func (h *Handler) StartReorganizeAnalysis(c *fiber.Ctx) error {
 	slog.Info("Starting file reorganization job from web request")
 
-	jobID, err := h.service.StartReorganizeAnalysis(c.Context())
+	fat32Safe := c.FormValue("fat32_safe") == "true"
+	jobID, err := h.service.StartReorganizeAnalysis(c.Context(), fat32Safe)
 	if err != nil {
 		slog.Error("Failed to start file reorganization job", "error", err)
 		return c.Status(fiber.StatusInternalServerError).Render("toast/toastError", fiber.Map{

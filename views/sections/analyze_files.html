@@ -16,17 +16,31 @@
             <p class="text-slate-600 dark:text-slate-400 mb-3">
                 Current path templates used for organizing files. Configure in <a href="/settings" class="text-blue-500 hover:text-blue-400 underline">Settings</a>.
             </p>
-            <button
-                hx-post="/analyze/reorganize"
-                hx-target="#toast-container"
-                hx-swap="beforeend"
-                class="w-full border border-green-500 dark:border-green-400 text-green-500 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 font-medium py-2 px-4 rounded-md transition-colors duration-200"
-            >
-                Apply templates
-                <span class="htmx-indicator ml-2">
-                    <i class="fas fa-spinner fa-spin text-green-500 dark:text-green-400"></i>
-                </span>
-            </button>
+            <form hx-post="/analyze/reorganize" hx-target="#toast-container" hx-swap="beforeend">
+                <div class="flex items-start gap-2 mb-3">
+                    <input
+                        type="checkbox"
+                        id="fat32_safe"
+                        name="fat32_safe"
+                        value="true"
+                        class="mt-0.5 w-4 h-4 text-green-500 border-gray-300 rounded focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 shrink-0"
+                    >
+                    <label for="fat32_safe" class="text-xs text-slate-600 dark:text-slate-400">
+                        <span class="font-medium text-slate-700 dark:text-slate-300">FAT32-safe filenames</span> —
+                        strip characters forbidden on FAT32/Windows (<code class="font-mono">: * ? " &lt; &gt; | \</code>)
+                        from every path segment. Useful when syncing to an iPod or external drive.
+                    </label>
+                </div>
+                <button
+                    type="submit"
+                    class="w-full border border-green-500 dark:border-green-400 text-green-500 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 font-medium py-2 px-4 rounded-md transition-colors duration-200"
+                >
+                    Apply templates
+                    <span class="htmx-indicator ml-2">
+                        <i class="fas fa-spinner fa-spin text-green-500 dark:text-green-400"></i>
+                    </span>
+                </button>
+            </form>
             <div class="mt-3 text-xs text-slate-500 dark:text-slate-400">
                 <a href="https://soulsolid.contre.io/docs/paths/#available-placeholders" target="_blank" class="text-blue-500 hover:text-blue-400 underline">View documentation for placeholders</a>
             </div>

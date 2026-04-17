@@ -63,6 +63,24 @@ func (o *FileOrganizer) MoveTrack(ctx context.Context, track *music.Track) (stri
 	return newPath, nil
 }
 
+// MoveTrackToPath moves a track file to an explicit destination path.
+func (o *FileOrganizer) MoveTrackToPath(ctx context.Context, track *music.Track, destPath string) (string, error) {
+	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+		return "", fmt.Errorf("failed to create directory: %w", err)
+	}
+	if err := copyFile(track.Path, destPath); err != nil {
+		return "", fmt.Errorf("failed to copy file: %w", err)
+	}
+	if err := os.Remove(track.Path); err != nil {
+		return "", fmt.Errorf("failed to remove original file after copy: %w", err)
+	}
+	dir := filepath.Dir(track.Path)
+	if err := o.removeEmptyDirectories(dir); err != nil {
+		fmt.Printf("Warning: failed to clean up empty directories after move: %v\n", err)
+	}
+	return destPath, nil
+}
+
 // isCrossDeviceError checks if an error is due to cross-device link (moving across filesystems)
 func isCrossDeviceError(err error) bool {
 	return err != nil && (err.Error() == "invalid cross-device link" || err.Error() == "cross-device link")
