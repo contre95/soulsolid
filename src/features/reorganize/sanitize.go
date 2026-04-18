@@ -6,11 +6,15 @@ import (
 	"unicode/utf8"
 )
 
-// fat32Forbidden contains all characters disallowed in FAT32 filenames.
-const fat32Forbidden = `:*?"<>|\`
-
 // maxFAT32Bytes is the maximum byte length of a single FAT32 filename component.
 const maxFAT32Bytes = 255
+
+// fat32Replacer replaces every FAT32-forbidden character with a hyphen.
+// Compiled once at package init; applied in O(n) per segment.
+var fat32Replacer = strings.NewReplacer(
+	":", "-", "*", "-", "?", "-", `"`, "-",
+	"<", "-", ">", "-", "|", "-", `\`, "-",
+)
 
 // sanitizeFAT32Path makes every segment of a file path UTF-8 valid and free of
 // FAT32-forbidden characters (: * ? " < > | \). Path separators are preserved;
@@ -36,21 +40,11 @@ func sanitizeFAT32Segment(seg string, isFilename bool) string {
 	// Strip invalid UTF-8 sequences.
 	seg = strings.ToValidUTF8(seg, "")
 
-	// Replace each FAT32-forbidden character with a hyphen.
-	var b strings.Builder
-	b.Grow(len(seg))
-	for _, r := range seg {
-		if strings.ContainsRune(fat32Forbidden, r) {
-			b.WriteRune('-')
-		} else {
-			b.WriteRune(r)
-		}
-	}
-	result := b.String()
+	// Replace FAT32-forbidden characters with hyphens.
+	result := fat32Replacer.Replace(seg)
 
 	// FAT32 names must not end with a dot or a space (applies to both files
-	// and directories; for files the extension already prevents a trailing dot
-	// under normal circumstances, but we trim here to be safe).
+	// and directories).
 	result = strings.TrimRight(result, ". ")
 
 	// Enforce the 255-byte FAT32 filename limit.
@@ -78,8 +72,14 @@ func truncateBytesUTF8(s string, maxBytes int) string {
 		return s
 	}
 	truncated := s[:maxBytes]
-	// Walk back until the slice ends on a valid rune boundary.
-	for !utf8.ValidString(truncated) {
+	// Step back past any incomplete multi-byte rune at the cut point.
+	// DecodeLastRuneInString returns RuneError with width 1 for invalid bytes;
+	// at most 3 iterations are needed (max UTF-8 sequence is 4 bytes).
+	for len(truncated) > 0 {
+		r, size := utf8.DecodeLastRuneInString(truncated)
+		if r != utf8.RuneError || size != 1 {
+			break
+		}
 		truncated = truncated[:len(truncated)-1]
 	}
 	return truncated

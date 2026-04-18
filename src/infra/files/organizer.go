@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -39,46 +40,36 @@ func (o *FileOrganizer) MoveTrack(ctx context.Context, track *music.Track) (stri
 	if err != nil {
 		return "", fmt.Errorf("failed to render path: %w", err)
 	}
-
 	newPath := filepath.Join(o.libraryPath, renderedPath+filepath.Ext(track.Path))
-	if err := os.MkdirAll(filepath.Dir(newPath), 0755); err != nil {
-		return "", fmt.Errorf("failed to create directory: %w", err)
+	if err := o.moveFile(track.Path, newPath); err != nil {
+		return "", err
 	}
-
-	if err := copyFile(track.Path, newPath); err != nil {
-		return "", fmt.Errorf("failed to copy file: %w", err)
-	}
-	// Remove the original file after successful copy
-	if err := os.Remove(track.Path); err != nil {
-		return "", fmt.Errorf("failed to remove original file after copy: %w", err)
-	}
-
-	// Check if parent directory of original file is now empty and remove it if so
-	dir := filepath.Dir(track.Path)
-	if err := o.removeEmptyDirectories(dir); err != nil {
-		// Log warning but don't fail the operation since file move succeeded
-		fmt.Printf("Warning: failed to clean up empty directories after move: %v\n", err)
-	}
-
 	return newPath, nil
 }
 
 // MoveTrackToPath moves a track file to an explicit destination path.
 func (o *FileOrganizer) MoveTrackToPath(ctx context.Context, track *music.Track, destPath string) (string, error) {
-	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
-		return "", fmt.Errorf("failed to create directory: %w", err)
-	}
-	if err := copyFile(track.Path, destPath); err != nil {
-		return "", fmt.Errorf("failed to copy file: %w", err)
-	}
-	if err := os.Remove(track.Path); err != nil {
-		return "", fmt.Errorf("failed to remove original file after copy: %w", err)
-	}
-	dir := filepath.Dir(track.Path)
-	if err := o.removeEmptyDirectories(dir); err != nil {
-		fmt.Printf("Warning: failed to clean up empty directories after move: %v\n", err)
+	if err := o.moveFile(track.Path, destPath); err != nil {
+		return "", err
 	}
 	return destPath, nil
+}
+
+// moveFile copies src to dst, removes src, and cleans up empty parent directories.
+func (o *FileOrganizer) moveFile(src, dst string) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+	if err := copyFile(src, dst); err != nil {
+		return fmt.Errorf("failed to copy file: %w", err)
+	}
+	if err := os.Remove(src); err != nil {
+		return fmt.Errorf("failed to remove original file after copy: %w", err)
+	}
+	if err := o.removeEmptyDirectories(filepath.Dir(src)); err != nil {
+		slog.Warn("failed to clean up empty directories after move", "error", err)
+	}
+	return nil
 }
 
 // isCrossDeviceError checks if an error is due to cross-device link (moving across filesystems)
