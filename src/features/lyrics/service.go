@@ -15,9 +15,11 @@ import (
 type AddLyricsResult int
 
 const (
-	LyricsAdded   AddLyricsResult = iota // Lyrics were added to a track without lyrics
-	LyricsQueued                         // Lyrics were queued for existing track (different or failed)
-	LyricsSkipped                        // Lyrics were skipped (identical to existing)
+	LyricsAdded              AddLyricsResult = iota // Lyrics were added to a track without lyrics
+	LyricsQueued                                    // Lyrics were queued for existing track (different lyrics found)
+	LyricsSkippedIdentical                          // Track already has lyrics and provider returned identical content
+	LyricsSkippedNotFound                           // Provider could not find lyrics for this track
+	LyricsSkippedInstrumental                       // Track is marked as instrumental (has_lyrics=false)
 )
 
 // Service provides lyrics functionality
@@ -57,33 +59,34 @@ func NewService(tagWriter TagWriter, tagReader TagReader, libraryRepo music.Libr
 func (s *Service) AddLyrics(ctx context.Context, trackID string, providerName string, overrideNoQueue bool) (AddLyricsResult, error) {
 	track, err := s.fetchTrack(ctx, trackID)
 	if err != nil {
-		return LyricsSkipped, err
+		return LyricsSkippedNotFound, err
 	}
 
 	if !track.HasLyrics {
-		return LyricsSkipped, nil
+		return LyricsSkippedInstrumental, nil
 	}
 
 	searchParams := s.buildSearchParams(track)
 	provider, err := s.validateAndGetProvider(providerName)
 	if err != nil {
-		return LyricsSkipped, err
+		return LyricsSkippedNotFound, err
 	}
 
 	newLyrics, err := s.searchLyrics(ctx, provider, searchParams)
 	if err != nil {
-		return LyricsSkipped, nil
+		slog.Info("Provider could not find lyrics", "trackID", trackID, "error", err)
+		return LyricsSkippedNotFound, nil
 	}
 
 	if s.isNewLyricsEmpty(newLyrics) {
-		slog.Info("Provider returned empty lyrics. Skipping", "trackID", trackID)
-		return LyricsSkipped, nil
+		slog.Info("Provider returned empty lyrics", "trackID", trackID)
+		return LyricsSkippedNotFound, nil
 	}
 
 	if s.hasExistingLyrics(track) {
 		if s.lyricsIdentical(track.Metadata.Lyrics, newLyrics) {
-			slog.Info("Track already has lyrics, new lyrics are identical, skipping", "trackID", trackID)
-			return LyricsSkipped, nil
+			slog.Info("Track already has identical lyrics, skipping", "trackID", trackID)
+			return LyricsSkippedIdentical, nil
 		}
 		return s.handleExistingLyricsConflict(ctx, track, newLyrics, providerName, overrideNoQueue)
 	}
@@ -156,7 +159,7 @@ func (s *Service) handleExistingLyricsConflict(ctx context.Context, track *music
 		"new_lyrics": newLyrics,
 	}); err != nil {
 		slog.Error("Failed to add track to lyrics queue", "trackID", track.ID, "error", err)
-		return LyricsSkipped, nil
+		return LyricsSkippedNotFound, nil
 	}
 	slog.Info("Successfully added track to existing_lyrics queue with new lyrics", "trackID", track.ID)
 	return LyricsQueued, nil
@@ -178,7 +181,7 @@ func (s *Service) applyAndPersistLyrics(ctx context.Context, track *music.Track,
 	}
 
 	if err := s.libraryRepo.UpdateTrack(ctx, track); err != nil {
-		return LyricsSkipped, fmt.Errorf("failed to update track with lyrics: %w", err)
+		return LyricsSkippedNotFound, fmt.Errorf("failed to update track with lyrics: %w", err)
 	}
 	return LyricsAdded, nil
 }
