@@ -122,7 +122,7 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progres
 
 			// Move the track to the new location
 			job.Logger.Info("Moving track to new location", "trackID", track.ID, "title", track.Title, "from", currentPath, "to", desiredPath, "color", "yellow")
-			newPath, err := t.service.fileManager.MoveTrackToPath(ctx, track, desiredPath)
+			newPath, err := t.service.fileManager.MoveTrackFile(ctx, track.Path, desiredPath)
 			if err != nil {
 				job.Logger.Warn("Failed to move track", "trackID", track.ID, "title", track.Title, "error", err, "color", "red")
 				errors++

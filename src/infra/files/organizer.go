@@ -47,9 +47,9 @@ func (o *FileOrganizer) MoveTrack(ctx context.Context, track *music.Track) (stri
 	return newPath, nil
 }
 
-// MoveTrackToPath moves a track file to an explicit destination path.
-func (o *FileOrganizer) MoveTrackToPath(ctx context.Context, track *music.Track, destPath string) (string, error) {
-	if err := o.moveFile(track.Path, destPath); err != nil {
+// MoveTrackFile moves a track file to an explicit destination path.
+func (o *FileOrganizer) MoveTrackFile(ctx context.Context, srcPath, destPath string) (string, error) {
+	if err := o.moveFile(srcPath, destPath); err != nil {
 		return "", err
 	}
 	return destPath, nil

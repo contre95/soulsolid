@@ -10,8 +10,8 @@ type FileManager interface {
 	GetLibraryPath(ctx context.Context, track *Track) (string, error)
 	// MoveTrack moves a track to a new location based on its metadata.
 	MoveTrack(ctx context.Context, track *Track) (string, error)
-	// MoveTrackToPath moves a track file to an explicit destination path.
-	MoveTrackToPath(ctx context.Context, track *Track, destPath string) (string, error)
+	// MoveTrackFile moves a track file to an explicit destination path.
+	MoveTrackFile(ctx context.Context, srcPath, destPath string) (string, error)
 	// CopyTrack copies a track to a new location based on its metadata.
 	CopyTrack(ctx context.Context, track *Track) (string, error)
 	// DeleteTrack removes a track file from the library
