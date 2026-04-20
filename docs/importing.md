@@ -8,7 +8,7 @@ lastmod: "2025-09-09T21:10:30+02:00"
 draft: false
 toc: true
 ---
-The soulsolid application supports importing music from two primary sources: local directories and Beets music library databases. The import process handles metadata extraction, duplicate detection, file organization, and automatic artist/album creation.
+The soulsolid application supports importing music from local directories. The import process handles metadata extraction, duplicate detection, file organization, and automatic artist/album creation.
 
 ## Configuration Options
 
@@ -16,16 +16,17 @@ Import behavior is controlled through the application configuration:
 
 ```yaml
 import:
-  move: false
-  always_queue: true
-  duplicates: replace
+  move: false           # if false, files are copied; if true, originals are removed after import
+  always_queue: false   # queue every track for manual review, even non-duplicates
+  duplicates: queue     # queue | skip | replace
+  allow_missing_metadata: false  # allow importing tracks with no artist/album metadata
+  auto_start_watcher: false      # automatically watch the download path on startup
   paths:
-    compilations: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
-    album:soundtrack: '%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
-    album:single: '%asciify{$albumartist}/%asciify{$album} [Single] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
-    album:ep: '%asciify{$albumartist}/%asciify{$album} [EP] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
-    default_path: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
-
+    compilations: '%asciify{$genre}/%asciify{$format}/%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    album:soundtrack: '%asciify{$genre}/%asciify{$format}/%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    album:single: '%asciify{$genre}/%asciify{$format}/%asciify{$albumartist}/%asciify{$album} [Single] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    album:ep: '%asciify{$genre}/%asciify{$format}/%asciify{$albumartist}/%asciify{$album} [EP] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    default_path: '%asciify{$genre}/%asciify{$format}/%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
 ```
 
 
@@ -47,20 +48,13 @@ Imports all supported audio files from a specified directory recursively. This i
 5. Creates artists and albums as needed
 6. Adds tracks to the music library
 
-### Beets Database Import
+### Download Path Watcher
 
-Imports music from a Beets music library database file (.db). This is useful for migrating from Beets or importing curated collections with rich metadata.
+The watcher monitors the configured `downloadPath` directory for new files. When a new audio file is created, it waits for any running jobs to finish (up to 5 minutes) and then automatically triggers a directory import of the download path.
 
-**Requirements:**
-- SQLite database file (.db) exported from Beets
-- Original audio files must be accessible at their stored paths
-- Maximum file size: 100MB
-
-**Process:**
-1. Reads track metadata from Beets database
-2. Verifies file existence at stored paths
-3. Processes tracks similar to directory import
-4. Handles missing files gracefully
+- Enable on startup: `import.auto_start_watcher: true`
+- Toggle at runtime from the web UI or via `POST /import/watcher/toggle`
+- Only responds to file creation events (not modifications or deletions)
 
 ## File Organization
 
@@ -102,17 +96,7 @@ Library/
 
 ## Duplicate Detection
 
-The system has two different methods to detect duplicate tracks:
-
-### Primary: Audio Fingerprinting
-
-- Uses [Chromaprint](https://acoustid.org/chromaprint) algorithm to generate unique audio fingerprints
-- Compares fingerprints to identify identical audio content. This is the most reliable method for detecting true duplicates
-
-### Fallback: Metadata Comparison
-
-When fingerprinting fails or is unavailable:
-- Compares track title, artist name, and album title. I is less reliable but still effective for most cases. It's only used when fingerprint generation encounters errors.
+Duplicate detection uses [Chromaprint](https://acoustid.org/chromaprint) audio fingerprints to identify identical audio content regardless of filename or tags. This is the most reliable method for detecting true duplicates.
 
 ## Duplicate Handling Strategies
 
@@ -144,8 +128,13 @@ Additionally you can opt to always queue regardless weather they are duplicates 
 The import queue provides manual review capabilities for tracks that require user approval before being added to the library. The queue stores tracks in memory only, so all queued items will be lost if the system is restarted.
 
 ### Queue Types
-- **Manual Review**: New tracks requiring approval, typically when the `always_queue: true` option is set.
-- **Duplicate**: Tracks that already exist in the library and were sent to the queue for manual review.
+
+| Type | Trigger | Available Actions |
+|------|---------|-------------------|
+| `manual_review` | `always_queue: true` or first-time imports pending approval | `import`, `cancel` |
+| `duplicate` | Track with matching fingerprint already exists in library | `replace`, `cancel` |
+| `missing_metadata` | Track has no artist or album metadata and `allow_missing_metadata: false` | `import`, `cancel`, `delete` |
+| `failed_import` | Import attempt errored (e.g. file unreadable) | `cancel`, `delete` |
 
 ### Telegram Integration
 

@@ -15,18 +15,37 @@ type Downloader interface {
     // Search methods
     SearchAlbums(query string, limit int) ([]music.Album, error)
     SearchTracks(query string, limit int) ([]music.Track, error)
+    SearchArtists(query string, limit int) ([]music.Artist, error)
+    SearchLinks(query string, limit int) (*LinkResult, error)
     // Navigation methods
     GetAlbumTracks(albumID string) ([]music.Track, error)
+    GetArtistAlbums(artistID string) ([]music.Album, error)
     GetChartTracks(limit int) ([]music.Track, error)
     // Download methods
     DownloadTrack(trackID string, downloadDir string, progressCallback func(downloaded, total int64)) (*music.Track, error)
     DownloadAlbum(albumID string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error)
+    DownloadArtist(artistID string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error)
+    DownloadLink(url string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error)
     // User info
     GetUserInfo() *UserInfo
     GetStatus() DownloaderStatus
     Name() string
+    Capabilities() DownloaderCapabilities
 }
 ```
+
+`DownloaderCapabilities` tells Soulsolid which UI features to expose for your plugin:
+
+```go
+type DownloaderCapabilities struct {
+    SupportsSearch       bool // track/album search
+    SupportsArtistSearch bool // artist search
+    SupportsDirectLinks  bool // URL/link input
+    SupportsChartTracks  bool // charts section
+}
+```
+
+Return `downloading.ErrMethodNotSupported` from any method your plugin does not implement.
 
 ## Creating a Plugin
 
@@ -68,35 +87,63 @@ func (d *MyDownloader) Name() string {
 
 func (d *MyDownloader) SearchAlbums(query string, limit int) ([]music.Album, error) {
     // Implement album search
+    return nil, downloading.ErrMethodNotSupported
 }
 
 func (d *MyDownloader) SearchTracks(query string, limit int) ([]music.Track, error) {
     // Implement track search
+    return nil, downloading.ErrMethodNotSupported
+}
+
+func (d *MyDownloader) SearchArtists(query string, limit int) ([]music.Artist, error) {
+    return nil, downloading.ErrMethodNotSupported
+}
+
+func (d *MyDownloader) SearchLinks(query string, limit int) (*downloading.LinkResult, error) {
+    return nil, downloading.ErrMethodNotSupported
 }
 
 func (d *MyDownloader) GetAlbumTracks(albumID string) ([]music.Track, error) {
-    // Implement getting album tracks
+    return nil, downloading.ErrMethodNotSupported
+}
+
+func (d *MyDownloader) GetArtistAlbums(artistID string) ([]music.Album, error) {
+    return nil, downloading.ErrMethodNotSupported
 }
 
 func (d *MyDownloader) GetChartTracks(limit int) ([]music.Track, error) {
-    // Implement getting chart tracks
+    return nil, downloading.ErrMethodNotSupported
 }
 
 func (d *MyDownloader) DownloadTrack(trackID string, downloadDir string, progressCallback func(downloaded, total int64)) (*music.Track, error) {
     // Implement track download
+    return nil, downloading.ErrMethodNotSupported
 }
 
 func (d *MyDownloader) DownloadAlbum(albumID string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error) {
-    // Implement album download - return downloaded tracks with folder structure in downloadDir
-    // Use progressCallback to report download progress (0-100)
+    return nil, downloading.ErrMethodNotSupported
+}
+
+func (d *MyDownloader) DownloadArtist(artistID string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error) {
+    return nil, downloading.ErrMethodNotSupported
+}
+
+func (d *MyDownloader) DownloadLink(url string, downloadDir string, progressCallback func(downloaded, total int64)) ([]*music.Track, error) {
+    return nil, downloading.ErrMethodNotSupported
 }
 
 func (d *MyDownloader) GetUserInfo() *downloading.UserInfo {
-    // Return user information
+    return &downloading.UserInfo{Name: "MyDownloader User"}
 }
 
 func (d *MyDownloader) GetStatus() downloading.DownloaderStatus {
-    // Return downloader status
+    return downloading.DownloaderStatus{Connected: true}
+}
+
+func (d *MyDownloader) Capabilities() downloading.DownloaderCapabilities {
+    return downloading.DownloaderCapabilities{
+        SupportsSearch: true,
+    }
 }
 
 // Export the NewDownloader function (this is required!)

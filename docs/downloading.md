@@ -20,17 +20,15 @@ downloaders:
   plugins:
     - name: "examplefy"
       path: "/path/to/examplefy.so"
+      # url: "https://github.com/user/soulsolid-examplefy"  # alternative: build from git
+      icon: "https://example.com/icon.png"
       config:
-        arl_token: "your_arl_token"
-        preferred_quality: "FLAC"
-  builtin:
-    dummy: true  # Enable built-in dummy downloader for testing
-   artwork:
-     embedded:
-       enabled: true
-       size: 1000
-       format: "jpeg"
-       quality: 85
+        api_key: "your_api_key"
+  artwork:
+    embedded:
+      enabled: true
+      size: 1000   # max dimension in pixels
+      quality: 85  # JPEG quality (0-100)
 ```
 
 ## Downloading Process
@@ -59,15 +57,6 @@ After downloading, Soulsolid embeds comprehensive metadata into the audio files:
 
 • Similar metadata fields as MP3
 • Additional Vorbis-specific fields like VERSION, DISCNUMBER
-
-## Built-in Dummy Downloader
-
-Soulsolid includes a built-in dummy downloader for testing and development:
-
-- Provides hardcoded sample data
-- No external API dependencies
-- Useful for UI testing and development
-- Automatically enabled when `demo: true` is set in the configuration
 
 ## Creating Custom Plugins
 
