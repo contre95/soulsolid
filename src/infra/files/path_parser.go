@@ -61,7 +61,11 @@ func (p *TemplatePathParser) renderPathTemplate(template string, track *music.Tr
 
 		switch funcName {
 		case "asciify":
-			return unidecode.Unidecode(argValue)
+			asciified := unidecode.Unidecode(argValue)
+			if len(asciified) == 0 {
+				return ""
+			}
+			return strings.ReplaceAll(asciified, "/", "-")
 		case "artistfolder":
 			asciified := unidecode.Unidecode(argValue)
 			if len(asciified) == 0 {
