@@ -285,9 +285,9 @@ func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *mus
 	var newPath string
 	var err error
 	if move {
-		newPath, err = s.fileManager.MoveTrack(ctx, newTrack)
+		newPath, err = s.fileManager.MoveTrackToLibrary(ctx, newTrack)
 	} else {
-		newPath, err = s.fileManager.CopyTrack(ctx, newTrack)
+		newPath, err = s.fileManager.CopyTrackToLibrary(ctx, newTrack)
 	}
 	if err != nil {
 		return fmt.Errorf("could not organize replacement track: %w", err)
@@ -379,9 +379,9 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 	var err error
 
 	if move {
-		newPath, err = s.fileManager.MoveTrack(ctx, track)
+		newPath, err = s.fileManager.MoveTrackToLibrary(ctx, track)
 	} else {
-		newPath, err = s.fileManager.CopyTrack(ctx, track)
+		newPath, err = s.fileManager.CopyTrackToLibrary(ctx, track)
 	}
 	if err != nil {
 		logger.Error("Service.importTrack: could not organize track", "error", err, "title", track.Title)

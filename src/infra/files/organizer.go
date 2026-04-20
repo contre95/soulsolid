@@ -34,8 +34,8 @@ func (o *FileOrganizer) GetLibraryPath(ctx context.Context, track *music.Track) 
 	return newPath, nil
 }
 
-// MoveTrack moves a track to a new location based on its metadata.
-func (o *FileOrganizer) MoveTrack(ctx context.Context, track *music.Track) (string, error) {
+// MoveTrackToLibrary moves a track to a new location based on its metadata.
+func (o *FileOrganizer) MoveTrackToLibrary(ctx context.Context, track *music.Track) (string, error) {
 	renderedPath, err := o.pathParser.RenderPath(track)
 	if err != nil {
 		return "", fmt.Errorf("failed to render path: %w", err)
@@ -77,8 +77,8 @@ func isCrossDeviceError(err error) bool {
 	return err != nil && (err.Error() == "invalid cross-device link" || err.Error() == "cross-device link")
 }
 
-// CopyTrack copies a track to a new location based on its metadata.
-func (o *FileOrganizer) CopyTrack(ctx context.Context, track *music.Track) (string, error) {
+// CopyTrackToLibrary copies a track to a new location based on its metadata.
+func (o *FileOrganizer) CopyTrackToLibrary(ctx context.Context, track *music.Track) (string, error) {
 	renderedPath, err := o.pathParser.RenderPath(track)
 	if err != nil {
 		return "", fmt.Errorf("failed to render path: %w", err)

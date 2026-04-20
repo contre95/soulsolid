@@ -169,9 +169,9 @@ func (e *DirectoryImportTask) importFile(ctx context.Context, track *music.Track
 	var newPath string
 	var err error
 	if moveFiles {
-		newPath, err = e.service.fileManager.MoveTrack(ctx, track)
+		newPath, err = e.service.fileManager.MoveTrackToLibrary(ctx, track)
 	} else {
-		newPath, err = e.service.fileManager.CopyTrack(ctx, track)
+		newPath, err = e.service.fileManager.CopyTrackToLibrary(ctx, track)
 	}
 	if err != nil {
 		logger.Error("Service.runDirectoryImport: could not organize track", "error", err)
