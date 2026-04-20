@@ -11,7 +11,7 @@
          hx-trigger="load, every 2s"
          hx-target="this"
          hx-swap="innerHTML"
-         hx-on::after-request="if(event.detail.xhr.status === 200 && event.detail.xhr.getResponseHeader('HX-Trigger') === 'done') { htmx.trigger('body', 'refreshJobList') }">
+         hx-on::after-request="if(event.detail.xhr.status === 200 && event.detail.xhr.getResponseHeader('HX-Trigger') === 'done') { this.remove(); htmx.trigger('body', 'refreshJobList'); }">
       {{ template "jobs/job_card_progress_bar" . }}
     </div>
   {{ end }}
