@@ -10,6 +10,7 @@ import (
 // NOTE: Similar and atm using the same implementation of https://github.com/contre95/soulsolid/blob/f3b8b31c9e5fea2d53dfae36d435152272608f6f/src/features/importing/tagger.go?plain=1#L9-L12
 type TagReader interface {
 	ReadFileTags(ctx context.Context, filePath string) (*music.Track, error)
+	ReadArtwork(filePath string) ([]byte, string, error)
 }
 
 // TagWriter defines the interface for writing metadata tags to music files.

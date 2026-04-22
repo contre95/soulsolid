@@ -11,6 +11,17 @@
   >
     <h1 class="text-3xl font-bold text-slate-800 dark:text-white">Tags</h1>
      <div class="flex flex-wrap items-center gap-3">
+       <!-- Album Art thumbnail (mobile only) -->
+       {{if .Track.ID}}
+       <a href="/ui/tag/edit/{{.Track.ID}}/artwork" target="_blank" rel="noopener noreferrer"
+          class="sm:hidden flex-shrink-0 block w-14 h-14 rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-600 shadow-sm hover:border-blue-400 dark:hover:border-blue-500 transition-all duration-200 cursor-zoom-in"
+          onerror="this.style.display='none'">
+         <img src="/ui/tag/edit/{{.Track.ID}}/artwork"
+              alt="Album Art"
+              class="w-full h-full object-cover"
+              onerror="this.closest('a').style.display='none'">
+       </a>
+       {{end}}
        <!-- Metadata Providers -->
        <div hx-get="/ui/tag/buttons/metadata/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}"
             hx-trigger="load"
