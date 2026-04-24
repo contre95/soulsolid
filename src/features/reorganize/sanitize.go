@@ -1,6 +1,8 @@
 package reorganize
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"unicode/utf8"
@@ -27,6 +29,7 @@ func sanitizeFAT32Segment(seg string, isFilename bool) string {
 		return seg
 	}
 	seg = strings.ToValidUTF8(seg, "")
+	seg = strings.ToLower(seg)
 	result := fat32Replacer.Replace(seg)
 	result = strings.TrimRight(result, ". ")
 	if isFilename {
@@ -41,6 +44,22 @@ func sanitizeFAT32Segment(seg string, isFilename bool) string {
 		result = truncateBytesUTF8(result, maxFAT32Bytes)
 	}
 	return result
+}
+
+// resolvePathConflict returns path unchanged if no file exists there, otherwise
+// appends _1, _2, … before the extension until a free slot is found.
+func resolvePathConflict(path string) string {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return path
+	}
+	ext := filepath.Ext(path)
+	stem := path[:len(path)-len(ext)]
+	for i := 1; ; i++ {
+		candidate := fmt.Sprintf("%s_%d%s", stem, i, ext)
+		if _, err := os.Stat(candidate); os.IsNotExist(err) {
+			return candidate
+		}
+	}
 }
 
 // truncateBytesUTF8 cuts s to maxBytes, stepping back to a valid UTF-8 rune boundary.
