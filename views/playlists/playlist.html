@@ -1,7 +1,4 @@
 <div id="contenido" class="animate__animated animate__fadeIn">
-  <div id="app-status" hx-get="/ui/jobs/active" hx-trigger="load, every 5s" hx-swap="innerHTML" hx-swap-oob="true">
-  </div>
-
   <!-- Back Button and Title -->
   <div class="flex items-center gap-4 mb-8">
     <button hx-get="/ui/playlists" hx-target="#contenido" hx-swap="innerHTML" hx-push-url="true"
