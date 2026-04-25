@@ -33,6 +33,7 @@ type Import struct {
 	PathOptions          Paths  `yaml:"paths"`
 	AutoStartWatcher     bool   `yaml:"auto_start_watcher"`
 	AllowMissingMetadata bool   `yaml:"allow_missing_metadata"`
+	Fat32Safe            bool   `yaml:"fat32_safe"`
 }
 
 type Paths struct {

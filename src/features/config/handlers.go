@@ -52,6 +52,7 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 			AlwaysQueue:          c.FormValue("import.always_queue") == "true",
 			Duplicates:           c.FormValue("import.duplicates"),
 			AllowMissingMetadata: c.FormValue("import.allow_missing_metadata") == "true",
+			Fat32Safe:            c.FormValue("import.fat32_safe") == "true",
 			PathOptions: Paths{
 				DefaultPath:     c.FormValue("import.paths.default_path"),
 				Compilations:    c.FormValue("import.paths.compilations"),
