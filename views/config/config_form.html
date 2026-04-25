@@ -220,11 +220,6 @@
                        class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                 <label for="import.allow_missing_metadata" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">Allow tracks without artist or album metadata.</label>
               </div>
-              <div class="flex flex-col md:flex-row md:items-center p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
-                <input type="checkbox" id="import.fat32_safe" name="import.fat32_safe" value="true" {{if .Config.Import.Fat32Safe}}checked{{end}}
-                       class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                <label for="import.fat32_safe" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">FAT32-safe filenames — lowercase paths, strip forbidden characters (<code class="font-mono">: * ? " &lt; &gt; | \</code>), 255-byte limit per segment.</label>
-              </div>
              <div class="p-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
                <label for="import.duplicates" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Duplicate Handling</label>
                  <select id="import.duplicates" name="import.duplicates"
@@ -347,6 +342,11 @@
            <label for="import.paths.album:ep" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">EP Path</label>
            <input type="text" id="import.paths.album:ep" name="import.paths.album:ep" value="{{.Config.Import.PathOptions.AlbumEP}}"
                   class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm">
+           <div class="flex flex-col md:flex-row md:items-center p-3 mt-3 bg-gray-50/50 dark:bg-gray-700/30 rounded-lg">
+             <input type="checkbox" id="import.paths.fat32_safe" name="import.paths.fat32_safe" value="true" {{if .Config.Import.PathOptions.Fat32Safe}}checked{{end}}
+                    class="w-5 h-5 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+             <label for="import.paths.fat32_safe" class="ml-6 text-sm font-medium text-gray-700 dark:text-gray-300">FAT32-safe filenames — lowercase paths, strip forbidden characters (<code class="font-mono">: * ? " &lt; &gt; | \</code>), 255-byte limit per segment.</label>
+           </div>
          </div>
        </div>
       </div>
