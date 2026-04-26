@@ -84,10 +84,6 @@ func (o *FileOrganizer) moveFile(src, dst string) error {
 	return nil
 }
 
-// isCrossDeviceError checks if an error is due to cross-device link (moving across filesystems)
-func isCrossDeviceError(err error) bool {
-	return err != nil && (err.Error() == "invalid cross-device link" || err.Error() == "cross-device link")
-}
 
 // CopyTrackToLibrary copies a track to a new location based on its metadata.
 func (o *FileOrganizer) CopyTrackToLibrary(ctx context.Context, track *music.Track) (string, error) {
