@@ -15,19 +15,34 @@
 
         <!-- Group actions -->
         <div class="flex flex-wrap gap-2 justify-start">
+              {{if $group.HasImportable}}
               <button
                   hx-post="/import/queue/group/artist/{{$groupKey | urlquery}}/import"
                   hx-target="#toast-container"
                   hx-swap="innerHTML"
-                  hx-confirm="Import all {{len $group.Items}} tracks by '{{$groupKey}}'?"
-                  {{if not $group.HasImportable}}disabled title="All tracks in this group have errors"{{end}}
-                  class="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo {{if not $group.HasImportable}}bg-gray-500/10 backdrop-blur-md border border-gray-400/30 text-gray-600 dark:text-gray-300 cursor-not-allowed{{else}}bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-md shadow-green-500/10 hover:-translate-y-0.5 hover:shadow-green-500/20 hover:bg-green-500/20 dark:hover:bg-green-500/30{{end}}">
+                  hx-confirm="Import new tracks by '{{$groupKey}}'?"
+                  class="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-md shadow-green-500/10 hover:-translate-y-0.5 hover:shadow-green-500/20 hover:bg-green-500/20 dark:hover:bg-green-500/30">
                   <i class="fas fa-plus mr-2"></i>
-                  Import All
+                  + Import Tracks
                   <span class="htmx-indicator ml-2">
                     <i class="fas fa-spinner fa-spin"></i>
                   </span>
               </button>
+              {{end}}
+              {{if $group.HasDuplicates}}
+              <button
+                  hx-post="/import/queue/group/artist/{{$groupKey | urlquery}}/replace"
+                  hx-target="#toast-container"
+                  hx-swap="innerHTML"
+                  hx-confirm="Replace duplicates by '{{$groupKey}}'?"
+                  class="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo bg-violet-500/10 backdrop-blur-md border border-violet-400/30 text-violet-600 dark:text-violet-300 shadow-md shadow-violet-500/10 hover:-translate-y-0.5 hover:shadow-violet-500/20 hover:bg-violet-500/20 dark:hover:bg-violet-500/30">
+                  <i class="fas fa-sync mr-2"></i>
+                  Replace Duplicates
+                  <span class="htmx-indicator ml-2">
+                    <i class="fas fa-spinner fa-spin"></i>
+                  </span>
+              </button>
+              {{end}}
              <button
                  hx-post="/import/queue/group/artist/{{$groupKey | urlquery}}/cancel"
                  hx-target="#toast-container"

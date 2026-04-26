@@ -49,6 +49,32 @@
     }
   }
 
+  // Override HTMX confirm to use SweetAlert2
+  document.addEventListener("htmx:confirm", function(e) {
+    if (!e.detail.question) return;
+    e.preventDefault();
+    Swal.fire({
+      title: "Are you sure?",
+      text: e.detail.question,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Confirm",
+      cancelButtonText: "Cancel",
+      buttonsStyling: false,
+      customClass: {
+        popup: "swal2-ss-popup",
+        title: "swal2-ss-title",
+        htmlContainer: "swal2-ss-text",
+        icon: "swal2-ss-icon",
+        confirmButton: "swal2-ss-confirm",
+        cancelButton: "swal2-ss-cancel",
+        actions: "swal2-ss-actions",
+      },
+    }).then(function(result) {
+      if (result.isConfirmed) e.detail.issueRequest(true);
+    });
+  });
+
   // Initialize on page load
   document.addEventListener("DOMContentLoaded", initSlimSelect);
 

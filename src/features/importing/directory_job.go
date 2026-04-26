@@ -241,7 +241,7 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 			logger.Info("Service.runDirectoryImport: processing file", "trackToImport", path)
 
 			trackToImport, err := e.service.metadataReader.ReadFileTags(ctx, path)
-			if err != nil {
+			if err != nil || info.Size() == 0 {
 				logger.Warn("Service.runDirectoryImport: could not read metadata from file", "path", path, "error", err)
 				stats.Errors++
 				// Create minimal track and add to queue.
