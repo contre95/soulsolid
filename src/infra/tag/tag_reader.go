@@ -393,6 +393,34 @@ func (r *TagReader) findISRC(tags tag.Metadata) string {
 	return ""
 }
 
+// ReadArtwork reads embedded artwork from a music file.
+// Returns the raw image bytes, MIME type, and any error.
+// Returns nil bytes (no error) if the file has no embedded artwork.
+func (r *TagReader) ReadArtwork(filePath string) ([]byte, string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	tags, err := tag.ReadFrom(file)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read tags: %w", err)
+	}
+
+	pic := tags.Picture()
+	if pic == nil {
+		return nil, "", nil
+	}
+
+	mimeType := pic.MIMEType
+	if mimeType == "" {
+		mimeType = "image/jpeg"
+	}
+
+	return pic.Data, mimeType, nil
+}
+
 // findBPM attempts to find BPM in various tag fields
 func (r *TagReader) findBPM(tags tag.Metadata) float64 {
 	rawTags := tags.Raw()

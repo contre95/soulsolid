@@ -10,92 +10,108 @@
         <input type="hidden" name="source" value="{{.Track.MetadataSource.Source}}">
         <input type="hidden" name="source_url" value="{{.Track.MetadataSource.MetadataSourceURL}}">
 
-        <!-- Title and Title Version -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="space-y-1">
-            <label for="title" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
-              <i class="fas fa-music mr-2 text-blue-500"></i>
-              Title
-            </label>
-             <input type="text"
-                    id="title"
-                    name="title"
-                    value="{{.Track.Title}}"
-                    class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
-                    placeholder="Track title">
+        <!-- Album Art + Title/Album/Artist fields -->
+        <div class="flex gap-4 items-start">
+
+          <!-- Album Art (desktop only, mobile shows in header) -->
+          <div class="hidden sm:block flex-shrink-0">
+            <a href="/ui/tag/edit/{{.Track.ID}}/artwork" target="_blank" rel="noopener noreferrer"
+               class="block w-44 h-44 rounded-xl overflow-hidden border-2 border-gray-300 dark:border-gray-600 shadow-md hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-zoom-in"
+               onerror="this.style.display='none'">
+              <img src="/ui/tag/edit/{{.Track.ID}}/artwork"
+                   alt="Album Art"
+                   class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                   onerror="this.closest('a').style.display='none'">
+            </a>
           </div>
 
-          <div class="space-y-1">
-             <label for="title_version" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
-              <i class="fas fa-random mr-2 text-orange-500"></i>
-              Title Version
-            </label>
-             <input type="text"
-                    id="title_version"
-                    name="title_version"
-                    value="{{.Track.TitleVersion}}"
-                    class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
-                    placeholder="Remix, live version, etc.">
-          </div>
-        </div>
+          <!-- Title, Album, Album Artist, Artist -->
+          <div class="flex-1 space-y-3 min-w-0">
 
-        <!-- Album Information -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-           <div class="space-y-4">
-             <div class="space-y-1">
-               <label for="album" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
-                 <i class="fas fa-compact-disc mr-2 text-purple-500"></i>
-                 Album
-               </label>
-               <select id="album"
-                       name="album_id"
-                       class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} focus:outline-none focus:ring-1 transition-all duration-200">
-                 <option value="">-- Select Album --</option>
-                 {{range .Albums}}
-                 <option value="{{.ID}}"
-                         {{if $.Track.Album}}{{if eq .ID $.Track.Album.ID}}selected{{end}}{{end}}>
-                   {{.Title}}
-                 </option>
-                 {{end}}
-               </select>
-             </div>
+            <!-- Title and Title Version -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="space-y-1">
+                <label for="title" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+                  <i class="fas fa-music mr-2 text-blue-500"></i>
+                  Title
+                </label>
+                <input type="text"
+                       id="title"
+                       name="title"
+                       value="{{.Track.Title}}"
+                       class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
+                       placeholder="Track title">
+              </div>
+              <div class="space-y-1">
+                <label for="title_version" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+                  <i class="fas fa-random mr-2 text-orange-500"></i>
+                  Title Version
+                </label>
+                <input type="text"
+                       id="title_version"
+                       name="title_version"
+                       value="{{.Track.TitleVersion}}"
+                       class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-all duration-200"
+                       placeholder="Remix, live version, etc.">
+              </div>
+            </div>
 
-             <div class="space-y-1">
-               <label for="album_artist" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
-                 <i class="fas fa-user mr-2 text-indigo-500"></i>
-                 Album Artist
-               </label>
-               <select id="album_artist"
-                       name="album_artist_id"
-                       class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} focus:outline-none focus:ring-1 transition-all duration-200">
-                 <option value="">-- Select Album Artist --</option>
+            <!-- Album, Album Artist, Artist -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="space-y-1">
+                <label for="album" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+                  <i class="fas fa-compact-disc mr-2 text-purple-500"></i>
+                  Album
+                </label>
+                <select id="album"
+                        name="album_id"
+                        class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} focus:outline-none focus:ring-1 transition-all duration-200">
+                  <option value="">-- Select Album --</option>
+                  {{range .Albums}}
+                  <option value="{{.ID}}"
+                          {{if $.Track.Album}}{{if eq .ID $.Track.Album.ID}}selected{{end}}{{end}}>
+                    {{.Title}}
+                  </option>
+                  {{end}}
+                </select>
+              </div>
+              <div class="space-y-1">
+                <label for="album_artist" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+                  <i class="fas fa-user mr-2 text-indigo-500"></i>
+                  Album Artist
+                </label>
+                <select id="album_artist"
+                        name="album_artist_id"
+                        class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} focus:outline-none focus:ring-1 transition-all duration-200">
+                  <option value="">-- Select Album Artist --</option>
                   {{range .Artists}}
                   <option value="{{.ID}}"
                           {{if eq .ID $.SelectedAlbumArtistID}}selected{{end}}>
                     {{.Name}}
                   </option>
                   {{end}}
-               </select>
-             </div>
-           </div>
+                </select>
+              </div>
+              <div class="space-y-1">
+                <label for="artist" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
+                  <i class="fas fa-microphone mr-2 text-red-500"></i>
+                  Artist
+                </label>
+                <select id="artist"
+                        name="artist_ids"
+                        multiple
+                        class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} focus:outline-none focus:ring-1 transition-all duration-200"
+                        style="min-height: 2.5rem;">
+                  {{range .Artists}}
+                  <option value="{{.ID}}" {{if index $.SelectedArtistIDs .ID}}selected{{end}}>
+                    {{.Name}}
+                  </option>
+                  {{end}}
+                </select>
+              </div>
+            </div>
 
-           <div class="space-y-1">
-             <label for="artist" class="flex items-center text-xs font-semibold {{if .FromProvider}}{{.ProviderColors.label}}{{else}}text-gray-600 dark:text-gray-400{{end}} uppercase tracking-wide">
-               <i class="fas fa-microphone mr-2 text-red-500"></i>
-               Artist
-             </label>
-             <select id="artist"
-                     name="artist_ids"
-                     multiple
-                     class="w-full px-3 py-2 text-sm border {{if .FromProvider}}{{.ProviderColors.border}} {{.ProviderColors.focusRing}}{{else}}border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500{{end}} rounded-md bg-white dark:bg-gray-800 {{if .FromProvider}}{{.ProviderColors.text}}{{else}}dark:text-white{{end}} focus:outline-none focus:ring-1 transition-all duration-200"
-                     style="min-height: 2.5rem;">
-               {{range .Artists}}
-                <option value="{{.ID}}" {{if index $.SelectedArtistIDs .ID}}selected{{end}}>
-                  {{.Name}}
-                </option>
-               {{end}}
-             </select>
-           </div>
+          </div>
         </div>
 
        <!-- Metadata -->

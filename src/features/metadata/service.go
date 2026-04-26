@@ -88,6 +88,18 @@ func (s *Service) GetTrackFileTags(ctx context.Context, trackID string) (*music.
 	return &result, nil
 }
 
+// GetTrackArtwork returns the embedded artwork bytes and MIME type for a track.
+func (s *Service) GetTrackArtwork(ctx context.Context, trackID string) ([]byte, string, error) {
+	track, err := s.libraryRepo.GetTrack(ctx, trackID)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get track: %w", err)
+	}
+	if track == nil {
+		return nil, "", fmt.Errorf("track not found: %s", trackID)
+	}
+	return s.tagReader.ReadArtwork(track.Path)
+}
+
 // UpdateTrackTags updates the tags of a track file and database
 func (s *Service) UpdateTrackTags(ctx context.Context, trackID string, formData map[string]string) error {
 	slog.Info("Updating track tags", "trackID", trackID)
