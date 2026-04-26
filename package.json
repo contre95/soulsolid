@@ -26,6 +26,7 @@
     "hyperscript.org": "^0.9.14",
     "jquery": "^3.7.1",
     "slim-select": "^3.0.3",
+    "sweetalert2": "^11.26.24",
     "tailwindcss": "^4.1.12"
   }
 }
