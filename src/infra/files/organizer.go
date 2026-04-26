@@ -16,31 +16,43 @@ import (
 type FileOrganizer struct {
 	libraryPath string
 	pathParser  importing.PathParser
+	fat32Safe   func() bool
 }
 
 // NewFileOrganizer creates a new file organizer implementation.
-func NewFileOrganizer(libraryPath string, pathParser importing.PathParser) *FileOrganizer {
-	return &FileOrganizer{libraryPath: libraryPath, pathParser: pathParser}
+// fat32Safe is called at operation time to check whether FAT32-safe path
+// sanitization should be applied (lowercase, forbidden chars stripped, 255-byte limit).
+func NewFileOrganizer(libraryPath string, pathParser importing.PathParser, fat32Safe func() bool) *FileOrganizer {
+	return &FileOrganizer{libraryPath: libraryPath, pathParser: pathParser, fat32Safe: fat32Safe}
+}
+
+// buildPath renders the track's library path and applies FAT32 sanitization when enabled.
+func (o *FileOrganizer) buildPath(track *music.Track) (string, error) {
+	renderedPath, err := o.pathParser.RenderPath(track)
+	if err != nil {
+		return "", fmt.Errorf("failed to render path: %w", err)
+	}
+	p := filepath.Join(o.libraryPath, renderedPath+filepath.Ext(track.Path))
+	if o.fat32Safe() {
+		p = SanitizeFAT32Path(p)
+	}
+	return p, nil
 }
 
 // GetLibraryPath generates the library path for a track without moving it.
 func (o *FileOrganizer) GetLibraryPath(ctx context.Context, track *music.Track) (string, error) {
-	renderedPath, err := o.pathParser.RenderPath(track)
-	if err != nil {
-		return "", fmt.Errorf("failed to render path: %w", err)
-	}
-
-	newPath := filepath.Join(o.libraryPath, renderedPath+filepath.Ext(track.Path))
-	return newPath, nil
+	return o.buildPath(track)
 }
 
 // MoveTrackToLibrary moves a track to a new location based on its metadata.
 func (o *FileOrganizer) MoveTrackToLibrary(ctx context.Context, track *music.Track) (string, error) {
-	renderedPath, err := o.pathParser.RenderPath(track)
+	newPath, err := o.buildPath(track)
 	if err != nil {
-		return "", fmt.Errorf("failed to render path: %w", err)
+		return "", err
 	}
-	newPath := filepath.Join(o.libraryPath, renderedPath+filepath.Ext(track.Path))
+	if o.fat32Safe() {
+		newPath = ResolvePathConflict(newPath)
+	}
 	if err := o.moveFile(track.Path, newPath); err != nil {
 		return "", err
 	}
@@ -72,23 +84,19 @@ func (o *FileOrganizer) moveFile(src, dst string) error {
 	return nil
 }
 
-// isCrossDeviceError checks if an error is due to cross-device link (moving across filesystems)
-func isCrossDeviceError(err error) bool {
-	return err != nil && (err.Error() == "invalid cross-device link" || err.Error() == "cross-device link")
-}
 
 // CopyTrackToLibrary copies a track to a new location based on its metadata.
 func (o *FileOrganizer) CopyTrackToLibrary(ctx context.Context, track *music.Track) (string, error) {
-	renderedPath, err := o.pathParser.RenderPath(track)
+	newPath, err := o.buildPath(track)
 	if err != nil {
-		return "", fmt.Errorf("failed to render path: %w", err)
+		return "", err
 	}
-
-	newPath := filepath.Join(o.libraryPath, renderedPath+filepath.Ext(track.Path))
+	if o.fat32Safe() {
+		newPath = ResolvePathConflict(newPath)
+	}
 	if err := os.MkdirAll(filepath.Dir(newPath), 0755); err != nil {
 		return "", fmt.Errorf("failed to create directory: %w", err)
 	}
-
 	if err := copyFile(track.Path, newPath); err != nil {
 		return "", fmt.Errorf("failed to copy file: %w", err)
 	}

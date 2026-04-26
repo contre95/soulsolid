@@ -182,13 +182,23 @@ Progress is tracked as a background job and can be monitored in the Jobs section
 
 ### FAT32 Safe Mode
 
-When **FAT32 Safe** is enabled, every path segment is additionally sanitized for FAT32 compatibility before the file is moved:
+FAT32 safe mode sanitizes every path segment for FAT32 compatibility:
 
+- Lowercases all segments so the Linux library has consistent casing (prevents case collisions when rsyncing to FAT32, where `Rock/` and `rock/` are the same directory)
 - Replaces forbidden characters (`: * ? " < > | \`) with `-`
 - Strips trailing dots and spaces from each segment
 - Truncates segments to 255 bytes at valid UTF-8 boundaries, preserving the file extension for the filename
+- Appends a numeric suffix (`_1`, `_2`, …) when two tracks would resolve to the same path after lowercasing, so both files and their database entries remain distinct
 
-This is useful when the library is stored on or synced to a FAT32 volume (e.g. an SD card or some NAS configurations).
+This is useful when the library is synced to a FAT32 volume (e.g. an SD card or some NAS configurations) — the library itself lives on a normal Linux filesystem.
+
+#### During Import
+
+Enable persistently via `import.fat32_safe: true` in the config (or the Settings UI checkbox). All imported files will land at FAT32-safe paths automatically.
+
+#### During Reorganize
+
+The Reorganize UI has its own per-run **FAT32 Safe** checkbox, useful for one-off cleanups on libraries where the config flag is off.
 
 ### API
 

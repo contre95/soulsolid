@@ -41,7 +41,9 @@ func main() {
 	slog.SetDefault(logger)
 
 	pathParser := files.NewTemplatePathParser(cfgManager)
-	fileOrganizer := files.NewFileOrganizer(cfgManager.Get().LibraryPath, pathParser)
+	fileOrganizer := files.NewFileOrganizer(cfgManager.Get().LibraryPath, pathParser, func() bool {
+		return cfgManager.Get().Import.PathOptions.Fat32Safe
+	})
 
 	db, err := database.NewSqliteLibrary(cfgManager.Get().Database.Path)
 	if err != nil {
