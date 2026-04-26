@@ -1,8 +1,8 @@
   <div class="bg-white/80 dark:bg-gray-900/80 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70" id="library-table">
    <!-- Search Form -->
-   <div class="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-     <div class="flex flex-col md:flex-row gap-4">
-       <!-- Unified Search -->
+   <form id="search-form" class="p-6 border-b border-gray-200/50 dark:border-gray-700/50" onsubmit="return false;">
+     <!-- Text search row -->
+     <div class="flex flex-col md:flex-row gap-4 mb-4">
        <div class="flex-1">
          <label for="search-query" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
            <i class="fas fa-search mr-2 text-blue-500"></i>Search Library
@@ -16,10 +16,77 @@
                 hx-trigger="input changed delay:300ms"
                 hx-target="#search-results"
                 hx-swap="innerHTML"
-                hx-include="[name='query']">
+                hx-include="closest form">
        </div>
      </div>
-   </div>
+
+     <!-- Filter row -->
+     <div class="flex flex-wrap gap-3 items-end">
+       <!-- Genre dropdown -->
+       <div class="min-w-32">
+         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Genre</label>
+         <select name="genre"
+                 class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 hx-get="/library/search"
+                 hx-trigger="change"
+                 hx-target="#search-results"
+                 hx-swap="innerHTML"
+                 hx-include="closest form">
+           <option value="">All genres</option>
+           {{range .Genres}}
+           <option value="{{.}}">{{.}}</option>
+           {{end}}
+         </select>
+       </div>
+
+       <!-- Lyrics filter dropdown -->
+       <div class="min-w-36">
+         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Lyrics</label>
+         <select name="lyrics_filter"
+                 class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 hx-get="/library/search"
+                 hx-trigger="change"
+                 hx-target="#search-results"
+                 hx-swap="innerHTML"
+                 hx-include="closest form">
+           <option value="">Any</option>
+           <option value="has">Has lyrics</option>
+           <option value="empty">Empty lyrics</option>
+           <option value="instrumental">Instrumental</option>
+         </select>
+       </div>
+
+       <!-- Lyrics text search -->
+       <div class="flex-1 min-w-40">
+         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Lyrics contain</label>
+         <input type="text"
+                name="lyrics_text"
+                placeholder="Search in lyrics..."
+                class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                hx-get="/library/search"
+                hx-trigger="input changed delay:400ms"
+                hx-target="#search-results"
+                hx-swap="innerHTML"
+                hx-include="closest form">
+       </div>
+
+       <!-- AcoustID checkbox -->
+       <div class="flex items-center gap-4 pb-1.5">
+         <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+           <input type="checkbox"
+                  name="has_acoustid"
+                  value="true"
+                  class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                  hx-get="/library/search"
+                  hx-trigger="change"
+                  hx-target="#search-results"
+                  hx-swap="innerHTML"
+                  hx-include="closest form">
+           Has AcoustID
+         </label>
+       </div>
+     </div>
+   </form>
 
    <!-- Library Search Results -->
    <div class="py-6 px-2">
