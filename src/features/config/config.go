@@ -41,6 +41,7 @@ type Paths struct {
 	AlbumSingle     string `yaml:"album:single"`
 	AlbumEP         string `yaml:"album:ep"`
 	DefaultPath     string `yaml:"default_path"`
+	Fat32Safe       bool   `yaml:"fat32_safe"`
 }
 
 // Database holds the configuration for the database

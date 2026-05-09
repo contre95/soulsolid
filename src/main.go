@@ -41,7 +41,11 @@ func main() {
 	slog.SetDefault(logger)
 
 	pathParser := files.NewTemplatePathParser(cfgManager)
-	fileOrganizer := files.NewFileOrganizer(cfgManager.Get().LibraryPath, pathParser)
+	fileOrganizer := files.NewFileOrganizer(
+		func() string { return cfgManager.Get().LibraryPath },
+		pathParser,
+		func() bool { return cfgManager.Get().Import.PathOptions.Fat32Safe },
+	)
 
 	db, err := database.NewSqliteLibrary(cfgManager.Get().Database.Path)
 	if err != nil {
@@ -50,7 +54,7 @@ func main() {
 	libraryService := library.NewService(db, cfgManager, fileOrganizer)
 	playlistsService := playlists.NewService(db, db, cfgManager)
 	metricsService := metrics.NewService(db, cfgManager)
-	jobService := jobs.NewService(&cfgManager.Get().Jobs)
+	jobService := jobs.NewService(cfgManager)
 
 	tagReader := tag.NewTagReader()
 	fingerprintReader := fingerprint.NewFingerprintService(cfgManager)

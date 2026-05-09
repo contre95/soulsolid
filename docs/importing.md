@@ -27,6 +27,7 @@ import:
     album:single: '%asciify{$genre}/%asciify{$format}/%asciify{$albumartist}/%asciify{$album} [Single] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
     album:ep: '%asciify{$genre}/%asciify{$format}/%asciify{$albumartist}/%asciify{$album} [EP] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
     default_path: '%asciify{$genre}/%asciify{$format}/%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
+    fat32_safe: false     # lowercase paths, strip FAT32-forbidden characters, 255-byte segment limit
 ```
 
 
@@ -93,6 +94,17 @@ Library/
 - **Compilations**: Multi-artist albums are placed under `Various Artists`
 - **Path Customization**: Different path patterns for singles, EPs, soundtracks, etc. You can see the [default config](https://github.com/contre95/soulsolid/blob/2a07d80165471205f0498e0c0715b3a866562a74/config.yaml?plain=1#L39-L44) for reference.
 - **Filename Sanitization**: Removes invalid characters and creates clean filenames
+
+### FAT32-Safe Filenames
+
+When `fat32_safe: true` is set, every path segment is sanitized for FAT32 compatibility at import time:
+
+- Lowercases all segments for consistent casing on the Linux library (avoids case collisions when syncing to FAT32 with rsync)
+- Replaces FAT32-forbidden characters (`: * ? " < > | \`) with `-`
+- Strips trailing dots and spaces from each segment
+- Truncates segments to 255 bytes at valid UTF-8 boundaries, preserving the file extension
+
+If two tracks would resolve to the same lowercased path (e.g. `Wos/lala.mp3` and `WoS/lala.mp3`), a numeric suffix is appended to the second (`wos/lala_1.mp3`) so both files and their database entries remain distinct.
 
 ## Duplicate Detection
 

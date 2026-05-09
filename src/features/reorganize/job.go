@@ -100,6 +100,9 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progres
 
 			if fat32Safe {
 				desiredPath = sanitizeFAT32Path(desiredPath)
+				if currentPath != desiredPath {
+					desiredPath = resolvePathConflict(desiredPath)
+				}
 			}
 
 			if currentPath == desiredPath {

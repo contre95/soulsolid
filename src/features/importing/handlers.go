@@ -30,7 +30,8 @@ type queueItemView struct {
 // groupView is a view model for grouped queue items
 type groupView struct {
 	Items         []queueItemView
-	HasImportable bool // true if at least one item's type is NOT "failed_import" AND NOT "missing_metadata"
+	HasImportable bool // true if at least one non-duplicate importable item exists
+	HasDuplicates bool // true if at least one duplicate item exists
 }
 
 // convertQueueItem converts a music.QueueItem to queueItemView
@@ -304,7 +305,7 @@ func (h *Handler) ProcessQueueGroup(c *fiber.Ctx) error {
 
 	if action != "import" && action != "cancel" && action != "delete" && action != "replace" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "action must be 'import', 'cancel', 'delete', or 'replace'",
+			"error": "action must be one of: import, cancel, delete, replace",
 		})
 	}
 
@@ -363,6 +364,7 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 	for groupKey, items := range groups {
 		viewItems := make([]queueItemView, 0, len(items))
 		hasImportable := false
+		hasDuplicates := false
 		for _, item := range items {
 			view, err := convertQueueItem(item)
 			if err != nil {
@@ -370,8 +372,9 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 				continue
 			}
 			viewItems = append(viewItems, view)
-			// Check if this item is importable (not failed_import and not missing_metadata)
-			if view.Type != "failed_import" && view.Type != "missing_metadata" {
+			if view.Type == "duplicate" {
+				hasDuplicates = true
+			} else if view.Type != "failed_import" && view.Type != "missing_metadata" {
 				hasImportable = true
 			}
 		}
@@ -382,6 +385,7 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 		viewGroups[groupKey] = groupView{
 			Items:         viewItems,
 			HasImportable: hasImportable,
+			HasDuplicates: hasDuplicates,
 		}
 	}
 
