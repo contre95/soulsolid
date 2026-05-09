@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,7 +23,7 @@ import (
 var _ music.JobService = (*Service)(nil)
 
 type TaskHandler interface {
-	Execute(ctx context.Context, job *music.Job, progressChan chan<- music.JobProgress) error
+	Execute(ctx context.Context, job *music.Job, progressChan chan<- music.JobProgress) (map[string]any, error)
 	Cancel(jobID string) error
 }
 
@@ -45,8 +44,9 @@ func NewBaseTaskHandler(task Task) *BaseTaskHandler {
 	return &BaseTaskHandler{Task: task}
 }
 
-// Execute runs the job using the provided task.
-func (h *BaseTaskHandler) Execute(ctx context.Context, job *music.Job, progressChan chan<- music.JobProgress) error {
+// Execute runs the job using the provided task and returns any result stats for
+// the caller to merge into job.Metadata under the appropriate lock.
+func (h *BaseTaskHandler) Execute(ctx context.Context, job *music.Job, progressChan chan<- music.JobProgress) (map[string]any, error) {
 	if job.Logger != nil {
 		job.Logger.Info("Starting job", "name", job.Name)
 	}
@@ -58,7 +58,7 @@ func (h *BaseTaskHandler) Execute(ctx context.Context, job *music.Job, progressC
 			if job.Logger != nil {
 				job.Logger.Error("Error: " + err.Error())
 			}
-			return err
+			return nil, err
 		}
 	}
 
@@ -83,24 +83,17 @@ func (h *BaseTaskHandler) Execute(ctx context.Context, job *music.Job, progressC
 	}()
 
 	stats, err := h.Task.Execute(ctx, job, progressUpdater)
-	// Merge stats into job metadata even on error
-	if stats != nil {
-		if job.Metadata == nil {
-			job.Metadata = make(map[string]any)
-		}
-		maps.Copy(job.Metadata, stats)
-	}
 	if err != nil {
 		if job.Logger != nil {
 			job.Logger.Error("Error during job execution", "error", err)
 		}
-		return err
+		return stats, err
 	}
 
 	if job.Logger != nil {
 		job.Logger.Info("Job finished successfully", "name", job.Name)
 	}
-	return nil
+	return stats, nil
 }
 
 // Cancel stops a running job.
@@ -115,10 +108,10 @@ type Service struct {
 	jobs     map[string]*music.Job
 	handlers map[string]TaskHandler
 	mu       sync.RWMutex
-	config   *config.Jobs
+	config   *config.Manager
 }
 
-func NewService(cfg *config.Jobs) *Service {
+func NewService(cfg *config.Manager) *Service {
 	return &Service{
 		jobs:     make(map[string]*music.Job),
 		handlers: make(map[string]TaskHandler),
@@ -146,8 +139,8 @@ func (s *Service) StartJob(jobType string, name string, metadata map[string]any)
 		Metadata:  metadata,
 	}
 
-	if s.config.Log {
-		logDir := s.config.LogPath
+	if s.config.Get().Jobs.Log {
+		logDir := s.config.Get().Jobs.LogPath
 		if err := os.MkdirAll(logDir, 0755); err != nil {
 			return "", fmt.Errorf("failed to create log directory: %w", err)
 		}
@@ -197,11 +190,19 @@ func (s *Service) executeJob(job *music.Job) {
 			s.UpdateJobProgress(progress.JobID, progress.Progress, progress.Message)
 		}
 	}()
-	err := handler.Execute(ctx, job, progressChan)
+	stats, err := handler.Execute(ctx, job, progressChan)
 	close(progressChan)
 
 	s.mu.Lock()
 	cancelled := job.Cancelled
+	if stats != nil {
+		if job.Metadata == nil {
+			job.Metadata = make(map[string]any)
+		}
+		for k, v := range stats {
+			job.Metadata[k] = v
+		}
+	}
 	s.mu.Unlock()
 
 	if err != nil {
@@ -358,13 +359,13 @@ func (s *Service) CleanupOldJobs(maxAge time.Duration) {
 
 // executeWebhook executes the configured webhook command for job completion
 func (s *Service) executeWebhook(job *music.Job) {
-	if !s.config.Webhooks.Enabled {
+	if !s.config.Get().Jobs.Webhooks.Enabled {
 		return
 	}
 
 	// Check if this job type should trigger webhooks
 	shouldNotify := false
-	for _, jobType := range s.config.Webhooks.JobTypes {
+	for _, jobType := range s.config.Get().Jobs.Webhooks.JobTypes {
 		if jobType == job.Type || jobType == "*" {
 			shouldNotify = true
 			break
@@ -398,7 +399,7 @@ func (s *Service) executeWebhook(job *music.Job) {
 	}
 
 	// Execute template
-	tmpl, err := template.New("webhook").Parse(s.config.Webhooks.Command)
+	tmpl, err := template.New("webhook").Parse(s.config.Get().Jobs.Webhooks.Command)
 	if err != nil {
 		if job.Logger != nil {
 			job.Logger.Error("Failed to parse webhook template", "error", err)
