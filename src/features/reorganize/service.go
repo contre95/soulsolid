@@ -27,10 +27,13 @@ func NewService(lib music.Library, fileManager music.FileManager, cfg *config.Ma
 	}
 }
 
-// StartReorganizeAnalysis starts a job to reorganize all tracks based on current path configuration
-func (s *Service) StartReorganizeAnalysis(ctx context.Context) (string, error) {
-	slog.Info("Starting file reorganization job")
-	jobID, err := s.jobService.StartJob("analyze_reorganize", "Reorganize Library Files", map[string]any{})
+// StartReorganizeAnalysis starts a job to reorganize all tracks based on current path configuration.
+// When fat32Safe is true the job will also strip FAT32-forbidden characters from every path segment.
+func (s *Service) StartReorganizeAnalysis(ctx context.Context, fat32Safe bool) (string, error) {
+	slog.Info("Starting file reorganization job", "fat32Safe", fat32Safe)
+	jobID, err := s.jobService.StartJob("analyze_reorganize", "Reorganize Library Files", map[string]any{
+		"fat32_safe": fat32Safe,
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to start reorganization job: %w", err)
 	}

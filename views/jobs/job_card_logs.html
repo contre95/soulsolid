@@ -17,23 +17,19 @@
       <span>
           View Logs
           {{if .LogPath}}
-          <a href="/jobs/{{ $job.ID }}/logs" target="_blank" class="text-blue-500 underline ml-2">(raw)</a>
-          <a href="/jobs/{{ $job.ID }}/logs?color=true" target="_blank" class="text-blue-500 underline ml-2">(full screen)</a>
+          <a href="/jobs/{{ $job.ID }}/logs" target="_blank" class="text-blue-500 underline ml-2" onclick="event.stopPropagation()">(raw)</a>
+          <a href="/jobs/{{ $job.ID }}/logs?color=true" target="_blank" class="text-blue-500 underline ml-2" onclick="event.stopPropagation()">(full screen)</a>
           {{end}}
       </span>
     </summary>
        <div class="mt-2 max-h-36 overflow-y-auto rounded border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-black">
             <pre class="p-2 text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap"
                  style="font-family: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace;"
-            {{ if or (eq .Status "completed") (eq .Status "cancelled") (eq .Status "failed") }}
-               hx-get="/jobs/{{ $job.ID }}/logs?color=true"
-               hx-trigger="load"
-            {{ else }}
-               hx-get="/jobs/{{ $job.ID }}/logs?color=true"
-               hx-trigger="every 2s"
-            {{ end }}
+            hx-get="/jobs/{{ $job.ID }}/logs?color=true"
+            hx-trigger="{{ if or (eq .Status "completed") (eq .Status "cancelled") (eq .Status "failed") }}load{{ else }}load, every 2s{{ end }}"
             hx-target="this"
             hx-swap="innerHTML"
+            hx-on::after-request="if(event.detail.xhr.getResponseHeader('HX-Trigger') === 'logsComplete') { const p = document.createElement('pre'); p.className = this.className; p.style.cssText = this.style.cssText; p.innerHTML = this.innerHTML; this.replaceWith(p); }"
             _="on htmx:afterSwap go to the bottom of me"></pre>
     </div>
   </details>

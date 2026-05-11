@@ -1,0 +1,155 @@
+{{define "library/track_overview_panel"}}
+<div id="track-overview-panel" class="fixed inset-0 z-30">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="document.getElementById('track-overview-panel').remove()"></div>
+
+  <!-- Drawer -->
+  <div class="absolute top-0 left-0 sm:left-64 w-80 h-screen bg-gray-100 dark:bg-gray-950 shadow-2xl border-r border-gray-200 dark:border-gray-800 overflow-y-auto flex flex-col track-panel-slide-in">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-900 shrink-0">
+      <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Track Overview</span>
+      <button onclick="document.getElementById('track-overview-panel').remove()"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded transition-colors">
+        <i class="fas fa-times text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Album Art -->
+    <div class="shrink-0">
+      <img src="/ui/tag/edit/{{.Track.ID}}/artwork" alt="Album art" class="w-full object-cover max-h-64"
+           onerror="this.parentElement.style.display='none'">
+    </div>
+
+    <!-- Core Info -->
+    <div class="p-4 space-y-4 flex-1">
+      <div>
+        <p class="text-base font-bold text-gray-900 dark:text-white leading-tight">{{.Track.Title}}</p>
+        {{if .Track.TitleVersion}}<p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 italic">{{.Track.TitleVersion}}</p>{{end}}
+      </div>
+
+      <div class="space-y-2 text-sm">
+        {{if .Artists}}
+        <div class="flex gap-2">
+          <span class="text-gray-400 dark:text-gray-500 w-20 shrink-0 text-xs pt-0.5 uppercase font-medium">Artist</span>
+          <span class="text-gray-800 dark:text-gray-200">{{.Artists}}</span>
+        </div>
+        {{end}}
+        {{if .Track.Album}}
+        <div class="flex gap-2">
+          <span class="text-gray-400 dark:text-gray-500 w-20 shrink-0 text-xs pt-0.5 uppercase font-medium">Album</span>
+          <span class="text-gray-800 dark:text-gray-200">{{.Track.Album.Title}}</span>
+        </div>
+        {{end}}
+        {{if .Track.Metadata.Year}}
+        <div class="flex gap-2">
+          <span class="text-gray-400 dark:text-gray-500 w-20 shrink-0 text-xs pt-0.5 uppercase font-medium">Year</span>
+          <span class="text-gray-800 dark:text-gray-200">{{.Track.Metadata.Year}}</span>
+        </div>
+        {{end}}
+        {{if .Track.Metadata.Genre}}
+        <div class="flex gap-2">
+          <span class="text-gray-400 dark:text-gray-500 w-20 shrink-0 text-xs pt-0.5 uppercase font-medium">Genre</span>
+          <span class="text-gray-800 dark:text-gray-200">{{.Track.Metadata.Genre}}</span>
+        </div>
+        {{end}}
+      </div>
+
+      <!-- Technical Details -->
+      <div class="bg-gray-200 dark:bg-gray-900 rounded-lg p-3 space-y-1.5 text-xs">
+        <p class="text-gray-400 dark:text-gray-500 uppercase font-semibold tracking-wider mb-2 text-xs">Technical</p>
+        {{if .Track.Metadata.Duration}}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Duration</span>
+          <span class="text-gray-800 dark:text-gray-200 font-mono">{{duration .Track.Metadata.Duration}}</span>
+        </div>
+        {{end}}
+        {{if .Track.Format}}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Format</span>
+          <span class="text-gray-800 dark:text-gray-200 font-mono uppercase">{{.Track.Format}}</span>
+        </div>
+        {{end}}
+        {{if .Track.Bitrate}}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Bitrate</span>
+          <span class="text-gray-800 dark:text-gray-200 font-mono">{{.Track.Bitrate}} kbps</span>
+        </div>
+        {{end}}
+        {{if .Track.SampleRate}}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Sample Rate</span>
+          <span class="text-gray-800 dark:text-gray-200 font-mono">{{.Track.SampleRate}} Hz</span>
+        </div>
+        {{end}}
+        {{if .Track.BitDepth}}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Bit Depth</span>
+          <span class="text-gray-800 dark:text-gray-200 font-mono">{{.Track.BitDepth}} bit</span>
+        </div>
+        {{end}}
+        {{if .Track.Channels}}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Channels</span>
+          <span class="text-gray-800 dark:text-gray-200 font-mono">{{.Track.Channels}}</span>
+        </div>
+        {{end}}
+        {{if .Track.Metadata.TrackNumber}}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Track #</span>
+          <span class="text-gray-800 dark:text-gray-200 font-mono">{{.Track.Metadata.TrackNumber}}{{if .Track.Metadata.DiscNumber}} / Disc {{.Track.Metadata.DiscNumber}}{{end}}</span>
+        </div>
+        {{end}}
+        {{if .Track.Metadata.BPM}}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">BPM</span>
+          <span class="text-gray-800 dark:text-gray-200 font-mono">{{printf "%.1f" .Track.Metadata.BPM}}</span>
+        </div>
+        {{end}}
+        {{if .Track.ISRC}}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">ISRC</span>
+          <span class="text-gray-800 dark:text-gray-200 font-mono">{{.Track.ISRC}}</span>
+        </div>
+        {{end}}
+      </div>
+
+      <!-- File Path -->
+      {{if .Track.Path}}
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">Path</p>
+        <p class="text-xs text-gray-600 dark:text-gray-400 break-all font-mono leading-relaxed">{{.Track.Path}}</p>
+      </div>
+      {{end}}
+
+      <!-- Lyrics Preview -->
+      {{if .LyricsPreview}}
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Lyrics</p>
+        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 max-h-48 overflow-y-auto">
+          <pre class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{{.LyricsPreview}}</pre>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes trackPanelSlideIn {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.track-panel-slide-in {
+  animation: trackPanelSlideIn 0.22s ease-out both;
+}
+</style>
+
+<script>
+document.addEventListener('keydown', function panelEsc(e) {
+  if (e.key === 'Escape') {
+    var panel = document.getElementById('track-overview-panel');
+    if (panel) { panel.remove(); document.removeEventListener('keydown', panelEsc); }
+  }
+});
+</script>
+{{end}}

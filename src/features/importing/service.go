@@ -78,6 +78,15 @@ func (s *Service) GetQueuedItems() map[string]music.QueueItem {
 	return s.queue.GetAll()
 }
 
+// GetPendingTrackArtwork returns the embedded artwork for a pending (not yet imported) track file.
+func (s *Service) GetPendingTrackArtwork(itemID string) ([]byte, string, error) {
+	item, err := s.queue.GetByID(itemID)
+	if err != nil {
+		return nil, "", fmt.Errorf("queue item not found: %w", err)
+	}
+	return s.metadataReader.ReadArtwork(item.Track.Path)
+}
+
 // ClearQueue removes all items from the queue
 func (s *Service) ClearQueue() error {
 	return s.queue.Clear()
@@ -251,13 +260,14 @@ func (s *Service) ProcessQueueGroup(ctx context.Context, groupKey string, groupT
 	// Get the group items first to process them individually
 	var groupItems []music.QueueItem
 
-	if groupType == "artist" {
+	switch groupType {
+	case "artist":
 		groups := s.GetGroupedByArtist()
 		groupItems = groups[groupKey]
-	} else if groupType == "album" {
+	case "album":
 		groups := s.GetGroupedByAlbum()
 		groupItems = groups[groupKey]
-	} else {
+	default:
 		return fmt.Errorf("invalid group type: %s", groupType)
 	}
 
@@ -265,8 +275,15 @@ func (s *Service) ProcessQueueGroup(ctx context.Context, groupKey string, groupT
 		return fmt.Errorf("no items found in group %s", groupKey)
 	}
 
-	// Process each item in the group
+	// Process each item in the group, filtering by type based on action
 	for _, item := range groupItems {
+		// "import" skips duplicates (use "replace" for those); "replace" only processes duplicates
+		if action == "import" && item.Type == music.Duplicate {
+			continue
+		}
+		if action == "replace" && item.Type != music.Duplicate {
+			continue
+		}
 		if err := s.ProcessQueueItem(ctx, item.ID, action); err != nil {
 			slog.Error("Failed to process queue item in group", "itemID", item.ID, "action", action, "error", err)
 			// Continue processing other items even if one fails
@@ -285,9 +302,9 @@ func (s *Service) replaceTrack(ctx context.Context, newTrack, existingTrack *mus
 	var newPath string
 	var err error
 	if move {
-		newPath, err = s.fileManager.MoveTrack(ctx, newTrack)
+		newPath, err = s.fileManager.MoveTrackToLibrary(ctx, newTrack)
 	} else {
-		newPath, err = s.fileManager.CopyTrack(ctx, newTrack)
+		newPath, err = s.fileManager.CopyTrackToLibrary(ctx, newTrack)
 	}
 	if err != nil {
 		return fmt.Errorf("could not organize replacement track: %w", err)
@@ -379,9 +396,9 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 	var err error
 
 	if move {
-		newPath, err = s.fileManager.MoveTrack(ctx, track)
+		newPath, err = s.fileManager.MoveTrackToLibrary(ctx, track)
 	} else {
-		newPath, err = s.fileManager.CopyTrack(ctx, track)
+		newPath, err = s.fileManager.CopyTrackToLibrary(ctx, track)
 	}
 	if err != nil {
 		logger.Error("Service.importTrack: could not organize track", "error", err, "title", track.Title)
@@ -403,16 +420,41 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 		return fmt.Errorf("track validation failed: %w", err)
 	}
 
-	// Check if track already exists
+	// Check if track already exists by path
 	existingTrack, err := s.library.FindTrackByPath(ctx, track.Path)
 	if err != nil && err.Error() != "sql: no rows in result set" {
 		logger.Error("Service.importTrack: failed to check if track exists", "error", err, "path", track.Path)
 		return fmt.Errorf("failed to check if track exists: %w", err)
 	}
-
-	// If track already exists, treat as successfully imported
 	if existingTrack != nil {
 		logger.Info("Track already exists, skipping import", "path", track.Path, "title", track.Title)
+		return nil
+	}
+
+	// Check if a track with the same ID exists (same content at a different path)
+	existingByID, err := s.library.GetTrack(ctx, track.ID)
+	if err != nil {
+		logger.Error("Service.importTrack: failed to check if track ID exists", "error", err, "id", track.ID)
+		return fmt.Errorf("failed to check if track ID exists: %w", err)
+	}
+	if existingByID != nil {
+		oldPath := existingByID.Path
+		existingByID.Path = track.Path
+		existingByID.Metadata = track.Metadata
+		existingByID.Title = track.Title
+		existingByID.TitleVersion = track.TitleVersion
+		existingByID.Artists = track.Artists
+		existingByID.Album = track.Album
+		if err := s.library.UpdateTrack(ctx, existingByID); err != nil {
+			logger.Error("Service.importTrack: failed to replace existing track", "error", err, "title", track.Title)
+			return fmt.Errorf("failed to replace existing track: %w", err)
+		}
+		if oldPath != track.Path {
+			if err := s.fileManager.DeleteTrack(ctx, oldPath); err != nil {
+				logger.Warn("Service.importTrack: failed to delete old track file", "oldPath", oldPath, "newPath", track.Path)
+			}
+		}
+		logger.Info("Track replaced (same ID, different path)", "id", track.ID, "title", track.Title, "oldPath", oldPath)
 		return nil
 	}
 

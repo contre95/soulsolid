@@ -163,6 +163,27 @@ func (h *Handler) getProviderColors(providerName string) map[string]string {
 	}
 }
 
+// ServeArtwork serves the embedded album art for a track directly from the file.
+func (h *Handler) ServeArtwork(c *fiber.Ctx) error {
+	trackID := c.Params("trackId")
+	if trackID == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+	}
+
+	data, mimeType, err := h.service.GetTrackArtwork(c.Context(), trackID)
+	if err != nil {
+		slog.Warn("Failed to read artwork", "trackId", trackID, "error", err)
+		return c.Status(fiber.StatusNotFound).SendString("Artwork not found")
+	}
+	if len(data) == 0 {
+		return c.Status(fiber.StatusNotFound).SendString("No artwork embedded in file")
+	}
+
+	c.Set("Content-Type", mimeType)
+	c.Set("Cache-Control", "public, max-age=3600")
+	return c.Send(data)
+}
+
 // FetchFromProvider handles fetching metadata from any provider and rendering the form
 func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")

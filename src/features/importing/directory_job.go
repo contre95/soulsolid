@@ -169,9 +169,9 @@ func (e *DirectoryImportTask) importFile(ctx context.Context, track *music.Track
 	var newPath string
 	var err error
 	if moveFiles {
-		newPath, err = e.service.fileManager.MoveTrack(ctx, track)
+		newPath, err = e.service.fileManager.MoveTrackToLibrary(ctx, track)
 	} else {
-		newPath, err = e.service.fileManager.CopyTrack(ctx, track)
+		newPath, err = e.service.fileManager.CopyTrackToLibrary(ctx, track)
 	}
 	if err != nil {
 		logger.Error("Service.runDirectoryImport: could not organize track", "error", err)
@@ -241,7 +241,7 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 			logger.Info("Service.runDirectoryImport: processing file", "trackToImport", path)
 
 			trackToImport, err := e.service.metadataReader.ReadFileTags(ctx, path)
-			if err != nil {
+			if err != nil || info.Size() == 0 {
 				logger.Warn("Service.runDirectoryImport: could not read metadata from file", "path", path, "error", err)
 				stats.Errors++
 				// Create minimal track and add to queue.

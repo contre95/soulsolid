@@ -90,6 +90,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 		EnablePrintRoutes:     cfg.Get().Server.PrintRoutes,
 		BodyLimit:             1000 * 1024 * 1024, // 100MB limit for file uploads
 		PassLocalsToViews:     true,
+		Immutable:             true,
 	})
 
 	// Add middleware

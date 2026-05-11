@@ -17,6 +17,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	ui.Get("/importing/queue/header", handler.GetQueueHeader)
 
 	// Action endpoints
+	app.Get("/import/queue/:id/artwork", handler.ServeQueueItemArtwork)
 	app.Post("/import/directory", handler.ImportDirectory)
 	app.Post("/import/queue/:id/:action", handler.ProcessQueueItem)
 	app.Post("/import/queue/group/:groupType/:groupKey/:action", handler.ProcessQueueGroup)

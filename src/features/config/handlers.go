@@ -58,6 +58,7 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 				AlbumSoundtrack: c.FormValue("import.paths.album:soundtrack"),
 				AlbumSingle:     c.FormValue("import.paths.album:single"),
 				AlbumEP:         c.FormValue("import.paths.album:ep"),
+				Fat32Safe:       c.FormValue("import.paths.fat32_safe") == "true",
 			},
 		},
 		Telegram: Telegram{

@@ -110,6 +110,9 @@ func (h *Handler) HandleJobLogs(c *fiber.Ctx) error {
 			})
 		} else {
 			// Return just the colored content for HTMX requests
+			if job.Status == music.JobStatusCompleted || job.Status == music.JobStatusFailed || job.Status == music.JobStatusCancelled {
+				c.Set("HX-Trigger", "logsComplete")
+			}
 			coloredContent := ParseAndColorLogContent(string(logContent))
 			c.Set("Content-Type", "text/html")
 			return c.SendString(coloredContent)
