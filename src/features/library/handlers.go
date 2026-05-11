@@ -4,11 +4,25 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"regexp"
 	"strings"
 
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
+
+var lrcTimestamp = regexp.MustCompile(`^\[\d+:\d+\.\d+\]\s*`)
+
+func stripLRC(lyrics string) string {
+	var lines []string
+	for _, line := range strings.Split(lyrics, "\n") {
+		line = lrcTimestamp.ReplaceAllString(strings.TrimSpace(line), "")
+		if line != "" {
+			lines = append(lines, line)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
 
 // Handler is the handler for the library feature.
 type Handler struct {
@@ -530,6 +544,48 @@ func (h *Handler) DeleteArtist(c *fiber.Ctx) error {
 
 	// Return success toast
 	return c.Render("toast/toastOk", fiber.Map{"Msg": "Artist deleted successfully"})
+}
+
+// RenderTrackOverviewPanel renders the floating track overview panel.
+func (h *Handler) RenderTrackOverviewPanel(c *fiber.Ctx) error {
+	slog.Debug("RenderTrackOverviewPanel handler called", "trackId", c.Params("trackId"))
+
+	trackID := c.Params("trackId")
+	if trackID == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+	}
+
+	track, err := h.service.GetTrack(c.Context(), trackID)
+	if err != nil || track == nil {
+		slog.Error("Failed to get track for overview", "error", err, "trackId", trackID)
+		return c.Status(fiber.StatusNotFound).SendString("Track not found")
+	}
+
+	var artistNames strings.Builder
+	for i, ar := range track.Artists {
+		if i > 0 {
+			artistNames.WriteString(", ")
+		}
+		if ar.Artist != nil {
+			artistNames.WriteString(ar.Artist.Name)
+		}
+	}
+
+	lyricsPreview := ""
+	if track.Metadata.Lyrics != "" {
+		plain := stripLRC(track.Metadata.Lyrics)
+		lines := strings.Split(plain, "\n")
+		if len(lines) > 20 {
+			lines = lines[:20]
+		}
+		lyricsPreview = strings.Join(lines, "\n")
+	}
+
+	return c.Render("library/track_overview_panel", fiber.Map{
+		"Track":         track,
+		"Artists":       artistNames.String(),
+		"LyricsPreview": lyricsPreview,
+	})
 }
 
 // RenderTagEditForm renders the tag edit form for a track

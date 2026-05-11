@@ -11,6 +11,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	// UI routes for page rendering
 	ui := app.Group("/ui")
 	ui.Get("/tag/edit/:trackId", handler.RenderTagEditor)
+	ui.Get("/tag/edit/:trackId/artwork", handler.ServeArtwork)
 	ui.Get("/tag/edit/:trackId/fetch/:provider", handler.FetchFromProvider)
 	ui.Get("/tag/edit/:trackId/search/:provider", handler.SearchTracksFromProvider)
 	ui.Get("/tag/edit/:trackId/select/:provider", handler.SelectTrackFromResults)

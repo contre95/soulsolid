@@ -12,6 +12,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	ui.Get("/library", handler.RenderLibrarySection)
 	ui.Get("/library/table", handler.GetLibraryTable)
 	ui.Get("/library/tag/edit/:trackId", handler.RenderTagEditForm)
+	ui.Get("/library/tracks/:trackId/overview", handler.RenderTrackOverviewPanel)
 
 	library := app.Group("/library")
 	library.Get("/search", handler.GetUnifiedSearch)
