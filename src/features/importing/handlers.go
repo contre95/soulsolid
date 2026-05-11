@@ -394,3 +394,15 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 		"GroupType": groupType,
 	})
 }
+
+// ServeQueueItemArtwork serves the embedded album art for a queue item's track file.
+func (h *Handler) ServeQueueItemArtwork(c *fiber.Ctx) error {
+	id := c.Params("id")
+	data, mimeType, err := h.service.GetPendingTrackArtwork(id)
+	if err != nil || len(data) == 0 {
+		return c.Status(fiber.StatusNotFound).SendString("No artwork found")
+	}
+	c.Set("Content-Type", mimeType)
+	c.Set("Cache-Control", "public, max-age=3600")
+	return c.Send(data)
+}
