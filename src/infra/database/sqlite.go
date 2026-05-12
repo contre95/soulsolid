@@ -176,6 +176,7 @@ func createTables(db *sql.DB) error {
 		CREATE INDEX IF NOT EXISTS idx_artist_attributes_artist ON artist_attributes(artist_id);
 		CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist ON playlist_tracks(playlist_id);
 		CREATE INDEX IF NOT EXISTS idx_playlist_tracks_track ON playlist_tracks(track_id);
+		CREATE INDEX IF NOT EXISTS idx_tracks_genre ON tracks(genre);
 	`)
 	if err != nil {
 		return err

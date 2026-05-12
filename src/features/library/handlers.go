@@ -423,32 +423,34 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 
 		// Search tracks: single query OR-matching title, artist name, and album title,
 		// combined with any active filters.
-		tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), 500, 0, &music.TrackFilter{
+		trackFilter := &music.TrackFilter{
 			TextSearch:   query,
 			Genre:        genre,
 			HasAcoustID:  hasAcoustID,
 			LyricsFilter: lyricsFilter,
 			LyricsText:   lyricsText,
-		})
+		}
+		trackCount, err := h.service.GetTracksFilteredCount(c.Context(), trackFilter)
 		if err != nil {
-			slog.Error("Error searching tracks", "error", err)
-		} else {
-			for _, track := range tracks {
-				results = append(results, trackToSearchResult(track))
+			slog.Error("Error counting tracks", "error", err)
+		}
+		nonTrackCount := len(results)
+		totalCount = nonTrackCount + trackCount
+
+		// Compute track-relative offset: artist/album results occupy the start of the
+		// combined list, so tracks only start contributing once we're past them.
+		trackStart := max(0, offset-nonTrackCount)
+		trackLimit := limit - max(0, nonTrackCount-offset)
+		if trackLimit > 0 {
+			tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), trackLimit, trackStart, trackFilter)
+			if err != nil {
+				slog.Error("Error searching tracks", "error", err)
+			} else {
+				for _, track := range tracks {
+					results = append(results, trackToSearchResult(track))
+				}
 			}
 		}
-
-		// For search results, paginate the collected results
-		totalCount = len(results)
-		start := (page - 1) * limit
-		end := start + limit
-		if start > totalCount {
-			start = totalCount
-		}
-		if end > totalCount {
-			end = totalCount
-		}
-		results = results[start:end]
 	}
 
 	pagination := NewPagination(page, limit, totalCount)

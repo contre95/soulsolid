@@ -733,6 +733,7 @@ func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 	}
 	if c.FormValue("instrumental") == "true" {
 		formData["has_lyrics"] = "false"
+		formData["lyrics"] = ""
 	} else {
 		formData["has_lyrics"] = "true"
 	}

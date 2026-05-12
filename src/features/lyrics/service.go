@@ -2,6 +2,7 @@ package lyrics
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -10,6 +11,9 @@ import (
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/music"
 )
+
+// ErrNotFound is returned when a track or lyrics resource cannot be found.
+var ErrNotFound = errors.New("not found")
 
 // AddLyricsResult represents the outcome of an AddLyrics operation
 type AddLyricsResult int
@@ -159,7 +163,7 @@ func (s *Service) handleExistingLyricsConflict(ctx context.Context, track *music
 		"new_lyrics": newLyrics,
 	}); err != nil {
 		slog.Error("Failed to add track to lyrics queue", "trackID", track.ID, "error", err)
-		return LyricsSkippedNotFound, nil
+		return LyricsSkippedNotFound, fmt.Errorf("failed to enqueue lyrics for review: %w", err)
 	}
 	slog.Info("Successfully added track to existing_lyrics queue with new lyrics", "trackID", track.ID)
 	return LyricsQueued, nil
@@ -372,7 +376,7 @@ func (s *Service) SearchLyrics(ctx context.Context, trackID string, providerName
 		return "", fmt.Errorf("failed to get track: %w", err)
 	}
 	if track == nil {
-		return "", fmt.Errorf("track not found: %s", trackID)
+		return "", fmt.Errorf("track not found: %s: %w", trackID, ErrNotFound)
 	}
 
 	// Build search parameters from current track data
