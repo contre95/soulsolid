@@ -12,6 +12,7 @@
       hx-get="/ui/tag/edit/{{if $.Track.ID}}{{$.Track.ID}}{{else}}0{{end}}/lyrics/text/{{.Name}}"
       hx-target="#lyrics"
       hx-swap="innerHTML"
+      hx-on:htmx:response-error="showErrToast(event.detail.xhr.responseText)"
       class="w-full cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-base font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-pink-500/20 backdrop-blur-lg border border-pink-400/30 text-pink-600 dark:text-pink-300 shadow-lg shadow-pink-500/10 hover:shadow-pink-500/20"
     >
       <span class="text-base font-bold">{{.DisplayName}}</span>
