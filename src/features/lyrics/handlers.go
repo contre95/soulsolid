@@ -97,8 +97,12 @@ func (h *Handler) GetLyricsText(c *fiber.Ctx) error {
 	// Fetch lyrics
 	lyrics, err := h.service.SearchLyrics(c.Context(), trackID, providerName)
 	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			slog.Info("No lyrics found for track", "trackId", trackID, "provider", providerName)
+			return c.Status(fiber.StatusNotFound).SendString("No lyrics found for this track")
+		}
 		slog.Error("Failed to fetch lyrics", "error", err, "trackId", trackID, "provider", providerName)
-		return c.Status(fiber.StatusNotFound).SendString("No lyrics found for this track")
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to fetch lyrics")
 	}
 
 	slog.Info("Lyrics fetched successfully", "trackId", trackID, "provider", providerName, "lyricsLength", len(lyrics))

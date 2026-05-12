@@ -2,9 +2,13 @@ package lyrics
 
 import (
 	"context"
+	"errors"
 
 	"github.com/contre95/soulsolid/src/music"
 )
+
+// ErrNotFound is returned when lyrics cannot be found for a track
+var ErrNotFound = errors.New("lyrics not found")
 
 // LyricsProvider defines the interface for fetching lyrics from external services
 type LyricsProvider interface {
