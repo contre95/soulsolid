@@ -63,15 +63,12 @@ podman build -t soulsolid .
 # Create folders
 mkdir downloads logs data confg
 # Run with environment variables
-podman run -d \
-  --name soulsolid \
-  -p 3535:3535 \
-  -v ./music:/app/library \ <-- Music will be imported (copied/moved) TO this folder 
-  -v ./downloads:/app/downloads \ <-- Music will be import FROM this folder
-  -v ./logs:/app/logs \ # optional
-  -v ./library.db:/data/library.db \
-  -v ./config.yaml:/config/config.yaml \
-  contre95/soulsolid:v0.22.1
+podman run -d --name soulsolid -p 3535:3535 \
+  -v ./music:/app/library \
+  -v ./downloads:/app/downloads \
+  -v ./logs:/app/logs \
+  -v ./data:/data/ \
+  -v ./config:/config contre95/soulsolid:v0.22.1
 ```
 
 The web interface will be available at `http://localhost:3535`.
