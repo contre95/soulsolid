@@ -109,6 +109,41 @@ func (p *Playlist) ContainsTrack(trackID string) bool {
 	return false
 }
 
+// RemotePlaylist represents a playlist as it exists on a remote media server.
+type RemotePlaylist struct {
+	RemoteID    string
+	Name        string
+	Description string
+	Tracks      []RemoteTrack
+}
+
+// RemoteTrack represents a track as returned by a remote media server.
+type RemoteTrack struct {
+	RemoteID string // item ID on the remote server
+	EntryID  string // playlist entry ID used for removal operations
+	Path     string // filesystem path, if the server exposes it
+	Title    string
+	Artist   string
+	Album    string
+}
+
+// PlaylistProvider abstracts a remote media server for playlist sync operations.
+type PlaylistProvider interface {
+	Name() string
+	DisplayName() string
+	IsEnabled() bool
+
+	ListPlaylists(ctx context.Context) ([]RemotePlaylist, error)
+	GetPlaylist(ctx context.Context, remoteID string) (*RemotePlaylist, error)
+
+	CreatePlaylist(ctx context.Context, name, description string) (remoteID string, err error)
+	AddTracksToPlaylist(ctx context.Context, remotePlaylistID string, remoteTrackIDs []string) error
+	RemoveTracksFromPlaylist(ctx context.Context, remotePlaylistID string, entryIDs []string) error
+
+	FindTrackByPath(ctx context.Context, path string) (*RemoteTrack, error)
+	FindTrackByMetadata(ctx context.Context, title, artist string) (*RemoteTrack, error)
+}
+
 // PlaylistRepository defines the interface for playlist data access operations.
 type PlaylistRepository interface {
 	Create(ctx context.Context, playlist *Playlist) error

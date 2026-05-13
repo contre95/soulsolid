@@ -32,6 +32,7 @@ func (h *Handler) RenderPlaylistsSection(c *fiber.Ctx) error {
 	data := fiber.Map{
 		"Title":     "Playlists",
 		"Playlists": playlists,
+		"Providers": h.service.ListProviders(),
 	}
 	if c.Get("HX-Request") != "true" {
 		data["Section"] = "playlists"
@@ -54,8 +55,9 @@ func (h *Handler) GetPlaylist(c *fiber.Ctx) error {
 	}
 
 	data := fiber.Map{
-		"Title":    fmt.Sprintf("Playlist: %s", playlist.Name),
-		"Playlist": playlist,
+		"Title":     fmt.Sprintf("Playlist: %s", playlist.Name),
+		"Playlist":  playlist,
+		"Providers": h.service.ListProviders(),
 	}
 
 	if c.Get("HX-Request") != "true" {
@@ -266,6 +268,84 @@ func (h *Handler) GetPlaylistsForItem(c *fiber.Ctx) error {
 	}
 
 	return c.Render("playlists/add_to_playlist_modal", data)
+}
+
+// GetProviders returns all configured playlist sync providers as JSON.
+func (h *Handler) GetProviders(c *fiber.Ctx) error {
+	slog.Debug("GetProviders handler called")
+	return c.JSON(h.service.ListProviders())
+}
+
+// PullFromProvider pulls all playlists from the named provider into local storage.
+// The provider name is read from the "provider" form field.
+func (h *Handler) PullFromProvider(c *fiber.Ctx) error {
+	providerName := c.FormValue("provider")
+	slog.Debug("PullFromProvider handler called", "provider", providerName)
+
+	if providerName == "" {
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "provider is required"})
+	}
+
+	pulled, err := h.service.PullFromProvider(c.Context(), providerName)
+	if err != nil {
+		slog.Error("PullFromProvider failed", "provider", providerName, "error", err)
+		return c.Render("toast/toastErr", fiber.Map{"Msg": fmt.Sprintf("Failed to pull from %s: %s", providerName, err)})
+	}
+
+	c.Set("HX-Trigger", "refreshPlaylists")
+	return c.Render("toast/toastOk", fiber.Map{
+		"Msg": fmt.Sprintf("Pulled %d playlists from %s", len(pulled), providerName),
+	})
+}
+
+// PushToProvider pushes a local playlist to the named provider.
+// The provider name is read from the "provider" form field.
+func (h *Handler) PushToProvider(c *fiber.Ctx) error {
+	playlistID := c.Params("id")
+	providerName := c.FormValue("provider")
+	slog.Debug("PushToProvider handler called", "playlistID", playlistID, "provider", providerName)
+
+	if providerName == "" {
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "provider is required"})
+	}
+
+	pushed, unmatched, err := h.service.PushToProvider(c.Context(), playlistID, providerName)
+	if err != nil {
+		slog.Error("PushToProvider failed", "playlistID", playlistID, "provider", providerName, "error", err)
+		return c.Render("toast/toastErr", fiber.Map{"Msg": fmt.Sprintf("Failed to push to %s: %s", providerName, err)})
+	}
+
+	var msg string
+	if unmatched > 0 {
+		msg = fmt.Sprintf("Pushed %d tracks to %s (%d could not be matched)", pushed, providerName, unmatched)
+	} else {
+		msg = fmt.Sprintf("Pushed %d tracks to %s", pushed, providerName)
+	}
+	return c.Render("toast/toastOk", fiber.Map{"Msg": msg})
+}
+
+// SyncWithProvider performs a two-way sync of a playlist with the named provider.
+// The provider name is read from the "provider" form field.
+func (h *Handler) SyncWithProvider(c *fiber.Ctx) error {
+	playlistID := c.Params("id")
+	providerName := c.FormValue("provider")
+	slog.Debug("SyncWithProvider handler called", "playlistID", playlistID, "provider", providerName)
+
+	if providerName == "" {
+		return c.Render("toast/toastErr", fiber.Map{"Msg": "provider is required"})
+	}
+
+	result, err := h.service.SyncWithProvider(c.Context(), playlistID, providerName)
+	if err != nil {
+		slog.Error("SyncWithProvider failed", "playlistID", playlistID, "provider", providerName, "error", err)
+		return c.Render("toast/toastErr", fiber.Map{"Msg": fmt.Sprintf("Failed to sync with %s: %s", providerName, err)})
+	}
+
+	msg := fmt.Sprintf("Sync with %s: +%d local, +%d remote", providerName, result.TracksAdded, result.TracksPushed)
+	if result.TracksUnmatched > 0 {
+		msg += fmt.Sprintf(", %d unmatched", result.TracksUnmatched)
+	}
+	return c.Render("toast/toastOk", fiber.Map{"Msg": msg})
 }
 
 // ExportM3U handles exporting a playlist to an M3U file.

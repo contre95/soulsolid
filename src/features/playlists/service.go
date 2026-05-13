@@ -18,14 +18,19 @@ type Service struct {
 	playlistRepo  music.PlaylistRepository
 	library       music.Library
 	configManager *config.Manager
+	providers     map[string]music.PlaylistProvider
 }
 
 // NewService creates a new playlists service.
-func NewService(playlistRepo music.PlaylistRepository, lib music.Library, cfgManager *config.Manager) *Service {
+func NewService(playlistRepo music.PlaylistRepository, lib music.Library, cfgManager *config.Manager, providers map[string]music.PlaylistProvider) *Service {
+	if providers == nil {
+		providers = map[string]music.PlaylistProvider{}
+	}
 	return &Service{
 		playlistRepo:  playlistRepo,
 		library:       lib,
 		configManager: cfgManager,
+		providers:     providers,
 	}
 }
 
@@ -289,6 +294,312 @@ func (s *Service) ExportM3U(ctx context.Context, playlistID, filePath string) er
 
 	slog.Debug("ExportM3U completed", "playlistID", playlistID, "filePath", filePath, "tracksExported", len(tracks))
 	return nil
+}
+
+// ListProviders returns info about all configured playlist providers.
+func (s *Service) ListProviders() []ProviderInfo {
+	result := make([]ProviderInfo, 0, len(s.providers))
+	for key, p := range s.providers {
+		result = append(result, ProviderInfo{
+			Name:        key,
+			Type:        p.Name(),
+			DisplayName: p.DisplayName(),
+			Enabled:     p.IsEnabled(),
+		})
+	}
+	return result
+}
+
+// PullFromProvider fetches all playlists from the named provider and creates or
+// updates the matching local playlists. Track matching uses file path first,
+// then title+artist as a fallback.
+func (s *Service) PullFromProvider(ctx context.Context, providerName string) ([]*music.Playlist, error) {
+	slog.Debug("PullFromProvider service called", "provider", providerName)
+
+	provider, ok := s.providers[providerName]
+	if !ok {
+		return nil, fmt.Errorf("playlist provider %q not found", providerName)
+	}
+
+	remotePlaylists, err := provider.ListPlaylists(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list playlists from %s: %w", providerName, err)
+	}
+
+	var pulled []*music.Playlist
+	for _, rp := range remotePlaylists {
+		full, err := provider.GetPlaylist(ctx, rp.RemoteID)
+		if err != nil {
+			slog.Warn("PullFromProvider: failed to get remote playlist tracks", "playlist", rp.Name, "error", err)
+			continue
+		}
+
+		// Find or create the local playlist by name.
+		allLocal, err := s.playlistRepo.GetAll(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("get local playlists: %w", err)
+		}
+		var local *music.Playlist
+		for _, lp := range allLocal {
+			if lp.Name == rp.Name {
+				local, err = s.playlistRepo.GetByID(ctx, lp.ID)
+				if err != nil {
+					return nil, err
+				}
+				break
+			}
+		}
+		if local == nil {
+			local, err = s.CreatePlaylist(ctx, rp.Name, rp.Description)
+			if err != nil {
+				slog.Warn("PullFromProvider: failed to create local playlist", "name", rp.Name, "error", err)
+				continue
+			}
+		}
+
+		added := 0
+		for _, rt := range full.Tracks {
+			// Resolve remote track to a local track.
+			localTrack := s.resolveRemoteTrack(ctx, provider, rt)
+			if localTrack == nil {
+				continue
+			}
+			if local.ContainsTrack(localTrack.ID) {
+				continue
+			}
+			if err := s.playlistRepo.AddTrackToPlaylist(ctx, local.ID, localTrack.ID); err != nil {
+				slog.Warn("PullFromProvider: failed to add track to local playlist", "trackID", localTrack.ID, "error", err)
+				continue
+			}
+			local.Tracks = append(local.Tracks, localTrack)
+			added++
+		}
+
+		slog.Info("PullFromProvider: pulled playlist", "name", rp.Name, "tracksAdded", added)
+		pulled = append(pulled, local)
+	}
+
+	slog.Debug("PullFromProvider completed", "provider", providerName, "playlists", len(pulled))
+	return pulled, nil
+}
+
+// PushToProvider pushes a local playlist to the named provider, creating the
+// remote playlist if it does not already exist (matched by name).
+// Returns (pushed, unmatched, error).
+func (s *Service) PushToProvider(ctx context.Context, playlistID, providerName string) (int, int, error) {
+	slog.Debug("PushToProvider service called", "playlistID", playlistID, "provider", providerName)
+
+	provider, ok := s.providers[providerName]
+	if !ok {
+		return 0, 0, fmt.Errorf("playlist provider %q not found", providerName)
+	}
+
+	local, err := s.playlistRepo.GetByID(ctx, playlistID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("get local playlist: %w", err)
+	}
+	if local == nil {
+		return 0, 0, fmt.Errorf("local playlist %s not found", playlistID)
+	}
+	local.Tracks, err = s.playlistRepo.GetTracksForPlaylist(ctx, playlistID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("get playlist tracks: %w", err)
+	}
+
+	// Find or create the remote playlist by name.
+	remoteID, err := s.findOrCreateRemotePlaylist(ctx, provider, local.Name, local.Description)
+	if err != nil {
+		return 0, 0, fmt.Errorf("find or create remote playlist: %w", err)
+	}
+
+	// Get current remote tracks to skip duplicates.
+	remoteFull, err := provider.GetPlaylist(ctx, remoteID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("get remote playlist tracks: %w", err)
+	}
+	remoteTrackIDs := map[string]struct{}{}
+	for _, rt := range remoteFull.Tracks {
+		remoteTrackIDs[rt.RemoteID] = struct{}{}
+	}
+
+	var toAdd []string
+	unmatched := 0
+	for _, lt := range local.Tracks {
+		rt, err := s.resolveLocalTrack(ctx, provider, lt)
+		if err != nil || rt == nil {
+			slog.Warn("PushToProvider: could not resolve local track to remote", "track", lt.Title, "error", err)
+			unmatched++
+			continue
+		}
+		if _, exists := remoteTrackIDs[rt.RemoteID]; exists {
+			continue
+		}
+		toAdd = append(toAdd, rt.RemoteID)
+	}
+
+	if len(toAdd) > 0 {
+		if err := provider.AddTracksToPlaylist(ctx, remoteID, toAdd); err != nil {
+			return 0, unmatched, fmt.Errorf("add tracks to remote playlist: %w", err)
+		}
+	}
+
+	slog.Info("PushToProvider completed", "playlist", local.Name, "provider", providerName, "tracksPushed", len(toAdd), "unmatched", unmatched)
+	return len(toAdd), unmatched, nil
+}
+
+// SyncWithProvider performs a two-way sync between a local playlist and its
+// counterpart on the named provider. Remote-only tracks are added locally;
+// local-only tracks are pushed to the remote.
+func (s *Service) SyncWithProvider(ctx context.Context, playlistID, providerName string) (*SyncResult, error) {
+	slog.Debug("SyncWithProvider service called", "playlistID", playlistID, "provider", providerName)
+
+	provider, ok := s.providers[providerName]
+	if !ok {
+		return nil, fmt.Errorf("playlist provider %q not found", providerName)
+	}
+
+	local, err := s.playlistRepo.GetByID(ctx, playlistID)
+	if err != nil {
+		return nil, fmt.Errorf("get local playlist: %w", err)
+	}
+	if local == nil {
+		return nil, fmt.Errorf("local playlist %s not found", playlistID)
+	}
+	local.Tracks, err = s.playlistRepo.GetTracksForPlaylist(ctx, playlistID)
+	if err != nil {
+		return nil, fmt.Errorf("get playlist tracks: %w", err)
+	}
+
+	result := &SyncResult{PlaylistName: local.Name}
+
+	// Find or create the remote playlist.
+	remoteID, err := s.findOrCreateRemotePlaylist(ctx, provider, local.Name, local.Description)
+	if err != nil {
+		return nil, fmt.Errorf("find or create remote playlist: %w", err)
+	}
+
+	remoteFull, err := provider.GetPlaylist(ctx, remoteID)
+	if err != nil {
+		return nil, fmt.Errorf("get remote playlist: %w", err)
+	}
+
+	// Index local tracks by path for fast lookup.
+	localByPath := map[string]*music.Track{}
+	for _, lt := range local.Tracks {
+		if lt.Path != "" {
+			localByPath[lt.Path] = lt
+		}
+	}
+
+	// Build set of remote track IDs for deduplication in the push direction.
+	remoteIDSet := map[string]struct{}{}
+	for _, rt := range remoteFull.Tracks {
+		remoteIDSet[rt.RemoteID] = struct{}{}
+	}
+
+	// Pull: add remote-only tracks to local playlist.
+	for _, rt := range remoteFull.Tracks {
+		localTrack := s.resolveRemoteTrack(ctx, provider, rt)
+		if localTrack == nil {
+			result.TracksUnmatched++
+			continue
+		}
+		if local.ContainsTrack(localTrack.ID) {
+			continue
+		}
+		if err := s.playlistRepo.AddTrackToPlaylist(ctx, local.ID, localTrack.ID); err != nil {
+			slog.Warn("SyncWithProvider: failed to add track locally", "track", localTrack.Title, "error", err)
+			continue
+		}
+		local.Tracks = append(local.Tracks, localTrack)
+		result.TracksAdded++
+	}
+
+	// Push: add local-only tracks to remote playlist.
+	// Resolve each local track to its remote ID and skip those already present —
+	// path-based comparison is unreliable when mount points differ.
+	var toAdd []string
+	for _, lt := range local.Tracks {
+		rt, err := s.resolveLocalTrack(ctx, provider, lt)
+		if err != nil || rt == nil {
+			continue
+		}
+		if _, exists := remoteIDSet[rt.RemoteID]; exists {
+			continue
+		}
+		toAdd = append(toAdd, rt.RemoteID)
+	}
+	if len(toAdd) > 0 {
+		if err := provider.AddTracksToPlaylist(ctx, remoteID, toAdd); err != nil {
+			slog.Warn("SyncWithProvider: failed to push tracks to remote", "error", err)
+		} else {
+			result.TracksPushed = len(toAdd)
+		}
+	}
+
+	slog.Info("SyncWithProvider completed", "playlist", local.Name, "provider", providerName,
+		"added", result.TracksAdded, "pushed", result.TracksPushed, "unmatched", result.TracksUnmatched)
+	return result, nil
+}
+
+// resolveRemoteTrack maps a RemoteTrack to a local music.Track using path then metadata.
+func (s *Service) resolveRemoteTrack(ctx context.Context, _ music.PlaylistProvider, rt music.RemoteTrack) *music.Track {
+	if rt.Path != "" {
+		if t, err := s.library.FindTrackByPath(ctx, rt.Path); err == nil && t != nil {
+			return t
+		}
+	}
+	if rt.Title != "" && rt.Artist != "" {
+		if t, err := s.library.FindTrackByMetadata(ctx, rt.Title, rt.Artist, rt.Album); err == nil && t != nil {
+			return t
+		}
+	}
+	return nil
+}
+
+// resolveLocalTrack maps a local music.Track to a RemoteTrack using path then metadata.
+func (s *Service) resolveLocalTrack(ctx context.Context, provider music.PlaylistProvider, lt *music.Track) (*music.RemoteTrack, error) {
+	if lt.Path != "" {
+		rt, err := provider.FindTrackByPath(ctx, lt.Path)
+		if err != nil {
+			slog.Debug("resolveLocalTrack: path lookup error", "track", lt.Title, "path", lt.Path, "error", err)
+		} else if rt != nil {
+			return rt, nil
+		} else {
+			slog.Debug("resolveLocalTrack: path lookup returned no match, trying metadata", "track", lt.Title, "path", lt.Path)
+		}
+	}
+	artistName := ""
+	if len(lt.Artists) > 0 && lt.Artists[0].Artist != nil {
+		artistName = lt.Artists[0].Artist.Name
+	}
+	if lt.Title != "" && artistName != "" {
+		rt, err := provider.FindTrackByMetadata(ctx, lt.Title, artistName)
+		if err != nil {
+			slog.Debug("resolveLocalTrack: metadata lookup error", "track", lt.Title, "artist", artistName, "error", err)
+			return nil, err
+		}
+		if rt == nil {
+			slog.Warn("resolveLocalTrack: track not found on provider", "track", lt.Title, "artist", artistName, "path", lt.Path)
+		}
+		return rt, nil
+	}
+	slog.Warn("resolveLocalTrack: insufficient metadata to search", "track", lt.Title, "path", lt.Path)
+	return nil, nil
+}
+
+// findOrCreateRemotePlaylist returns the remote playlist ID matching name, creating it if absent.
+func (s *Service) findOrCreateRemotePlaylist(ctx context.Context, provider music.PlaylistProvider, name, description string) (string, error) {
+	remotes, err := provider.ListPlaylists(ctx)
+	if err != nil {
+		return "", err
+	}
+	for _, rp := range remotes {
+		if rp.Name == name {
+			return rp.RemoteID, nil
+		}
+	}
+	return provider.CreatePlaylist(ctx, name, description)
 }
 
 // GetPlaylistsContainingTrack gets all playlists that contain a specific track.

@@ -71,6 +71,9 @@ var defaultConfig = Config{
 			},
 		},
 	},
+	Playlists: PlaylistsConfig{
+		Providers: []PlaylistProviderConfig{},
+	},
 	Jobs: Jobs{
 		Log:     true,
 		LogPath: "./logs/jobs",

@@ -5,21 +5,90 @@
             class="p-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200">
       <i class="fas fa-arrow-left"></i>
     </button>
-    <div class="flex-1">
-      <h1 class="text-3xl font-bold text-slate-800 dark:text-white">{{.Playlist.Name}}</h1>
+    <div class="flex-1 min-w-0">
+      <h1 class="text-3xl font-bold text-slate-800 dark:text-white truncate">{{.Playlist.Name}}</h1>
       {{if .Playlist.Description}}
       <p class="text-gray-600 dark:text-gray-400 mt-1">{{.Playlist.Description}}</p>
       {{end}}
     </div>
-    <div class="flex items-center gap-2">
-      <button class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
-              onclick="editPlaylist()">
-        <i class="fas fa-edit mr-2"></i>Edit
+    <div class="flex items-center gap-2 shrink-0">
+
+      <button onclick="editPlaylist()"
+        class="cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-blue-500/10 backdrop-blur-md border border-blue-400/30 text-blue-600 dark:text-blue-300 shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20">
+        <i class="fas fa-edit mr-2 opacity-80"></i>Edit
       </button>
+
       <a href="/playlists/{{.Playlist.ID}}/export" target="_blank"
-         class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors duration-200 inline-block">
-        <i class="fas fa-download mr-2"></i>Export
+        class="cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-lg shadow-green-500/10 hover:shadow-green-500/20">
+        <i class="fas fa-download mr-2 opacity-80"></i>Export
       </a>
+
+      {{if .Providers}}
+      <!-- Push dropdown -->
+      <div class="relative">
+        <button onclick="toggleProviderDropdown('push-provider-menu', this)"
+          title="Push this playlist to a provider"
+          class="cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-purple-500/10 backdrop-blur-md border border-purple-400/30 text-purple-600 dark:text-purple-300 shadow-lg shadow-purple-500/10 hover:shadow-purple-500/20">
+          <i class="fas fa-cloud-upload-alt mr-2 opacity-80"></i>
+          <span class="hidden md:inline">Push</span>
+          <i class="fas fa-chevron-down ml-1 text-xs opacity-50"></i>
+        </button>
+        <div id="push-provider-menu"
+          class="hidden absolute right-0 mt-2 w-52 rounded-lg shadow-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+          <div class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
+            Push to
+          </div>
+          {{range .Providers}}
+          {{if .Enabled}}
+          <form hx-post="/playlists/{{$.Playlist.ID}}/push" hx-target="#toast-container" hx-swap="beforeend"
+                hx-on::after-request="document.getElementById('push-provider-menu').classList.add('hidden')">
+            <input type="hidden" name="provider" value="{{.Name}}">
+            <button type="submit"
+              class="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
+              {{if eq .Type "emby"}}<img src="/img/emby.svg" class="w-4 h-4 shrink-0">
+              {{else if eq .Type "jellyfin"}}<img src="/img/jellyfin.svg" class="w-4 h-4 shrink-0">
+              {{else}}<i class="fas fa-server text-xs w-4 shrink-0"></i>{{end}}
+              {{.DisplayName}}
+            </button>
+          </form>
+          {{end}}
+          {{end}}
+        </div>
+      </div>
+
+      <!-- Sync dropdown -->
+      <div class="relative">
+        <button onclick="toggleProviderDropdown('sync-provider-menu', this)"
+          title="Sync this playlist with a provider"
+          class="cursor-pointer group inline-flex items-center px-3 py-2 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-amber-500/10 backdrop-blur-md border border-amber-400/30 text-amber-600 dark:text-amber-300 shadow-lg shadow-amber-500/10 hover:shadow-amber-500/20">
+          <i class="fas fa-sync-alt mr-2 opacity-80"></i>
+          <span class="hidden md:inline">Sync</span>
+          <i class="fas fa-chevron-down ml-1 text-xs opacity-50"></i>
+        </button>
+        <div id="sync-provider-menu"
+          class="hidden absolute right-0 mt-2 w-52 rounded-lg shadow-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+          <div class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
+            Sync with
+          </div>
+          {{range .Providers}}
+          {{if .Enabled}}
+          <form hx-post="/playlists/{{$.Playlist.ID}}/sync" hx-target="#toast-container" hx-swap="beforeend"
+                hx-on::after-request="document.getElementById('sync-provider-menu').classList.add('hidden')">
+            <input type="hidden" name="provider" value="{{.Name}}">
+            <button type="submit"
+              class="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
+              {{if eq .Type "emby"}}<img src="/img/emby.svg" class="w-4 h-4 shrink-0">
+              {{else if eq .Type "jellyfin"}}<img src="/img/jellyfin.svg" class="w-4 h-4 shrink-0">
+              {{else}}<i class="fas fa-server text-xs w-4 shrink-0"></i>{{end}}
+              {{.DisplayName}}
+            </button>
+          </form>
+          {{end}}
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+
     </div>
   </div>
 
@@ -190,23 +259,29 @@ function editPlaylist() {
   cancelBtn.addEventListener('click', closeModal);
 
   modal.addEventListener('click', function(e) {
-    if (e.target === modal) {
-      closeModal();
-    }
+    if (e.target === modal) closeModal();
   });
 
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
-      closeModal();
-    }
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
   });
 }
 
-// Helper functions for template
-function duration(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+function toggleProviderDropdown(id, trigger) {
+  const menu = document.getElementById(id);
+  const isHidden = menu.classList.contains('hidden');
+  document.querySelectorAll('[id$="-provider-menu"]').forEach(el => el.classList.add('hidden'));
+  if (isHidden) {
+    menu.classList.remove('hidden');
+    setTimeout(() => {
+      document.addEventListener('click', function closeOnOutside(e) {
+        if (!menu.contains(e.target) && e.target !== trigger && !trigger.contains(e.target)) {
+          menu.classList.add('hidden');
+          document.removeEventListener('click', closeOnOutside);
+        }
+      });
+    }, 0);
+  }
 }
 </script>
 

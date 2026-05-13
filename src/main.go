@@ -7,6 +7,7 @@ import (
 	"os/signal"
 
 	"github.com/contre95/soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/music"
 	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/features/hosting"
 	"github.com/contre95/soulsolid/src/features/importing"
@@ -52,7 +53,22 @@ func main() {
 		log.Fatalf("failed to create library: %v", err)
 	}
 	libraryService := library.NewService(db, cfgManager, fileOrganizer)
-	playlistsService := playlists.NewService(db, db, cfgManager)
+
+	playlistProviders := map[string]music.PlaylistProvider{}
+	for _, pc := range cfgManager.Get().Playlists.Providers {
+		if !pc.Enabled {
+			continue
+		}
+		switch pc.Type {
+		case "emby":
+			playlistProviders[pc.Name] = providers.NewEmbyPlaylistProvider(pc.Name, pc.URL, pc.APIKey, pc.UserID, pc.Enabled)
+		case "jellyfin":
+			playlistProviders[pc.Name] = providers.NewJellyfinPlaylistProvider(pc.Name, pc.URL, pc.APIKey, pc.UserID, pc.Enabled)
+		default:
+			slog.Warn("Unknown playlist provider type, skipping", "type", pc.Type, "name", pc.Name)
+		}
+	}
+	playlistsService := playlists.NewService(db, db, cfgManager, playlistProviders)
 	metricsService := metrics.NewService(db, cfgManager)
 	jobService := jobs.NewService(cfgManager)
 

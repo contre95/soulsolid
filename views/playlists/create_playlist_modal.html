@@ -1,8 +1,8 @@
 {{define "playlists/create_playlist_modal"}}
 <!-- Modal Background -->
 <div id="create-playlist-modal" class="fixed inset-0 z-50">
-  <!-- Blurry Background Overlay -->
-  <div class="modal-overlay"></div>
+  <!-- Blurry Background Overlay — clicking it closes the modal -->
+  <div class="modal-overlay" onclick="document.getElementById('create-playlist-modal').remove()"></div>
   <!-- Modal Content Container -->
   <div class="flex items-center justify-center h-full">
     <!-- Modal Content -->
@@ -59,38 +59,24 @@
 </style>
 
 <script>
-// Close modal functionality
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
   const modal = document.getElementById('create-playlist-modal');
-  const closeBtn = document.getElementById('close-create-playlist-modal');
-  const cancelBtn = document.getElementById('cancel-create-playlist');
 
-  if (closeBtn) {
-    closeBtn.addEventListener('click', function() {
+  document.getElementById('close-create-playlist-modal').addEventListener('click', function() {
+    modal.remove();
+  });
+
+  document.getElementById('cancel-create-playlist').addEventListener('click', function() {
+    modal.remove();
+  });
+
+  function onEscape(e) {
+    if (e.key === 'Escape') {
       modal.remove();
-    });
+      document.removeEventListener('keydown', onEscape);
+    }
   }
-
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', function() {
-      modal.remove();
-    });
-  }
-
-  if (modal) {
-    modal.addEventListener('click', function(e) {
-      if (e.target === modal) {
-        modal.remove();
-      }
-    });
-
-    // Close on escape key
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        modal.remove();
-      }
-    });
-  }
-});
+  document.addEventListener('keydown', onEscape);
+})();
 </script>
 {{end}}

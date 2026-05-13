@@ -22,4 +22,9 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	playlists.Get("/:type/:id/playlists", handler.GetPlaylistsForItem)
 
 	playlists.Get("/:id/export", handler.ExportM3U)
+
+	playlists.Get("/providers", handler.GetProviders)
+	playlists.Post("/pull", handler.PullFromProvider)
+	playlists.Post("/:id/push", handler.PushToProvider)
+	playlists.Post("/:id/sync", handler.SyncWithProvider)
 }

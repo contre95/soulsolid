@@ -13,6 +13,7 @@ type Config struct {
 	Metadata     Metadata    `yaml:"metadata"`
 	Lyrics       Lyrics      `yaml:"lyrics"`
 	Jobs         Jobs        `yaml:"jobs"`
+	Playlists    PlaylistsConfig `yaml:"playlists"`
 }
 type Jobs struct {
 	Log      bool          `yaml:"log"`
@@ -96,6 +97,21 @@ type Lyrics struct {
 type LyricsProvider struct {
 	Enabled      bool `yaml:"enabled"`
 	PreferSynced bool `yaml:"prefer_synced,omitempty"`
+}
+
+// PlaylistsConfig holds configuration for the playlists feature.
+type PlaylistsConfig struct {
+	Providers []PlaylistProviderConfig `yaml:"providers"`
+}
+
+// PlaylistProviderConfig holds configuration for a single playlist sync provider.
+type PlaylistProviderConfig struct {
+	Type    string `yaml:"type"`    // "emby" or "jellyfin"
+	Name    string `yaml:"name"`
+	URL     string `yaml:"url"`
+	APIKey  string `yaml:"api_key"`
+	UserID  string `yaml:"user_id"`
+	Enabled bool   `yaml:"enabled"`
 }
 
 // Artwork holds configuration for artwork handling
