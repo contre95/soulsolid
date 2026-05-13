@@ -42,7 +42,7 @@ Demo: https://soulsolid-demo.contre.io
 
 The application can run without copying `config.yaml` into the container. If no config file exists, it will automatically create one with sensible defaults. 
 
-#### Environment Variable Support
+### Environment Variable Support
 
 Soulsolid supports environment variables in configuration files using the `!env_var` tag:
 
@@ -57,12 +57,14 @@ metadata:
 
 The application will fail to start if a referenced environment variable is not set.
 
+### Build and/or run it  
+
 ```bash
 # Build the image
 podman build -t soulsolid .
 # Create folders
 mkdir downloads logs data confg
-# Run with environment variables
+# Run with docker/podman
 podman run -d --name soulsolid -p 3535:3535 \
   -v ./music:/app/library \
   -v ./downloads:/app/downloads \
