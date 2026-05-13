@@ -10,6 +10,19 @@
       {{if .Playlist.Description}}
       <p class="text-gray-600 dark:text-gray-400 mt-1">{{.Playlist.Description}}</p>
       {{end}}
+      {{if .Playlist.Links}}
+      <div class="flex flex-wrap gap-1.5 mt-2">
+        {{range .Playlist.Links}}
+        <span title="{{.ProviderName}} · {{.RemoteID}}"
+              class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700/50 select-none">
+          {{if eq .ProviderType "emby"}}<img src="/img/emby.svg" class="w-3 h-3 opacity-40">
+          {{else if eq .ProviderType "jellyfin"}}<img src="/img/jellyfin.svg" class="w-3 h-3 opacity-40">
+          {{else}}<i class="fas fa-server text-xs opacity-40"></i>{{end}}
+          <span class="font-mono opacity-50">{{if gt (len .RemoteID) 8}}{{slice .RemoteID 0 8}}{{else}}{{.RemoteID}}{{end}}</span>
+        </span>
+        {{end}}
+      </div>
+      {{end}}
     </div>
     <div class="flex items-center gap-2 shrink-0">
 

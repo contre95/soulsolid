@@ -19,10 +19,11 @@ type Service struct {
 	library       music.Library
 	configManager *config.Manager
 	providers     map[string]music.PlaylistProvider
+	jobService    music.JobService
 }
 
 // NewService creates a new playlists service.
-func NewService(playlistRepo music.PlaylistRepository, lib music.Library, cfgManager *config.Manager, providers map[string]music.PlaylistProvider) *Service {
+func NewService(playlistRepo music.PlaylistRepository, lib music.Library, cfgManager *config.Manager, providers map[string]music.PlaylistProvider, jobService music.JobService) *Service {
 	if providers == nil {
 		providers = map[string]music.PlaylistProvider{}
 	}
@@ -31,7 +32,34 @@ func NewService(playlistRepo music.PlaylistRepository, lib music.Library, cfgMan
 		library:       lib,
 		configManager: cfgManager,
 		providers:     providers,
+		jobService:    jobService,
 	}
+}
+
+// StartPushJob enqueues a job that pushes a local playlist to a remote provider.
+func (s *Service) StartPushJob(playlistID, providerName string) (string, error) {
+	return s.jobService.StartJob("playlist_push", fmt.Sprintf("Push playlist to %s", providerName), map[string]any{
+		"operation":   "push",
+		"provider":    providerName,
+		"playlist_id": playlistID,
+	})
+}
+
+// StartPullJob enqueues a job that pulls all playlists from a remote provider.
+func (s *Service) StartPullJob(providerName string) (string, error) {
+	return s.jobService.StartJob("playlist_pull", fmt.Sprintf("Pull playlists from %s", providerName), map[string]any{
+		"operation": "pull",
+		"provider":  providerName,
+	})
+}
+
+// StartSyncJob enqueues a job that two-way syncs a local playlist with a remote provider.
+func (s *Service) StartSyncJob(playlistID, providerName string) (string, error) {
+	return s.jobService.StartJob("playlist_sync", fmt.Sprintf("Sync playlist with %s", providerName), map[string]any{
+		"operation":   "sync",
+		"provider":    providerName,
+		"playlist_id": playlistID,
+	})
 }
 
 // CreatePlaylist creates a new playlist.
@@ -326,6 +354,12 @@ func (s *Service) PullFromProvider(ctx context.Context, providerName string) ([]
 		return nil, fmt.Errorf("list playlists from %s: %w", providerName, err)
 	}
 
+	// Load all local playlists once to avoid repeated GetAll calls.
+	allLocal, err := s.playlistRepo.GetAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get local playlists: %w", err)
+	}
+
 	var pulled []*music.Playlist
 	for _, rp := range remotePlaylists {
 		full, err := provider.GetPlaylist(ctx, rp.RemoteID)
@@ -334,19 +368,28 @@ func (s *Service) PullFromProvider(ctx context.Context, providerName string) ([]
 			continue
 		}
 
-		// Find or create the local playlist by name.
-		allLocal, err := s.playlistRepo.GetAll(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("get local playlists: %w", err)
-		}
+		// Find local playlist: check cached link first, then fall back to name match.
 		var local *music.Playlist
 		for _, lp := range allLocal {
-			if lp.Name == rp.Name {
-				local, err = s.playlistRepo.GetByID(ctx, lp.ID)
-				if err != nil {
-					return nil, err
+			links, err := s.playlistRepo.GetProviderLinks(ctx, lp.ID)
+			if err == nil {
+				for _, link := range links {
+					if link.ProviderName == providerName && link.RemoteID == rp.RemoteID {
+						local, _ = s.playlistRepo.GetByID(ctx, lp.ID)
+						break
+					}
 				}
+			}
+			if local != nil {
 				break
+			}
+		}
+		if local == nil {
+			for _, lp := range allLocal {
+				if lp.Name == rp.Name {
+					local, _ = s.playlistRepo.GetByID(ctx, lp.ID)
+					break
+				}
 			}
 		}
 		if local == nil {
@@ -357,9 +400,11 @@ func (s *Service) PullFromProvider(ctx context.Context, providerName string) ([]
 			}
 		}
 
+		// Persist the remote association.
+		_ = s.playlistRepo.SetProviderLink(ctx, local.ID, providerName, provider.Name(), rp.RemoteID)
+
 		added := 0
 		for _, rt := range full.Tracks {
-			// Resolve remote track to a local track.
 			localTrack := s.resolveRemoteTrack(ctx, provider, rt)
 			if localTrack == nil {
 				continue
@@ -407,7 +452,7 @@ func (s *Service) PushToProvider(ctx context.Context, playlistID, providerName s
 	}
 
 	// Find or create the remote playlist by name.
-	remoteID, err := s.findOrCreateRemotePlaylist(ctx, provider, local.Name, local.Description)
+	remoteID, err := s.findOrCreateRemotePlaylist(ctx, provider, providerName, local.ID, local.Name, local.Description)
 	if err != nil {
 		return 0, 0, fmt.Errorf("find or create remote playlist: %w", err)
 	}
@@ -473,7 +518,7 @@ func (s *Service) SyncWithProvider(ctx context.Context, playlistID, providerName
 	result := &SyncResult{PlaylistName: local.Name}
 
 	// Find or create the remote playlist.
-	remoteID, err := s.findOrCreateRemotePlaylist(ctx, provider, local.Name, local.Description)
+	remoteID, err := s.findOrCreateRemotePlaylist(ctx, provider, providerName, local.ID, local.Name, local.Description)
 	if err != nil {
 		return nil, fmt.Errorf("find or create remote playlist: %w", err)
 	}
@@ -588,18 +633,34 @@ func (s *Service) resolveLocalTrack(ctx context.Context, provider music.Playlist
 	return nil, nil
 }
 
-// findOrCreateRemotePlaylist returns the remote playlist ID matching name, creating it if absent.
-func (s *Service) findOrCreateRemotePlaylist(ctx context.Context, provider music.PlaylistProvider, name, description string) (string, error) {
+// findOrCreateRemotePlaylist returns the remote playlist ID for the given local playlist,
+// using the cached link if available to skip the ListPlaylists round-trip.
+func (s *Service) findOrCreateRemotePlaylist(ctx context.Context, provider music.PlaylistProvider, providerName, playlistID, name, description string) (string, error) {
+	// Check cached link first.
+	if links, err := s.playlistRepo.GetProviderLinks(ctx, playlistID); err == nil {
+		for _, link := range links {
+			if link.ProviderName == providerName {
+				return link.RemoteID, nil
+			}
+		}
+	}
+	// Fall back to name search on the remote.
 	remotes, err := provider.ListPlaylists(ctx)
 	if err != nil {
 		return "", err
 	}
 	for _, rp := range remotes {
 		if rp.Name == name {
+			_ = s.playlistRepo.SetProviderLink(ctx, playlistID, providerName, provider.Name(), rp.RemoteID)
 			return rp.RemoteID, nil
 		}
 	}
-	return provider.CreatePlaylist(ctx, name, description)
+	remoteID, err := provider.CreatePlaylist(ctx, name, description)
+	if err != nil {
+		return "", fmt.Errorf("create playlist: %w", err)
+	}
+	_ = s.playlistRepo.SetProviderLink(ctx, playlistID, providerName, provider.Name(), remoteID)
+	return remoteID, nil
 }
 
 // GetPlaylistsContainingTrack gets all playlists that contain a specific track.

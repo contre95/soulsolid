@@ -68,9 +68,9 @@ func main() {
 			slog.Warn("Unknown playlist provider type, skipping", "type", pc.Type, "name", pc.Name)
 		}
 	}
-	playlistsService := playlists.NewService(db, db, cfgManager, playlistProviders)
-	metricsService := metrics.NewService(db, cfgManager)
 	jobService := jobs.NewService(cfgManager)
+	playlistsService := playlists.NewService(db, db, cfgManager, playlistProviders, jobService)
+	metricsService := metrics.NewService(db, cfgManager)
 
 	tagReader := tag.NewTagReader()
 	fingerprintReader := fingerprint.NewFingerprintService(cfgManager)
@@ -136,6 +136,11 @@ func main() {
 
 	reorganizeTask := reorganize.NewReorganizeJobTask(reorganizeService)
 	jobService.RegisterHandler("analyze_reorganize", jobs.NewBaseTaskHandler(reorganizeTask))
+
+	playlistTask := playlists.NewPlaylistJobTask(playlistsService)
+	jobService.RegisterHandler("playlist_push", jobs.NewBaseTaskHandler(playlistTask))
+	jobService.RegisterHandler("playlist_pull", jobs.NewBaseTaskHandler(playlistTask))
+	jobService.RegisterHandler("playlist_sync", jobs.NewBaseTaskHandler(playlistTask))
 
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {

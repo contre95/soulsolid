@@ -276,7 +276,7 @@ func (h *Handler) GetProviders(c *fiber.Ctx) error {
 	return c.JSON(h.service.ListProviders())
 }
 
-// PullFromProvider pulls all playlists from the named provider into local storage.
+// PullFromProvider enqueues a job that pulls all playlists from the named provider.
 // The provider name is read from the "provider" form field.
 func (h *Handler) PullFromProvider(c *fiber.Ctx) error {
 	providerName := c.FormValue("provider")
@@ -286,19 +286,16 @@ func (h *Handler) PullFromProvider(c *fiber.Ctx) error {
 		return c.Render("toast/toastErr", fiber.Map{"Msg": "provider is required"})
 	}
 
-	pulled, err := h.service.PullFromProvider(c.Context(), providerName)
-	if err != nil {
-		slog.Error("PullFromProvider failed", "provider", providerName, "error", err)
-		return c.Render("toast/toastErr", fiber.Map{"Msg": fmt.Sprintf("Failed to pull from %s: %s", providerName, err)})
+	if _, err := h.service.StartPullJob(providerName); err != nil {
+		slog.Error("PullFromProvider failed to start job", "provider", providerName, "error", err)
+		return c.Render("toast/toastErr", fiber.Map{"Msg": fmt.Sprintf("Failed to start pull from %s: %s", providerName, err)})
 	}
 
-	c.Set("HX-Trigger", "refreshPlaylists")
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": fmt.Sprintf("Pulled %d playlists from %s", len(pulled), providerName),
-	})
+	c.Set("HX-Trigger", "refreshJobList")
+	return c.Render("toast/toastInfo", fiber.Map{"Msg": fmt.Sprintf("Pulling playlists from %s…", providerName)})
 }
 
-// PushToProvider pushes a local playlist to the named provider.
+// PushToProvider enqueues a job that pushes a local playlist to the named provider.
 // The provider name is read from the "provider" form field.
 func (h *Handler) PushToProvider(c *fiber.Ctx) error {
 	playlistID := c.Params("id")
@@ -309,22 +306,16 @@ func (h *Handler) PushToProvider(c *fiber.Ctx) error {
 		return c.Render("toast/toastErr", fiber.Map{"Msg": "provider is required"})
 	}
 
-	pushed, unmatched, err := h.service.PushToProvider(c.Context(), playlistID, providerName)
-	if err != nil {
-		slog.Error("PushToProvider failed", "playlistID", playlistID, "provider", providerName, "error", err)
-		return c.Render("toast/toastErr", fiber.Map{"Msg": fmt.Sprintf("Failed to push to %s: %s", providerName, err)})
+	if _, err := h.service.StartPushJob(playlistID, providerName); err != nil {
+		slog.Error("PushToProvider failed to start job", "playlistID", playlistID, "provider", providerName, "error", err)
+		return c.Render("toast/toastErr", fiber.Map{"Msg": fmt.Sprintf("Failed to start push to %s: %s", providerName, err)})
 	}
 
-	var msg string
-	if unmatched > 0 {
-		msg = fmt.Sprintf("Pushed %d tracks to %s (%d could not be matched)", pushed, providerName, unmatched)
-	} else {
-		msg = fmt.Sprintf("Pushed %d tracks to %s", pushed, providerName)
-	}
-	return c.Render("toast/toastOk", fiber.Map{"Msg": msg})
+	c.Set("HX-Trigger", "refreshJobList")
+	return c.Render("toast/toastInfo", fiber.Map{"Msg": fmt.Sprintf("Pushing playlist to %s…", providerName)})
 }
 
-// SyncWithProvider performs a two-way sync of a playlist with the named provider.
+// SyncWithProvider enqueues a job that two-way syncs a local playlist with the named provider.
 // The provider name is read from the "provider" form field.
 func (h *Handler) SyncWithProvider(c *fiber.Ctx) error {
 	playlistID := c.Params("id")
@@ -335,17 +326,13 @@ func (h *Handler) SyncWithProvider(c *fiber.Ctx) error {
 		return c.Render("toast/toastErr", fiber.Map{"Msg": "provider is required"})
 	}
 
-	result, err := h.service.SyncWithProvider(c.Context(), playlistID, providerName)
-	if err != nil {
-		slog.Error("SyncWithProvider failed", "playlistID", playlistID, "provider", providerName, "error", err)
-		return c.Render("toast/toastErr", fiber.Map{"Msg": fmt.Sprintf("Failed to sync with %s: %s", providerName, err)})
+	if _, err := h.service.StartSyncJob(playlistID, providerName); err != nil {
+		slog.Error("SyncWithProvider failed to start job", "playlistID", playlistID, "provider", providerName, "error", err)
+		return c.Render("toast/toastErr", fiber.Map{"Msg": fmt.Sprintf("Failed to start sync with %s: %s", providerName, err)})
 	}
 
-	msg := fmt.Sprintf("Sync with %s: +%d local, +%d remote", providerName, result.TracksAdded, result.TracksPushed)
-	if result.TracksUnmatched > 0 {
-		msg += fmt.Sprintf(", %d unmatched", result.TracksUnmatched)
-	}
-	return c.Render("toast/toastOk", fiber.Map{"Msg": msg})
+	c.Set("HX-Trigger", "refreshJobList")
+	return c.Render("toast/toastInfo", fiber.Map{"Msg": fmt.Sprintf("Syncing playlist with %s…", providerName)})
 }
 
 // ExportM3U handles exporting a playlist to an M3U file.

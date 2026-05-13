@@ -9,12 +9,23 @@ import (
 	"github.com/google/uuid"
 )
 
+// ProviderLink records the association between a local playlist and its
+// counterpart on a remote media server. Stored in the DB so push/sync can skip
+// the ListPlaylists round-trip on subsequent calls.
+type ProviderLink struct {
+	PlaylistID   string
+	ProviderName string // config key, e.g. "my-emby"
+	ProviderType string // "emby" or "jellyfin" — used for icon selection in templates
+	RemoteID     string
+}
+
 // Playlist represents a collection of tracks that can be played in order.
 type Playlist struct {
 	ID           string
 	Name         string
 	Description  string
 	Tracks       []*Track
+	Links        []ProviderLink // remote associations, populated by GetByID
 	CreatedDate  time.Time
 	ModifiedDate time.Time
 }
@@ -154,6 +165,8 @@ type PlaylistRepository interface {
 	AddTrackToPlaylist(ctx context.Context, playlistID, trackID string) error
 	RemoveTrackFromPlaylist(ctx context.Context, playlistID, trackID string) error
 	GetTracksForPlaylist(ctx context.Context, playlistID string) ([]*Track, error)
+	SetProviderLink(ctx context.Context, playlistID, providerName, providerType, remoteID string) error
+	GetProviderLinks(ctx context.Context, playlistID string) ([]ProviderLink, error)
 }
 
 // GeneratePlaylistID creates a UUID for a playlist.

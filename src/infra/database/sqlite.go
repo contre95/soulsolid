@@ -167,6 +167,15 @@ func createTables(db *sql.DB) error {
 			UNIQUE(metric_type, metric_key)
 		);
 
+		CREATE TABLE IF NOT EXISTS playlist_provider_links (
+			playlist_id   TEXT NOT NULL,
+			provider_name TEXT NOT NULL,
+			provider_type TEXT NOT NULL DEFAULT '',
+			remote_id     TEXT NOT NULL,
+			PRIMARY KEY (playlist_id, provider_name),
+			FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE
+		);
+
 		CREATE INDEX IF NOT EXISTS idx_track_artists_track ON track_artists(track_id);
 		CREATE INDEX IF NOT EXISTS idx_track_artists_artist ON track_artists(artist_id);
 		CREATE INDEX IF NOT EXISTS idx_album_artists_album ON album_artists(album_id);
@@ -2126,7 +2135,19 @@ func (d *SqliteLibrary) GetByID(ctx context.Context, id string) (*music.Playlist
 	}
 	playlist.Tracks = tracks
 
-	return playlist, tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	// Load provider links (non-fatal: missing links just means no remote associations yet).
+	links, err := d.GetProviderLinks(ctx, id)
+	if err != nil {
+		slog.Warn("GetByID: failed to load provider links", "playlistID", id, "error", err)
+	} else {
+		playlist.Links = links
+	}
+
+	return playlist, nil
 }
 
 // GetAll gets all playlists from the database.
@@ -2431,6 +2452,40 @@ func (d *SqliteLibrary) FindTrackByPath(ctx context.Context, path string) (*musi
 	}
 
 	return track, nil
+}
+
+// SetProviderLink upserts a (playlist, provider) → remoteID association.
+func (d *SqliteLibrary) SetProviderLink(ctx context.Context, playlistID, providerName, providerType, remoteID string) error {
+	_, err := d.db.ExecContext(ctx, `
+		INSERT INTO playlist_provider_links (playlist_id, provider_name, provider_type, remote_id)
+		VALUES (?, ?, ?, ?)
+		ON CONFLICT(playlist_id, provider_name) DO UPDATE SET remote_id = excluded.remote_id, provider_type = excluded.provider_type
+	`, playlistID, providerName, providerType, remoteID)
+	return err
+}
+
+// GetProviderLinks returns all remote associations for a playlist.
+func (d *SqliteLibrary) GetProviderLinks(ctx context.Context, playlistID string) ([]music.ProviderLink, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT provider_name, provider_type, remote_id
+		FROM playlist_provider_links
+		WHERE playlist_id = ?
+		ORDER BY provider_name
+	`, playlistID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var links []music.ProviderLink
+	for rows.Next() {
+		link := music.ProviderLink{PlaylistID: playlistID}
+		if err := rows.Scan(&link.ProviderName, &link.ProviderType, &link.RemoteID); err != nil {
+			return nil, err
+		}
+		links = append(links, link)
+	}
+	return links, rows.Err()
 }
 
 // Ensure SqliteLibrary implements PlaylistRepository
