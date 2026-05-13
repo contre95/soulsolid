@@ -70,7 +70,7 @@ podman run -d \
   -v /host/logs:/app/logs \ # optional
   -v /host/library.db:/data/library.db \
   -v /host/config.yaml:/config/config.yaml \
-  soulsolid
+  contre95/soulsolid:v0.22.1
 ```
 
 The web interface will be available at `http://localhost:3535`.
