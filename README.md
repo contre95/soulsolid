@@ -60,16 +60,17 @@ The application will fail to start if a referenced environment variable is not s
 ```bash
 # Build the image
 podman build -t soulsolid .
-
+# Create folders
+mkdir downloads logs data confg
 # Run with environment variables
 podman run -d \
   --name soulsolid \
   -p 3535:3535 \
-  -v /host/music:/app/library \ <-- Music will be imported (copied/moved) TO this folder 
-  -v /host/downloads:/app/downloads \ <-- Music will be import FROM this folder
-  -v /host/logs:/app/logs \ # optional
-  -v /host/library.db:/data/library.db \
-  -v /host/config.yaml:/config/config.yaml \
+  -v ./music:/app/library \ <-- Music will be imported (copied/moved) TO this folder 
+  -v ./downloads:/app/downloads \ <-- Music will be import FROM this folder
+  -v ./logs:/app/logs \ # optional
+  -v ./library.db:/data/library.db \
+  -v ./config.yaml:/config/config.yaml \
   contre95/soulsolid:v0.22.1
 ```
 
