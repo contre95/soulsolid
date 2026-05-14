@@ -258,16 +258,21 @@ func (c *mediaBrowserClient) findTrackByMetadata(ctx context.Context, title, art
 		return nil, fmt.Errorf("decode find track by metadata response: %w", err)
 	}
 
-	artistLower := strings.ToLower(artist)
+	titleLower := strings.ToLower(strings.TrimSpace(title))
+	artistLower := strings.ToLower(strings.TrimSpace(artist))
 	for _, item := range result.Items {
 		itemArtist := item.AlbumArtist
 		if itemArtist == "" && len(item.Artists) > 0 {
 			itemArtist = item.Artists[0]
 		}
-		// Use Contains rather than exact equality: handles "Artist feat. X" and
-		// other minor tagging differences between SoulSolid and the media server.
-		if strings.Contains(strings.ToLower(itemArtist), artistLower) ||
-			strings.Contains(artistLower, strings.ToLower(itemArtist)) {
+		itemTitleLower := strings.ToLower(strings.TrimSpace(item.Name))
+		// Use bidirectional Contains rather than exact equality: handles "Artist feat. X"
+		// and other minor tagging differences between SoulSolid and the media server.
+		artistMatch := strings.Contains(strings.ToLower(itemArtist), artistLower) ||
+			strings.Contains(artistLower, strings.ToLower(itemArtist))
+		titleMatch := strings.Contains(itemTitleLower, titleLower) ||
+			strings.Contains(titleLower, itemTitleLower)
+		if artistMatch && titleMatch {
 			return &music.RemoteTrack{
 				RemoteID: item.Id,
 				Path:     item.Path,

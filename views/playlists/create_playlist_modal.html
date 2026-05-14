@@ -2,7 +2,7 @@
 <!-- Modal Background -->
 <div id="create-playlist-modal" class="fixed inset-0 z-50">
   <!-- Blurry Background Overlay — clicking it closes the modal -->
-  <div class="modal-overlay" onclick="document.getElementById('create-playlist-modal').remove()"></div>
+  <div class="modal-overlay" id="create-playlist-overlay"></div>
   <!-- Modal Content Container -->
   <div class="flex items-center justify-center h-full">
     <!-- Modal Content -->
@@ -19,7 +19,7 @@
 
     <!-- Modal Body -->
     <div class="p-4 bg-gray-50 dark:bg-gray-900">
-      <form hx-post="/playlists" hx-target="#toast-container" hx-swap="beforeend" class="space-y-3" hx-on:htmx:after-request="if (event.detail.successful) { document.getElementById('create-playlist-modal').remove(); htmx.trigger('#contenido', 'refreshPlaylists'); }">
+      <form hx-post="/playlists" hx-target="#toast-container" hx-swap="beforeend" class="space-y-3" hx-on:htmx:after-request="if (event.detail.successful) { document.getElementById('create-playlist-modal')._closeModal(); htmx.trigger('#contenido', 'refreshPlaylists'); }">
         <div>
           <label for="modal-playlist-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
           <input type="text" id="modal-playlist-name" name="name" required
@@ -62,20 +62,20 @@
 (function() {
   const modal = document.getElementById('create-playlist-modal');
 
-  document.getElementById('close-create-playlist-modal').addEventListener('click', function() {
-    modal.remove();
-  });
-
-  document.getElementById('cancel-create-playlist').addEventListener('click', function() {
-    modal.remove();
-  });
-
   function onEscape(e) {
-    if (e.key === 'Escape') {
-      modal.remove();
-      document.removeEventListener('keydown', onEscape);
-    }
+    if (e.key === 'Escape') closeModal();
   }
+
+  function closeModal() {
+    document.removeEventListener('keydown', onEscape);
+    modal.remove();
+  }
+
+  modal._closeModal = closeModal;
+
+  document.getElementById('create-playlist-overlay').addEventListener('click', closeModal);
+  document.getElementById('close-create-playlist-modal').addEventListener('click', closeModal);
+  document.getElementById('cancel-create-playlist').addEventListener('click', closeModal);
   document.addEventListener('keydown', onEscape);
 })();
 </script>

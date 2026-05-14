@@ -544,7 +544,9 @@ func (s *Service) SyncWithProvider(ctx context.Context, playlistID, providerName
 		remoteIDSet[rt.RemoteID] = struct{}{}
 	}
 
-	// Pull: add remote-only tracks to local playlist.
+	// Pull: add remote-only tracks to local playlist atomically.
+	var pullTracks []*music.Track
+	var pullIDs []string
 	for _, rt := range remoteFull.Tracks {
 		localTrack := s.resolveRemoteTrack(ctx, provider, rt)
 		if localTrack == nil {
@@ -554,13 +556,14 @@ func (s *Service) SyncWithProvider(ctx context.Context, playlistID, providerName
 		if local.ContainsTrack(localTrack.ID) {
 			continue
 		}
-		if err := s.playlistRepo.AddTrackToPlaylist(ctx, local.ID, localTrack.ID); err != nil {
-			slog.Warn("SyncWithProvider: failed to add track locally", "track", localTrack.Title, "error", err)
-			continue
-		}
-		local.Tracks = append(local.Tracks, localTrack)
-		result.TracksAdded++
+		pullTracks = append(pullTracks, localTrack)
+		pullIDs = append(pullIDs, localTrack.ID)
 	}
+	if err := s.playlistRepo.BatchAddTracks(ctx, local.ID, pullIDs); err != nil {
+		return result, fmt.Errorf("SyncWithProvider: batch-add pulled tracks: %w", err)
+	}
+	local.Tracks = append(local.Tracks, pullTracks...)
+	result.TracksAdded = len(pullIDs)
 
 	// Push: add local-only tracks to remote playlist.
 	// Resolve each local track to its remote ID and skip those already present —
