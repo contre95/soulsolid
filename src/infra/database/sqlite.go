@@ -2488,5 +2488,50 @@ func (d *SqliteLibrary) GetProviderLinks(ctx context.Context, playlistID string)
 	return links, rows.Err()
 }
 
+// BatchAddTracks adds multiple tracks to a playlist in a single transaction,
+// skipping any track IDs that are already present.
+func (d *SqliteLibrary) BatchAddTracks(ctx context.Context, playlistID string, trackIDs []string) error {
+	if len(trackIDs) == 0 {
+		return nil
+	}
+
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var maxPosition int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COALESCE(MAX(position), -1) FROM playlist_tracks WHERE playlist_id = ?`,
+		playlistID,
+	).Scan(&maxPosition); err != nil {
+		return err
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	for _, trackID := range trackIDs {
+		var exists bool
+		if err := tx.QueryRowContext(ctx,
+			`SELECT EXISTS(SELECT 1 FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?)`,
+			playlistID, trackID,
+		).Scan(&exists); err != nil {
+			return err
+		}
+		if exists {
+			continue
+		}
+		maxPosition++
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO playlist_tracks (playlist_id, track_id, position, added_date) VALUES (?, ?, ?, ?)`,
+			playlistID, trackID, maxPosition, now,
+		); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
 // Ensure SqliteLibrary implements PlaylistRepository
 var _ music.PlaylistRepository = (*SqliteLibrary)(nil)

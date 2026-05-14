@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/contre95/soulsolid/src/music"
 )
@@ -24,7 +25,7 @@ func NewEmbyPlaylistProvider(name, baseURL, apiKey, userID string, enabled bool)
 	p.mediaBrowserClient = mediaBrowserClient{
 		baseURL:    baseURL,
 		userID:     userID,
-		httpClient: &http.Client{},
+		httpClient: &http.Client{Timeout: 30 * time.Second},
 		authHeader: func() string {
 			return fmt.Sprintf("MediaBrowser Client=\"SoulSolid\", Device=\"SoulSolid\", DeviceId=\"soulsolid\", Version=\"1.0.0\", Token=\"%s\"", apiKey)
 		},

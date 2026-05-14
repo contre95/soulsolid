@@ -401,26 +401,28 @@ func (s *Service) PullFromProvider(ctx context.Context, providerName string) ([]
 		}
 
 		// Persist the remote association.
-		_ = s.playlistRepo.SetProviderLink(ctx, local.ID, providerName, provider.Name(), rp.RemoteID)
-
-		added := 0
-		for _, rt := range full.Tracks {
-			localTrack := s.resolveRemoteTrack(ctx, provider, rt)
-			if localTrack == nil {
-				continue
-			}
-			if local.ContainsTrack(localTrack.ID) {
-				continue
-			}
-			if err := s.playlistRepo.AddTrackToPlaylist(ctx, local.ID, localTrack.ID); err != nil {
-				slog.Warn("PullFromProvider: failed to add track to local playlist", "trackID", localTrack.ID, "error", err)
-				continue
-			}
-			local.Tracks = append(local.Tracks, localTrack)
-			added++
+		if err := s.playlistRepo.SetProviderLink(ctx, local.ID, providerName, provider.Name(), rp.RemoteID); err != nil {
+			slog.Warn("PullFromProvider: failed to set provider link", "provider", providerName, "playlistID", local.ID, "error", err)
 		}
 
-		slog.Info("PullFromProvider: pulled playlist", "name", rp.Name, "tracksAdded", added)
+		// Resolve all remote tracks before writing so we can add them atomically.
+		var newTracks []*music.Track
+		var newIDs []string
+		for _, rt := range full.Tracks {
+			localTrack := s.resolveRemoteTrack(ctx, provider, rt)
+			if localTrack == nil || local.ContainsTrack(localTrack.ID) {
+				continue
+			}
+			newTracks = append(newTracks, localTrack)
+			newIDs = append(newIDs, localTrack.ID)
+		}
+		if err := s.playlistRepo.BatchAddTracks(ctx, local.ID, newIDs); err != nil {
+			slog.Warn("PullFromProvider: failed to batch-add tracks", "playlistID", local.ID, "error", err)
+			continue
+		}
+		local.Tracks = append(local.Tracks, newTracks...)
+
+		slog.Info("PullFromProvider: pulled playlist", "name", rp.Name, "tracksAdded", len(newIDs))
 		pulled = append(pulled, local)
 	}
 
@@ -651,7 +653,9 @@ func (s *Service) findOrCreateRemotePlaylist(ctx context.Context, provider music
 	}
 	for _, rp := range remotes {
 		if rp.Name == name {
-			_ = s.playlistRepo.SetProviderLink(ctx, playlistID, providerName, provider.Name(), rp.RemoteID)
+			if err := s.playlistRepo.SetProviderLink(ctx, playlistID, providerName, provider.Name(), rp.RemoteID); err != nil {
+				slog.Warn("resolveOrCreateRemotePlaylist: failed to set provider link", "provider", providerName, "playlistID", playlistID, "error", err)
+			}
 			return rp.RemoteID, nil
 		}
 	}
@@ -659,7 +663,9 @@ func (s *Service) findOrCreateRemotePlaylist(ctx context.Context, provider music
 	if err != nil {
 		return "", fmt.Errorf("create playlist: %w", err)
 	}
-	_ = s.playlistRepo.SetProviderLink(ctx, playlistID, providerName, provider.Name(), remoteID)
+	if err := s.playlistRepo.SetProviderLink(ctx, playlistID, providerName, provider.Name(), remoteID); err != nil {
+		slog.Warn("resolveOrCreateRemotePlaylist: failed to set provider link", "provider", providerName, "playlistID", playlistID, "error", err)
+	}
 	return remoteID, nil
 }
 

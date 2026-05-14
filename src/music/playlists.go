@@ -163,6 +163,7 @@ type PlaylistRepository interface {
 	Update(ctx context.Context, playlist *Playlist) error
 	Delete(ctx context.Context, id string) error
 	AddTrackToPlaylist(ctx context.Context, playlistID, trackID string) error
+	BatchAddTracks(ctx context.Context, playlistID string, trackIDs []string) error
 	RemoveTrackFromPlaylist(ctx context.Context, playlistID, trackID string) error
 	GetTracksForPlaylist(ctx context.Context, playlistID string) ([]*Track, error)
 	SetProviderLink(ctx context.Context, playlistID, providerName, providerType, remoteID string) error
