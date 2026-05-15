@@ -4,11 +4,25 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"regexp"
 	"strings"
 
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
+
+var lrcTimestamp = regexp.MustCompile(`^\[\d+:\d+\.\d+\]\s*`)
+
+func stripLRC(lyrics string) string {
+	var lines []string
+	for _, line := range strings.Split(lyrics, "\n") {
+		line = lrcTimestamp.ReplaceAllString(strings.TrimSpace(line), "")
+		if line != "" {
+			lines = append(lines, line)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
 
 // Handler is the handler for the library feature.
 type Handler struct {
@@ -186,18 +200,25 @@ func (h *Handler) GetLibraryTable(c *fiber.Ctx) error {
 	artists, err := h.service.GetArtists(c.Context())
 	if err != nil {
 		slog.Error("Error loading artists for search form", "error", err)
-		artists = []*music.Artist{} // Continue with empty list
+		artists = []*music.Artist{}
 	}
 
 	albums, err := h.service.GetAlbums(c.Context())
 	if err != nil {
 		slog.Error("Error loading albums for search form", "error", err)
-		albums = []*music.Album{} // Continue with empty list
+		albums = []*music.Album{}
+	}
+
+	genres, err := h.service.GetGenres(c.Context())
+	if err != nil {
+		slog.Error("Error loading genres for search form", "error", err)
+		genres = []string{}
 	}
 
 	return c.Render("library/library_table", fiber.Map{
 		"SearchArtists": artists,
 		"SearchAlbums":  albums,
+		"Genres":        genres,
 	})
 }
 
@@ -210,6 +231,19 @@ type SearchResult struct {
 	Tertiary    string // "", Album year, Track album title
 	Duration    int    // Track duration in seconds (for tracks only)
 	ImageURL    string // Image for display
+}
+
+// parseBoolFilter converts "true"/"false" query params to *bool; anything else returns nil.
+func parseBoolFilter(s string) *bool {
+	if s == "true" {
+		v := true
+		return &v
+	}
+	if s == "false" {
+		v := false
+		return &v
+	}
+	return nil
 }
 
 // trackToSearchResult converts a music.Track to a SearchResult.
@@ -242,14 +276,20 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 	query := strings.TrimSpace(c.Query("query", ""))
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 50)
+	genre := c.Query("genre", "")
+	hasAcoustID := parseBoolFilter(c.Query("has_acoustid", ""))
+	lyricsFilter := c.Query("lyrics_filter", "")
+	lyricsText := strings.TrimSpace(c.Query("lyrics_text", ""))
 
 	var results []SearchResult
 	var totalCount int
 
 	offset := (page - 1) * limit
 
-	if query == "" {
-		// When no query, show all artists, albums, and tracks combined
+	hasActiveFilters := genre != "" || hasAcoustID != nil || lyricsFilter != "" || lyricsText != ""
+
+	if query == "" && !hasActiveFilters {
+		// Browse-all: paginated view of artists, albums, and tracks combined
 		artists, err := h.service.GetArtists(c.Context())
 		if err != nil {
 			slog.Error("Error loading artists", "error", err)
@@ -274,11 +314,9 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 
 		totalCount = totalOther + tracksCount
 
-		// Determine the slice for this page
 		start := offset
 		end := min(offset+limit, totalCount)
 
-		// Add artists
 		if start < artistsCount {
 			artistEnd := min(end, artistsCount)
 			for i := start; i < artistEnd; i++ {
@@ -288,13 +326,10 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 					ID:          artist.ID,
 					PrimaryName: artist.Name,
 					Secondary:   artist.ID,
-					Tertiary:    "",
-					ImageURL:    "",
 				})
 			}
 		}
 
-		// Add albums
 		if end > artistsCount {
 			albumStart := 0
 			if start > artistsCount {
@@ -304,93 +339,8 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 			for i := albumStart; i < albumEnd; i++ {
 				album := albums[i]
 				var artistNames strings.Builder
-				if len(album.Artists) > 0 {
-					for j, ar := range album.Artists {
-						if j > 0 {
-							artistNames.WriteString(", ")
-						}
-						artistNames.WriteString(ar.Artist.Name)
-					}
-				}
-				year := ""
-				if !album.ReleaseDate.IsZero() {
-					year = fmt.Sprintf("%d", album.ReleaseDate.Year())
-				}
-				results = append(results, SearchResult{
-					Type:        "album",
-					ID:          album.ID,
-					PrimaryName: album.Title,
-					Secondary:   artistNames.String(),
-					Tertiary:    year,
-					ImageURL:    album.ImageSmall,
-				})
-			}
-		}
-
-		// Add tracks
-		if end > totalOther {
-			trackStart := 0
-			if start > totalOther {
-				trackStart = start - totalOther
-			}
-			trackLimit := end - totalOther - trackStart
-			if trackLimit > 0 {
-				tracks, err := h.service.GetTracksPaginated(c.Context(), trackLimit, trackStart)
-				if err != nil {
-					slog.Error("Error loading tracks", "error", err)
-					return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
-				}
-				for _, track := range tracks {
-					var artistNames strings.Builder
-					if len(track.Artists) > 0 {
-						for i, ar := range track.Artists {
-							if i > 0 {
-								artistNames.WriteString(", ")
-							}
-							artistNames.WriteString(ar.Artist.Name)
-						}
-					}
-					albumTitle := ""
-					if track.Album != nil {
-						albumTitle = track.Album.Title
-					}
-					results = append(results, SearchResult{
-						Type:        "track",
-						ID:          track.ID,
-						PrimaryName: track.Title,
-						Secondary:   artistNames.String(),
-						Tertiary:    albumTitle,
-						Duration:    track.Metadata.Duration,
-						ImageURL:    "",
-					})
-				}
-			}
-		}
-	} else {
-		// Search artists
-		artists, err := h.service.GetArtistsFilteredPaginated(c.Context(), 20, 0, query)
-		if err != nil {
-			slog.Error("Error searching artists", "error", err)
-		} else {
-			for _, artist := range artists {
-				results = append(results, SearchResult{
-					Type:        "artist",
-					ID:          artist.ID,
-					PrimaryName: artist.Name,
-					Secondary:   artist.ID,
-				})
-			}
-		}
-
-		// Search albums (lightweight: single JOIN query, no N+1)
-		albums, err := h.service.SearchAlbums(c.Context(), query, 20, 0)
-		if err != nil {
-			slog.Error("Error searching albums", "error", err)
-		} else {
-			for _, album := range albums {
-				var artistNames strings.Builder
-				for i, ar := range album.Artists {
-					if i > 0 {
+				for j, ar := range album.Artists {
+					if j > 0 {
 						artistNames.WriteString(", ")
 					}
 					artistNames.WriteString(ar.Artist.Name)
@@ -409,27 +359,98 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 			}
 		}
 
-		// Search tracks: single query OR-matching title, artist name, and album title
-		tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), 500, 0, &music.TrackFilter{TextSearch: query})
-		if err != nil {
-			slog.Error("Error searching tracks", "error", err)
-		} else {
-			for _, track := range tracks {
-				results = append(results, trackToSearchResult(track))
+		if end > totalOther {
+			trackStart := 0
+			if start > totalOther {
+				trackStart = start - totalOther
+			}
+			trackLimit := end - totalOther - trackStart
+			if trackLimit > 0 {
+				tracks, err := h.service.GetTracksPaginated(c.Context(), trackLimit, trackStart)
+				if err != nil {
+					slog.Error("Error loading tracks", "error", err)
+					return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
+				}
+				for _, track := range tracks {
+					results = append(results, trackToSearchResult(track))
+				}
+			}
+		}
+	} else {
+		// Only include artist/album results when there's a text query to match against
+		if query != "" {
+			artists, err := h.service.GetArtistsFilteredPaginated(c.Context(), 20, 0, query)
+			if err != nil {
+				slog.Error("Error searching artists", "error", err)
+			} else {
+				for _, artist := range artists {
+					results = append(results, SearchResult{
+						Type:        "artist",
+						ID:          artist.ID,
+						PrimaryName: artist.Name,
+						Secondary:   artist.ID,
+					})
+				}
+			}
+
+			// Search albums (lightweight: single JOIN query, no N+1)
+			albums, err := h.service.SearchAlbums(c.Context(), query, 20, 0)
+			if err != nil {
+				slog.Error("Error searching albums", "error", err)
+			} else {
+				for _, album := range albums {
+					var artistNames strings.Builder
+					for i, ar := range album.Artists {
+						if i > 0 {
+							artistNames.WriteString(", ")
+						}
+						artistNames.WriteString(ar.Artist.Name)
+					}
+					year := ""
+					if !album.ReleaseDate.IsZero() {
+						year = fmt.Sprintf("%d", album.ReleaseDate.Year())
+					}
+					results = append(results, SearchResult{
+						Type:        "album",
+						ID:          album.ID,
+						PrimaryName: album.Title,
+						Secondary:   artistNames.String(),
+						Tertiary:    year,
+					})
+				}
 			}
 		}
 
-		// For search results, paginate the collected results
-		totalCount = len(results)
-		start := (page - 1) * limit
-		end := start + limit
-		if start > totalCount {
-			start = totalCount
+		// Search tracks: single query OR-matching title, artist name, and album title,
+		// combined with any active filters.
+		trackFilter := &music.TrackFilter{
+			TextSearch:   query,
+			Genre:        genre,
+			HasAcoustID:  hasAcoustID,
+			LyricsFilter: lyricsFilter,
+			LyricsText:   lyricsText,
 		}
-		if end > totalCount {
-			end = totalCount
+		trackCount, err := h.service.GetTracksFilteredCount(c.Context(), trackFilter)
+		if err != nil {
+			slog.Error("Error counting tracks", "error", err)
 		}
-		results = results[start:end]
+		nonTrackCount := len(results)
+		totalCount = nonTrackCount + trackCount
+
+		// Compute track-relative offset: artist/album results occupy the start of the
+		// combined list, so tracks only start contributing once we're past them.
+		trackStart := max(0, offset-nonTrackCount)
+		trackLimit := limit - max(0, nonTrackCount-offset)
+		if trackLimit > 0 {
+			tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), trackLimit, trackStart, trackFilter)
+			if err != nil {
+				slog.Error("Error searching tracks", "error", err)
+			} else {
+				for _, track := range tracks {
+					results = append(results, trackToSearchResult(track))
+				}
+			}
+		}
 	}
 
 	pagination := NewPagination(page, limit, totalCount)
@@ -530,6 +551,48 @@ func (h *Handler) DeleteArtist(c *fiber.Ctx) error {
 
 	// Return success toast
 	return c.Render("toast/toastOk", fiber.Map{"Msg": "Artist deleted successfully"})
+}
+
+// RenderTrackOverviewPanel renders the floating track overview panel.
+func (h *Handler) RenderTrackOverviewPanel(c *fiber.Ctx) error {
+	slog.Debug("RenderTrackOverviewPanel handler called", "trackId", c.Params("trackId"))
+
+	trackID := c.Params("trackId")
+	if trackID == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+	}
+
+	track, err := h.service.GetTrack(c.Context(), trackID)
+	if err != nil || track == nil {
+		slog.Error("Failed to get track for overview", "error", err, "trackId", trackID)
+		return c.Status(fiber.StatusNotFound).SendString("Track not found")
+	}
+
+	var artistNames strings.Builder
+	for i, ar := range track.Artists {
+		if i > 0 {
+			artistNames.WriteString(", ")
+		}
+		if ar.Artist != nil {
+			artistNames.WriteString(ar.Artist.Name)
+		}
+	}
+
+	lyricsPreview := ""
+	if track.Metadata.Lyrics != "" {
+		plain := stripLRC(track.Metadata.Lyrics)
+		lines := strings.Split(plain, "\n")
+		if len(lines) > 20 {
+			lines = lines[:20]
+		}
+		lyricsPreview = strings.Join(lines, "\n")
+	}
+
+	return c.Render("library/track_overview_panel", fiber.Map{
+		"Track":         track,
+		"Artists":       artistNames.String(),
+		"LyricsPreview": lyricsPreview,
+	})
 }
 
 // RenderTagEditForm renders the tag edit form for a track

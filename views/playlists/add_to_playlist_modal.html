@@ -81,8 +81,7 @@
 </style>
 
 <script>
-// Close modal functionality
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
   const modal = document.getElementById('playlist-modal');
   const closeBtn = document.getElementById('close-playlist-modal');
 
@@ -99,13 +98,13 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
-    // Close on escape key
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', function onEscape(e) {
       if (e.key === 'Escape') {
         modal.remove();
+        document.removeEventListener('keydown', onEscape);
       }
     });
   }
-});
+})();
 </script>
 {{end}}

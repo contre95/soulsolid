@@ -4,7 +4,13 @@
     <div class="flex flex-col space-y-2">
         <!-- Top row: Title on left, Date + Badge on right -->
         <div class="flex items-center justify-between">
-            <h4 class="text-sm font-semibold text-gray-900 dark:text-white truncate flex-1">{{.Track.Title}}</h4>
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+              <img src="/import/queue/{{.ID}}/artwork"
+                   alt="Album Art"
+                   class="w-10 h-10 rounded-md object-cover flex-shrink-0"
+                   onerror="this.style.display='none'">
+              <h4 class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{.Track.Title}}</h4>
+            </div>
             <div class="flex items-center space-x-2 ml-2">
                 <span class="text-xs text-gray-500 dark:text-gray-400">{{.Timestamp.Format "Jan 2, 15:04"}}</span>
                  {{if eq .Type "duplicate"}}

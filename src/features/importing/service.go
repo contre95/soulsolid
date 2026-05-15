@@ -78,6 +78,15 @@ func (s *Service) GetQueuedItems() map[string]music.QueueItem {
 	return s.queue.GetAll()
 }
 
+// GetPendingTrackArtwork returns the embedded artwork for a pending (not yet imported) track file.
+func (s *Service) GetPendingTrackArtwork(itemID string) ([]byte, string, error) {
+	item, err := s.queue.GetByID(itemID)
+	if err != nil {
+		return nil, "", fmt.Errorf("queue item not found: %w", err)
+	}
+	return s.metadataReader.ReadArtwork(item.Track.Path)
+}
+
 // ClearQueue removes all items from the queue
 func (s *Service) ClearQueue() error {
 	return s.queue.Clear()
@@ -251,13 +260,14 @@ func (s *Service) ProcessQueueGroup(ctx context.Context, groupKey string, groupT
 	// Get the group items first to process them individually
 	var groupItems []music.QueueItem
 
-	if groupType == "artist" {
+	switch groupType {
+	case "artist":
 		groups := s.GetGroupedByArtist()
 		groupItems = groups[groupKey]
-	} else if groupType == "album" {
+	case "album":
 		groups := s.GetGroupedByAlbum()
 		groupItems = groups[groupKey]
-	} else {
+	default:
 		return fmt.Errorf("invalid group type: %s", groupType)
 	}
 

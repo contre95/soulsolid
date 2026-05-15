@@ -14,15 +14,15 @@ import (
 
 // FileOrganizer is the infrastructure implementation of the music.FileManager interface.
 type FileOrganizer struct {
-	libraryPath string
+	libraryPath func() string
 	pathParser  importing.PathParser
 	fat32Safe   func() bool
 }
 
 // NewFileOrganizer creates a new file organizer implementation.
-// fat32Safe is called at operation time to check whether FAT32-safe path
-// sanitization should be applied (lowercase, forbidden chars stripped, 255-byte limit).
-func NewFileOrganizer(libraryPath string, pathParser importing.PathParser, fat32Safe func() bool) *FileOrganizer {
+// Both libraryPath and fat32Safe are called at operation time so config changes
+// are picked up without restarting.
+func NewFileOrganizer(libraryPath func() string, pathParser importing.PathParser, fat32Safe func() bool) *FileOrganizer {
 	return &FileOrganizer{libraryPath: libraryPath, pathParser: pathParser, fat32Safe: fat32Safe}
 }
 
@@ -32,7 +32,7 @@ func (o *FileOrganizer) buildPath(track *music.Track) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to render path: %w", err)
 	}
-	return filepath.Join(o.libraryPath, renderedPath+filepath.Ext(track.Path)), nil
+	return filepath.Join(o.libraryPath(), renderedPath+filepath.Ext(track.Path)), nil
 }
 
 // GetLibraryPath generates the library path for a track without moving it.
@@ -80,7 +80,6 @@ func (o *FileOrganizer) moveFile(src, dst string) error {
 	}
 	return nil
 }
-
 
 // CopyTrackToLibrary copies a track to a new location based on its metadata.
 func (o *FileOrganizer) CopyTrackToLibrary(ctx context.Context, track *music.Track) (string, error) {
@@ -144,7 +143,7 @@ func (o *FileOrganizer) removeEmptyDirectories(dir string) error {
 		// Move up to parent directory
 		parent := filepath.Dir(dir)
 		// Stop if we've reached the library root or a non-empty directory
-		if parent == dir || parent == o.libraryPath {
+		if parent == dir || filepath.Clean(parent) == filepath.Clean(o.libraryPath()) {
 			break
 		}
 		dir = parent

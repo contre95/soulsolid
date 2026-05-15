@@ -251,6 +251,11 @@ func (s *Service) GetAlbumsFilteredCount(ctx context.Context, titleFilter string
 	return count, nil
 }
 
+// GetGenres returns all distinct non-empty genres in the library.
+func (s *Service) GetGenres(ctx context.Context) ([]string, error) {
+	return s.library.GetGenres(ctx)
+}
+
 // SearchAlbums returns albums matching query using a single lightweight JOIN query.
 func (s *Service) SearchAlbums(ctx context.Context, query string, limit, offset int) ([]*library.Album, error) {
 	slog.Debug("SearchAlbums service called", "query", query, "limit", limit, "offset", offset)

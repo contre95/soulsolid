@@ -110,8 +110,9 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 			skipExisting, _ := job.Metadata["skip_existing"].(bool)
 			overrideNoQueue, _ := job.Metadata["override_no_queue"].(bool)
 
-			// Skip tracks that already have lyrics if option is enabled
-			if skipExisting && track.HasLyrics {
+			// Skip tracks that already have lyrics if option is enabled.
+			// Skips instrumentals (has_lyrics=false) and tracks with existing lyrics content.
+			if skipExisting && (!track.HasLyrics || track.Metadata.Lyrics != "") {
 				job.Logger.Info("Track already has lyrics - skipping", "trackID", track.ID, "title", track.Title)
 				skipped++
 				processed++
@@ -151,9 +152,15 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 					job.Logger.Info("Added lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "green")
 				case LyricsQueued:
 					job.Logger.Info("Queued lyrics for track (differ from existing)", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "blue")
-				case LyricsSkipped:
+				case LyricsSkippedIdentical:
 					skipped++
-					job.Logger.Info("Skipped lyrics for track (identical to existing)", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "yellow")
+					job.Logger.Info("Skipped: track already has identical lyrics", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "yellow")
+				case LyricsSkippedNotFound:
+					skipped++
+					job.Logger.Info("Skipped: provider could not find lyrics", "trackID", track.ID, "title", track.Title, "provider", provider, "color", "yellow")
+				case LyricsSkippedInstrumental:
+					skipped++
+					job.Logger.Info("Skipped: track marked as instrumental", "trackID", track.ID, "title", track.Title, "color", "gray")
 				}
 			}
 			processed++
