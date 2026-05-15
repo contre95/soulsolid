@@ -2,7 +2,7 @@ name: Development Build
 on:
   pull_request:
     branches:
-      - development
+      - dev
     types: [closed]
 
 permissions:
