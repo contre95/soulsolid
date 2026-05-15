@@ -71,10 +71,11 @@ type Job struct {
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	Metadata   map[string]any
-	CancelFunc context.CancelFunc
-	Logger     *slog.Logger
+	// json:"-" because func and *slog.Logger are not JSON-serializable; Cancelled is internal runtime state
+	CancelFunc context.CancelFunc `json:"-"`
+	Logger     *slog.Logger       `json:"-"`
 	LogPath    string
-	Cancelled  bool // Track if job has been cancelled
+	Cancelled  bool `json:"-"`
 }
 
 // JobProgress represents a progress update for a job
