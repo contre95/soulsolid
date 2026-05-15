@@ -26,7 +26,7 @@ func NewFileOrganizer(libraryPath func() string, pathParser importing.PathParser
 	return &FileOrganizer{libraryPath: libraryPath, pathParser: pathParser, fat32Safe: fat32Safe}
 }
 
-// buildPath renders the track's library path and applies FAT32 sanitization when enabled.
+// buildPath renders the raw library path for a track without FAT32 sanitization.
 func (o *FileOrganizer) buildPath(track *music.Track) (string, error) {
 	renderedPath, err := o.pathParser.RenderPath(track)
 	if err != nil {
@@ -47,6 +47,7 @@ func (o *FileOrganizer) MoveTrackToLibrary(ctx context.Context, track *music.Tra
 		return "", err
 	}
 	if o.fat32Safe() {
+		newPath = SanitizeFAT32Path(newPath)
 		newPath = ResolvePathConflict(newPath)
 	}
 	if err := o.moveFile(track.Path, newPath); err != nil {
@@ -87,6 +88,7 @@ func (o *FileOrganizer) CopyTrackToLibrary(ctx context.Context, track *music.Tra
 		return "", err
 	}
 	if o.fat32Safe() {
+		newPath = SanitizeFAT32Path(newPath)
 		newPath = ResolvePathConflict(newPath)
 	}
 	if err := os.MkdirAll(filepath.Dir(newPath), 0755); err != nil {
