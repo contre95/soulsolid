@@ -788,8 +788,36 @@ func (s *Service) resolveRemoteTrack(ctx context.Context, _ music.PlaylistProvid
 			return t
 		}
 	}
+	// Fuzzy fallback: strip "feat." annotations and use a LIKE search so that
+	// "Get Lucky (Radio Edit - feat. X)" matches "Get Lucky (Radio Edit)" and vice versa.
+	if rt.Title != "" {
+		stripped := cleanTitle(rt.Title)
+		candidates, err := s.library.GetTracksFilteredPaginated(ctx, 20, 0, &music.TrackFilter{TextSearch: stripped})
+		if err == nil {
+			strippedLower := strings.ToLower(stripped)
+			for _, c := range candidates {
+				if strings.ToLower(cleanTitle(c.Title)) == strippedLower {
+					slog.Debug("resolveRemoteTrack: matched by fuzzy title", "remote", rt.Title, "local", c.Title)
+					return c
+				}
+			}
+		}
+	}
 	slog.Debug("resolveRemoteTrack: no local match", "title", rt.Title, "artist", rt.Artist, "path", rt.Path)
 	return nil
+}
+
+// cleanTitle removes featured-artist annotations from a track title so that
+// "Get Lucky (Radio Edit - feat. Pharrell Williams)" and "Get Lucky (Radio Edit)" compare equal.
+func cleanTitle(title string) string {
+	lower := strings.ToLower(title)
+	for _, sep := range []string{" - feat.", " (feat.", " feat."} {
+		if idx := strings.Index(lower, sep); idx >= 0 {
+			title = strings.TrimSpace(title[:idx])
+			lower = lower[:idx]
+		}
+	}
+	return title
 }
 
 // resolveLocalTrack maps a local music.Track to a RemoteTrack using path then metadata.
