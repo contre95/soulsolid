@@ -155,6 +155,14 @@ type PlaylistProvider interface {
 	FindTrackByMetadata(ctx context.Context, title, artist string) (*RemoteTrack, error)
 }
 
+// SyncSnapshotEntry records a single track's state at the time of the last sync.
+// RemoteTrackID is the stable ID on the provider; LocalTrackID is the local DB ID
+// (empty when the remote track had no local match at sync time).
+type SyncSnapshotEntry struct {
+	RemoteTrackID string
+	LocalTrackID  string
+}
+
 // PlaylistRepository defines the interface for playlist data access operations.
 type PlaylistRepository interface {
 	Create(ctx context.Context, playlist *Playlist) error
@@ -168,6 +176,8 @@ type PlaylistRepository interface {
 	GetTracksForPlaylist(ctx context.Context, playlistID string) ([]*Track, error)
 	SetProviderLink(ctx context.Context, playlistID, providerName, providerType, remoteID string) error
 	GetProviderLinks(ctx context.Context, playlistID string) ([]ProviderLink, error)
+	GetSyncSnapshot(ctx context.Context, playlistID, providerName string) ([]SyncSnapshotEntry, error)
+	SetSyncSnapshot(ctx context.Context, playlistID, providerName string, entries []SyncSnapshotEntry) error
 }
 
 // GeneratePlaylistID creates a UUID for a playlist.

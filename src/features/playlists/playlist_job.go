@@ -35,7 +35,7 @@ func (t *PlaylistJobTask) Execute(ctx context.Context, job *music.Job, progressU
 		if playlistID == "" {
 			return nil, fmt.Errorf("playlist_id is required for push")
 		}
-		pushed, unmatched, err := t.service.PushToProvider(ctx, playlistID, providerName)
+		pushed, unmatched, err := t.service.PushToProvider(ctx, playlistID, providerName, job.Logger)
 		if err != nil {
 			return nil, err
 		}
@@ -43,17 +43,15 @@ func (t *PlaylistJobTask) Execute(ctx context.Context, job *music.Job, progressU
 		if unmatched > 0 {
 			msg += fmt.Sprintf(" (%d could not be matched)", unmatched)
 		}
-		job.Logger.Info(msg)
 		progressUpdater(100, msg)
 		return map[string]any{"pushed": pushed, "unmatched": unmatched, "msg": msg}, nil
 
 	case "pull":
-		pulled, err := t.service.PullFromProvider(ctx, providerName)
+		pulled, err := t.service.PullFromProvider(ctx, providerName, job.Logger)
 		if err != nil {
 			return nil, err
 		}
 		msg := fmt.Sprintf("Pulled %d playlists from %s", len(pulled), providerName)
-		job.Logger.Info(msg)
 		progressUpdater(100, msg)
 		return map[string]any{"playlists": len(pulled), "msg": msg}, nil
 
@@ -61,22 +59,34 @@ func (t *PlaylistJobTask) Execute(ctx context.Context, job *music.Job, progressU
 		if playlistID == "" {
 			return nil, fmt.Errorf("playlist_id is required for sync")
 		}
-		result, err := t.service.SyncWithProvider(ctx, playlistID, providerName)
+		result, err := t.service.SyncWithProvider(ctx, playlistID, providerName, job.Logger)
 		if err != nil {
 			return nil, err
 		}
 		msg := fmt.Sprintf("Sync with %s: +%d local, +%d remote", providerName, result.TracksAdded, result.TracksPushed)
+		if result.TracksRemovedFromLocal+result.TracksRemovedFromRemote > 0 {
+			msg += fmt.Sprintf(", -%d local, -%d remote", result.TracksRemovedFromLocal, result.TracksRemovedFromRemote)
+		}
 		if result.TracksUnmatched > 0 {
 			msg += fmt.Sprintf(", %d unmatched", result.TracksUnmatched)
 		}
-		job.Logger.Info(msg)
 		progressUpdater(100, msg)
 		return map[string]any{
-			"tracksAdded":     result.TracksAdded,
-			"tracksPushed":    result.TracksPushed,
-			"tracksUnmatched": result.TracksUnmatched,
-			"msg":             msg,
+			"tracksAdded":           result.TracksAdded,
+			"tracksPushed":          result.TracksPushed,
+			"tracksUnmatched":       result.TracksUnmatched,
+			"tracksRemovedFromLocal":  result.TracksRemovedFromLocal,
+			"tracksRemovedFromRemote": result.TracksRemovedFromRemote,
+			"msg":                   msg,
 		}, nil
+
+	case "sync_all":
+		if err := t.service.AutoSyncAll(ctx, job.Logger); err != nil {
+			return nil, err
+		}
+		msg := "All playlists synced"
+		progressUpdater(100, msg)
+		return map[string]any{"msg": msg}, nil
 
 	default:
 		return nil, fmt.Errorf("unknown playlist job operation: %s", operation)

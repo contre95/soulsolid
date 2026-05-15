@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/music"
@@ -141,6 +142,18 @@ func main() {
 	jobService.RegisterHandler("playlist_push", jobs.NewBaseTaskHandler(playlistTask))
 	jobService.RegisterHandler("playlist_pull", jobs.NewBaseTaskHandler(playlistTask))
 	jobService.RegisterHandler("playlist_sync", jobs.NewBaseTaskHandler(playlistTask))
+	jobService.RegisterHandler("playlist_sync_all", jobs.NewBaseTaskHandler(playlistTask))
+
+	// Periodic playlist sync every 30 minutes.
+	go func() {
+		ticker := time.NewTicker(30 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			if _, err := playlistsService.StartAutoSyncAllJob(); err != nil {
+				slog.Warn("periodic playlist sync: failed to start job", "error", err)
+			}
+		}
+	}()
 
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {

@@ -23,6 +23,13 @@ func NewHandler(service *Service) *Handler {
 func (h *Handler) RenderPlaylistsSection(c *fiber.Ctx) error {
 	slog.Debug("RenderPlaylistsSection handler called")
 
+	// Kick off a background sync whenever the tab is opened.
+	go func() {
+		if _, err := h.service.StartAutoSyncAllJob(); err != nil {
+			slog.Debug("RenderPlaylistsSection: failed to start auto-sync job", "error", err)
+		}
+	}()
+
 	playlists, err := h.service.GetAllPlaylists(c.Context())
 	if err != nil {
 		slog.Error("Error loading playlists", "error", err)

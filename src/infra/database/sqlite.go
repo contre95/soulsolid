@@ -176,6 +176,15 @@ func createTables(db *sql.DB) error {
 			FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE
 		);
 
+		CREATE TABLE IF NOT EXISTS playlist_sync_snapshots (
+			playlist_id     TEXT NOT NULL,
+			provider_name   TEXT NOT NULL,
+			remote_track_id TEXT NOT NULL,
+			local_track_id  TEXT NOT NULL DEFAULT '',
+			PRIMARY KEY (playlist_id, provider_name, remote_track_id),
+			FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE
+		);
+
 		CREATE INDEX IF NOT EXISTS idx_track_artists_track ON track_artists(track_id);
 		CREATE INDEX IF NOT EXISTS idx_track_artists_artist ON track_artists(artist_id);
 		CREATE INDEX IF NOT EXISTS idx_album_artists_album ON album_artists(album_id);
@@ -2486,6 +2495,51 @@ func (d *SqliteLibrary) GetProviderLinks(ctx context.Context, playlistID string)
 		links = append(links, link)
 	}
 	return links, rows.Err()
+}
+
+// GetSyncSnapshot returns the snapshot written at the end of the last sync.
+func (d *SqliteLibrary) GetSyncSnapshot(ctx context.Context, playlistID, providerName string) ([]music.SyncSnapshotEntry, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT remote_track_id, local_track_id
+		FROM playlist_sync_snapshots
+		WHERE playlist_id = ? AND provider_name = ?
+	`, playlistID, providerName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var entries []music.SyncSnapshotEntry
+	for rows.Next() {
+		var e music.SyncSnapshotEntry
+		if err := rows.Scan(&e.RemoteTrackID, &e.LocalTrackID); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}
+
+// SetSyncSnapshot replaces the stored snapshot for a (playlist, provider) pair.
+func (d *SqliteLibrary) SetSyncSnapshot(ctx context.Context, playlistID, providerName string, entries []music.SyncSnapshotEntry) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `
+		DELETE FROM playlist_sync_snapshots WHERE playlist_id = ? AND provider_name = ?
+	`, playlistID, providerName); err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO playlist_sync_snapshots (playlist_id, provider_name, remote_track_id, local_track_id)
+			VALUES (?, ?, ?, ?)
+		`, playlistID, providerName, e.RemoteTrackID, e.LocalTrackID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 // BatchAddTracks adds multiple tracks to a playlist in a single transaction,

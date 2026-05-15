@@ -201,6 +201,9 @@ func (c *mediaBrowserClient) findTrackByPath(ctx context.Context, path string) (
 	if idx := strings.LastIndexByte(searchTerm, '.'); idx >= 0 {
 		searchTerm = searchTerm[:idx]
 	}
+	// Strip "feat." annotations: Jellyfin often stores the title without them, so
+	// searching the full filename including "feat. X" may return 0 results.
+	searchTerm = stripFeaturedArtists(searchTerm)
 
 	// Limit to 10: the filename search is specific enough that the right track
 	// should rank first. Without a limit Emby/Jellyfin may return thousands of
@@ -241,9 +244,27 @@ func (c *mediaBrowserClient) findTrackByPath(ctx context.Context, path string) (
 	return nil, nil
 }
 
+// stripFeaturedArtists removes " - feat. X", " (feat. X", and " feat. X" suffixes
+// from a track title. Media servers often store featured artists in the Artists
+// field rather than embedding them in the title, so "Get Lucky (Radio Edit - feat.
+// Pharrell Williams)" and "Get Lucky (Radio Edit)" must match each other.
+func stripFeaturedArtists(title string) string {
+	lower := strings.ToLower(title)
+	for _, sep := range []string{" - feat.", " (feat.", " feat."} {
+		if idx := strings.Index(lower, sep); idx >= 0 {
+			title = strings.TrimSpace(title[:idx])
+			lower = lower[:idx]
+		}
+	}
+	return title
+}
+
 func (c *mediaBrowserClient) findTrackByMetadata(ctx context.Context, title, artist string) (*music.RemoteTrack, error) {
+	// Strip "feat." annotations before searching: media servers often store featured
+	// artists separately, so a long title may not match any item in the index.
+	searchTitle := stripFeaturedArtists(title)
 	apiPath := fmt.Sprintf("/Items?userId=%s&IncludeItemTypes=Audio&Recursive=true&searchTerm=%s&Fields=Path,Artists,AlbumArtist,Album&Limit=25",
-		url.QueryEscape(c.userID), url.QueryEscape(title))
+		url.QueryEscape(c.userID), url.QueryEscape(searchTitle))
 	resp, err := c.doRequest(ctx, http.MethodGet, apiPath, nil)
 	if err != nil {
 		return nil, fmt.Errorf("find track by metadata request: %w", err)
@@ -258,16 +279,18 @@ func (c *mediaBrowserClient) findTrackByMetadata(ctx context.Context, title, art
 		return nil, fmt.Errorf("decode find track by metadata response: %w", err)
 	}
 
-	titleLower := strings.ToLower(strings.TrimSpace(title))
+	// Normalize both sides before comparing so that "Get Lucky (Radio Edit - feat. X)"
+	// and "Get Lucky (Radio Edit)" are treated as the same title.
+	titleLower := strings.ToLower(strings.TrimSpace(stripFeaturedArtists(title)))
 	artistLower := strings.ToLower(strings.TrimSpace(artist))
 	for _, item := range result.Items {
 		itemArtist := item.AlbumArtist
 		if itemArtist == "" && len(item.Artists) > 0 {
 			itemArtist = item.Artists[0]
 		}
-		itemTitleLower := strings.ToLower(strings.TrimSpace(item.Name))
-		// Use bidirectional Contains rather than exact equality: handles "Artist feat. X"
-		// and other minor tagging differences between SoulSolid and the media server.
+		itemTitleLower := strings.ToLower(strings.TrimSpace(stripFeaturedArtists(item.Name)))
+		// Bidirectional Contains handles minor tagging differences between SoulSolid
+		// and the media server (e.g. one side has a version suffix the other lacks).
 		artistMatch := strings.Contains(strings.ToLower(itemArtist), artistLower) ||
 			strings.Contains(artistLower, strings.ToLower(itemArtist))
 		titleMatch := strings.Contains(itemTitleLower, titleLower) ||

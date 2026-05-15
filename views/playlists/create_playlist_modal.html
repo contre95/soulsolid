@@ -19,7 +19,7 @@
 
     <!-- Modal Body -->
     <div class="p-4 bg-gray-50 dark:bg-gray-900">
-      <form hx-post="/playlists" hx-target="#toast-container" hx-swap="beforeend" class="space-y-3" hx-on:htmx:after-request="if (event.detail.successful) { document.getElementById('create-playlist-modal')._closeModal(); htmx.trigger('#contenido', 'refreshPlaylists'); }">
+      <form hx-post="/playlists" hx-target="#toast-container" hx-swap="beforeend" class="space-y-3" hx-on:htmx:after-request="if (event.detail.successful) { const m = document.getElementById('create-playlist-modal'); if (m) m._closeModal(); htmx.trigger('#contenido', 'refreshPlaylists'); }">
         <div>
           <label for="modal-playlist-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
           <input type="text" id="modal-playlist-name" name="name" required

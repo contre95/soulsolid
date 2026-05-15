@@ -170,7 +170,8 @@
          <div class="group flex items-center border-b border-slate-200/50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
            <div class="p-2 md:p-1 w-10 text-center text-slate-500 dark:text-slate-400">{{add $index 1}}</div>
            <div class="p-2 md:p-1 flex-1 flex items-center gap-3">
-             <div class="flex flex-col w-full justify-center">
+             <img src="/ui/tag/edit/{{.ID}}/artwork" class="w-10 h-10 rounded object-cover flex-shrink-0" onerror="this.src='/img/album.svg'" alt="Album art">
+             <div class="flex flex-col min-w-0 justify-center">
                <div class="font-medium text-slate-800 dark:text-white overflow-hidden whitespace-nowrap" style="text-overflow: ellipsis;">
                  {{.Title}}
                  {{if .TitleVersion}} ({{.TitleVersion}}){{end}}
