@@ -83,6 +83,18 @@ func apiDelete(path string) (int, error) {
 	return resp.StatusCode, nil
 }
 
+func apiPutForm(path string, data url.Values) ([]byte, int, error) {
+	req, _ := http.NewRequest(http.MethodPut, baseURL+path, strings.NewReader(data.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	return body, resp.StatusCode, nil
+}
+
 // --- Result helpers ---
 
 func jsonResult(data []byte) *mcp.CallToolResult {
@@ -204,6 +216,66 @@ func registerTools(s *server.MCPServer) {
 		mcp.WithString("artist_id", mcp.Required(), mcp.Description("External artist ID (from search_downloads results)")),
 		mcp.WithString("downloader", mcp.Required(), mcp.Description("Downloader plugin name (e.g. 'deezer')")),
 	), downloadArtist)
+
+	s.AddTool(mcp.NewTool("create_playlist",
+		mcp.WithDescription("Create a new empty playlist"),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Playlist name")),
+		mcp.WithString("description", mcp.Description("Optional description")),
+	), createPlaylist)
+
+	s.AddTool(mcp.NewTool("update_playlist",
+		mcp.WithDescription("Rename or update the description of a playlist"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Playlist UUID")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("New playlist name")),
+		mcp.WithString("description", mcp.Description("New description")),
+	), updatePlaylist)
+
+	s.AddTool(mcp.NewTool("delete_playlist",
+		mcp.WithDescription("Permanently delete a playlist (does not delete the tracks themselves)"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Playlist UUID")),
+	), deletePlaylist)
+
+	s.AddTool(mcp.NewTool("cancel_job",
+		mcp.WithDescription("Cancel a running or pending background job"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Job ID")),
+	), cancelJob)
+
+	s.AddTool(mcp.NewTool("delete_track",
+		mcp.WithDescription("Permanently delete a track from the library and remove its file from disk"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Track UUID")),
+	), deleteTrack)
+
+	s.AddTool(mcp.NewTool("delete_album",
+		mcp.WithDescription("Permanently delete an album and all its tracks from the library"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Album UUID")),
+	), deleteAlbum)
+
+	s.AddTool(mcp.NewTool("delete_artist",
+		mcp.WithDescription("Permanently delete an artist and all their tracks from the library"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Artist UUID")),
+	), deleteArtist)
+
+	s.AddTool(mcp.NewTool("get_track_lyrics",
+		mcp.WithDescription("Get the lyrics currently embedded in a track's metadata"),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Track UUID")),
+	), getTrackLyrics)
+
+	s.AddTool(mcp.NewTool("fetch_lyrics",
+		mcp.WithDescription("Fetch lyrics for a track from an external provider (e.g. lrclib). Returns the lyrics text without saving — use to preview before embedding."),
+		mcp.WithString("track_id", mcp.Required(), mcp.Description("Track UUID")),
+		mcp.WithString("provider", mcp.Required(), mcp.Description("Lyrics provider name (e.g. 'lrclib')")),
+	), fetchLyrics)
+
+	s.AddTool(mcp.NewTool("import_path",
+		mcp.WithDescription("Trigger an import job for a directory on the server filesystem. Use list_jobs / get_job to track progress."),
+		mcp.WithString("path", mcp.Required(), mcp.Description("Absolute directory path on the server to import")),
+	), importPath)
+
+	s.AddTool(mcp.NewTool("resolve_queue_item",
+		mcp.WithDescription("Resolve an import queue item. Actions: 'import' (add to library), 'replace' (replace existing), 'delete' (remove the file), 'skip' (dismiss)."),
+		mcp.WithString("id", mcp.Required(), mcp.Description("Queue item ID (from list_queue_items)")),
+		mcp.WithString("action", mcp.Required(), mcp.Description("One of: import, replace, delete, skip")),
+	), resolveQueueItem)
 
 }
 
@@ -400,5 +472,137 @@ func downloadArtist(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolRe
 		return errResult(strings.TrimSpace(string(body))), nil
 	}
 	return jsonResult(body), nil
+}
+
+func createPlaylist(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	args := req.Params.Arguments
+	data := url.Values{
+		"name":        {strArg(args, "name")},
+		"description": {strArg(args, "description")},
+	}
+	body, status, err := apiPostForm("/playlists/", data)
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	if status >= 400 {
+		return errResult(strings.TrimSpace(string(body))), nil
+	}
+	return mcp.NewToolResultText("playlist created successfully"), nil
+}
+
+func updatePlaylist(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	args := req.Params.Arguments
+	data := url.Values{
+		"name":        {strArg(args, "name")},
+		"description": {strArg(args, "description")},
+	}
+	body, status, err := apiPutForm("/playlists/"+strArg(args, "id"), data)
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	if status >= 400 {
+		return errResult(strings.TrimSpace(string(body))), nil
+	}
+	return mcp.NewToolResultText("playlist updated successfully"), nil
+}
+
+func deletePlaylist(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	status, err := apiDelete("/playlists/" + strArg(req.Params.Arguments, "id"))
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	if status >= 400 {
+		return errResult(fmt.Sprintf("HTTP %d", status)), nil
+	}
+	return mcp.NewToolResultText("playlist deleted successfully"), nil
+}
+
+func cancelJob(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	_, status, err := apiPostJSON("/jobs/"+strArg(req.Params.Arguments, "id")+"/cancel", map[string]any{})
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	if status >= 400 {
+		return errResult(fmt.Sprintf("HTTP %d", status)), nil
+	}
+	return mcp.NewToolResultText("job cancelled"), nil
+}
+
+func deleteTrack(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	status, err := apiDelete("/library/tracks/" + strArg(req.Params.Arguments, "id"))
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	if status >= 400 {
+		return errResult(fmt.Sprintf("HTTP %d", status)), nil
+	}
+	return mcp.NewToolResultText("track deleted successfully"), nil
+}
+
+func deleteAlbum(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	status, err := apiDelete("/library/albums/" + strArg(req.Params.Arguments, "id"))
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	if status >= 400 {
+		return errResult(fmt.Sprintf("HTTP %d", status)), nil
+	}
+	return mcp.NewToolResultText("album deleted successfully"), nil
+}
+
+func deleteArtist(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	status, err := apiDelete("/library/artists/" + strArg(req.Params.Arguments, "id"))
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	if status >= 400 {
+		return errResult(fmt.Sprintf("HTTP %d", status)), nil
+	}
+	return mcp.NewToolResultText("artist deleted successfully"), nil
+}
+
+func getTrackLyrics(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	body, err := apiGet("/library/tracks/" + strArg(req.Params.Arguments, "id") + "/lyrics")
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	return mcp.NewToolResultText(string(body)), nil
+}
+
+func fetchLyrics(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	args := req.Params.Arguments
+	path := fmt.Sprintf("/ui/tag/edit/%s/lyrics/text/%s",
+		url.PathEscape(strArg(args, "track_id")),
+		url.PathEscape(strArg(args, "provider")))
+	body, err := apiGet(path)
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	return mcp.NewToolResultText(string(body)), nil
+}
+
+func importPath(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	payload := map[string]any{"directoryPath": strArg(req.Params.Arguments, "path")}
+	body, status, err := apiPostJSON("/import/directory", payload)
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	if status >= 400 {
+		return errResult(strings.TrimSpace(string(body))), nil
+	}
+	return mcp.NewToolResultText("import job started"), nil
+}
+
+func resolveQueueItem(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	args := req.Params.Arguments
+	path := fmt.Sprintf("/import/queue/%s/%s", strArg(args, "id"), strArg(args, "action"))
+	_, status, err := apiPostJSON(path, map[string]any{})
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	if status >= 400 {
+		return errResult(fmt.Sprintf("HTTP %d", status)), nil
+	}
+	return mcp.NewToolResultText("queue item resolved"), nil
 }
 
