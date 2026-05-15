@@ -284,18 +284,34 @@ func (c *mediaBrowserClient) findTrackByMetadata(ctx context.Context, title, art
 	titleLower := strings.ToLower(strings.TrimSpace(stripFeaturedArtists(title)))
 	artistLower := strings.ToLower(strings.TrimSpace(artist))
 	for _, item := range result.Items {
-		itemArtist := item.AlbumArtist
-		if itemArtist == "" && len(item.Artists) > 0 {
-			itemArtist = item.Artists[0]
-		}
 		itemTitleLower := strings.ToLower(strings.TrimSpace(stripFeaturedArtists(item.Name)))
 		// Bidirectional Contains handles minor tagging differences between SoulSolid
 		// and the media server (e.g. one side has a version suffix the other lacks).
-		artistMatch := strings.Contains(strings.ToLower(itemArtist), artistLower) ||
-			strings.Contains(artistLower, strings.ToLower(itemArtist))
 		titleMatch := strings.Contains(itemTitleLower, titleLower) ||
 			strings.Contains(titleLower, itemTitleLower)
-		if artistMatch && titleMatch {
+		if !titleMatch {
+			continue
+		}
+		// Match the search artist against ALL artists the media server knows for this
+		// item — AlbumArtist and every entry in the Artists array. This is necessary
+		// when AlbumArtist ("Nile Rodgers") differs from the track Artist ("Daft Punk").
+		allItemArtists := append([]string{item.AlbumArtist}, item.Artists...)
+		artistMatch := false
+		for _, a := range allItemArtists {
+			if a == "" {
+				continue
+			}
+			aLow := strings.ToLower(a)
+			if strings.Contains(aLow, artistLower) || strings.Contains(artistLower, aLow) {
+				artistMatch = true
+				break
+			}
+		}
+		if artistMatch {
+			itemArtist := item.AlbumArtist
+			if itemArtist == "" && len(item.Artists) > 0 {
+				itemArtist = item.Artists[0]
+			}
 			return &music.RemoteTrack{
 				RemoteID: item.Id,
 				Path:     item.Path,

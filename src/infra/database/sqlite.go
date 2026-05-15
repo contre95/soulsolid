@@ -1954,24 +1954,35 @@ func (d *SqliteLibrary) FindOrCreateAlbum(ctx context.Context, artist *music.Art
 	return newAlbum, nil
 }
 
-// FindTrackByMetadata finds a track by matching title, artist name, and album title
+// FindTrackByMetadata finds a track by matching title, artist name, and album title.
+// The artist is checked against both track artists and album artists: for tracks like
+// "Get Lucky" where AlbumArtist ("Nile Rodgers") differs from Artist ("Daft Punk"),
+// the caller may receive either name depending on the remote provider.
 func (d *SqliteLibrary) FindTrackByMetadata(ctx context.Context, title, artistName, albumTitle string) (*music.Track, error) {
-	// Query to find tracks with matching metadata
 	row := d.db.QueryRowContext(ctx, `
-		SELECT t.id, t.path, t.title, t.title_version, t.duration, t.track_number, t.disc_number,
+		SELECT DISTINCT t.id, t.path, t.title, t.title_version, t.duration, t.track_number, t.disc_number,
 			   t.isrc, t.bitrate, t.format, t.sample_rate, t.bit_depth, t.channels,
 			   t.explicit_content, t.preview_url, t.composer, t.genre, t.year,
 			   t.original_year, t.lyrics, t.explicit_lyrics, t.bpm, t.gain, t.source, t.source_url, t.added_date, t.modified_date
 		FROM tracks t
 		JOIN track_albums ta ON t.id = ta.track_id
 		JOIN albums a ON ta.album_id = a.id
-		JOIN album_artists aa ON a.id = aa.album_id
-		JOIN artists art ON aa.artist_id = art.id
 		WHERE LOWER(t.title) = LOWER(?)
-		AND LOWER(art.name) = LOWER(?)
 		AND LOWER(a.title) = LOWER(?)
+		AND (
+			EXISTS (
+				SELECT 1 FROM track_artists ta2
+				JOIN artists ar2 ON ta2.artist_id = ar2.id
+				WHERE ta2.track_id = t.id AND LOWER(ar2.name) = LOWER(?)
+			)
+			OR EXISTS (
+				SELECT 1 FROM album_artists aa2
+				JOIN artists ar2 ON aa2.artist_id = ar2.id
+				WHERE aa2.album_id = a.id AND LOWER(ar2.name) = LOWER(?)
+			)
+		)
 		LIMIT 1
-	`, title, artistName, albumTitle)
+	`, title, albumTitle, artistName, artistName)
 
 	track := &music.Track{}
 	var addedDateStr, modifiedDateStr string
