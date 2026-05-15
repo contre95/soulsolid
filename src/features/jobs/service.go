@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"text/template"
 	"time"
 
@@ -426,11 +427,13 @@ func (s *Service) executeWebhookCommand(command string, job *music.Job) {
 	// Use shell to properly handle quoted strings and complex commands
 	cmd := exec.Command("/bin/sh", "-c", command)
 	cmd.Env = os.Environ()
+	// Put the shell and all its children in a new process group so the timeout
+	// kill reaches the entire tree and no grandchildren are orphaned to PID 1.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	// Set timeout
 	timer := time.AfterFunc(30*time.Second, func() {
 		if cmd.Process != nil {
-			cmd.Process.Kill()
+			syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		}
 	})
 	defer timer.Stop()
