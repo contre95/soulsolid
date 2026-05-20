@@ -299,9 +299,9 @@ func (h *Handler) ExportM3U(c *fiber.Ctx) error {
 	m3uContent := builder.String()
 	filename := fmt.Sprintf("%s.m3u", playlist.Name)
 
-	// Set headers for inline display in new tab
-	c.Set("Content-Type", "text/plain")
-	c.Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
-
-	return c.SendString(m3uContent)
+	return respond.Resource(c, "audio/x-mpegurl", fmt.Sprintf("%s/playlists/%s/export", c.BaseURL(), playlistID), func() error {
+		c.Set("Content-Type", "text/plain")
+		c.Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
+		return c.SendString(m3uContent)
+	})
 }

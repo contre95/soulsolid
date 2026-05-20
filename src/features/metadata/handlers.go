@@ -162,21 +162,20 @@ func (h *Handler) getProviderColors(providerName string) map[string]string {
 func (h *Handler) ServeArtwork(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	if trackID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+		return respond.Err(c, fiber.StatusBadRequest, "Track ID is required")
 	}
 
 	data, mimeType, err := h.service.GetTrackArtwork(c.Context(), trackID)
-	if err != nil {
+	if err != nil || len(data) == 0 {
 		slog.Warn("Failed to read artwork", "trackId", trackID, "error", err)
-		return c.Status(fiber.StatusNotFound).SendString("Artwork not found")
-	}
-	if len(data) == 0 {
-		return c.Status(fiber.StatusNotFound).SendString("No artwork embedded in file")
+		return respond.Err(c, fiber.StatusNotFound, "Artwork not found")
 	}
 
-	c.Set("Content-Type", mimeType)
-	c.Set("Cache-Control", "public, max-age=3600")
-	return c.Send(data)
+	return respond.Resource(c, mimeType, fmt.Sprintf("%s/tag/%s/artwork", c.BaseURL(), trackID), func() error {
+		c.Set("Content-Type", mimeType)
+		c.Set("Cache-Control", "public, max-age=3600")
+		return c.Send(data)
+	})
 }
 
 // FetchFromProvider handles fetching metadata from any provider and rendering the form

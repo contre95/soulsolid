@@ -59,3 +59,12 @@ func Text(c *fiber.Ctx, key string, value any, htmxText ...string) error {
 	}
 	return c.JSON(fiber.Map{"key": key, "value": value})
 }
+
+// Resource serves binary or file content for HTMX requests or returns {"type": mimeType, "url": url} JSON otherwise.
+// The serve func is only called for HTMX requests and is responsible for setting headers and writing the body.
+func Resource(c *fiber.Ctx, mimeType, url string, serve func() error) error {
+	if c.Get("HX-Request") != "true" {
+		return c.JSON(fiber.Map{"type": mimeType, "url": url})
+	}
+	return serve()
+}

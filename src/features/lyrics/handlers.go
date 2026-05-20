@@ -86,29 +86,30 @@ func (h *Handler) RenderLyricsButtons(c *fiber.Ctx) error {
 	})
 }
 
-// GetLyricsText returns plain lyrics text for HTMX to set in textarea
+// GetLyricsText returns plain lyrics text for HTMX to set in textarea, or JSON for API clients.
 func (h *Handler) GetLyricsText(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	providerName := c.Params("provider")
 
 	if trackID == "" || providerName == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Track ID and provider name are required")
+		return respond.Err(c, fiber.StatusBadRequest, "Track ID and provider name are required")
 	}
 
-	// Fetch lyrics
 	lyrics, err := h.service.SearchLyrics(c.Context(), trackID, providerName)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			return c.Status(fiber.StatusNotFound).SendString("No lyrics found for this track")
+			return respond.Err(c, fiber.StatusNotFound, "No lyrics found for this track")
 		}
 		slog.Error("Failed to fetch lyrics", "error", err, "trackId", trackID, "provider", providerName)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to fetch lyrics")
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to fetch lyrics")
 	}
 
 	slog.Info("Lyrics fetched successfully", "trackId", trackID, "provider", providerName, "lyricsLength", len(lyrics))
 
-	// Return plain lyrics text for HTMX to set in textarea
-	return c.SendString(lyrics)
+	if c.Get("HX-Request") == "true" {
+		return c.SendString(lyrics)
+	}
+	return c.JSON(fiber.Map{"track_id": trackID, "lyrics": lyrics})
 }
 
 // GetTrackLyrics returns the lyrics of a track in plain text.

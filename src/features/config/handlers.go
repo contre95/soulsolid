@@ -153,17 +153,12 @@ func (h *Handler) GetConfigForm(c *fiber.Ctx) error {
 
 // GetConfig returns the current configuration in the requested format.
 func (h *Handler) GetConfig(c *fiber.Ctx) error {
-	// Supporting only one format for now
-	slog.Debug("GetConfig handler called", "format", c.Query("fmt", "yaml"))
-	format := c.Query("fmt", "yaml")
-
-	switch format {
-	case "yaml":
-		c.Set("Content-Type", "text/yaml")
-		return c.SendString(h.configManager.GetYAML())
-	default:
-		return c.Status(fiber.StatusBadRequest).SendString("Invalid format. 'yaml' only availabe for now")
+	slog.Debug("GetConfig handler called")
+	if c.Get("HX-Request") != "true" {
+		return c.JSON(h.configManager.Get())
 	}
+	c.Set("Content-Type", "text/yaml")
+	return c.SendString(h.configManager.GetYAML())
 }
 
 // DownloadDatabase serves the database file for download.
@@ -174,16 +169,13 @@ func (h *Handler) DownloadDatabase(c *fiber.Ctx) error {
 	dbPath := config.Database.Path
 
 	if dbPath == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Database path not configured")
+		return respond.Err(c, fiber.StatusBadRequest, "Database path not configured")
 	}
 
-	// Extract filename from path for download
 	filename := filepath.Base(dbPath)
-
-	// Set headers for file download
-	c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
-	c.Set("Content-Type", "application/octet-stream")
-
-	// Send the file
-	return c.SendFile(dbPath)
+	return respond.Resource(c, "application/octet-stream", fmt.Sprintf("%s/config/database/download", c.BaseURL()), func() error {
+		c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+		c.Set("Content-Type", "application/octet-stream")
+		return c.SendFile(dbPath)
+	})
 }
