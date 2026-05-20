@@ -26,14 +26,22 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 
 	trackID := c.Params("trackId")
 	if trackID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+		return respond.Err(c, fiber.StatusBadRequest, "Track ID is required")
 	}
 
-	// Get track data for editing
-	track, err := h.service.GetTrackFileTags(c.Context(), trackID)
+	var track *music.Track
+	var err error
+	if c.Query("source", "file") == "db" {
+		track, err = h.service.libraryRepo.GetTrack(c.Context(), trackID)
+		if err == nil && track == nil {
+			return respond.Err(c, fiber.StatusNotFound, "Track not found")
+		}
+	} else {
+		track, err = h.service.GetTrackFileTags(c.Context(), trackID)
+	}
 	if err != nil {
 		slog.Error("Failed to get track for editing", "error", err, "trackId", trackID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to load track data")
 	}
 
 	// Fetch all artists and albums for dropdowns
