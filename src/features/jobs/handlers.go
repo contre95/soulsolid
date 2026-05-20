@@ -41,10 +41,7 @@ func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
 	}
 
 	c.Set("HX-Trigger", "refreshActiveJobsBadge")
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{"Msg": fmt.Sprintf("Started %s job", jobType)})
-	}
-	return c.JSON(fiber.Map{"job_id": jobID})
+	return respond.Job(c, jobID, fmt.Sprintf("Started %s job", jobType))
 }
 
 func (h *Handler) HandleJobStatus(c *fiber.Ctx) error {
@@ -120,7 +117,7 @@ func (h *Handler) HandleJobProgress(c *fiber.Ctx) error {
 		c.Set("HX-Trigger", "done")
 	}
 
-	return c.Render("jobs/job_card_progress_bar", fiber.Map{
+	return respond.Partial(c, "jobs/job_card_progress_bar", fiber.Map{
 		"ID":        job.ID,
 		"Name":      job.Name,
 		"Type":      job.Type,
@@ -164,7 +161,7 @@ func (h *Handler) HandleCancelJob(c *fiber.Ctx) error {
 		return c.Status(404).SendString("Job not found")
 	}
 
-	return c.Render("jobs/job_card", fiber.Map{
+	return respond.Partial(c, "jobs/job_card", fiber.Map{
 		"ID":        job.ID,
 		"Name":      job.Name,
 		"Type":      job.Type,
@@ -206,7 +203,7 @@ func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
 		return activeJobs[i].CreatedAt.After(activeJobs[j].CreatedAt)
 	})
 
-	return c.Render("jobs/active_list", fiber.Map{
+	return respond.Partial(c, "jobs/active_list", fiber.Map{
 		"Jobs": activeJobs,
 	})
 }
@@ -231,7 +228,7 @@ func (h *Handler) HandleFilteredJobsList(c *fiber.Ctx) error {
 		return jobs[i].CreatedAt.After(jobs[j].CreatedAt)
 	})
 
-	return c.Render("jobs/job_list", fiber.Map{
+	return respond.Partial(c, "jobs/job_list", fiber.Map{
 		"Jobs": jobs,
 	})
 }
@@ -244,7 +241,7 @@ func (h *Handler) HandleLatestJobs(c *fiber.Ctx) error {
 	if len(jobs) > 5 {
 		jobs = jobs[:5]
 	}
-	return c.Render("cards/latest_jobs", fiber.Map{
+	return respond.Partial(c, "cards/latest_jobs", fiber.Map{
 		"Jobs": jobs,
 	})
 }
@@ -262,8 +259,9 @@ func (h *Handler) HandleJobsCount(c *fiber.Ctx) error {
 		}
 	}
 
-	if count == 0 {
-		return c.SendString("")
+	formatted := ""
+	if count > 0 {
+		formatted = fmt.Sprintf("(%d)", count)
 	}
-	return c.SendString(fmt.Sprintf("(%d)", count))
+	return respond.Text(c, "jobs_count", count, formatted)
 }

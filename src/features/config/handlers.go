@@ -146,7 +146,7 @@ func (h *Handler) GetConfigForm(c *fiber.Ctx) error {
 	slog.Debug("GetSettingsForm handler called")
 	config := h.configManager.Get()
 
-	return c.Render("config/config_form", fiber.Map{
+	return respond.Partial(c, "config/config_form", fiber.Map{
 		"Config": config,
 	})
 }

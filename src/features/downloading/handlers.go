@@ -61,11 +61,10 @@ func (h *Handler) SearchAlbums(c *fiber.Ctx) error {
 		slog.Error("Failed to search albums", "error", err)
 		return respond.Err(c, fiber.StatusInternalServerError, "Failed to search albums")
 	}
-
-	if c.Get("HX-Request") == "true" {
-		return h.renderAlbumResults(c, albums, req.Downloader)
-	}
-	return c.JSON(fiber.Map{"albums": albums})
+	return respond.Partial(c, "downloading/album_results", fiber.Map{
+		"Albums":     albums,
+		"Downloader": req.Downloader,
+	})
 }
 
 // SearchTracks handles track search requests
@@ -86,10 +85,14 @@ func (h *Handler) SearchTracks(c *fiber.Ctx) error {
 		return respond.Err(c, fiber.StatusInternalServerError, "Failed to search tracks")
 	}
 
-	if c.Get("HX-Request") == "true" {
-		return h.renderTrackResults(c, tracks, req.Downloader)
+	trackPtrs := make([]*music.Track, len(tracks))
+	for i := range tracks {
+		trackPtrs[i] = &tracks[i]
 	}
-	return c.JSON(fiber.Map{"tracks": tracks})
+	return respond.Partial(c, "downloading/spotify_track_results", fiber.Map{
+		"Tracks":     trackPtrs,
+		"Downloader": req.Downloader,
+	})
 }
 
 // Search handles general search requests
@@ -107,8 +110,6 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 		req.Limit = 20
 	}
 
-	htmx := c.Get("HX-Request") == "true"
-
 	switch req.Type {
 	case "album":
 		albums, err := h.service.SearchAlbums(req.Downloader, req.Query, req.Limit)
@@ -116,10 +117,10 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 			slog.Error("Failed to search albums", "error", err)
 			return respond.Err(c, fiber.StatusInternalServerError, "Failed to search albums")
 		}
-		if htmx {
-			return h.renderAlbumResults(c, albums, req.Downloader)
-		}
-		return c.JSON(fiber.Map{"albums": albums})
+		return respond.Partial(c, "downloading/album_results", fiber.Map{
+			"Albums":     albums,
+			"Downloader": req.Downloader,
+		})
 
 	case "track":
 		tracks, err := h.service.SearchTracks(req.Downloader, req.Query, req.Limit)
@@ -127,10 +128,14 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 			slog.Error("Failed to search tracks", "error", err)
 			return respond.Err(c, fiber.StatusInternalServerError, "Failed to search tracks")
 		}
-		if htmx {
-			return h.renderTrackResults(c, tracks, req.Downloader)
+		trackPtrs := make([]*music.Track, len(tracks))
+		for i := range tracks {
+			trackPtrs[i] = &tracks[i]
 		}
-		return c.JSON(fiber.Map{"tracks": tracks})
+		return respond.Partial(c, "downloading/spotify_track_results", fiber.Map{
+			"Tracks":     trackPtrs,
+			"Downloader": req.Downloader,
+		})
 
 	case "artist":
 		artists, err := h.service.SearchArtists(req.Downloader, req.Query, req.Limit)
@@ -138,10 +143,10 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 			slog.Error("Failed to search artists", "error", err)
 			return respond.Err(c, fiber.StatusInternalServerError, "Failed to search artists")
 		}
-		if htmx {
-			return h.renderArtistResults(c, artists, req.Downloader)
-		}
-		return c.JSON(fiber.Map{"artists": artists})
+		return respond.Partial(c, "downloading/artist_results", fiber.Map{
+			"Artists":    artists,
+			"Downloader": req.Downloader,
+		})
 
 	case "link":
 		result, err := h.service.SearchLinks(req.Downloader, req.Query, req.Limit)
@@ -149,73 +154,33 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 			slog.Error("Failed to search links", "error", err)
 			return respond.Err(c, fiber.StatusInternalServerError, "Failed to search links")
 		}
-		if htmx {
-			switch result.Type {
-			case "artist":
-				return h.renderArtistLinkResults(c, result.Artist, result.Albums, req.Downloader)
-			default:
-				return h.renderLinkResults(c, result.Tracks, req.Downloader)
-			}
+		if c.Get("HX-Request") != "true" {
+			return c.JSON(result)
 		}
-		return c.JSON(result)
+		if result.Type == "artist" {
+			return c.Render("downloading/artist_link_results", fiber.Map{
+				"Artist":     result.Artist,
+				"Albums":     result.Albums,
+				"Downloader": req.Downloader,
+			})
+		}
+		playlistName := ""
+		if len(result.Tracks) > 0 && result.Tracks[0].Attributes != nil {
+			playlistName = result.Tracks[0].Attributes["playlist_name"]
+		}
+		trackPtrs := make([]*music.Track, len(result.Tracks))
+		for i := range result.Tracks {
+			trackPtrs[i] = &result.Tracks[i]
+		}
+		return c.Render("downloading/link_results", fiber.Map{
+			"Tracks":       trackPtrs,
+			"Downloader":   req.Downloader,
+			"PlaylistName": playlistName,
+		})
 
 	default:
 		return respond.Err(c, fiber.StatusBadRequest, "Invalid search type")
 	}
-}
-
-// renderAlbumResults renders album search results as HTML for HTMX
-func (h *Handler) renderAlbumResults(c *fiber.Ctx, albums []music.Album, downloader string) error {
-	return c.Render("downloading/album_results", fiber.Map{
-		"Albums":     albums,
-		"Downloader": downloader,
-	})
-}
-
-// renderTrackResults renders track search results as HTML for HTMX
-func (h *Handler) renderTrackResults(c *fiber.Ctx, tracks []music.Track, downloader string) error {
-	trackPtrs := make([]*music.Track, len(tracks))
-	for i := range tracks {
-		trackPtrs[i] = &tracks[i]
-	}
-	return c.Render("downloading/spotify_track_results", fiber.Map{
-		"Tracks":     trackPtrs,
-		"Downloader": downloader,
-	})
-}
-
-// renderLinkResults renders link search results as HTML for HTMX
-func (h *Handler) renderLinkResults(c *fiber.Ctx, tracks []music.Track, downloader string) error {
-	playlistName := ""
-	if len(tracks) > 0 && tracks[0].Attributes != nil {
-		playlistName = tracks[0].Attributes["playlist_name"]
-	}
-	trackPtrs := make([]*music.Track, len(tracks))
-	for i := range tracks {
-		trackPtrs[i] = &tracks[i]
-	}
-	return c.Render("downloading/link_results", fiber.Map{
-		"Tracks":       trackPtrs,
-		"Downloader":   downloader,
-		"PlaylistName": playlistName,
-	})
-}
-
-// renderArtistLinkResults renders artist link results (artist info + albums) as HTML for HTMX
-func (h *Handler) renderArtistLinkResults(c *fiber.Ctx, artist *music.Artist, albums []music.Album, downloader string) error {
-	return c.Render("downloading/artist_link_results", fiber.Map{
-		"Artist":     artist,
-		"Albums":     albums,
-		"Downloader": downloader,
-	})
-}
-
-// renderArtistResults renders artist search results as HTML for HTMX
-func (h *Handler) renderArtistResults(c *fiber.Ctx, artists []music.Artist, downloader string) error {
-	return c.Render("downloading/artist_results", fiber.Map{
-		"Artists":    artists,
-		"Downloader": downloader,
-	})
 }
 
 // DownloadTrackRequest represents a download track request
@@ -259,10 +224,7 @@ func (h *Handler) DownloadTrack(c *fiber.Ctx) error {
 		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start track download")
 	}
 
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{"Msg": "Track download started"})
-	}
-	return c.JSON(fiber.Map{"jobId": jobID, "message": "Download started"})
+	return respond.Job(c, jobID, "Track download started")
 }
 
 // DownloadAlbum handles album download requests
@@ -284,10 +246,7 @@ func (h *Handler) DownloadAlbum(c *fiber.Ctx) error {
 		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start album download")
 	}
 
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{"Msg": "Album download started"})
-	}
-	return c.JSON(fiber.Map{"jobId": jobID, "message": "Download started"})
+	return respond.Job(c, jobID, "Album download started")
 }
 
 // DownloadArtist handles artist download requests
@@ -309,10 +268,7 @@ func (h *Handler) DownloadArtist(c *fiber.Ctx) error {
 		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start artist download")
 	}
 
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{"Msg": "Artist download started"})
-	}
-	return c.JSON(fiber.Map{"jobId": jobID, "message": "Download started"})
+	return respond.Job(c, jobID, "Artist download started")
 }
 
 // DownloadTracks handles multiple track download requests
@@ -339,10 +295,7 @@ func (h *Handler) DownloadTracks(c *fiber.Ctx) error {
 		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start tracks download")
 	}
 
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{"Msg": "Tracks download started"})
-	}
-	return c.JSON(fiber.Map{"jobId": jobID, "message": "Download started"})
+	return respond.Job(c, jobID, "Tracks download started")
 }
 
 // DownloadPlaylist handles playlist download requests
@@ -375,10 +328,7 @@ func (h *Handler) DownloadPlaylist(c *fiber.Ctx) error {
 		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start playlist download")
 	}
 
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{"Msg": "Playlist '" + req.PlaylistName + "' download started"})
-	}
-	return c.JSON(fiber.Map{"jobId": jobID, "message": "Download started"})
+	return respond.Job(c, jobID, "Playlist '"+req.PlaylistName+"' download started")
 }
 
 // GetAlbumTracks handles requests to get tracks from an album
@@ -411,7 +361,7 @@ func (h *Handler) GetAlbumTracks(c *fiber.Ctx) error {
 	for i := range tracks {
 		trackPtrs[i] = &tracks[i]
 	}
-	return c.Render("downloading/album_tracks", fiber.Map{
+	return respond.Partial(c, "downloading/album_tracks", fiber.Map{
 		"Album":         album,
 		"Tracks":        trackPtrs,
 		"TotalDuration": totalDuration,
@@ -440,7 +390,7 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 		if d, exists := h.service.pluginManager.GetDownloader(downloader); exists {
 			downloaderName = d.Name()
 		}
-		return c.Render("downloading/chart_tracks", fiber.Map{
+		return respond.Partial(c, "downloading/chart_tracks", fiber.Map{
 			"Tracks":         []*music.Track{},
 			"NotSupported":   true,
 			"DownloaderName": downloaderName,
@@ -459,7 +409,7 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 	downloaderStatus := statuses[downloaderKey]
 
 	if err != nil || downloaderStatus.Status != "valid" {
-		return c.Render("downloading/chart_tracks", fiber.Map{
+		return respond.Partial(c, "downloading/chart_tracks", fiber.Map{
 			"Tracks":           []*music.Track{},
 			"DownloaderStatus": downloaderStatus,
 			"DownloaderName":   downloaderName,
@@ -498,20 +448,14 @@ func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
 		caps = d.Capabilities()
 	}
 
-	if c.Get("HX-Request") == "true" {
-		return c.Render("downloading/user_info", fiber.Map{
-			"UserInfo":          userInfo,
-			"Statuses":          statuses,
-			"DownloaderName":    downloaderName,
-			"DownloaderStatus":  downloaderStatus,
-			"HasDownloaders":    hasDownloaders,
-			"CurrentDownloader": downloader,
-			"Capabilities":      caps,
-		})
-	}
-	return c.JSON(fiber.Map{
-		"userInfo": userInfo,
-		"statuses": statuses,
+	return respond.Partial(c, "downloading/user_info", fiber.Map{
+		"UserInfo":          userInfo,
+		"Statuses":          statuses,
+		"DownloaderName":    downloaderName,
+		"DownloaderStatus":  downloaderStatus,
+		"HasDownloaders":    hasDownloaders,
+		"CurrentDownloader": downloader,
+		"Capabilities":      caps,
 	})
 }
 

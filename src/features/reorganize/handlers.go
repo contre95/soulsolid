@@ -38,10 +38,7 @@ func (h *Handler) StartReorganizeAnalysis(c *fiber.Ctx) error {
 	slog.Info("File reorganization job started", "jobID", jobID)
 
 	c.Set("HX-Trigger", "refreshJobList")
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{"Msg": "File reorganization started successfully"})
-	}
-	return c.JSON(fiber.Map{"job_id": jobID})
+	return respond.Job(c, jobID, "File reorganization started successfully")
 }
 
 // RenderFilesReorganizationSection renders the file paths section page

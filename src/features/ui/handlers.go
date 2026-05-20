@@ -29,7 +29,7 @@ func (h *Handler) RenderDashboard(c *fiber.Ctx) error {
 // GetQuickActionsCard renders the quick actions card for the dashboard.
 func (h *Handler) GetQuickActionsCard(c *fiber.Ctx) error {
 	slog.Debug("GetQuickActionsCard handler called")
-	return c.Render("cards/quick_actions", fiber.Map{})
+	return respond.Partial(c, "cards/quick_actions", fiber.Map{})
 }
 
 // RenderAnalyzeSection renders the all analyze jobs page

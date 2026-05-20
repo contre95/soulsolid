@@ -213,7 +213,7 @@ func (h *Handler) RemoveTrackFromPlaylist(c *fiber.Ctx) error {
 func (h *Handler) GetPlaylistCreationModal(c *fiber.Ctx) error {
 	slog.Debug("GetCreatePlaylistModal handler called")
 
-	return c.Render("playlists/create_playlist_modal", nil)
+	return respond.Partial(c, "playlists/create_playlist_modal", fiber.Map{})
 }
 
 // GetPlaylistsForItem returns playlists for adding tracks, artists, or albums.
@@ -261,7 +261,7 @@ func (h *Handler) GetPlaylistsForItem(c *fiber.Ctx) error {
 		"ItemName":  itemName,
 	}
 
-	return c.Render("playlists/add_to_playlist_modal", data)
+	return respond.Partial(c, "playlists/add_to_playlist_modal", data)
 }
 
 // ExportM3U handles exporting a playlist to an M3U file.

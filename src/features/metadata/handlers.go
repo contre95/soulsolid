@@ -423,14 +423,6 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 	})
 }
 
-// ModalData holds data for the search results modal
-type ModalData struct {
-	Tracks         []*music.Track
-	ProviderName   string
-	ProviderColors map[string]string
-	TrackID        string
-}
-
 // SearchTracksFromProvider handles searching for tracks from a specific provider
 func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
@@ -452,12 +444,11 @@ func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
 	// Get provider colors for styling
 	providerColors := h.getProviderColors(providerName)
 
-	// Render modal with search results
-	return c.Render("tag/search_results_modal", ModalData{
-		Tracks:         tracks,
-		ProviderName:   providerName,
-		ProviderColors: providerColors,
-		TrackID:        trackID,
+	return respond.Partial(c, "tag/search_results_modal", fiber.Map{
+		"Tracks":         tracks,
+		"ProviderName":   providerName,
+		"ProviderColors": providerColors,
+		"TrackID":        trackID,
 	})
 }
 
@@ -593,8 +584,7 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 	// Get provider colors
 	providerColors := h.getProviderColors(providerName)
 
-	// Render the updated form
-	return c.Render("sections/tag", fiber.Map{
+	return respond.Partial(c, "sections/tag", fiber.Map{
 		"Track":                 mergedTrack,
 		"Artists":               artists,
 		"Albums":                albums,
@@ -647,12 +637,9 @@ func (h *Handler) ViewFingerprint(c *fiber.Ctx) error {
 	}
 
 	if track.ChromaprintFingerprint == "" {
-		return c.SendString("No fingerprint available for this track.")
+		return respond.Text(c, "fingerprint", "", "No fingerprint available for this track.")
 	}
-
-	// Return raw text
-	c.Set("Content-Type", "text/plain")
-	return c.SendString(track.ChromaprintFingerprint)
+	return respond.Text(c, "fingerprint", track.ChromaprintFingerprint)
 }
 
 // RenderMetadataButtons renders the metadata provider buttons for a track
@@ -669,7 +656,7 @@ func (h *Handler) RenderMetadataButtons(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
 	}
 
-	return c.Render("tag/metadata_buttons", fiber.Map{
+	return respond.Partial(c, "tag/metadata_buttons", fiber.Map{
 		"Track":            track,
 		"EnabledProviders": h.service.GetEnabledMetadataProviders(),
 	})
@@ -783,10 +770,7 @@ func (h *Handler) StartAcoustIDAnalysis(c *fiber.Ctx) error {
 
 	// // Trigger HTMX to refresh the job list
 	c.Set("HX-Trigger", "refreshJobList")
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{"Msg": "AcoustID analysis started successfully"})
-	}
-	return c.JSON(fiber.Map{"job_id": jobID})
+	return respond.Job(c, jobID, "AcoustID analysis started successfully")
 }
 
 // RenderMetadataAnalysisSection renders the metadata analysis section page

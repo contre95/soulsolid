@@ -135,9 +135,9 @@ func (h *Handler) GetArtistsCount(c *fiber.Ctx) error {
 	artists, err := h.service.GetArtists(c.Context())
 	if err != nil {
 		slog.Error("Error loading artists count", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Error loading artists count")
+		return respond.Err(c, fiber.StatusInternalServerError, "Error loading artists count")
 	}
-	return c.SendString(fmt.Sprintf("%d", len(artists)))
+	return respond.Text(c, "artists_count", len(artists))
 }
 
 // GetAlbumsCount returns the count of albums in the library.
@@ -146,9 +146,9 @@ func (h *Handler) GetAlbumsCount(c *fiber.Ctx) error {
 	albums, err := h.service.GetAlbums(c.Context())
 	if err != nil {
 		slog.Error("Error loading albums count", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums count")
+		return respond.Err(c, fiber.StatusInternalServerError, "Error loading albums count")
 	}
-	return c.SendString(fmt.Sprintf("%d", len(albums)))
+	return respond.Text(c, "albums_count", len(albums))
 }
 
 // GetTracksCount returns the count of tracks in the library.
@@ -157,9 +157,9 @@ func (h *Handler) GetTracksCount(c *fiber.Ctx) error {
 	count, err := h.service.GetTracksCount(c.Context())
 	if err != nil {
 		slog.Error("Error loading tracks count", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks count")
+		return respond.Err(c, fiber.StatusInternalServerError, "Error loading tracks count")
 	}
-	return c.SendString(fmt.Sprintf("%d tracks", count))
+	return respond.Text(c, "tracks_count", count, fmt.Sprintf("%d tracks", count))
 }
 
 // GetStorageSize returns the storage size of the library.
@@ -168,10 +168,9 @@ func (h *Handler) GetStorageSize(c *fiber.Ctx) error {
 	size, err := h.service.GetStorageSize(c.Context())
 	if err != nil {
 		slog.Error("Error loading storage size", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Error loading storage size")
+		return respond.Err(c, fiber.StatusInternalServerError, "Error loading storage size")
 	}
 
-	// Format the size
 	var formatted string
 	if size >= 1_000_000_000_000 {
 		formatted = fmt.Sprintf("%.1f TB", float64(size)/math.Pow(10, 12))
@@ -184,8 +183,7 @@ func (h *Handler) GetStorageSize(c *fiber.Ctx) error {
 	} else {
 		formatted = fmt.Sprintf("%d B", size)
 	}
-
-	return c.SendString(formatted)
+	return respond.Text(c, "storage_size_bytes", size, formatted)
 }
 
 // GetLibraryTable renders the library table section with tabs.
@@ -211,7 +209,7 @@ func (h *Handler) GetLibraryTable(c *fiber.Ctx) error {
 		genres = []string{}
 	}
 
-	return c.Render("library/library_table", fiber.Map{
+	return respond.Partial(c, "library/library_table", fiber.Map{
 		"SearchArtists": artists,
 		"SearchAlbums":  albums,
 		"Genres":        genres,
@@ -484,9 +482,9 @@ func (h *Handler) GetLibraryFileTree(c *fiber.Ctx) error {
 	}
 	if err != nil {
 		slog.Error("Error getting library file tree", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get library file tree")
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to get library file tree")
 	}
-	return c.SendString(tree)
+	return respond.Text(c, "file_tree", tree)
 }
 
 // DeleteTrack deletes a track from the library.
@@ -569,7 +567,7 @@ func (h *Handler) RenderTrackOverviewPanel(c *fiber.Ctx) error {
 		lyricsPreview = strings.Join(lines, "\n")
 	}
 
-	return c.Render("library/track_overview_panel", fiber.Map{
+	return respond.Partial(c, "library/track_overview_panel", fiber.Map{
 		"Track":         track,
 		"Artists":       artistNames.String(),
 		"LyricsPreview": lyricsPreview,

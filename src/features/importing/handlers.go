@@ -120,10 +120,11 @@ func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
 // QueueCount returns the current queue count formatted as "(X)" or empty if 0
 func (h *Handler) QueueCount(c *fiber.Ctx) error {
 	count := len(h.service.GetQueuedItems())
-	if count == 0 {
-		return c.SendString("")
+	formatted := ""
+	if count > 0 {
+		formatted = fmt.Sprintf("(%d)", count)
 	}
-	return c.SendString(fmt.Sprintf("(%d)", count))
+	return respond.Text(c, "queue_count", count, formatted)
 }
 
 // ClearQueue handles clearing all items from the import queue
@@ -201,7 +202,7 @@ func (h *Handler) ToggleWatcher(c *fiber.Ctx) error {
 // GetWatcherStatus returns the current status of the watcher
 func (h *Handler) GetWatcherStatus(c *fiber.Ctx) error {
 	running := h.service.GetWatcherStatus()
-	return c.Render("components/status_badge", fiber.Map{
+	return respond.Partial(c, "components/status_badge", fiber.Map{
 		"Running": running,
 	})
 }
@@ -209,7 +210,7 @@ func (h *Handler) GetWatcherStatus(c *fiber.Ctx) error {
 // GetWatcherToggleState returns the toggle input element with correct checked state
 func (h *Handler) GetWatcherToggleState(c *fiber.Ctx) error {
 	running := h.service.GetWatcherStatus()
-	return c.Render("components/toggle", fiber.Map{
+	return respond.Partial(c, "components/toggle", fiber.Map{
 		"ID":      "watcher-toggle",
 		"Checked": running,
 		"PostURL": "/import/watcher/toggle",
@@ -225,7 +226,7 @@ func (h *Handler) GetDirectoryForm(c *fiber.Ctx) error {
 	// Get default download path from service
 	defaultDownloadPath := h.service.config.Get().DownloadPath
 
-	return c.Render("importing/directory_form", fiber.Map{
+	return respond.Partial(c, "importing/directory_form", fiber.Map{
 		"DefaultDownloadPath": defaultDownloadPath,
 		"Config":              h.service.config.Get(),
 	})
@@ -259,7 +260,7 @@ func (h *Handler) RenderQueueItems(c *fiber.Ctx) error {
 		queueItems = queueItems[:10]
 	}
 
-	return c.Render("importing/queue_items", fiber.Map{
+	return respond.Partial(c, "importing/queue_items", fiber.Map{
 		"QueueItems": queueItems,
 	})
 }
@@ -272,7 +273,7 @@ func (h *Handler) GetQueueHeader(c *fiber.Ctx) error {
 	queueItems := h.service.GetQueuedItems()
 	queueCount := len(queueItems)
 
-	return c.Render("importing/queue_header", fiber.Map{
+	return respond.Partial(c, "importing/queue_header", fiber.Map{
 		"QueueCount": queueCount,
 	})
 }
@@ -383,7 +384,7 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.Render(templateName, fiber.Map{
+	return respond.Partial(c, templateName, fiber.Map{
 		"Groups":    viewGroups,
 		"GroupType": groupType,
 	})

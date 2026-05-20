@@ -80,7 +80,7 @@ func (h *Handler) RenderLyricsButtons(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
 	}
 
-	return c.Render("tag/lyrics_buttons", fiber.Map{
+	return respond.Partial(c, "tag/lyrics_buttons", fiber.Map{
 		"Track":           track,
 		"LyricsProviders": h.service.GetLyricsProvidersInfo(),
 	})
@@ -122,7 +122,7 @@ func (h *Handler) GetTrackLyrics(c *fiber.Ctx) error {
 	if track == nil {
 		return c.Status(fiber.StatusNotFound).SendString("Track not found")
 	}
-	return c.SendString(track.Metadata.Lyrics)
+	return respond.Text(c, "lyrics", track.Metadata.Lyrics)
 }
 
 // GetQueueNewLyrics returns the new lyrics from a queue item's metadata.
@@ -134,9 +134,9 @@ func (h *Handler) GetQueueNewLyrics(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).SendString("Queue item not found")
 	}
 	if newLyrics, ok := item.Metadata["new_lyrics"]; ok && newLyrics != "" {
-		return c.SendString(newLyrics)
+		return respond.Text(c, "lyrics", newLyrics)
 	}
-	return c.SendString("No new lyrics available")
+	return respond.Text(c, "lyrics", "", "No new lyrics available")
 }
 
 // RenderLyricsQueueItems renders the lyrics queue content for HTMX
@@ -170,7 +170,7 @@ func (h *Handler) RenderLyricsQueueItems(c *fiber.Ctx) error {
 		slog.Info("First queue item sample", "id", queueItems[0].ID, "type", queueItems[0].Type, "trackTitle", queueItems[0].Track.Title)
 	}
 
-	return c.Render("lyrics/queue_items", fiber.Map{
+	return respond.Partial(c, "lyrics/queue_items", fiber.Map{
 		"QueueItems": queueItems,
 	})
 }
@@ -210,10 +210,11 @@ func (h *Handler) ProcessLyricsQueueItem(c *fiber.Ctx) error {
 // LyricsQueueCount returns the current lyrics queue count formatted as "(X)" or empty if 0
 func (h *Handler) LyricsQueueCount(c *fiber.Ctx) error {
 	count := len(h.service.GetLyricsQueueItems())
-	if count == 0 {
-		return c.SendString("")
+	formatted := ""
+	if count > 0 {
+		formatted = fmt.Sprintf("(%d)", count)
 	}
-	return c.SendString(fmt.Sprintf("(%d)", count))
+	return respond.Text(c, "queue_count", count, formatted)
 }
 
 // ClearLyricsQueue handles clearing all items from the lyrics queue
@@ -267,7 +268,7 @@ func (h *Handler) RenderGroupedLyricsQueueItems(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.Render(templateName, fiber.Map{
+	return respond.Partial(c, templateName, fiber.Map{
 		"Groups":    viewGroups,
 		"GroupType": groupType,
 	})
@@ -317,7 +318,7 @@ func (h *Handler) ProcessLyricsQueueGroup(c *fiber.Ctx) error {
 func (h *Handler) RenderLyricsQueueHeader(c *fiber.Ctx) error {
 	slog.Debug("RenderLyricsQueueHeader handler called")
 	count := len(h.service.GetLyricsQueueItems())
-	return c.Render("lyrics/queue_header", fiber.Map{
+	return respond.Partial(c, "lyrics/queue_header", fiber.Map{
 		"QueueCount": count,
 	})
 }
@@ -355,10 +356,7 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 
 	// Trigger HTMX to refresh the job list
 	c.Set("HX-Trigger", "refreshJobList")
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{"Msg": "Lyrics analysis started successfully"})
-	}
-	return c.JSON(fiber.Map{"job_id": jobID})
+	return respond.Job(c, jobID, "Lyrics analysis started successfully")
 }
 
 // RenderLyricsAnalysisSection renders the lyrics analysis section page
