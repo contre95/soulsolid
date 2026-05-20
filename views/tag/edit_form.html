@@ -15,10 +15,10 @@
 
           <!-- Album Art (desktop only, mobile shows in header) -->
           <div class="hidden sm:block flex-shrink-0">
-            <a href="/ui/tag/edit/{{.Track.ID}}/artwork" target="_blank" rel="noopener noreferrer"
+            <a href="/tag/edit/{{.Track.ID}}/artwork" target="_blank" rel="noopener noreferrer"
                class="block w-44 h-44 rounded-xl overflow-hidden border-2 border-gray-300 dark:border-gray-600 shadow-md hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-zoom-in"
                onerror="this.style.display='none'">
-              <img src="/ui/tag/edit/{{.Track.ID}}/artwork"
+              <img src="/tag/edit/{{.Track.ID}}/artwork"
                    alt="Album Art"
                    class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                    onerror="this.closest('a').style.display='none'">

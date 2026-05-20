@@ -2,7 +2,7 @@
 {{if index .EnabledProviders "acoustid"}}
 <button
   type="button"
-  hx-get="/ui/tag/edit/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/fingerprint"
+  hx-get="/tag/edit/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/fingerprint"
   hx-target="#toast-container"
   hx-swap="beforeend"
   class="cursor-pointer group inline-flex items-center justify-center sm:justify-start w-14 h-14 sm:w-auto sm:h-auto sm:px-3 sm:py-2 rounded-md text-base font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-blue-500/10 backdrop-blur-md border border-blue-400/30 text-blue-600 dark:text-blue-300 shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20"
@@ -17,7 +17,7 @@
 {{if index .EnabledProviders "musicbrainz"}}
 <button
   type="button"
-  hx-get="/ui/tag/edit/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/search/musicbrainz"
+  hx-get="/tag/edit/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/search/musicbrainz"
   hx-target="body"
   hx-swap="beforeend"
   class="group inline-flex items-center justify-center sm:justify-start w-14 h-14 sm:w-auto sm:h-auto sm:px-3 sm:py-2 rounded-md text-sm font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-orange-500/10 backdrop-blur-md border border-orange-400/30 text-orange-600 dark:text-orange-300 shadow-lg shadow-orange-500/10 hover:shadow-orange-500/20 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500"
@@ -32,7 +32,7 @@
 {{if index .EnabledProviders "discogs"}}
 <button
   type="button"
-  hx-get="/ui/tag/edit/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/search/discogs"
+  hx-get="/tag/edit/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/search/discogs"
   hx-target="body"
   hx-swap="beforeend"
   class="cursor-pointer group inline-flex items-center justify-center sm:justify-start w-14 h-14 sm:w-auto sm:h-auto sm:px-3 sm:py-2 rounded-md text-base font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-slate-500/10 backdrop-blur-md border border-slate-400/30 text-slate-600 dark:text-slate-300 shadow-lg shadow-slate-500/10 hover:shadow-slate-500/20"
@@ -47,7 +47,7 @@
 {{if index .EnabledProviders "deezer"}}
 <button
   type="button"
-  hx-get="/ui/tag/edit/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/search/deezer"
+  hx-get="/tag/edit/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/search/deezer"
   hx-target="body"
   hx-swap="beforeend"
   class="cursor-pointer group inline-flex items-center justify-center sm:justify-start w-14 h-14 sm:w-auto sm:h-auto sm:px-3 sm:py-2 rounded-md text-base font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-purple-500/10 backdrop-blur-md border border-purple-400/30 text-purple-600 dark:text-purple-300 shadow-lg shadow-purple-500/10 hover:shadow-purple-500/20"
