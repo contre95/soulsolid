@@ -68,24 +68,16 @@ func (h *Handler) ImportDirectory(c *fiber.Ctx) error {
 	}
 	var req ImportPathRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "cannot parse request body",
-		})
+		return respond.Err(c, fiber.StatusBadRequest, "Cannot parse request body")
 	}
 	jobID, err := h.service.ImportDirectory(c.Context(), req.DirectoryPath)
 	if err != nil {
 		slog.Error("Error importing directory", "error", err)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Failed to start sync job",
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start sync job")
 	}
 	slog.Info("ImportDirectory: directory import started", "jobID", jobID)
-	c.Response().Header.Set("HX-Trigger", "jobStarted")
-	c.Response().Header.Set("HX-Trigger", "queueUpdated")
-	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
-	return c.Render("toast/toastInfo", fiber.Map{
-		"Msg": "Directory import started!",
-	})
+	c.Response().Header.Set("HX-Trigger", "jobStarted,queueUpdated,refreshImportQueueBadge")
+	return respond.Job(c, jobID, "Directory import started!")
 }
 
 // ProcessQueueItem handles import/cancel actions for individual queue items
@@ -95,11 +87,8 @@ func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
 	err := h.service.ProcessQueueItem(c.Context(), itemID, action)
 	if err != nil {
 		slog.Error("Failed to process queue item", "error", err, "itemID", itemID, "action", action)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to process queue item: %s", err.Error()),
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to process queue item: %s", err.Error()))
 	}
-	// Return success response that updates the UI
 	actionMsg := "skipped"
 	switch action {
 	case "import":
@@ -109,12 +98,8 @@ func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
 	case "delete":
 		actionMsg = "deleted"
 	}
-	c.Response().Header.Set("HX-Trigger", "queueUpdated")
-	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
-	c.Response().Header.Set("HX-Trigger", "activateIndividualGrouping")
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": fmt.Sprintf("Track %s successfully", actionMsg),
-	})
+	c.Response().Header.Set("HX-Trigger", "queueUpdated,refreshImportQueueBadge,activateIndividualGrouping")
+	return respond.Ok(c, fmt.Sprintf("Track %s successfully", actionMsg))
 }
 
 // QueueCount returns the current queue count formatted as "(X)" or empty if 0
@@ -132,16 +117,10 @@ func (h *Handler) ClearQueue(c *fiber.Ctx) error {
 	err := h.service.ClearQueue()
 	if err != nil {
 		slog.Error("Failed to clear queue", "error", err)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Failed to clear queue",
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to clear queue")
 	}
-	c.Response().Header.Set("HX-Trigger", "queueUpdated")
-	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
-	c.Response().Header.Set("HX-Trigger", "activateIndividualGrouping")
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": "Queue cleared successfully",
-	})
+	c.Response().Header.Set("HX-Trigger", "queueUpdated,refreshImportQueueBadge,activateIndividualGrouping")
+	return respond.Ok(c, "Queue cleared successfully")
 }
 
 // PruneDownloadPath handles pruning the download path and clearing the queue
@@ -149,25 +128,17 @@ func (h *Handler) PruneDownloadPath(c *fiber.Ctx) error {
 	err := h.service.PruneDownloadPath(c.Context())
 	if err != nil {
 		slog.Error("Failed to prune download path", "error", err)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Failed to prune download path",
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to prune download path")
 	}
-	c.Response().Header.Set("HX-Trigger", "queueUpdated")
-	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
-	c.Response().Header.Set("HX-Trigger", "activateIndividualGrouping")
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": "Download path pruned and queue cleared successfully",
-	})
+	c.Response().Header.Set("HX-Trigger", "queueUpdated,refreshImportQueueBadge,activateIndividualGrouping")
+	return respond.Ok(c, "Download path pruned and queue cleared successfully")
 }
 
 // ToggleWatcher toggles the file system watcher on/off
 func (h *Handler) ToggleWatcher(c *fiber.Ctx) error {
 	action := c.FormValue("action")
 	if action == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "action parameter required",
-		})
+		return respond.Err(c, fiber.StatusBadRequest, "action parameter required")
 	}
 
 	var err error
@@ -181,22 +152,16 @@ func (h *Handler) ToggleWatcher(c *fiber.Ctx) error {
 		err = h.service.StopWatcher()
 		msg = "File watcher stopped successfully"
 	default:
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid action",
-		})
+		return respond.Err(c, fiber.StatusBadRequest, "invalid action")
 	}
 
 	if err != nil {
 		slog.Error("Failed to toggle watcher", "action", action, "error", err)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Failed to " + action + " file watcher",
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to "+action+" file watcher")
 	}
 
 	c.Response().Header.Set("HX-Trigger", "watcherStatusChanged")
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": msg,
-	})
+	return respond.Ok(c, msg)
 }
 
 // GetWatcherStatus returns the current status of the watcher
@@ -293,23 +258,17 @@ func (h *Handler) ProcessQueueGroup(c *fiber.Ctx) error {
 	}
 
 	if groupType != "artist" && groupType != "album" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "groupType must be 'artist' or 'album'",
-		})
+		return respond.Err(c, fiber.StatusBadRequest, "groupType must be 'artist' or 'album'")
 	}
 
 	if action != "import" && action != "cancel" && action != "delete" && action != "replace" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "action must be one of: import, cancel, delete, replace",
-		})
+		return respond.Err(c, fiber.StatusBadRequest, "action must be one of: import, cancel, delete, replace")
 	}
 
 	err = h.service.ProcessQueueGroup(c.Context(), decodedGroupKey, groupType, action)
 	if err != nil {
 		slog.Error("Failed to process group", "error", err, "groupKey", decodedGroupKey, "groupType", groupType, "action", action)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to process group %s", decodedGroupKey),
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to process group %s", decodedGroupKey))
 	}
 
 	actionMsg := "processed"
@@ -324,19 +283,14 @@ func (h *Handler) ProcessQueueGroup(c *fiber.Ctx) error {
 		actionMsg = "deleted"
 	}
 
-	c.Response().Header.Set("HX-Trigger", "queueUpdated")
-	c.Response().Header.Set("HX-Trigger", "refreshImportQueueBadge")
-
-	// Send grouping activation header based on group type
+	trigger := "queueUpdated,refreshImportQueueBadge"
 	if groupType == "artist" {
-		c.Response().Header.Set("HX-Trigger", "activateArtistGrouping")
-	} else if groupType == "album" {
-		c.Response().Header.Set("HX-Trigger", "activateAlbumGrouping")
+		trigger += ",activateArtistGrouping"
+	} else {
+		trigger += ",activateAlbumGrouping"
 	}
-
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": fmt.Sprintf("Group '%s' %s successfully", decodedGroupKey, actionMsg),
-	})
+	c.Response().Header.Set("HX-Trigger", trigger)
+	return respond.Ok(c, fmt.Sprintf("Group '%s' %s successfully", decodedGroupKey, actionMsg))
 }
 
 // RenderGroupedQueueItems renders queue items grouped by artist or album

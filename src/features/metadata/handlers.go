@@ -436,9 +436,7 @@ func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
 	tracks, err := h.service.SearchTrackMetadata(c.Context(), trackID, providerName)
 	if err != nil {
 		slog.Error("Failed to search tracks", "error", err, "trackId", trackID, "provider", providerName)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to search tracks: %v", err),
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to search tracks: %v", err))
 	}
 
 	// Get provider colors for styling
@@ -607,18 +605,11 @@ func (h *Handler) CalculateFingerprint(c *fiber.Ctx) error {
 	err := h.service.AddChromaprintAndAcoustID(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to calculate fingerprint", "error", err, "trackId", trackID)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to calculate fingerprint: %v", err),
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to calculate fingerprint: %v", err))
 	}
 
-	// Set HTMX header to refresh the edit form after successful calculation
 	c.Set("HX-Trigger", "refreshEditForm")
-
-	// Return success toast
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": "Fingerprint calculated successfully!",
-	})
+	return respond.Ok(c, "Fingerprint calculated successfully!")
 }
 
 // ViewFingerprint handles viewing fingerprint
@@ -743,15 +734,10 @@ func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 	err := h.service.UpdateTrackTags(c.Context(), trackID, formData)
 	if err != nil {
 		slog.Error("Failed to update track tags", "error", err, "trackId", trackID)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to update tags: %v", err),
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to update tags: %v", err))
 	}
 
-	// Return success toast
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": "Tags updated successfully!",
-	})
+	return respond.Ok(c, "Tags updated successfully!")
 }
 
 // StartAcoustIDAnalysis handles starting the AcoustID analysis job
@@ -761,9 +747,7 @@ func (h *Handler) StartAcoustIDAnalysis(c *fiber.Ctx) error {
 	jobID, err := h.service.StartAcoustIDAnalysis(c.Context())
 	if err != nil {
 		slog.Error("Failed to start AcoustID analysis", "error", err)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Failed to start AcoustID analysis: " + err.Error(),
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start AcoustID analysis: "+err.Error())
 	}
 
 	slog.Info("AcoustID analysis job started successfully", "jobID", jobID)

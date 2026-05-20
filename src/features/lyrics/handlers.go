@@ -183,11 +183,8 @@ func (h *Handler) ProcessLyricsQueueItem(c *fiber.Ctx) error {
 	err := h.service.ProcessLyricsQueueItem(c.Context(), itemID, action)
 	if err != nil {
 		slog.Error("Failed to process lyrics queue item", "error", err, "itemID", itemID, "action", action)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to process lyrics queue item: %s", err.Error()),
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to process lyrics queue item: %s", err.Error()))
 	}
-	// Return success response that updates the UI
 	actionMsg := "processed"
 	switch action {
 	case "override":
@@ -202,9 +199,7 @@ func (h *Handler) ProcessLyricsQueueItem(c *fiber.Ctx) error {
 		actionMsg = "skipped"
 	}
 	c.Response().Header.Set("HX-Trigger", "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount,activateIndividualGroupingLyrics")
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": fmt.Sprintf("Track %s successfully", actionMsg),
-	})
+	return respond.Ok(c, fmt.Sprintf("Track %s successfully", actionMsg))
 }
 
 // LyricsQueueCount returns the current lyrics queue count formatted as "(X)" or empty if 0
@@ -222,14 +217,10 @@ func (h *Handler) ClearLyricsQueue(c *fiber.Ctx) error {
 	err := h.service.ClearLyricsQueue()
 	if err != nil {
 		slog.Error("Failed to clear lyrics queue", "error", err)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Failed to clear lyrics queue",
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to clear lyrics queue")
 	}
 	c.Response().Header.Set("HX-Trigger", "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount,activateIndividualGroupingLyrics")
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": "Lyrics queue cleared successfully",
-	})
+	return respond.Ok(c, "Lyrics queue cleared successfully")
 }
 
 // RenderGroupedLyricsQueueItems renders lyrics queue items grouped by artist or album
@@ -297,21 +288,17 @@ func (h *Handler) ProcessLyricsQueueGroup(c *fiber.Ctx) error {
 	err = h.service.ProcessLyricsQueueGroup(c.Context(), decodedGroupKey, groupType, action)
 	if err != nil {
 		slog.Error("Failed to process lyrics queue group", "error", err, "groupKey", decodedGroupKey, "groupType", groupType, "action", action)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to process group %s", decodedGroupKey),
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to process group %s", decodedGroupKey))
 	}
 
 	trigger := "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount"
 	if groupType == "artist" {
 		trigger += ",activateArtistGroupingLyrics"
-	} else if groupType == "album" {
+	} else {
 		trigger += ",activateAlbumGroupingLyrics"
 	}
 	c.Response().Header.Set("HX-Trigger", trigger)
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": fmt.Sprintf("Group '%s' processed successfully", decodedGroupKey),
-	})
+	return respond.Ok(c, fmt.Sprintf("Group '%s' processed successfully", decodedGroupKey))
 }
 
 // RenderLyricsQueueHeader renders the lyrics queue header for HTMX
@@ -330,9 +317,7 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 	// Get provider from form data
 	provider := c.FormValue("provider")
 	if provider == "" {
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Please select a lyrics provider",
-		})
+		return respond.Err(c, fiber.StatusBadRequest, "Please select a lyrics provider")
 	}
 
 	// Get options from form data
@@ -347,9 +332,7 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 	jobID, err := h.service.StartLyricsAnalysis(c.Context(), provider, skipExistingLyrics, overrideNoQueue)
 	if err != nil {
 		slog.Error("Failed to start lyrics analysis", "error", err)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Failed to start lyrics analysis: " + err.Error(),
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start lyrics analysis: "+err.Error())
 	}
 
 	slog.Info("Lyrics analysis job started successfully", "jobID", jobID, "provider", provider)

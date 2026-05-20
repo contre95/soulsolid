@@ -30,9 +30,7 @@ func (h *Handler) StartReorganizeAnalysis(c *fiber.Ctx) error {
 	jobID, err := h.service.StartReorganizeAnalysis(c.Context(), fat32Safe)
 	if err != nil {
 		slog.Error("Failed to start file reorganization job", "error", err)
-		return c.Status(fiber.StatusInternalServerError).Render("toast/toastError", fiber.Map{
-			"Msg": "Failed to start file reorganization job: " + err.Error(),
-		})
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start file reorganization job: "+err.Error())
 	}
 
 	slog.Info("File reorganization job started", "jobID", jobID)
