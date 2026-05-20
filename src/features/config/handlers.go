@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -24,14 +25,7 @@ func NewHandler(configManager *Manager) *Handler {
 // RenderSettingsSection renders the settings form with current configuration values.
 func (h *Handler) RenderSettingsSection(c *fiber.Ctx) error {
 	slog.Debug("RenderSettings handler called")
-	data := fiber.Map{
-		"Title": "Settings",
-	}
-	if c.Get("HX-Request") != "true" {
-		data["Section"] = "settings"
-		return c.Render("main", data)
-	}
-	return c.Render("sections/settings", data)
+	return respond.Section(c, "settings", fiber.Map{"Title": "Settings"})
 }
 
 // UpdateSettings handles the form submission to update configuration.

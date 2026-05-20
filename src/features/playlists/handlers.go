@@ -27,7 +27,7 @@ func (h *Handler) RenderPlaylistsSection(c *fiber.Ctx) error {
 	playlists, err := h.service.GetAllPlaylists(c.Context())
 	if err != nil {
 		slog.Error("Error loading playlists", "error", err)
-		playlists = []*music.Playlist{}
+		playlists = []*music.Playlist{} // Continue with empty list
 	}
 
 	return respond.Section(c, "playlists", fiber.Map{
@@ -36,186 +36,155 @@ func (h *Handler) RenderPlaylistsSection(c *fiber.Ctx) error {
 	})
 }
 
-// RenderPlaylist renders a single playlist page (HTML, HTMX-aware).
-func (h *Handler) RenderPlaylist(c *fiber.Ctx) error {
-	slog.Debug("RenderPlaylist handler called", "id", c.Params("id"))
-
-	playlist, err := h.service.GetPlaylist(c.Context(), c.Params("id"))
-	if err != nil {
-		slog.Error("Error loading playlist", "error", err, "id", c.Params("id"))
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to load playlist")
-	}
-	if playlist == nil {
-		return respond.Err(c, fiber.StatusNotFound, "Playlist not found")
-	}
-
-	data := fiber.Map{
-		"Title":    fmt.Sprintf("Playlist: %s", playlist.Name),
-		"Playlist": playlist,
-	}
-	if c.Get("HX-Request") != "true" {
-		return c.Render("main", data)
-	}
-	return c.Render("playlists/playlist", data)
-}
-
-// GetAllPlaylists returns all playlists as JSON.
-func (h *Handler) GetAllPlaylists(c *fiber.Ctx) error {
-	slog.Debug("GetAllPlaylists handler called")
-
-	playlists, err := h.service.GetAllPlaylists(c.Context())
-	if err != nil {
-		slog.Error("Error loading playlists", "error", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-	return c.JSON(fiber.Map{"playlists": playlists})
-}
-
-// GetPlaylist returns a single playlist as JSON.
+// GetPlaylist renders a single playlist page.
 func (h *Handler) GetPlaylist(c *fiber.Ctx) error {
 	slog.Debug("GetPlaylist handler called", "id", c.Params("id"))
 
 	playlist, err := h.service.GetPlaylist(c.Context(), c.Params("id"))
 	if err != nil {
 		slog.Error("Error loading playlist", "error", err, "id", c.Params("id"))
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load playlist")
 	}
 	if playlist == nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "playlist not found"})
+		return c.Status(fiber.StatusNotFound).SendString("Playlist not found")
 	}
-	return c.JSON(playlist)
+
+	data := fiber.Map{
+		"Title":    fmt.Sprintf("Playlist: %s", playlist.Name),
+		"Playlist": playlist,
+	}
+
+	if c.Get("HX-Request") != "true" {
+		// For direct navigation to specific playlist, render main with Playlist data (no Section set)
+		return c.Render("main", data)
+	}
+	return c.Render("playlists/playlist", data)
 }
 
 // CreatePlaylist handles creating a new playlist.
 func (h *Handler) CreatePlaylist(c *fiber.Ctx) error {
 	slog.Debug("CreatePlaylist handler called")
 
-	var req struct {
-		Name        string `json:"name" form:"name"`
-		Description string `json:"description" form:"description"`
-	}
-	if err := c.BodyParser(&req); err != nil {
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid request body")
-	}
-	if req.Name == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Playlist name is required")
+	name := c.FormValue("name")
+	description := c.FormValue("description")
+
+	if name == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Playlist name is required")
 	}
 
-	playlist, err := h.service.CreatePlaylist(c.Context(), req.Name, req.Description)
+	_, err := h.service.CreatePlaylist(c.Context(), name, description)
 	if err != nil {
 		slog.Error("Error creating playlist", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to create playlist")
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to create playlist")
 	}
 
+	// Trigger playlist refresh and return success toast
 	c.Set("HX-Trigger", "refreshPlaylists")
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{"Msg": "Playlist created successfully"})
-	}
-	return c.Status(fiber.StatusCreated).JSON(playlist)
+	return c.Render("toast/toastOk", fiber.Map{"Msg": "Playlist created successfully"})
 }
 
 // UpdatePlaylist handles updating a playlist.
 func (h *Handler) UpdatePlaylist(c *fiber.Ctx) error {
 	slog.Debug("UpdatePlaylist handler called", "id", c.Params("id"))
 
-	var req struct {
-		Name        string `json:"name" form:"name"`
-		Description string `json:"description" form:"description"`
-	}
-	if err := c.BodyParser(&req); err != nil {
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid request body")
-	}
-	if req.Name == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Playlist name is required")
+	playlistID := c.Params("id")
+	name := c.FormValue("name")
+	description := c.FormValue("description")
+
+	if name == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("Playlist name is required")
 	}
 
-	playlist, err := h.service.GetPlaylist(c.Context(), c.Params("id"))
+	playlist, err := h.service.GetPlaylist(c.Context(), playlistID)
 	if err != nil {
-		slog.Error("Error loading playlist for update", "error", err, "id", c.Params("id"))
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to load playlist")
+		slog.Error("Error loading playlist for update", "error", err, "id", playlistID)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load playlist")
 	}
 	if playlist == nil {
-		return respond.Err(c, fiber.StatusNotFound, "Playlist not found")
+		return c.Status(fiber.StatusNotFound).SendString("Playlist not found")
 	}
 
-	playlist.Name = req.Name
-	playlist.Description = req.Description
+	playlist.Name = name
+	playlist.Description = description
 
-	if err := h.service.UpdatePlaylist(c.Context(), playlist); err != nil {
-		slog.Error("Error updating playlist", "error", err, "id", c.Params("id"))
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to update playlist")
+	err = h.service.UpdatePlaylist(c.Context(), playlist)
+	if err != nil {
+		slog.Error("Error updating playlist", "error", err, "id", playlistID)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to update playlist")
 	}
-	return respond.Ok(c, "Playlist updated successfully")
+
+	// Return success toast
+	return c.Render("toast/toastOk", fiber.Map{"Msg": "Playlist updated successfully"})
 }
 
 // DeletePlaylist handles deleting a playlist.
 func (h *Handler) DeletePlaylist(c *fiber.Ctx) error {
 	slog.Debug("DeletePlaylist handler called", "id", c.Params("id"))
 
-	if err := h.service.DeletePlaylist(c.Context(), c.Params("id")); err != nil {
+	err := h.service.DeletePlaylist(c.Context(), c.Params("id"))
+	if err != nil {
 		slog.Error("Error deleting playlist", "error", err, "id", c.Params("id"))
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to delete playlist")
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete playlist")
 	}
 
+	// Trigger playlist refresh and return success toast
 	c.Set("HX-Trigger", "refreshPlaylists")
-	return respond.Ok(c, "Playlist deleted successfully")
+	return c.Render("toast/toastOk", fiber.Map{"Msg": "Playlist deleted successfully"})
 }
 
 // AddItemToPlaylist handles adding tracks, artists, or albums to a playlist.
 func (h *Handler) AddItemToPlaylist(c *fiber.Ctx) error {
-	var req struct {
-		PlaylistID string `json:"playlist_id" form:"playlist_id"`
-		ItemType   string `json:"item_type" form:"item_type"`
-		ItemID     string `json:"item_id" form:"item_id"`
-	}
-	if err := c.BodyParser(&req); err != nil {
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid request body")
-	}
+	playlistID := c.FormValue("playlist_id")
+	itemType := c.FormValue("item_type")
+	itemID := c.FormValue("item_id")
 
-	slog.Debug("AddItemToPlaylist handler called", "playlistID", req.PlaylistID, "itemType", req.ItemType, "itemID", req.ItemID)
+	slog.Debug("AddItemToPlaylist handler called", "playlistID", playlistID, "itemType", itemType, "itemID", itemID)
 
-	if req.PlaylistID == "" || req.ItemType == "" || req.ItemID == "" {
-		slog.Error("AddItemToPlaylist: missing required parameters", "playlistID", req.PlaylistID, "itemType", req.ItemType, "itemID", req.ItemID)
-		return respond.Err(c, fiber.StatusBadRequest, "Playlist ID, item type, and item ID are required")
+	if playlistID == "" || itemType == "" || itemID == "" {
+		slog.Error("AddItemToPlaylist: missing required parameters", "playlistID", playlistID, "itemType", itemType, "itemID", itemID)
+		return c.Status(fiber.StatusBadRequest).SendString("Playlist ID, item type, and item ID are required")
 	}
 
-	if err := h.service.AddItemToPlaylist(c.Context(), req.PlaylistID, req.ItemType, req.ItemID); err != nil {
-		slog.Error("Error adding item to playlist", "error", err, "playlistID", req.PlaylistID, "itemType", req.ItemType, "itemID", req.ItemID)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to add item to playlist")
+	err := h.service.AddItemToPlaylist(c.Context(), playlistID, itemType, itemID)
+	if err != nil {
+		slog.Error("Error adding item to playlist", "error", err, "playlistID", playlistID, "itemType", itemType, "itemID", itemID)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to add item to playlist")
 	}
 
+	// Get item name for success message
 	var itemName string
-	switch req.ItemType {
+	switch itemType {
 	case "track":
-		if track, err := h.service.library.GetTrack(c.Context(), req.ItemID); err == nil && track != nil {
+		if track, err := h.service.library.GetTrack(c.Context(), itemID); err == nil && track != nil {
 			itemName = track.Title
 		}
 	case "artist":
-		if artist, err := h.service.library.GetArtist(c.Context(), req.ItemID); err == nil && artist != nil {
+		if artist, err := h.service.library.GetArtist(c.Context(), itemID); err == nil && artist != nil {
 			itemName = artist.Name
 		}
 	case "album":
-		if album, err := h.service.library.GetAlbum(c.Context(), req.ItemID); err == nil && album != nil {
+		if album, err := h.service.library.GetAlbum(c.Context(), itemID); err == nil && album != nil {
 			itemName = album.Title
 		}
 	}
 
-	var msg string
-	switch req.ItemType {
+	var successMsg string
+	switch itemType {
 	case "track":
-		msg = fmt.Sprintf("Track '%s' added to playlist", itemName)
+		successMsg = fmt.Sprintf("Track '%s' added to playlist", itemName)
 	case "artist":
-		msg = fmt.Sprintf("All tracks by '%s' added to playlist", itemName)
+		successMsg = fmt.Sprintf("All tracks by '%s' added to playlist", itemName)
 	case "album":
-		msg = fmt.Sprintf("All tracks from '%s' added to playlist", itemName)
+		successMsg = fmt.Sprintf("All tracks from '%s' added to playlist", itemName)
 	default:
-		msg = "Item added to playlist"
+		successMsg = "Item added to playlist"
 	}
 
-	slog.Info("Item successfully added to playlist", "playlistID", req.PlaylistID, "itemType", req.ItemType, "itemID", req.ItemID)
+	slog.Info("Item successfully added to playlist", "playlistID", playlistID, "itemType", itemType, "itemID", itemID)
 
+	// Trigger playlist refresh and return success toast
 	c.Set("HX-Trigger", "playlistUpdated")
-	return respond.Ok(c, msg)
+	return c.Render("toast/toastOk", fiber.Map{"Msg": successMsg})
 }
 
 // RemoveTrackFromPlaylist handles removing a track from a playlist.
@@ -226,25 +195,28 @@ func (h *Handler) RemoveTrackFromPlaylist(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
 
 	if playlistID == "" || trackID == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Playlist ID and Track ID are required")
+		return c.Status(fiber.StatusBadRequest).SendString("Playlist ID and Track ID are required")
 	}
 
-	if err := h.service.RemoveTrackFromPlaylist(c.Context(), playlistID, trackID); err != nil {
+	err := h.service.RemoveTrackFromPlaylist(c.Context(), playlistID, trackID)
+	if err != nil {
 		slog.Error("Error removing track from playlist", "error", err, "playlistID", playlistID, "trackID", trackID)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to remove track from playlist")
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to remove track from playlist")
 	}
 
+	// Trigger playlist refresh and return success toast
 	c.Set("HX-Trigger", "playlistUpdated")
-	return respond.Ok(c, "Track removed from playlist")
+	return c.Render("toast/toastOk", fiber.Map{"Msg": "Track removed from playlist"})
 }
 
 // GetPlaylistCreationModal returns the create playlist modal.
 func (h *Handler) GetPlaylistCreationModal(c *fiber.Ctx) error {
 	slog.Debug("GetCreatePlaylistModal handler called")
+
 	return c.Render("playlists/create_playlist_modal", nil)
 }
 
-// GetPlaylistsForItem returns the add-to-playlist modal for a given item.
+// GetPlaylistsForItem returns playlists for adding tracks, artists, or albums.
 func (h *Handler) GetPlaylistsForItem(c *fiber.Ctx) error {
 	itemType := c.Params("type")
 	itemID := c.Params("id")
@@ -254,58 +226,66 @@ func (h *Handler) GetPlaylistsForItem(c *fiber.Ctx) error {
 	playlists, err := h.service.GetAllPlaylists(c.Context())
 	if err != nil {
 		slog.Error("Error loading playlists", "error", err, "type", itemType, "id", itemID)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to load playlists")
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load playlists")
 	}
 
+	// Get item name for display
 	var itemName string
 	switch itemType {
 	case "track":
 		track, err := h.service.library.GetTrack(c.Context(), itemID)
 		if err != nil || track == nil {
-			return respond.Err(c, fiber.StatusNotFound, "Track not found")
+			return c.Status(fiber.StatusNotFound).SendString("Track not found")
 		}
 		itemName = track.Title
 	case "artist":
 		artist, err := h.service.library.GetArtist(c.Context(), itemID)
 		if err != nil || artist == nil {
-			return respond.Err(c, fiber.StatusNotFound, "Artist not found")
+			return c.Status(fiber.StatusNotFound).SendString("Artist not found")
 		}
 		itemName = artist.Name
 	case "album":
 		album, err := h.service.library.GetAlbum(c.Context(), itemID)
 		if err != nil || album == nil {
-			return respond.Err(c, fiber.StatusNotFound, "Album not found")
+			return c.Status(fiber.StatusNotFound).SendString("Album not found")
 		}
 		itemName = album.Title
 	default:
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid item type")
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid item type")
 	}
 
-	return c.Render("playlists/add_to_playlist_modal", fiber.Map{
+	data := fiber.Map{
 		"Playlists": playlists,
 		"ItemType":  itemType,
 		"ItemID":    itemID,
 		"ItemName":  itemName,
-	})
+	}
+
+	return c.Render("playlists/add_to_playlist_modal", data)
 }
 
 // ExportM3U handles exporting a playlist to an M3U file.
 func (h *Handler) ExportM3U(c *fiber.Ctx) error {
 	slog.Debug("ExportM3U handler called", "id", c.Params("id"))
 
-	playlist, err := h.service.GetPlaylist(c.Context(), c.Params("id"))
+	playlistID := c.Params("id")
+
+	// Get playlist
+	playlist, err := h.service.GetPlaylist(c.Context(), playlistID)
 	if err != nil {
-		slog.Error("Error loading playlist for export", "error", err, "id", c.Params("id"))
+		slog.Error("Error loading playlist for export", "error", err, "id", playlistID)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load playlist")
 	}
 	if playlist == nil {
 		return c.Status(fiber.StatusNotFound).SendString("Playlist not found")
 	}
 
+	// Generate M3U content
 	var builder strings.Builder
 	builder.WriteString("#EXTM3U\n")
 
 	for _, track := range playlist.Tracks {
+		// Write extended M3U info
 		duration := track.Metadata.Duration
 		artists := make([]string, len(track.Artists))
 		for i, ar := range track.Artists {
@@ -314,12 +294,19 @@ func (h *Handler) ExportM3U(c *fiber.Ctx) error {
 			}
 		}
 		artistStr := strings.Join(artists, ", ")
+
 		builder.WriteString(fmt.Sprintf("#EXTINF:%d,%s - %s\n", duration, artistStr, track.Title))
+
+		// Write file path
 		builder.WriteString(track.Path + "\n")
 	}
 
+	m3uContent := builder.String()
 	filename := fmt.Sprintf("%s.m3u", playlist.Name)
+
+	// Set headers for inline display in new tab
 	c.Set("Content-Type", "text/plain")
 	c.Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
-	return c.SendString(builder.String())
+
+	return c.SendString(m3uContent)
 }

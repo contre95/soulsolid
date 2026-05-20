@@ -9,6 +9,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
@@ -354,31 +355,17 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 
 	// Trigger HTMX to refresh the job list
 	c.Set("HX-Trigger", "refreshJobList")
-
 	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{
-			"Msg": "Lyrics analysis started successfully",
-		})
+		return c.Render("toast/toastOk", fiber.Map{"Msg": "Lyrics analysis started successfully"})
 	}
-
-	return c.Redirect("/ui/analyze/lyrics")
+	return c.JSON(fiber.Map{"job_id": jobID})
 }
 
 // RenderLyricsAnalysisSection renders the lyrics analysis section page
 func (h *Handler) RenderLyricsAnalysisSection(c *fiber.Ctx) error {
 	slog.Debug("Rendering lyrics analysis section")
-
-	data := fiber.Map{
-		"Title": "Lyrics Analysis",
-	}
-
-	// Get lyrics providers info for the UI
-	data["LyricsProviders"] = h.service.GetLyricsProvidersInfo()
-
-	if c.Get("HX-Request") != "true" {
-		data["Section"] = "analyze_lyrics"
-		return c.Render("main", data)
-	}
-
-	return c.Render("sections/analyze_lyrics", data)
+	return respond.Section(c, "analyze_lyrics", fiber.Map{
+		"Title":          "Lyrics Analysis",
+		"LyricsProviders": h.service.GetLyricsProvidersInfo(),
+	})
 }

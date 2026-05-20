@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/contre95/soulsolid/src/features/config"
+	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -37,29 +38,17 @@ func (h *Handler) StartReorganizeAnalysis(c *fiber.Ctx) error {
 	slog.Info("File reorganization job started", "jobID", jobID)
 
 	c.Set("HX-Trigger", "refreshJobList")
-
 	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{
-			"Msg": "File reorganization started successfully",
-		})
+		return c.Render("toast/toastOk", fiber.Map{"Msg": "File reorganization started successfully"})
 	}
-
-	return c.Redirect("/ui/analyze/files")
+	return c.JSON(fiber.Map{"job_id": jobID})
 }
 
 // RenderFilesReorganizationSection renders the file paths section page
 func (h *Handler) RenderFilesReorganizationSection(c *fiber.Ctx) error {
 	slog.Debug("Rendering file paths section")
-
-	data := fiber.Map{
+	return respond.Section(c, "analyze_files", fiber.Map{
 		"Title":  "File Paths",
 		"Config": h.config.Get(),
-	}
-
-	if c.Get("HX-Request") != "true" {
-		data["Section"] = "analyze_files"
-		return c.Render("main", data)
-	}
-
-	return c.Render("sections/analyze_files", data)
+	})
 }

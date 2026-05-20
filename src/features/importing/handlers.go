@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
@@ -57,14 +58,7 @@ func NewHandler(service *Service) *Handler {
 // RenderImportSection renders the import page.
 func (h *Handler) RenderImportSection(c *fiber.Ctx) error {
 	slog.Debug("RenderImport handler called")
-	data := fiber.Map{
-		"Title": "Import",
-	}
-	if c.Get("HX-Request") != "true" {
-		data["Section"] = "import"
-		return c.Render("main", data)
-	}
-	return c.Render("sections/import", data)
+	return respond.Section(c, "import", fiber.Map{"Title": "Import"})
 }
 
 // ImportDirectory is the handler for importing a directory.

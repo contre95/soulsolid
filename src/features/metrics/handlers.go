@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"log/slog"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -27,15 +26,9 @@ func (h *Handler) GetMetricsOverview(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Error loading metrics")
 	}
 
-	// Check if request accepts HTML (HTMX request)
-	acceptHeader := c.Get("Accept")
-	hxRequest := c.Get("HX-Request")
-	if strings.Contains(acceptHeader, "text/html") || hxRequest == "true" {
-		return c.Render("metrics/overview", fiber.Map{
-			"Metrics": metrics,
-		})
+	if c.Get("HX-Request") == "true" {
+		return c.Render("metrics/overview", fiber.Map{"Metrics": metrics})
 	}
-
 	return c.JSON(metrics)
 }
 

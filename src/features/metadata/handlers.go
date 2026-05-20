@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
@@ -290,7 +291,6 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 		// Get provider colors
 		providerColors := h.getProviderColors(providerName)
 
-		// Check if request is HTMX or full page
 		if c.Get("HX-Request") == "true" {
 			return c.Render("sections/tag", fiber.Map{
 				"Track":                 track,
@@ -301,18 +301,17 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 				"SelectedAlbumArtistID": selectedAlbumArtistID,
 				"SelectedArtistIDs":     selectedArtistIDs,
 			})
-		} else {
-			return c.Render("main", fiber.Map{
-				"Track":                 track,
-				"IsTagEdit":             true,
-				"Artists":               artists,
-				"Albums":                albums,
-				"FetchError":            "err",
-				"ProviderColors":        providerColors,
-				"SelectedAlbumArtistID": selectedAlbumArtistID,
-				"SelectedArtistIDs":     selectedArtistIDs,
-			})
 		}
+		return c.Render("main", fiber.Map{
+			"Track":                 track,
+			"IsTagEdit":             true,
+			"Artists":               artists,
+			"Albums":                albums,
+			"FetchError":            "err",
+			"ProviderColors":        providerColors,
+			"SelectedAlbumArtistID": selectedAlbumArtistID,
+			"SelectedArtistIDs":     selectedArtistIDs,
+		})
 	}
 
 	// Use the first track from search results
@@ -401,7 +400,6 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 	// Get provider colors
 	providerColors := h.getProviderColors(providerName)
 
-	// Check if request is HTMX or full page
 	if c.Get("HX-Request") == "true" {
 		return c.Render("sections/tag", fiber.Map{
 			"Track":                 track,
@@ -412,18 +410,17 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 			"SelectedAlbumArtistID": selectedAlbumArtistID,
 			"SelectedArtistIDs":     selectedArtistIDs,
 		})
-	} else {
-		return c.Render("main", fiber.Map{
-			"Track":                 track,
-			"IsTagEdit":             true,
-			"Artists":               artists,
-			"Albums":                albums,
-			"FromProvider":          providerName,
-			"ProviderColors":        providerColors,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-		})
 	}
+	return c.Render("main", fiber.Map{
+		"Track":                 track,
+		"IsTagEdit":             true,
+		"Artists":               artists,
+		"Albums":                albums,
+		"FromProvider":          providerName,
+		"ProviderColors":        providerColors,
+		"SelectedAlbumArtistID": selectedAlbumArtistID,
+		"SelectedArtistIDs":     selectedArtistIDs,
+	})
 }
 
 // ModalData holds data for the search results modal
@@ -786,28 +783,14 @@ func (h *Handler) StartAcoustIDAnalysis(c *fiber.Ctx) error {
 
 	// // Trigger HTMX to refresh the job list
 	c.Set("HX-Trigger", "refreshJobList")
-
 	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{
-			"Msg": "AcoustID analysis started successfully",
-		})
+		return c.Render("toast/toastOk", fiber.Map{"Msg": "AcoustID analysis started successfully"})
 	}
-
-	return c.Redirect("/ui/analyze/metadata")
+	return c.JSON(fiber.Map{"job_id": jobID})
 }
 
 // RenderMetadataAnalysisSection renders the metadata analysis section page
 func (h *Handler) RenderMetadataAnalysisSection(c *fiber.Ctx) error {
 	slog.Debug("Rendering metadata analysis section")
-
-	data := fiber.Map{
-		"Title": "Metadata Analysis",
-	}
-
-	if c.Get("HX-Request") != "true" {
-		data["Section"] = "analyze_metadata"
-		return c.Render("main", data)
-	}
-
-	return c.Render("sections/analyze_metadata", data)
+	return respond.Section(c, "analyze_metadata", fiber.Map{"Title": "Metadata Analysis"})
 }
