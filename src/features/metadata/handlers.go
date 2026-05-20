@@ -114,22 +114,8 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 		}
 	}
 
-	// Check if request is HTMX or full page
-	if c.Get("HX-Request") == "true" {
-		// Return just the section content for HTMX requests
-		return c.Render("sections/tag", fiber.Map{
-			"Track":                 track,
-			"Artists":               artists,
-			"Albums":                albums,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-		})
-	}
-
-	// Return full page for direct navigation
-	return c.Render("main", fiber.Map{
+	return respond.Partial(c, "sections/tag", fiber.Map{
 		"Track":                 track,
-		"IsTagEdit":             true,
 		"Artists":               artists,
 		"Albums":                albums,
 		"SelectedAlbumArtistID": selectedAlbumArtistID,
@@ -299,20 +285,8 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 		// Get provider colors
 		providerColors := h.getProviderColors(providerName)
 
-		if c.Get("HX-Request") == "true" {
-			return c.Render("sections/tag", fiber.Map{
-				"Track":                 track,
-				"Artists":               artists,
-				"Albums":                albums,
-				"FetchError":            "err",
-				"ProviderColors":        providerColors,
-				"SelectedAlbumArtistID": selectedAlbumArtistID,
-				"SelectedArtistIDs":     selectedArtistIDs,
-			})
-		}
-		return c.Render("main", fiber.Map{
+		return respond.Partial(c, "sections/tag", fiber.Map{
 			"Track":                 track,
-			"IsTagEdit":             true,
 			"Artists":               artists,
 			"Albums":                albums,
 			"FetchError":            "err",
@@ -408,20 +382,8 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 	// Get provider colors
 	providerColors := h.getProviderColors(providerName)
 
-	if c.Get("HX-Request") == "true" {
-		return c.Render("sections/tag", fiber.Map{
-			"Track":                 track,
-			"Artists":               artists,
-			"Albums":                albums,
-			"FromProvider":          providerName,
-			"ProviderColors":        providerColors,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-		})
-	}
-	return c.Render("main", fiber.Map{
+	return respond.Partial(c, "sections/tag", fiber.Map{
 		"Track":                 track,
-		"IsTagEdit":             true,
 		"Artists":               artists,
 		"Albums":                albums,
 		"FromProvider":          providerName,

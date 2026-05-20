@@ -13,8 +13,8 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	ui.Get("/lyrics/queue/items", handler.RenderLyricsQueueItems)
 	ui.Get("/lyrics/queue/items/grouped", handler.RenderGroupedLyricsQueueItems)
 	tag := app.Group("/tag")
-	tag.Get("/edit/:trackId/lyrics/text/:provider", handler.GetLyricsText)
 	tag.Get("/buttons/lyrics/:trackId", handler.RenderLyricsButtons)
+	tag.Get("/:trackId/lyrics/text/:provider", handler.GetLyricsText)
 
 	// Library routes for lyrics
 	library := app.Group("/library")
