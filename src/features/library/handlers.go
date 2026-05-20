@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
@@ -51,17 +52,12 @@ func (h *Handler) RenderLibrarySection(c *fiber.Ctx) error {
 		albums = []*music.Album{} // Continue with empty list
 	}
 
-	data := fiber.Map{
+	return respond.Section(c, "library", fiber.Map{
 		"Title":               "Library",
 		"DefaultDownloadPath": h.service.configManager.Get().DownloadPath,
 		"SearchArtists":       artists,
 		"SearchAlbums":        albums,
-	}
-	if c.Get("HX-Request") != "true" {
-		data["Section"] = "library"
-		return c.Render("main", data)
-	}
-	return c.Render("sections/library", data)
+	})
 }
 
 // Pagination represents pagination information
@@ -455,10 +451,7 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 
 	pagination := NewPagination(page, limit, totalCount)
 
-	// Check if the request accepts HTML (like an HTMX request)
-	acceptHeader := c.Get("Accept")
-	hxRequest := c.Get("HX-Request")
-	if strings.Contains(acceptHeader, "text/html") || hxRequest == "true" {
+	if c.Get("HX-Request") == "true" {
 		return c.Render("library/unified_search_list", fiber.Map{
 			"Results":    results,
 			"Pagination": pagination,
@@ -502,17 +495,13 @@ func (h *Handler) DeleteTrack(c *fiber.Ctx) error {
 
 	trackID := c.Params("trackId")
 	if trackID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+		return respond.Err(c, fiber.StatusBadRequest, "Track ID is required")
 	}
-
-	err := h.service.DeleteTrack(c.Context(), trackID)
-	if err != nil {
+	if err := h.service.DeleteTrack(c.Context(), trackID); err != nil {
 		slog.Error("Failed to delete track", "error", err, "trackId", trackID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete track")
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to delete track")
 	}
-
-	// Return success toast
-	return c.Render("toast/toastOk", fiber.Map{"Msg": "Track deleted successfully"})
+	return respond.Ok(c, "Track deleted successfully")
 }
 
 // DeleteAlbum deletes an album from the library.
@@ -521,17 +510,13 @@ func (h *Handler) DeleteAlbum(c *fiber.Ctx) error {
 
 	albumID := c.Params("albumId")
 	if albumID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Album ID is required")
+		return respond.Err(c, fiber.StatusBadRequest, "Album ID is required")
 	}
-
-	err := h.service.DeleteAlbum(c.Context(), albumID)
-	if err != nil {
+	if err := h.service.DeleteAlbum(c.Context(), albumID); err != nil {
 		slog.Error("Failed to delete album", "error", err, "albumId", albumID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete album")
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to delete album")
 	}
-
-	// Return success toast
-	return c.Render("toast/toastOk", fiber.Map{"Msg": "Album deleted successfully"})
+	return respond.Ok(c, "Album deleted successfully")
 }
 
 // DeleteArtist deletes an artist from the library.
@@ -540,17 +525,13 @@ func (h *Handler) DeleteArtist(c *fiber.Ctx) error {
 
 	artistID := c.Params("artistId")
 	if artistID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Artist ID is required")
+		return respond.Err(c, fiber.StatusBadRequest, "Artist ID is required")
 	}
-
-	err := h.service.DeleteArtist(c.Context(), artistID)
-	if err != nil {
+	if err := h.service.DeleteArtist(c.Context(), artistID); err != nil {
 		slog.Error("Failed to delete artist", "error", err, "artistId", artistID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete artist")
+		return respond.Err(c, fiber.StatusInternalServerError, "Failed to delete artist")
 	}
-
-	// Return success toast
-	return c.Render("toast/toastOk", fiber.Map{"Msg": "Artist deleted successfully"})
+	return respond.Ok(c, "Artist deleted successfully")
 }
 
 // RenderTrackOverviewPanel renders the floating track overview panel.
