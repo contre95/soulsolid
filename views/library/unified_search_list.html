@@ -38,7 +38,7 @@
           {{range .Results}}
              <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/60 transition-colors {{if eq .Type "track"}}border-l-8 border-green-500 cursor-pointer{{else if eq .Type "album"}}border-l-8 border-purple-500{{else}}border-l-8 border-cyan-500{{end}}"
               {{if eq .Type "track"}}
-              hx-get="/ui/library/tracks/{{.ID}}/overview"
+              hx-get="/library/tracks/{{.ID}}/overview"
               hx-target="#modal-container"
               hx-swap="innerHTML"
               hx-trigger="click[!event.target.closest('button')]"
@@ -75,7 +75,7 @@
                <td class="px-1.5 py-1 text-center flex gap-1">
                  {{if eq .Type "track"}}
                  <button class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 bg-gray-50/50 dark:bg-gray-800/40 rounded backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 w-6 h-6 flex items-center justify-center"
-                         hx-get="/ui/library/tracks/{{.ID}}/overview"
+                         hx-get="/library/tracks/{{.ID}}/overview"
                          hx-target="#modal-container"
                          hx-swap="innerHTML"
                          title="Overview">

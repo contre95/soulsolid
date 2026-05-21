@@ -8,10 +8,8 @@ import (
 func RegisterRoutes(app *fiber.App, service *Service) {
 	handler := NewHandler(service)
 
-	// UI routes for page rendering
-	ui := app.Group("/ui")
 	tag := app.Group("/tag")
-	tag.Get("/buttons/metadata/:trackId", handler.RenderMetadataButtons)
+	tag.Get("/:trackId/metadata", handler.GetMetadataProviders)
 	tag.Get("/:trackId/artwork", handler.ServeArtwork)
 	tag.Get("/:trackId/fingerprint", handler.CalculateFingerprint)
 	tag.Get("/:trackId/fingerprint/view", handler.ViewFingerprint)
@@ -24,5 +22,5 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	analyze := app.Group("/analyze")
 	analyze.Post("/acoustid", handler.StartAcoustIDAnalysis)
 
-	ui.Get("/analyze/metadata", handler.RenderMetadataAnalysisSection)
+	app.Get("/analyze/metadata", handler.RenderMetadataAnalysisSection)
 }

@@ -71,7 +71,7 @@
   <div
     class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg lg:col-span-2"
     style="height: 300px"
-    hx-get="/ui/metrics/charts/year"
+    hx-get="/metrics/charts/year"
     hx-trigger="apexcharts-ready from:body, load"
     hx-swap="innerHTML"
     hx-indicator="#yearChartLoading"
@@ -88,7 +88,7 @@
   <div
     class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-lg shadow-lg lg:col-span-1"
     style="height: 300px"
-    hx-get="/ui/metrics/charts/genre"
+    hx-get="/metrics/charts/genre"
     hx-trigger="apexcharts-ready from:body, load"
     hx-swap="innerHTML"
     hx-indicator="#genreChartLoading"
@@ -105,7 +105,7 @@
   <div
     class="bg-white/80 dark:bg-gray-900/70 p-3 rounded-lg shadow-lg lg:col-span-1"
     style="height: 300px"
-    hx-get="/ui/metrics/charts/format"
+    hx-get="/metrics/charts/format"
     hx-trigger="apexcharts-ready from:body, load"
     hx-swap="innerHTML"
     hx-indicator="#formatChartLoading"
@@ -122,7 +122,7 @@
   <div
     class="bg-white/80 dark:bg-gray-900/70 p-3 rounded-lg shadow-lg lg:col-span-2"
     style="height: 300px"
-    hx-get="/ui/metrics/charts/metadata"
+    hx-get="/metrics/charts/metadata"
     hx-trigger="apexcharts-ready from:body, load"
     hx-swap="innerHTML"
     hx-indicator="#metadataChartLoading"
@@ -165,7 +165,7 @@
 
     function showChartFallbacks() {
       // Fallback display when ApexCharts fails to load
-      const chartContainers = document.querySelectorAll('[hx-get*="/ui/metrics/charts/"]');
+      const chartContainers = document.querySelectorAll('[hx-get*="/metrics/charts/"]');
       chartContainers.forEach(container => {
         container.innerHTML = '<div class="flex items-center justify-center h-64 text-gray-500"><div class="text-center"><i class="fas fa-chart-bar text-4xl mb-2"></i><p>Charts unavailable</p><p class="text-sm">ApexCharts loading failed</p></div></div>';
       });
@@ -175,14 +175,14 @@
     document.body.addEventListener('htmx:responseError', function(evt) {
       console.error('HTMX request failed:', evt.detail);
       const target = evt.detail.target;
-      if (target && target.getAttribute('hx-get')?.includes('/ui/metrics/charts/')) {
+      if (target && target.getAttribute('hx-get')?.includes('/metrics/charts/')) {
         target.innerHTML = '<div class="flex items-center justify-center h-64 text-red-500"><div class="text-center"><i class="fas fa-exclamation-triangle text-4xl mb-2"></i><p>Failed to load chart</p><p class="text-sm">Please try refreshing</p></div></div>';
       }
     });
 
     // Add refresh functionality for all charts
     function refreshAllCharts() {
-      const chartContainers = document.querySelectorAll('[hx-get*="/ui/metrics/charts/"]');
+      const chartContainers = document.querySelectorAll('[hx-get*="/metrics/charts/"]');
       chartContainers.forEach(container => {
         htmx.trigger(container, 'load');
       });

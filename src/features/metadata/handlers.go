@@ -602,23 +602,28 @@ func (h *Handler) ViewFingerprint(c *fiber.Ctx) error {
 	return respond.Text(c, "fingerprint", track.ChromaprintFingerprint)
 }
 
-// RenderMetadataButtons renders the metadata provider buttons for a track
-func (h *Handler) RenderMetadataButtons(c *fiber.Ctx) error {
+// GetMetadataProviders returns metadata provider buttons for HTMX or provider list as JSON.
+func (h *Handler) GetMetadataProviders(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	if trackID == "" {
 		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
 	}
 
-	// Get track data for button context
+	providers := h.service.GetEnabledMetadataProviders()
+
+	if c.Get("HX-Request") != "true" {
+		return c.JSON(providers)
+	}
+
 	track, err := h.service.GetTrackFileTags(c.Context(), trackID)
 	if err != nil {
-		slog.Error("Failed to get track for buttons", "error", err, "trackId", trackID)
+		slog.Error("Failed to get track for metadata providers", "error", err, "trackId", trackID)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
 	}
 
 	return respond.Partial(c, "tag/metadata_buttons", fiber.Map{
 		"Track":            track,
-		"EnabledProviders": h.service.GetEnabledMetadataProviders(),
+		"EnabledProviders": providers,
 	})
 }
 

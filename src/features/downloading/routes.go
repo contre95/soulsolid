@@ -8,32 +8,19 @@ import (
 func RegisterRoutes(app *fiber.App, service *Service) {
 	handler := NewHandler(service)
 
-	// API routes for downloading
-	api := app.Group("/downloads")
+	app.Get("/downloads", handler.RenderDownloadSection)
 
-	// Search endpoints
-	api.Post("/search", handler.Search)
-	api.Post("/search/albums", handler.SearchAlbums)
-	api.Post("/search/tracks", handler.SearchTracks)
-
-	// Navigation endpoints
-
-	api.Get("/album/:albumId/tracks", handler.GetAlbumTracks)
-
-	// Download endpoints
-	api.Post("/track", handler.DownloadTrack)
-	api.Post("/album", handler.DownloadAlbum)
-	api.Post("/artist", handler.DownloadArtist)
-	api.Post("/tracks", handler.DownloadTracks)
-	api.Post("/playlist", handler.DownloadPlaylist)
-
-	// Capabilities endpoint
-	api.Get("/capabilities", handler.GetDownloaderCapabilities)
-
-	// User info endpoint
-	api.Get("/user/info", handler.GetUserInfo)
-
-	ui := app.Group("/ui")
-	ui.Get("/download", handler.RenderDownloadSection)
-	ui.Get("/downloading/chart/tracks", handler.GetChartTracks)
+	downloads := app.Group("/downloads")
+	downloads.Post("/search", handler.Search)
+	downloads.Post("/search/albums", handler.SearchAlbums)
+	downloads.Post("/search/tracks", handler.SearchTracks)
+	downloads.Get("/album/:albumId/tracks", handler.GetAlbumTracks)
+	downloads.Post("/track", handler.DownloadTrack)
+	downloads.Post("/album", handler.DownloadAlbum)
+	downloads.Post("/artist", handler.DownloadArtist)
+	downloads.Post("/tracks", handler.DownloadTracks)
+	downloads.Post("/playlist", handler.DownloadPlaylist)
+	downloads.Get("/capabilities", handler.GetDownloaderCapabilities)
+	downloads.Get("/user/info", handler.GetUserInfo)
+	downloads.Get("/chart/tracks", handler.GetChartTracks)
 }
