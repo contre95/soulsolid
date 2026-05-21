@@ -122,9 +122,7 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	} else {
 		slog.Info("Configuration saved to file successfully")
 	}
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": "Configuration updated successfully!",
-	})
+	return respond.ToastOk(c, "Configuration updated successfully!")
 }
 
 func parseStringSlice(s string) []string {
@@ -151,14 +149,14 @@ func (h *Handler) GetConfigForm(c *fiber.Ctx) error {
 	})
 }
 
-// GetConfig returns the current configuration in the requested format.
+// GetConfig returns the config as JSON, or as raw YAML text when ?fmt=yaml is set.
 func (h *Handler) GetConfig(c *fiber.Ctx) error {
 	slog.Debug("GetConfig handler called")
-	if c.Get("HX-Request") != "true" {
-		return c.JSON(h.configManager.Get())
+	if c.Query("fmt") == "yaml" {
+		c.Set("Content-Type", "text/yaml")
+		return c.SendString(h.configManager.GetYAML())
 	}
-	c.Set("Content-Type", "text/yaml")
-	return c.SendString(h.configManager.GetYAML())
+	return c.JSON(h.configManager.Get())
 }
 
 // DownloadDatabase serves the database file for download.
@@ -169,7 +167,7 @@ func (h *Handler) DownloadDatabase(c *fiber.Ctx) error {
 	dbPath := config.Database.Path
 
 	if dbPath == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Database path not configured")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Database path not configured")
 	}
 
 	filename := filepath.Base(dbPath)

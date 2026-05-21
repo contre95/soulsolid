@@ -50,16 +50,16 @@ func (h *Handler) SearchAlbums(c *fiber.Ctx) error {
 
 	var req SearchRequest
 	if err := c.BodyParser(&req); err != nil {
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid request body")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.Query == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Query parameter is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Query parameter is required")
 	}
 
 	albums, err := h.service.SearchAlbums(req.Downloader, req.Query, req.Limit)
 	if err != nil {
 		slog.Error("Failed to search albums", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to search albums")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to search albums")
 	}
 	return respond.Partial(c, "downloading/album_results", fiber.Map{
 		"Albums":     albums,
@@ -73,16 +73,16 @@ func (h *Handler) SearchTracks(c *fiber.Ctx) error {
 
 	var req SearchRequest
 	if err := c.BodyParser(&req); err != nil {
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid request body")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.Query == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Query parameter is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Query parameter is required")
 	}
 
 	tracks, err := h.service.SearchTracks(req.Downloader, req.Query, req.Limit)
 	if err != nil {
 		slog.Error("Failed to search tracks", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to search tracks")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to search tracks")
 	}
 
 	trackPtrs := make([]*music.Track, len(tracks))
@@ -101,10 +101,10 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 
 	var req SearchRequest
 	if err := c.BodyParser(&req); err != nil {
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid request body")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.Query == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Query parameter is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Query parameter is required")
 	}
 	if req.Limit == 0 {
 		req.Limit = 20
@@ -115,7 +115,7 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 		albums, err := h.service.SearchAlbums(req.Downloader, req.Query, req.Limit)
 		if err != nil {
 			slog.Error("Failed to search albums", "error", err)
-			return respond.Err(c, fiber.StatusInternalServerError, "Failed to search albums")
+			return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to search albums")
 		}
 		return respond.Partial(c, "downloading/album_results", fiber.Map{
 			"Albums":     albums,
@@ -126,7 +126,7 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 		tracks, err := h.service.SearchTracks(req.Downloader, req.Query, req.Limit)
 		if err != nil {
 			slog.Error("Failed to search tracks", "error", err)
-			return respond.Err(c, fiber.StatusInternalServerError, "Failed to search tracks")
+			return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to search tracks")
 		}
 		trackPtrs := make([]*music.Track, len(tracks))
 		for i := range tracks {
@@ -141,7 +141,7 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 		artists, err := h.service.SearchArtists(req.Downloader, req.Query, req.Limit)
 		if err != nil {
 			slog.Error("Failed to search artists", "error", err)
-			return respond.Err(c, fiber.StatusInternalServerError, "Failed to search artists")
+			return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to search artists")
 		}
 		return respond.Partial(c, "downloading/artist_results", fiber.Map{
 			"Artists":    artists,
@@ -152,7 +152,7 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 		result, err := h.service.SearchLinks(req.Downloader, req.Query, req.Limit)
 		if err != nil {
 			slog.Error("Failed to search links", "error", err)
-			return respond.Err(c, fiber.StatusInternalServerError, "Failed to search links")
+			return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to search links")
 		}
 		if c.Get("HX-Request") != "true" {
 			return c.JSON(result)
@@ -179,7 +179,7 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 		})
 
 	default:
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid search type")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid search type")
 	}
 }
 
@@ -209,10 +209,10 @@ func (h *Handler) DownloadTrack(c *fiber.Ctx) error {
 
 	var req DownloadTrackRequest
 	if err := c.BodyParser(&req); err != nil {
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid request body")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.TrackID == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Track ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Track ID is required")
 	}
 
 	downloader := strings.Clone(c.Query("downloader", "dummy"))
@@ -221,10 +221,10 @@ func (h *Handler) DownloadTrack(c *fiber.Ctx) error {
 	jobID, err := h.service.DownloadTrack(downloader, req.TrackID)
 	if err != nil {
 		slog.Error("Failed to start track download", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start track download")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start track download")
 	}
 
-	return respond.Job(c, jobID, "Track download started")
+	return respond.ToastJob(c, jobID, "Track download started")
 }
 
 // DownloadAlbum handles album download requests
@@ -233,20 +233,20 @@ func (h *Handler) DownloadAlbum(c *fiber.Ctx) error {
 
 	var req DownloadAlbumRequest
 	if err := c.BodyParser(&req); err != nil {
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid request body")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.AlbumID == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Album ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Album ID is required")
 	}
 
 	downloader := strings.Clone(c.Query("downloader", "dummy"))
 	jobID, err := h.service.DownloadAlbum(downloader, req.AlbumID)
 	if err != nil {
 		slog.Error("Failed to start album download", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start album download")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start album download")
 	}
 
-	return respond.Job(c, jobID, "Album download started")
+	return respond.ToastJob(c, jobID, "Album download started")
 }
 
 // DownloadArtist handles artist download requests
@@ -255,20 +255,20 @@ func (h *Handler) DownloadArtist(c *fiber.Ctx) error {
 
 	var req DownloadArtistRequest
 	if err := c.BodyParser(&req); err != nil {
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid request body")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.ArtistID == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Artist ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Artist ID is required")
 	}
 
 	downloader := strings.Clone(c.Query("downloader", "dummy"))
 	jobID, err := h.service.DownloadArtist(downloader, req.ArtistID)
 	if err != nil {
 		slog.Error("Failed to start artist download", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start artist download")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start artist download")
 	}
 
-	return respond.Job(c, jobID, "Artist download started")
+	return respond.ToastJob(c, jobID, "Artist download started")
 }
 
 // DownloadTracks handles multiple track download requests
@@ -277,10 +277,10 @@ func (h *Handler) DownloadTracks(c *fiber.Ctx) error {
 
 	var req DownloadTracksRequest
 	if err := c.BodyParser(&req); err != nil {
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid request body")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.TrackIDs == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Track IDs are required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Track IDs are required")
 	}
 
 	trackIDs := strings.Split(req.TrackIDs, ",")
@@ -292,10 +292,10 @@ func (h *Handler) DownloadTracks(c *fiber.Ctx) error {
 	jobID, err := h.service.DownloadTracks(downloader, trackIDs)
 	if err != nil {
 		slog.Error("Failed to start tracks download", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start tracks download")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start tracks download")
 	}
 
-	return respond.Job(c, jobID, "Tracks download started")
+	return respond.ToastJob(c, jobID, "Tracks download started")
 }
 
 // DownloadPlaylist handles playlist download requests
@@ -307,13 +307,13 @@ func (h *Handler) DownloadPlaylist(c *fiber.Ctx) error {
 		PlaylistName string `json:"playlistName" form:"playlistName"`
 	}
 	if err := c.BodyParser(&req); err != nil {
-		return respond.Err(c, fiber.StatusBadRequest, "Invalid request body")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.TrackIDs == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Track IDs are required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Track IDs are required")
 	}
 	if req.PlaylistName == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Playlist name is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Playlist name is required")
 	}
 
 	trackIDs := strings.Split(req.TrackIDs, ",")
@@ -325,10 +325,10 @@ func (h *Handler) DownloadPlaylist(c *fiber.Ctx) error {
 	jobID, err := h.service.DownloadPlaylist(downloader, trackIDs, req.PlaylistName)
 	if err != nil {
 		slog.Error("Failed to start playlist download", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start playlist download")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start playlist download")
 	}
 
-	return respond.Job(c, jobID, "Playlist '"+req.PlaylistName+"' download started")
+	return respond.ToastJob(c, jobID, "Playlist '"+req.PlaylistName+"' download started")
 }
 
 // GetAlbumTracks handles requests to get tracks from an album
@@ -421,7 +421,7 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 	for i := range tracks {
 		trackPtrs[i] = &tracks[i]
 	}
-	return c.Render("downloading/chart_tracks", fiber.Map{
+	return respond.Partial(c, "downloading/chart_tracks", fiber.Map{
 		"Tracks":           trackPtrs,
 		"DownloaderStatus": downloaderStatus,
 		"DownloaderName":   downloaderName,

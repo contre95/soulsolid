@@ -30,13 +30,13 @@ func (h *Handler) StartReorganizeAnalysis(c *fiber.Ctx) error {
 	jobID, err := h.service.StartReorganizeAnalysis(c.Context(), fat32Safe)
 	if err != nil {
 		slog.Error("Failed to start file reorganization job", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start file reorganization job: "+err.Error())
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start file reorganization job: "+err.Error())
 	}
 
 	slog.Info("File reorganization job started", "jobID", jobID)
 
 	c.Set("HX-Trigger", "refreshJobList")
-	return respond.Job(c, jobID, "File reorganization started successfully")
+	return respond.ToastJob(c, jobID, "File reorganization started successfully")
 }
 
 // RenderFilesReorganizationSection renders the file paths section page

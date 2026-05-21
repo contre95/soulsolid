@@ -135,7 +135,7 @@ func (h *Handler) GetArtistsCount(c *fiber.Ctx) error {
 	artists, err := h.service.GetArtists(c.Context())
 	if err != nil {
 		slog.Error("Error loading artists count", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Error loading artists count")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Error loading artists count")
 	}
 	return respond.Text(c, "artists_count", len(artists))
 }
@@ -146,7 +146,7 @@ func (h *Handler) GetAlbumsCount(c *fiber.Ctx) error {
 	albums, err := h.service.GetAlbums(c.Context())
 	if err != nil {
 		slog.Error("Error loading albums count", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Error loading albums count")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Error loading albums count")
 	}
 	return respond.Text(c, "albums_count", len(albums))
 }
@@ -157,7 +157,7 @@ func (h *Handler) GetTracksCount(c *fiber.Ctx) error {
 	count, err := h.service.GetTracksCount(c.Context())
 	if err != nil {
 		slog.Error("Error loading tracks count", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Error loading tracks count")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Error loading tracks count")
 	}
 	return respond.Text(c, "tracks_count", count, fmt.Sprintf("%d tracks", count))
 }
@@ -168,7 +168,7 @@ func (h *Handler) GetStorageSize(c *fiber.Ctx) error {
 	size, err := h.service.GetStorageSize(c.Context())
 	if err != nil {
 		slog.Error("Error loading storage size", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Error loading storage size")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Error loading storage size")
 	}
 
 	var formatted string
@@ -449,22 +449,10 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 
 	pagination := NewPagination(page, limit, totalCount)
 
-	if c.Get("HX-Request") == "true" {
-		return c.Render("library/unified_search_list", fiber.Map{
-			"Results":    results,
-			"Pagination": pagination,
-			"Query":      query,
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"results": results,
-		"pagination": fiber.Map{
-			"page":       page,
-			"limit":      limit,
-			"totalCount": totalCount,
-			"totalPages": (totalCount + limit - 1) / limit,
-		},
+	return respond.Partial(c, "library/unified_search_list", fiber.Map{
+		"Results":    results,
+		"Pagination": pagination,
+		"Query":      query,
 	})
 }
 
@@ -482,7 +470,7 @@ func (h *Handler) GetLibraryFileTree(c *fiber.Ctx) error {
 	}
 	if err != nil {
 		slog.Error("Error getting library file tree", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to get library file tree")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to get library file tree")
 	}
 	return respond.Text(c, "file_tree", tree)
 }
@@ -493,13 +481,13 @@ func (h *Handler) DeleteTrack(c *fiber.Ctx) error {
 
 	trackID := c.Params("trackId")
 	if trackID == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Track ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Track ID is required")
 	}
 	if err := h.service.DeleteTrack(c.Context(), trackID); err != nil {
 		slog.Error("Failed to delete track", "error", err, "trackId", trackID)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to delete track")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to delete track")
 	}
-	return respond.Ok(c, "Track deleted successfully")
+	return respond.ToastOk(c, "Track deleted successfully")
 }
 
 // DeleteAlbum deletes an album from the library.
@@ -508,13 +496,13 @@ func (h *Handler) DeleteAlbum(c *fiber.Ctx) error {
 
 	albumID := c.Params("albumId")
 	if albumID == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Album ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Album ID is required")
 	}
 	if err := h.service.DeleteAlbum(c.Context(), albumID); err != nil {
 		slog.Error("Failed to delete album", "error", err, "albumId", albumID)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to delete album")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to delete album")
 	}
-	return respond.Ok(c, "Album deleted successfully")
+	return respond.ToastOk(c, "Album deleted successfully")
 }
 
 // DeleteArtist deletes an artist from the library.
@@ -523,13 +511,13 @@ func (h *Handler) DeleteArtist(c *fiber.Ctx) error {
 
 	artistID := c.Params("artistId")
 	if artistID == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Artist ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Artist ID is required")
 	}
 	if err := h.service.DeleteArtist(c.Context(), artistID); err != nil {
 		slog.Error("Failed to delete artist", "error", err, "artistId", artistID)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to delete artist")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to delete artist")
 	}
-	return respond.Ok(c, "Artist deleted successfully")
+	return respond.ToastOk(c, "Artist deleted successfully")
 }
 
 // RenderTrackOverviewPanel renders the floating track overview panel.
@@ -573,4 +561,3 @@ func (h *Handler) RenderTrackOverviewPanel(c *fiber.Ctx) error {
 		"LyricsPreview": lyricsPreview,
 	})
 }
-

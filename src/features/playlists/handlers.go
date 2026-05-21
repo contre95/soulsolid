@@ -49,16 +49,10 @@ func (h *Handler) GetPlaylist(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).SendString("Playlist not found")
 	}
 
-	data := fiber.Map{
+	return respond.Partial(c, "playlists/playlist", fiber.Map{
 		"Title":    fmt.Sprintf("Playlist: %s", playlist.Name),
 		"Playlist": playlist,
-	}
-
-	if c.Get("HX-Request") != "true" {
-		// For direct navigation to specific playlist, render main with Playlist data (no Section set)
-		return c.Render("main", data)
-	}
-	return c.Render("playlists/playlist", data)
+	})
 }
 
 // CreatePlaylist handles creating a new playlist.
@@ -69,17 +63,17 @@ func (h *Handler) CreatePlaylist(c *fiber.Ctx) error {
 	description := c.FormValue("description")
 
 	if name == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Playlist name is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Playlist name is required")
 	}
 
 	_, err := h.service.CreatePlaylist(c.Context(), name, description)
 	if err != nil {
 		slog.Error("Error creating playlist", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to create playlist")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to create playlist")
 	}
 
 	c.Set("HX-Trigger", "refreshPlaylists")
-	return respond.Ok(c, "Playlist created successfully")
+	return respond.ToastOk(c, "Playlist created successfully")
 }
 
 // UpdatePlaylist handles updating a playlist.
@@ -91,16 +85,16 @@ func (h *Handler) UpdatePlaylist(c *fiber.Ctx) error {
 	description := c.FormValue("description")
 
 	if name == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Playlist name is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Playlist name is required")
 	}
 
 	playlist, err := h.service.GetPlaylist(c.Context(), playlistID)
 	if err != nil {
 		slog.Error("Error loading playlist for update", "error", err, "id", playlistID)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to load playlist")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to load playlist")
 	}
 	if playlist == nil {
-		return respond.Err(c, fiber.StatusNotFound, "Playlist not found")
+		return respond.ToastErr(c, fiber.StatusNotFound, "Playlist not found")
 	}
 
 	playlist.Name = name
@@ -109,10 +103,10 @@ func (h *Handler) UpdatePlaylist(c *fiber.Ctx) error {
 	err = h.service.UpdatePlaylist(c.Context(), playlist)
 	if err != nil {
 		slog.Error("Error updating playlist", "error", err, "id", playlistID)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to update playlist")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to update playlist")
 	}
 
-	return respond.Ok(c, "Playlist updated successfully")
+	return respond.ToastOk(c, "Playlist updated successfully")
 }
 
 // DeletePlaylist handles deleting a playlist.
@@ -122,11 +116,11 @@ func (h *Handler) DeletePlaylist(c *fiber.Ctx) error {
 	err := h.service.DeletePlaylist(c.Context(), c.Params("id"))
 	if err != nil {
 		slog.Error("Error deleting playlist", "error", err, "id", c.Params("id"))
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to delete playlist")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to delete playlist")
 	}
 
 	c.Set("HX-Trigger", "refreshPlaylists")
-	return respond.Ok(c, "Playlist deleted successfully")
+	return respond.ToastOk(c, "Playlist deleted successfully")
 }
 
 // AddItemToPlaylist handles adding tracks, artists, or albums to a playlist.
@@ -139,13 +133,13 @@ func (h *Handler) AddItemToPlaylist(c *fiber.Ctx) error {
 
 	if playlistID == "" || itemType == "" || itemID == "" {
 		slog.Error("AddItemToPlaylist: missing required parameters", "playlistID", playlistID, "itemType", itemType, "itemID", itemID)
-		return respond.Err(c, fiber.StatusBadRequest, "Playlist ID, item type, and item ID are required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Playlist ID, item type, and item ID are required")
 	}
 
 	err := h.service.AddItemToPlaylist(c.Context(), playlistID, itemType, itemID)
 	if err != nil {
 		slog.Error("Error adding item to playlist", "error", err, "playlistID", playlistID, "itemType", itemType, "itemID", itemID)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to add item to playlist")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to add item to playlist")
 	}
 
 	// Get item name for success message
@@ -180,7 +174,7 @@ func (h *Handler) AddItemToPlaylist(c *fiber.Ctx) error {
 	slog.Info("Item successfully added to playlist", "playlistID", playlistID, "itemType", itemType, "itemID", itemID)
 
 	c.Set("HX-Trigger", "playlistUpdated")
-	return respond.Ok(c, successMsg)
+	return respond.ToastOk(c, successMsg)
 }
 
 // RemoveTrackFromPlaylist handles removing a track from a playlist.
@@ -191,17 +185,17 @@ func (h *Handler) RemoveTrackFromPlaylist(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
 
 	if playlistID == "" || trackID == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Playlist ID and Track ID are required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Playlist ID and Track ID are required")
 	}
 
 	err := h.service.RemoveTrackFromPlaylist(c.Context(), playlistID, trackID)
 	if err != nil {
 		slog.Error("Error removing track from playlist", "error", err, "playlistID", playlistID, "trackID", trackID)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to remove track from playlist")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to remove track from playlist")
 	}
 
 	c.Set("HX-Trigger", "playlistUpdated")
-	return respond.Ok(c, "Track removed from playlist")
+	return respond.ToastOk(c, "Track removed from playlist")
 }
 
 // GetPlaylistCreationModal returns the create playlist modal.

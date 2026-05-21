@@ -37,6 +37,8 @@
                    {{template "playlists/playlist" .}}
                   {{else if eq .Section "download"}}
                  {{template "sections/download" .}}
+                 {{else if eq .Section "tag"}}
+                 {{template "sections/tag" .}}
                  {{else if .IsTagEdit}}
                  {{template "sections/tag" .}}
                  {{else if .CurrentDownloader}}

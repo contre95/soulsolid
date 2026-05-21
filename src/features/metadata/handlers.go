@@ -26,7 +26,7 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 
 	trackID := c.Params("trackId")
 	if trackID == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Track ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Track ID is required")
 	}
 
 	var track *music.Track
@@ -34,14 +34,14 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 	if c.Query("source", "file") == "db" {
 		track, err = h.service.libraryRepo.GetTrack(c.Context(), trackID)
 		if err == nil && track == nil {
-			return respond.Err(c, fiber.StatusNotFound, "Track not found")
+			return respond.ToastErr(c, fiber.StatusNotFound, "Track not found")
 		}
 	} else {
 		track, err = h.service.GetTrackFileTags(c.Context(), trackID)
 	}
 	if err != nil {
 		slog.Error("Failed to get track for editing", "error", err, "trackId", trackID)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to load track data")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to load track data")
 	}
 
 	// Fetch all artists and albums for dropdowns
@@ -114,7 +114,7 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 		}
 	}
 
-	return respond.Partial(c, "sections/tag", fiber.Map{
+	return respond.Section(c, "tag", fiber.Map{
 		"Track":                 track,
 		"Artists":               artists,
 		"Albums":                albums,
@@ -162,13 +162,13 @@ func (h *Handler) getProviderColors(providerName string) map[string]string {
 func (h *Handler) ServeArtwork(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	if trackID == "" {
-		return respond.Err(c, fiber.StatusBadRequest, "Track ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Track ID is required")
 	}
 
 	data, mimeType, err := h.service.GetTrackArtwork(c.Context(), trackID)
 	if err != nil || len(data) == 0 {
 		slog.Warn("Failed to read artwork", "trackId", trackID, "error", err)
-		return respond.Err(c, fiber.StatusNotFound, "Artwork not found")
+		return respond.ToastErr(c, fiber.StatusNotFound, "Artwork not found")
 	}
 
 	return respond.Resource(c, mimeType, fmt.Sprintf("%s/tag/%s/artwork", c.BaseURL(), trackID), func() error {
@@ -284,7 +284,7 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 		// Get provider colors
 		providerColors := h.getProviderColors(providerName)
 
-		return respond.Partial(c, "sections/tag", fiber.Map{
+		return respond.Section(c, "tag", fiber.Map{
 			"Track":                 track,
 			"Artists":               artists,
 			"Albums":                albums,
@@ -381,7 +381,7 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 	// Get provider colors
 	providerColors := h.getProviderColors(providerName)
 
-	return respond.Partial(c, "sections/tag", fiber.Map{
+	return respond.Section(c, "tag", fiber.Map{
 		"Track":                 track,
 		"Artists":               artists,
 		"Albums":                albums,
@@ -405,7 +405,7 @@ func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
 	tracks, err := h.service.SearchTrackMetadata(c.Context(), trackID, providerName)
 	if err != nil {
 		slog.Error("Failed to search tracks", "error", err, "trackId", trackID, "provider", providerName)
-		return respond.Err(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to search tracks: %v", err))
+		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to search tracks: %v", err))
 	}
 
 	// Get provider colors for styling
@@ -551,7 +551,7 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 	// Get provider colors
 	providerColors := h.getProviderColors(providerName)
 
-	return respond.Partial(c, "sections/tag", fiber.Map{
+	return respond.Section(c, "tag", fiber.Map{
 		"Track":                 mergedTrack,
 		"Artists":               artists,
 		"Albums":                albums,
@@ -574,11 +574,11 @@ func (h *Handler) CalculateFingerprint(c *fiber.Ctx) error {
 	err := h.service.AddChromaprintAndAcoustID(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to calculate fingerprint", "error", err, "trackId", trackID)
-		return respond.Err(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to calculate fingerprint: %v", err))
+		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to calculate fingerprint: %v", err))
 	}
 
 	c.Set("HX-Trigger", "refreshEditForm")
-	return respond.Ok(c, "Fingerprint calculated successfully!")
+	return respond.ToastOk(c, "Fingerprint calculated successfully!")
 }
 
 // ViewFingerprint handles viewing fingerprint
@@ -703,10 +703,10 @@ func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 	err := h.service.UpdateTrackTags(c.Context(), trackID, formData)
 	if err != nil {
 		slog.Error("Failed to update track tags", "error", err, "trackId", trackID)
-		return respond.Err(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to update tags: %v", err))
+		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to update tags: %v", err))
 	}
 
-	return respond.Ok(c, "Tags updated successfully!")
+	return respond.ToastOk(c, "Tags updated successfully!")
 }
 
 // StartAcoustIDAnalysis handles starting the AcoustID analysis job
@@ -716,14 +716,14 @@ func (h *Handler) StartAcoustIDAnalysis(c *fiber.Ctx) error {
 	jobID, err := h.service.StartAcoustIDAnalysis(c.Context())
 	if err != nil {
 		slog.Error("Failed to start AcoustID analysis", "error", err)
-		return respond.Err(c, fiber.StatusInternalServerError, "Failed to start AcoustID analysis: "+err.Error())
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start AcoustID analysis: "+err.Error())
 	}
 
 	slog.Info("AcoustID analysis job started successfully", "jobID", jobID)
 
 	// // Trigger HTMX to refresh the job list
 	c.Set("HX-Trigger", "refreshJobList")
-	return respond.Job(c, jobID, "AcoustID analysis started successfully")
+	return respond.ToastJob(c, jobID, "AcoustID analysis started successfully")
 }
 
 // RenderMetadataAnalysisSection renders the metadata analysis section page

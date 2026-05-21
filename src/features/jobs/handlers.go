@@ -37,11 +37,11 @@ func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
 
 	jobID, err := h.service.StartJob(jobType, name, nil)
 	if err != nil {
-		return respond.Err(c, 500, fmt.Sprintf("Failed to start job: %s", err.Error()))
+		return respond.ToastErr(c, 500, fmt.Sprintf("Failed to start job: %s", err.Error()))
 	}
 
 	c.Set("HX-Trigger", "refreshActiveJobsBadge")
-	return respond.Job(c, jobID, fmt.Sprintf("Started %s job", jobType))
+	return respond.ToastJob(c, jobID, fmt.Sprintf("Started %s job", jobType))
 }
 
 func (h *Handler) HandleJobStatus(c *fiber.Ctx) error {
@@ -176,15 +176,15 @@ func (h *Handler) HandleCancelJob(c *fiber.Ctx) error {
 
 func (h *Handler) HandleCleanupJobs(c *fiber.Ctx) error {
 	h.service.CleanupOldJobs(24 * time.Hour)
-	return c.JSON(fiber.Map{"status": "cleanup completed"})
+	return respond.ToastOk(c, "cleanup completed")
 }
 
 func (h *Handler) HandleClearFinishedJobs(c *fiber.Ctx) error {
 	if err := h.service.ClearFinishedJobs(); err != nil {
-		return respond.Err(c, 500, err.Error())
+		return respond.ToastErr(c, 500, err.Error())
 	}
 	c.Set("HX-Trigger", "refreshJobList")
-	return respond.Ok(c, "Finished jobs cleared")
+	return respond.ToastOk(c, "Finished jobs cleared")
 }
 
 func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
