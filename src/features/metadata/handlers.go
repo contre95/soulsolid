@@ -610,11 +610,6 @@ func (h *Handler) GetMetadataProviders(c *fiber.Ctx) error {
 	}
 
 	providers := h.service.GetEnabledMetadataProviders()
-
-	if c.Get("HX-Request") != "true" {
-		return c.JSON(providers)
-	}
-
 	track, err := h.service.GetTrackFileTags(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to get track for metadata providers", "error", err, "trackId", trackID)
