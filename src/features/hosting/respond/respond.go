@@ -11,6 +11,9 @@ import (
 // Assumes templates follow the "sections/<section>" naming convention.
 func Section(c *fiber.Ctx, section string, data fiber.Map) error {
 	if c.Get("HX-Request") != "true" {
+		if data == nil {
+			data = fiber.Map{}
+		}
 		data["Section"] = section
 		return c.Render("main", data)
 	}

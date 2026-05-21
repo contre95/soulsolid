@@ -184,7 +184,7 @@ func (h *Handler) ProcessLyricsQueueItem(c *fiber.Ctx) error {
 	err := h.service.ProcessLyricsQueueItem(c.Context(), itemID, action)
 	if err != nil {
 		slog.Error("Failed to process lyrics queue item", "error", err, "itemID", itemID, "action", action)
-		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to process lyrics queue item: %s", err.Error()))
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to process lyrics request")
 	}
 	actionMsg := "processed"
 	switch action {
@@ -332,8 +332,8 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 
 	jobID, err := h.service.StartLyricsAnalysis(c.Context(), provider, skipExistingLyrics, overrideNoQueue)
 	if err != nil {
-		slog.Error("Failed to start lyrics analysis", "error", err)
-		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start lyrics analysis: "+err.Error())
+		slog.Error("Failed to start lyrics analysis", "error", err, "provider", provider, "skipExisting", skipExistingLyrics, "overrideNoQueue", overrideNoQueue)
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start lyrics analysis")
 	}
 
 	slog.Info("Lyrics analysis job started successfully", "jobID", jobID, "provider", provider)

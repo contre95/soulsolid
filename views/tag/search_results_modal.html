@@ -101,6 +101,7 @@
                 </a>
                 {{end}}
                  <button
+                   type="button"
                    hx-get="/tag/{{$.TrackID}}/select/{{$.ProviderName}}?index={{$index}}"
                    hx-target="#contenido"
                    hx-swap="outerHTML"

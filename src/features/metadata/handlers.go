@@ -405,7 +405,7 @@ func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
 	tracks, err := h.service.SearchTrackMetadata(c.Context(), trackID, providerName)
 	if err != nil {
 		slog.Error("Failed to search tracks", "error", err, "trackId", trackID, "provider", providerName)
-		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to search tracks: %v", err))
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to search tracks")
 	}
 
 	// Get provider colors for styling
@@ -574,7 +574,7 @@ func (h *Handler) CalculateFingerprint(c *fiber.Ctx) error {
 	err := h.service.AddChromaprintAndAcoustID(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to calculate fingerprint", "error", err, "trackId", trackID)
-		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to calculate fingerprint: %v", err))
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to calculate fingerprint")
 	}
 
 	c.Set("HX-Trigger", "refreshEditForm")
@@ -703,7 +703,7 @@ func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 	err := h.service.UpdateTrackTags(c.Context(), trackID, formData)
 	if err != nil {
 		slog.Error("Failed to update track tags", "error", err, "trackId", trackID)
-		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to update tags: %v", err))
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to update tags")
 	}
 
 	return respond.ToastOk(c, "Tags updated successfully!")
@@ -716,7 +716,7 @@ func (h *Handler) StartAcoustIDAnalysis(c *fiber.Ctx) error {
 	jobID, err := h.service.StartAcoustIDAnalysis(c.Context())
 	if err != nil {
 		slog.Error("Failed to start AcoustID analysis", "error", err)
-		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start AcoustID analysis: "+err.Error())
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start AcoustID analysis")
 	}
 
 	slog.Info("AcoustID analysis job started successfully", "jobID", jobID)
