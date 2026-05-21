@@ -130,9 +130,10 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	metricsHandler := metrics.NewHandler(metricsService)
 	metrics.RegisterRoutes(app, metricsHandler)
 	downloading.RegisterRoutes(app, downloadingService)
-	metadata.RegisterRoutes(app, tagService)
+	tagHandler := metadata.RegisterRoutes(app, tagService)
 	lyricsHandler := lyrics.NewHandler(lyricsService, tagService)
 	lyrics.RegisterRoutes(app, lyricsHandler)
+	metadata.RegisterProviderCatchAll(app, tagHandler)
 	reorganizeHandler := reorganize.NewHandler(reorganizeService, cfg)
 	reorganize.RegisterRoutes(app, reorganizeHandler)
 

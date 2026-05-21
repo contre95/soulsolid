@@ -4,8 +4,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// RegisterRoutes registers the routes for the tag feature
-func RegisterRoutes(app *fiber.App, service *Service) {
+// RegisterRoutes registers the routes for the tag feature.
+// Note: the /:trackId/:provider catch-all is NOT registered here — call
+// RegisterProviderCatchAll after all other /tag routes (e.g. lyrics) are registered,
+// so those more specific routes are matched first by Fiber.
+func RegisterRoutes(app *fiber.App, service *Service) *Handler {
 	handler := NewHandler(service)
 
 	tag := app.Group("/tag")
@@ -17,10 +20,17 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	tag.Get("/:trackId/select/:provider", handler.SelectTrackFromResults)
 	tag.Get("/:trackId", handler.RenderTagEditor)
 	tag.Post("/:trackId", handler.UpdateTags)
-	tag.Get("/:trackId/:provider", handler.FetchFromProvider)
 
 	analyze := app.Group("/analyze")
 	analyze.Post("/acoustid", handler.StartAcoustIDAnalysis)
 
 	app.Get("/analyze/metadata", handler.RenderMetadataAnalysisSection)
+
+	return handler
+}
+
+// RegisterProviderCatchAll registers the /:trackId/:provider catch-all route.
+// Must be called after all other /tag routes are registered (including lyrics routes).
+func RegisterProviderCatchAll(app *fiber.App, handler *Handler) {
+	app.Get("/tag/:trackId/:provider", handler.FetchFromProvider)
 }
