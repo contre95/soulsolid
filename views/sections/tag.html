@@ -16,12 +16,12 @@
        </a>
        {{end}}
        <!-- Metadata Providers -->
-       <div hx-get="/tag/buttons/metadata/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}"
+       <div hx-get="/tag/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/metadata"
             hx-trigger="load"
             hx-swap="innerHTML">
        </div>
        <!-- Lyrics Providers -->
-       <div hx-get="/tag/buttons/lyrics/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}"
+       <div hx-get="/tag/{{if .Track.ID}}{{.Track.ID}}{{else}}0{{end}}/lyrics"
             hx-trigger="load"
             hx-swap="innerHTML">
        </div>

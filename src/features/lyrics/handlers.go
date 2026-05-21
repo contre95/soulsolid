@@ -66,23 +66,28 @@ func convertQueueItem(item music.QueueItem) (queueItemView, error) {
 	}, nil
 }
 
-// RenderLyricsButtons renders the lyrics provider buttons for a track
-func (h *Handler) RenderLyricsButtons(c *fiber.Ctx) error {
+// GetLyricsProviders returns lyrics provider buttons for HTMX or provider list as JSON.
+func (h *Handler) GetLyricsProviders(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	if trackID == "" {
 		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
 	}
 
-	// Get track data for button context
+	providers := h.service.GetLyricsProvidersInfo()
+
+	if c.Get("HX-Request") != "true" {
+		return c.JSON(providers)
+	}
+
 	track, err := h.metadataService.GetTrackFileTags(c.Context(), trackID)
 	if err != nil {
-		slog.Error("Failed to get track for lyrics buttons", "error", err, "trackId", trackID)
+		slog.Error("Failed to get track for lyrics providers", "error", err, "trackId", trackID)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
 	}
 
 	return respond.Partial(c, "tag/lyrics_buttons", fiber.Map{
 		"Track":           track,
-		"LyricsProviders": h.service.GetLyricsProvidersInfo(),
+		"LyricsProviders": providers,
 	})
 }
 

@@ -8,12 +8,11 @@ import (
 func RegisterRoutes(app *fiber.App, service *Service) {
 	handler := NewHandler(service)
 
-	ui := app.Group("/ui")
-	ui.Get("/library", handler.RenderLibrarySection)
-	ui.Get("/library/table", handler.GetLibraryTable)
-ui.Get("/library/tracks/:trackId/overview", handler.RenderTrackOverviewPanel)
+	app.Get("/library", handler.RenderLibrarySection)
 
 	library := app.Group("/library")
+	library.Get("/table", handler.GetLibraryTable)
+	library.Get("/tracks/:trackId/overview", handler.RenderTrackOverviewPanel)
 	library.Get("/search", handler.GetUnifiedSearch)
 	library.Get("/artists/count", handler.GetArtistsCount)
 	library.Get("/albums/count", handler.GetAlbumsCount)
