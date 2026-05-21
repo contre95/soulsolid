@@ -432,21 +432,26 @@ func (s *Service) PullFromProvider(ctx context.Context, providerName string, log
 			if localTrack == nil || local.ContainsTrack(localTrack.ID) {
 				continue
 			}
-			if _, dup := seen[localTrack.ID]; dup {
+		pending := map[string]struct{}{}
+		for _, rt := range full.Tracks {
+			localTrack := s.resolveRemoteTrack(ctx, provider, rt)
+			if localTrack == nil || local.ContainsTrack(localTrack.ID) {
 				continue
 			}
-			seen[localTrack.ID] = struct{}{}
+			if _, exists := pending[localTrack.ID]; exists {
+				continue
+			}
+			pending[localTrack.ID] = struct{}{}
 			newTracks = append(newTracks, localTrack)
 			newIDs = append(newIDs, localTrack.ID)
 		}
-		logger.Info("PullFromProvider: resolved tracks", "playlist", rp.Name, "toAdd", len(newIDs), "remoteTotal", len(full.Tracks))
 		if err := s.playlistRepo.BatchAddTracks(ctx, local.ID, newIDs); err != nil {
-			logger.Warn("PullFromProvider: failed to batch-add tracks", "playlistID", local.ID, "error", err)
+			slog.Warn("PullFromProvider: failed to batch-add tracks", "playlistID", local.ID, "error", err)
 			continue
 		}
 		local.Tracks = append(local.Tracks, newTracks...)
 
-		logger.Info("PullFromProvider: pulled playlist", "name", rp.Name, "tracksAdded", len(newIDs))
+		slog.Info("PullFromProvider: pulled playlist", "name", rp.Name, "tracksAdded", len(newIDs))
 		pulled = append(pulled, local)
 	}
 
