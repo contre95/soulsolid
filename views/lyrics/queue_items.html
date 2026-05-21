@@ -57,7 +57,7 @@
                 <i class="fas fa-sync-alt mr-0.5"></i>
                 Override
             </button>
-            <a href="/tag/{{.Track.ID}}"
+            <a href="/ui/library/tag/edit/{{.Track.ID}}"
                 target="_blank"
                 class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 border border-blue-400/30 text-blue-600 dark:text-blue-300 hover:bg-blue-500/20 dark:hover:bg-blue-500/30"
                 title="Edit Manually">
@@ -65,7 +65,7 @@
                 Edit
             </a>
             {{else if eq .Type "lyric_404"}}
-            <a href="/tag/{{.Track.ID}}"
+            <a href="/ui/library/tag/edit/{{.Track.ID}}"
                 target="_blank"
                 class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 border border-blue-400/30 text-blue-600 dark:text-blue-300 hover:bg-blue-500/20 dark:hover:bg-blue-500/30"
                 title="Edit Manually">
@@ -83,7 +83,7 @@
                 No Lyrics
             </button>
             {{else if eq .Type "failed_lyrics"}}
-            <a href="/tag/{{.Track.ID}}"
+            <a href="/ui/library/tag/edit/{{.Track.ID}}"
                 target="_blank"
                 class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 border border-blue-400/30 text-blue-600 dark:text-blue-300 hover:bg-blue-500/20 dark:hover:bg-blue-500/30"
                 title="Edit Manually">

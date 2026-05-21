@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
@@ -28,7 +27,14 @@ func NewHandler(service *Service) *Handler {
 
 // RenderJobsSection renders the jobs page.
 func (h *Handler) RenderJobsSection(c *fiber.Ctx) error {
-	return respond.Section(c, "jobs", fiber.Map{"Title": "Jobs"})
+	data := fiber.Map{
+		"Title": "Jobs",
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "jobs"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/jobs", data)
 }
 
 func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
@@ -37,11 +43,23 @@ func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
 
 	jobID, err := h.service.StartJob(jobType, name, nil)
 	if err != nil {
-		return respond.ToastErr(c, 500, fmt.Sprintf("Failed to start job: %s", err.Error()))
+		// Check if this is an HTMX request
+		if c.Get("HX-Request") == "true" {
+			return c.Status(500).SendString(fmt.Sprintf("Failed to start job: %s", err.Error()))
+		}
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	// Trigger HTMX to refresh the badge immediately
 	c.Set("HX-Trigger", "refreshActiveJobsBadge")
-	return respond.ToastJob(c, jobID, fmt.Sprintf("Started %s job", jobType))
+
+	// Check if this is an HTMX request
+	if c.Get("HX-Request") == "true" {
+		return c.Render("toast/toastOk", fiber.Map{
+			"Msg": fmt.Sprintf("Started %s job", jobType),
+		})
+	}
+	return c.JSON(fiber.Map{"job_id": jobID})
 }
 
 func (h *Handler) HandleJobStatus(c *fiber.Ctx) error {
@@ -117,7 +135,7 @@ func (h *Handler) HandleJobProgress(c *fiber.Ctx) error {
 		c.Set("HX-Trigger", "done")
 	}
 
-	return respond.Partial(c, "jobs/job_card_progress_bar", fiber.Map{
+	return c.Render("jobs/job_card_progress_bar", fiber.Map{
 		"ID":        job.ID,
 		"Name":      job.Name,
 		"Type":      job.Type,
@@ -161,7 +179,7 @@ func (h *Handler) HandleCancelJob(c *fiber.Ctx) error {
 		return c.Status(404).SendString("Job not found")
 	}
 
-	return respond.Partial(c, "jobs/job_card", fiber.Map{
+	return c.Render("jobs/job_card", fiber.Map{
 		"ID":        job.ID,
 		"Name":      job.Name,
 		"Type":      job.Type,
@@ -176,15 +194,23 @@ func (h *Handler) HandleCancelJob(c *fiber.Ctx) error {
 
 func (h *Handler) HandleCleanupJobs(c *fiber.Ctx) error {
 	h.service.CleanupOldJobs(24 * time.Hour)
-	return respond.ToastOk(c, "cleanup completed")
+	return c.JSON(fiber.Map{"status": "cleanup completed"})
 }
 
 func (h *Handler) HandleClearFinishedJobs(c *fiber.Ctx) error {
-	if err := h.service.ClearFinishedJobs(); err != nil {
-		return respond.ToastErr(c, 500, err.Error())
+	err := h.service.ClearFinishedJobs()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
-	c.Set("HX-Trigger", "refreshJobList")
-	return respond.ToastOk(c, "Finished jobs cleared")
+
+	if c.Get("HX-Request") == "true" {
+		c.Set("HX-Trigger", "refreshJobList")
+		return c.Render("toast/toastOk", fiber.Map{
+			"Msg": "Finished jobs cleared",
+		})
+	}
+
+	return c.JSON(fiber.Map{"status": "finished jobs cleared"})
 }
 
 func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
@@ -203,7 +229,7 @@ func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
 		return activeJobs[i].CreatedAt.After(activeJobs[j].CreatedAt)
 	})
 
-	return respond.Partial(c, "jobs/active_list", fiber.Map{
+	return c.Render("jobs/active_list", fiber.Map{
 		"Jobs": activeJobs,
 	})
 }
@@ -228,7 +254,7 @@ func (h *Handler) HandleFilteredJobsList(c *fiber.Ctx) error {
 		return jobs[i].CreatedAt.After(jobs[j].CreatedAt)
 	})
 
-	return respond.Partial(c, "jobs/job_list", fiber.Map{
+	return c.Render("jobs/job_list", fiber.Map{
 		"Jobs": jobs,
 	})
 }
@@ -241,7 +267,7 @@ func (h *Handler) HandleLatestJobs(c *fiber.Ctx) error {
 	if len(jobs) > 5 {
 		jobs = jobs[:5]
 	}
-	return respond.Partial(c, "cards/latest_jobs", fiber.Map{
+	return c.Render("cards/latest_jobs", fiber.Map{
 		"Jobs": jobs,
 	})
 }
@@ -259,9 +285,8 @@ func (h *Handler) HandleJobsCount(c *fiber.Ctx) error {
 		}
 	}
 
-	formatted := ""
-	if count > 0 {
-		formatted = fmt.Sprintf("(%d)", count)
+	if count == 0 {
+		return c.SendString("")
 	}
-	return respond.Text(c, "jobs_count", count, formatted)
+	return c.SendString(fmt.Sprintf("(%d)", count))
 }

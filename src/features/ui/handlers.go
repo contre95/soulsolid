@@ -4,7 +4,6 @@ import (
 	"log/slog"
 
 	"github.com/contre95/soulsolid/src/features/config"
-	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -23,17 +22,34 @@ func NewHandler(configManager *config.Manager) *Handler {
 // RenderDashboard renders the main dashboard page.
 func (h *Handler) RenderDashboard(c *fiber.Ctx) error {
 	slog.Debug("RenderDashboard handler called")
-	return respond.Section(c, "dashboard", fiber.Map{"Title": "Dashboard"})
+	data := fiber.Map{
+		"Title": "Dashboard",
+	}
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "dashboard"
+		return c.Render("main", data)
+	}
+	return c.Render("sections/dashboard", data)
 }
 
 // GetQuickActionsCard renders the quick actions card for the dashboard.
 func (h *Handler) GetQuickActionsCard(c *fiber.Ctx) error {
 	slog.Debug("GetQuickActionsCard handler called")
-	return respond.Partial(c, "cards/quick_actions", fiber.Map{})
+	return c.Render("cards/quick_actions", fiber.Map{})
 }
 
 // RenderAnalyzeSection renders the all analyze jobs page
 func (h *Handler) RenderAnalyzeSection(c *fiber.Ctx) error {
 	slog.Debug("Rendering all analyze jobs page")
-	return respond.Section(c, "analyze", fiber.Map{"Title": "All Analyze Jobs"})
+
+	data := fiber.Map{
+		"Title": "All Analyze Jobs",
+	}
+
+	if c.Get("HX-Request") != "true" {
+		data["Section"] = "analyze"
+		return c.Render("main", data)
+	}
+
+	return c.Render("sections/analyze", data)
 }
