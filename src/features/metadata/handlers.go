@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
@@ -25,14 +26,22 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 
 	trackID := c.Params("trackId")
 	if trackID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Track ID is required")
 	}
 
-	// Get track data for editing
-	track, err := h.service.GetTrackFileTags(c.Context(), trackID)
+	var track *music.Track
+	var err error
+	if c.Query("source", "file") == "db" {
+		track, err = h.service.libraryRepo.GetTrack(c.Context(), trackID)
+		if err == nil && track == nil {
+			return respond.ToastErr(c, fiber.StatusNotFound, "Track not found")
+		}
+	} else {
+		track, err = h.service.GetTrackFileTags(c.Context(), trackID)
+	}
 	if err != nil {
 		slog.Error("Failed to get track for editing", "error", err, "trackId", trackID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to load track data")
 	}
 
 	// Fetch all artists and albums for dropdowns
@@ -105,22 +114,8 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 		}
 	}
 
-	// Check if request is HTMX or full page
-	if c.Get("HX-Request") == "true" {
-		// Return just the section content for HTMX requests
-		return c.Render("sections/tag", fiber.Map{
-			"Track":                 track,
-			"Artists":               artists,
-			"Albums":                albums,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-		})
-	}
-
-	// Return full page for direct navigation
-	return c.Render("main", fiber.Map{
+	return respond.Section(c, "tag", fiber.Map{
 		"Track":                 track,
-		"IsTagEdit":             true,
 		"Artists":               artists,
 		"Albums":                albums,
 		"SelectedAlbumArtistID": selectedAlbumArtistID,
@@ -167,21 +162,20 @@ func (h *Handler) getProviderColors(providerName string) map[string]string {
 func (h *Handler) ServeArtwork(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	if trackID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Track ID is required")
 	}
 
 	data, mimeType, err := h.service.GetTrackArtwork(c.Context(), trackID)
-	if err != nil {
+	if err != nil || len(data) == 0 {
 		slog.Warn("Failed to read artwork", "trackId", trackID, "error", err)
-		return c.Status(fiber.StatusNotFound).SendString("Artwork not found")
-	}
-	if len(data) == 0 {
-		return c.Status(fiber.StatusNotFound).SendString("No artwork embedded in file")
+		return respond.ToastErr(c, fiber.StatusNotFound, "Artwork not found")
 	}
 
-	c.Set("Content-Type", mimeType)
-	c.Set("Cache-Control", "public, max-age=3600")
-	return c.Send(data)
+	return respond.Resource(c, mimeType, fmt.Sprintf("%s/tag/%s/artwork", c.BaseURL(), trackID), func() error {
+		c.Set("Content-Type", mimeType)
+		c.Set("Cache-Control", "public, max-age=3600")
+		return c.Send(data)
+	})
 }
 
 // FetchFromProvider handles fetching metadata from any provider and rendering the form
@@ -290,29 +284,15 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 		// Get provider colors
 		providerColors := h.getProviderColors(providerName)
 
-		// Check if request is HTMX or full page
-		if c.Get("HX-Request") == "true" {
-			return c.Render("sections/tag", fiber.Map{
-				"Track":                 track,
-				"Artists":               artists,
-				"Albums":                albums,
-				"FetchError":            "err",
-				"ProviderColors":        providerColors,
-				"SelectedAlbumArtistID": selectedAlbumArtistID,
-				"SelectedArtistIDs":     selectedArtistIDs,
-			})
-		} else {
-			return c.Render("main", fiber.Map{
-				"Track":                 track,
-				"IsTagEdit":             true,
-				"Artists":               artists,
-				"Albums":                albums,
-				"FetchError":            "err",
-				"ProviderColors":        providerColors,
-				"SelectedAlbumArtistID": selectedAlbumArtistID,
-				"SelectedArtistIDs":     selectedArtistIDs,
-			})
-		}
+		return respond.Section(c, "tag", fiber.Map{
+			"Track":                 track,
+			"Artists":               artists,
+			"Albums":                albums,
+			"FetchError":            "err",
+			"ProviderColors":        providerColors,
+			"SelectedAlbumArtistID": selectedAlbumArtistID,
+			"SelectedArtistIDs":     selectedArtistIDs,
+		})
 	}
 
 	// Use the first track from search results
@@ -401,37 +381,15 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 	// Get provider colors
 	providerColors := h.getProviderColors(providerName)
 
-	// Check if request is HTMX or full page
-	if c.Get("HX-Request") == "true" {
-		return c.Render("sections/tag", fiber.Map{
-			"Track":                 track,
-			"Artists":               artists,
-			"Albums":                albums,
-			"FromProvider":          providerName,
-			"ProviderColors":        providerColors,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-		})
-	} else {
-		return c.Render("main", fiber.Map{
-			"Track":                 track,
-			"IsTagEdit":             true,
-			"Artists":               artists,
-			"Albums":                albums,
-			"FromProvider":          providerName,
-			"ProviderColors":        providerColors,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-		})
-	}
-}
-
-// ModalData holds data for the search results modal
-type ModalData struct {
-	Tracks         []*music.Track
-	ProviderName   string
-	ProviderColors map[string]string
-	TrackID        string
+	return respond.Section(c, "tag", fiber.Map{
+		"Track":                 track,
+		"Artists":               artists,
+		"Albums":                albums,
+		"FromProvider":          providerName,
+		"ProviderColors":        providerColors,
+		"SelectedAlbumArtistID": selectedAlbumArtistID,
+		"SelectedArtistIDs":     selectedArtistIDs,
+	})
 }
 
 // SearchTracksFromProvider handles searching for tracks from a specific provider
@@ -447,20 +405,17 @@ func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
 	tracks, err := h.service.SearchTrackMetadata(c.Context(), trackID, providerName)
 	if err != nil {
 		slog.Error("Failed to search tracks", "error", err, "trackId", trackID, "provider", providerName)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to search tracks: %v", err),
-		})
+		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to search tracks: %v", err))
 	}
 
 	// Get provider colors for styling
 	providerColors := h.getProviderColors(providerName)
 
-	// Render modal with search results
-	return c.Render("tag/search_results_modal", ModalData{
-		Tracks:         tracks,
-		ProviderName:   providerName,
-		ProviderColors: providerColors,
-		TrackID:        trackID,
+	return respond.Partial(c, "tag/search_results_modal", fiber.Map{
+		"Tracks":         tracks,
+		"ProviderName":   providerName,
+		"ProviderColors": providerColors,
+		"TrackID":        trackID,
 	})
 }
 
@@ -596,8 +551,7 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 	// Get provider colors
 	providerColors := h.getProviderColors(providerName)
 
-	// Render the updated form
-	return c.Render("sections/tag", fiber.Map{
+	return respond.Section(c, "tag", fiber.Map{
 		"Track":                 mergedTrack,
 		"Artists":               artists,
 		"Albums":                albums,
@@ -620,18 +574,11 @@ func (h *Handler) CalculateFingerprint(c *fiber.Ctx) error {
 	err := h.service.AddChromaprintAndAcoustID(c.Context(), trackID)
 	if err != nil {
 		slog.Error("Failed to calculate fingerprint", "error", err, "trackId", trackID)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to calculate fingerprint: %v", err),
-		})
+		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to calculate fingerprint: %v", err))
 	}
 
-	// Set HTMX header to refresh the edit form after successful calculation
 	c.Set("HX-Trigger", "refreshEditForm")
-
-	// Return success toast
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": "Fingerprint calculated successfully!",
-	})
+	return respond.ToastOk(c, "Fingerprint calculated successfully!")
 }
 
 // ViewFingerprint handles viewing fingerprint
@@ -650,12 +597,9 @@ func (h *Handler) ViewFingerprint(c *fiber.Ctx) error {
 	}
 
 	if track.ChromaprintFingerprint == "" {
-		return c.SendString("No fingerprint available for this track.")
+		return respond.Text(c, "fingerprint", "", "No fingerprint available for this track.")
 	}
-
-	// Return raw text
-	c.Set("Content-Type", "text/plain")
-	return c.SendString(track.ChromaprintFingerprint)
+	return respond.Text(c, "fingerprint", track.ChromaprintFingerprint)
 }
 
 // RenderMetadataButtons renders the metadata provider buttons for a track
@@ -672,7 +616,7 @@ func (h *Handler) RenderMetadataButtons(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
 	}
 
-	return c.Render("tag/metadata_buttons", fiber.Map{
+	return respond.Partial(c, "tag/metadata_buttons", fiber.Map{
 		"Track":            track,
 		"EnabledProviders": h.service.GetEnabledMetadataProviders(),
 	})
@@ -759,15 +703,10 @@ func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 	err := h.service.UpdateTrackTags(c.Context(), trackID, formData)
 	if err != nil {
 		slog.Error("Failed to update track tags", "error", err, "trackId", trackID)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to update tags: %v", err),
-		})
+		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to update tags: %v", err))
 	}
 
-	// Return success toast
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": "Tags updated successfully!",
-	})
+	return respond.ToastOk(c, "Tags updated successfully!")
 }
 
 // StartAcoustIDAnalysis handles starting the AcoustID analysis job
@@ -777,37 +716,18 @@ func (h *Handler) StartAcoustIDAnalysis(c *fiber.Ctx) error {
 	jobID, err := h.service.StartAcoustIDAnalysis(c.Context())
 	if err != nil {
 		slog.Error("Failed to start AcoustID analysis", "error", err)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Failed to start AcoustID analysis: " + err.Error(),
-		})
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start AcoustID analysis: "+err.Error())
 	}
 
 	slog.Info("AcoustID analysis job started successfully", "jobID", jobID)
 
 	// // Trigger HTMX to refresh the job list
 	c.Set("HX-Trigger", "refreshJobList")
-
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{
-			"Msg": "AcoustID analysis started successfully",
-		})
-	}
-
-	return c.Redirect("/ui/analyze/metadata")
+	return respond.ToastJob(c, jobID, "AcoustID analysis started successfully")
 }
 
 // RenderMetadataAnalysisSection renders the metadata analysis section page
 func (h *Handler) RenderMetadataAnalysisSection(c *fiber.Ctx) error {
 	slog.Debug("Rendering metadata analysis section")
-
-	data := fiber.Map{
-		"Title": "Metadata Analysis",
-	}
-
-	if c.Get("HX-Request") != "true" {
-		data["Section"] = "analyze_metadata"
-		return c.Render("main", data)
-	}
-
-	return c.Render("sections/analyze_metadata", data)
+	return respond.Section(c, "analyze_metadata", fiber.Map{"Title": "Metadata Analysis"})
 }

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -24,14 +25,7 @@ func NewHandler(configManager *Manager) *Handler {
 // RenderSettingsSection renders the settings form with current configuration values.
 func (h *Handler) RenderSettingsSection(c *fiber.Ctx) error {
 	slog.Debug("RenderSettings handler called")
-	data := fiber.Map{
-		"Title": "Settings",
-	}
-	if c.Get("HX-Request") != "true" {
-		data["Section"] = "settings"
-		return c.Render("main", data)
-	}
-	return c.Render("sections/settings", data)
+	return respond.Section(c, "settings", fiber.Map{"Title": "Settings"})
 }
 
 // UpdateSettings handles the form submission to update configuration.
@@ -128,9 +122,7 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	} else {
 		slog.Info("Configuration saved to file successfully")
 	}
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": "Configuration updated successfully!",
-	})
+	return respond.ToastOk(c, "Configuration updated successfully!")
 }
 
 func parseStringSlice(s string) []string {
@@ -152,24 +144,19 @@ func (h *Handler) GetConfigForm(c *fiber.Ctx) error {
 	slog.Debug("GetSettingsForm handler called")
 	config := h.configManager.Get()
 
-	return c.Render("config/config_form", fiber.Map{
+	return respond.Partial(c, "config/config_form", fiber.Map{
 		"Config": config,
 	})
 }
 
-// GetConfig returns the current configuration in the requested format.
+// GetConfig returns the config as JSON, or as raw YAML text when ?fmt=yaml is set.
 func (h *Handler) GetConfig(c *fiber.Ctx) error {
-	// Supporting only one format for now
-	slog.Debug("GetConfig handler called", "format", c.Query("fmt", "yaml"))
-	format := c.Query("fmt", "yaml")
-
-	switch format {
-	case "yaml":
+	slog.Debug("GetConfig handler called")
+	if c.Query("fmt") == "yaml" {
 		c.Set("Content-Type", "text/yaml")
 		return c.SendString(h.configManager.GetYAML())
-	default:
-		return c.Status(fiber.StatusBadRequest).SendString("Invalid format. 'yaml' only availabe for now")
 	}
+	return c.JSON(h.configManager.Get())
 }
 
 // DownloadDatabase serves the database file for download.
@@ -180,16 +167,13 @@ func (h *Handler) DownloadDatabase(c *fiber.Ctx) error {
 	dbPath := config.Database.Path
 
 	if dbPath == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Database path not configured")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Database path not configured")
 	}
 
-	// Extract filename from path for download
 	filename := filepath.Base(dbPath)
-
-	// Set headers for file download
-	c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
-	c.Set("Content-Type", "application/octet-stream")
-
-	// Send the file
-	return c.SendFile(dbPath)
+	return respond.Resource(c, "application/octet-stream", fmt.Sprintf("%s/config/database/download", c.BaseURL()), func() error {
+		c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+		c.Set("Content-Type", "application/octet-stream")
+		return c.SendFile(dbPath)
+	})
 }

@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
@@ -51,17 +52,12 @@ func (h *Handler) RenderLibrarySection(c *fiber.Ctx) error {
 		albums = []*music.Album{} // Continue with empty list
 	}
 
-	data := fiber.Map{
+	return respond.Section(c, "library", fiber.Map{
 		"Title":               "Library",
 		"DefaultDownloadPath": h.service.configManager.Get().DownloadPath,
 		"SearchArtists":       artists,
 		"SearchAlbums":        albums,
-	}
-	if c.Get("HX-Request") != "true" {
-		data["Section"] = "library"
-		return c.Render("main", data)
-	}
-	return c.Render("sections/library", data)
+	})
 }
 
 // Pagination represents pagination information
@@ -139,9 +135,9 @@ func (h *Handler) GetArtistsCount(c *fiber.Ctx) error {
 	artists, err := h.service.GetArtists(c.Context())
 	if err != nil {
 		slog.Error("Error loading artists count", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Error loading artists count")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Error loading artists count")
 	}
-	return c.SendString(fmt.Sprintf("%d", len(artists)))
+	return respond.Text(c, "artists_count", len(artists))
 }
 
 // GetAlbumsCount returns the count of albums in the library.
@@ -150,9 +146,9 @@ func (h *Handler) GetAlbumsCount(c *fiber.Ctx) error {
 	albums, err := h.service.GetAlbums(c.Context())
 	if err != nil {
 		slog.Error("Error loading albums count", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums count")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Error loading albums count")
 	}
-	return c.SendString(fmt.Sprintf("%d", len(albums)))
+	return respond.Text(c, "albums_count", len(albums))
 }
 
 // GetTracksCount returns the count of tracks in the library.
@@ -161,9 +157,9 @@ func (h *Handler) GetTracksCount(c *fiber.Ctx) error {
 	count, err := h.service.GetTracksCount(c.Context())
 	if err != nil {
 		slog.Error("Error loading tracks count", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks count")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Error loading tracks count")
 	}
-	return c.SendString(fmt.Sprintf("%d tracks", count))
+	return respond.Text(c, "tracks_count", count, fmt.Sprintf("%d tracks", count))
 }
 
 // GetStorageSize returns the storage size of the library.
@@ -172,10 +168,9 @@ func (h *Handler) GetStorageSize(c *fiber.Ctx) error {
 	size, err := h.service.GetStorageSize(c.Context())
 	if err != nil {
 		slog.Error("Error loading storage size", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Error loading storage size")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Error loading storage size")
 	}
 
-	// Format the size
 	var formatted string
 	if size >= 1_000_000_000_000 {
 		formatted = fmt.Sprintf("%.1f TB", float64(size)/math.Pow(10, 12))
@@ -188,8 +183,7 @@ func (h *Handler) GetStorageSize(c *fiber.Ctx) error {
 	} else {
 		formatted = fmt.Sprintf("%d B", size)
 	}
-
-	return c.SendString(formatted)
+	return respond.Text(c, "storage_size_bytes", size, formatted)
 }
 
 // GetLibraryTable renders the library table section with tabs.
@@ -215,7 +209,7 @@ func (h *Handler) GetLibraryTable(c *fiber.Ctx) error {
 		genres = []string{}
 	}
 
-	return c.Render("library/library_table", fiber.Map{
+	return respond.Partial(c, "library/library_table", fiber.Map{
 		"SearchArtists": artists,
 		"SearchAlbums":  albums,
 		"Genres":        genres,
@@ -455,25 +449,10 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 
 	pagination := NewPagination(page, limit, totalCount)
 
-	// Check if the request accepts HTML (like an HTMX request)
-	acceptHeader := c.Get("Accept")
-	hxRequest := c.Get("HX-Request")
-	if strings.Contains(acceptHeader, "text/html") || hxRequest == "true" {
-		return c.Render("library/unified_search_list", fiber.Map{
-			"Results":    results,
-			"Pagination": pagination,
-			"Query":      query,
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"results": results,
-		"pagination": fiber.Map{
-			"page":       page,
-			"limit":      limit,
-			"totalCount": totalCount,
-			"totalPages": (totalCount + limit - 1) / limit,
-		},
+	return respond.Partial(c, "library/unified_search_list", fiber.Map{
+		"Results":    results,
+		"Pagination": pagination,
+		"Query":      query,
 	})
 }
 
@@ -491,9 +470,9 @@ func (h *Handler) GetLibraryFileTree(c *fiber.Ctx) error {
 	}
 	if err != nil {
 		slog.Error("Error getting library file tree", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get library file tree")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to get library file tree")
 	}
-	return c.SendString(tree)
+	return respond.Text(c, "file_tree", tree)
 }
 
 // DeleteTrack deletes a track from the library.
@@ -502,17 +481,13 @@ func (h *Handler) DeleteTrack(c *fiber.Ctx) error {
 
 	trackID := c.Params("trackId")
 	if trackID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Track ID is required")
 	}
-
-	err := h.service.DeleteTrack(c.Context(), trackID)
-	if err != nil {
+	if err := h.service.DeleteTrack(c.Context(), trackID); err != nil {
 		slog.Error("Failed to delete track", "error", err, "trackId", trackID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete track")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to delete track")
 	}
-
-	// Return success toast
-	return c.Render("toast/toastOk", fiber.Map{"Msg": "Track deleted successfully"})
+	return respond.ToastOk(c, "Track deleted successfully")
 }
 
 // DeleteAlbum deletes an album from the library.
@@ -521,17 +496,13 @@ func (h *Handler) DeleteAlbum(c *fiber.Ctx) error {
 
 	albumID := c.Params("albumId")
 	if albumID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Album ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Album ID is required")
 	}
-
-	err := h.service.DeleteAlbum(c.Context(), albumID)
-	if err != nil {
+	if err := h.service.DeleteAlbum(c.Context(), albumID); err != nil {
 		slog.Error("Failed to delete album", "error", err, "albumId", albumID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete album")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to delete album")
 	}
-
-	// Return success toast
-	return c.Render("toast/toastOk", fiber.Map{"Msg": "Album deleted successfully"})
+	return respond.ToastOk(c, "Album deleted successfully")
 }
 
 // DeleteArtist deletes an artist from the library.
@@ -540,17 +511,13 @@ func (h *Handler) DeleteArtist(c *fiber.Ctx) error {
 
 	artistID := c.Params("artistId")
 	if artistID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Artist ID is required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Artist ID is required")
 	}
-
-	err := h.service.DeleteArtist(c.Context(), artistID)
-	if err != nil {
+	if err := h.service.DeleteArtist(c.Context(), artistID); err != nil {
 		slog.Error("Failed to delete artist", "error", err, "artistId", artistID)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete artist")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to delete artist")
 	}
-
-	// Return success toast
-	return c.Render("toast/toastOk", fiber.Map{"Msg": "Artist deleted successfully"})
+	return respond.ToastOk(c, "Artist deleted successfully")
 }
 
 // RenderTrackOverviewPanel renders the floating track overview panel.
@@ -588,118 +555,9 @@ func (h *Handler) RenderTrackOverviewPanel(c *fiber.Ctx) error {
 		lyricsPreview = strings.Join(lines, "\n")
 	}
 
-	return c.Render("library/track_overview_panel", fiber.Map{
+	return respond.Partial(c, "library/track_overview_panel", fiber.Map{
 		"Track":         track,
 		"Artists":       artistNames.String(),
 		"LyricsPreview": lyricsPreview,
-	})
-}
-
-// RenderTagEditForm renders the tag edit form for a track
-func (h *Handler) RenderTagEditForm(c *fiber.Ctx) error {
-	slog.Debug("RenderTagEditForm handler called", "trackId", c.Params("trackId"))
-
-	trackID := c.Params("trackId")
-	if trackID == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
-	}
-
-	// Get track data for editing
-	track, err := h.service.GetTrack(c.Context(), trackID)
-	if err != nil || track == nil {
-		slog.Error("Failed to get track for editing", "error", err, "trackId", trackID)
-		return c.Status(fiber.StatusNotFound).SendString("Track not found")
-	}
-
-	// Fetch all artists and albums for dropdowns
-	artists, err := h.service.GetArtists(c.Context())
-	if err != nil {
-		slog.Error("Failed to get artists for dropdown", "error", err)
-		artists = []*music.Artist{} // Continue with empty list
-	}
-
-	albums, err := h.service.GetAlbums(c.Context())
-	if err != nil {
-		slog.Error("Failed to get albums for dropdown", "error", err)
-		albums = []*music.Album{} // Continue with empty list
-	}
-
-	// Ensure track's artists are included in the dropdown, even if missing from main query
-	artistMap := make(map[string]bool)
-	for _, artist := range artists {
-		artistMap[artist.ID] = true
-	}
-	// Add track artists (include those without IDs for fetched data)
-	for _, artistRole := range track.Artists {
-		if artistRole.Artist != nil {
-			artistID := artistRole.Artist.ID
-			if artistID == "" {
-				// Generate a temporary ID for artists without database IDs (for dropdown display)
-				artistID = "temp_" + artistRole.Artist.Name
-				artistRole.Artist.ID = artistID
-			}
-			if !artistMap[artistID] {
-				artists = append(artists, artistRole.Artist)
-				artistMap[artistID] = true
-			}
-		}
-	}
-	// Add album artists (include those without IDs for fetched data)
-	if track.Album != nil {
-		for _, artistRole := range track.Album.Artists {
-			if artistRole.Artist != nil {
-				artistID := artistRole.Artist.ID
-				if artistID == "" {
-					// Generate a temporary ID for artists without database IDs (for dropdown display)
-					artistID = "temp_" + artistRole.Artist.Name
-					artistRole.Artist.ID = artistID
-				}
-				if !artistMap[artistID] {
-					artists = append(artists, artistRole.Artist)
-					artistMap[artistID] = true
-				}
-			}
-		}
-	}
-
-	// Ensure track has valid ID for template
-	if track.ID == "" {
-		track.ID = trackID
-	}
-
-	// Determine selected album artist ID for template
-	selectedAlbumArtistID := ""
-	if track.Album != nil && len(track.Album.Artists) > 0 {
-		selectedAlbumArtistID = track.Album.Artists[0].Artist.ID
-	}
-
-	// Create map of selected artist IDs for template
-	selectedArtistIDs := make(map[string]bool)
-	for _, artistRole := range track.Artists {
-		if artistRole.Artist != nil && artistRole.Artist.ID != "" {
-			selectedArtistIDs[artistRole.Artist.ID] = true
-		}
-	}
-
-	// Check if request is HTMX or full page
-	if c.Get("HX-Request") == "true" {
-		// Return the full tag section with button loading HTMX for HTMX requests
-		return c.Render("sections/tag", fiber.Map{
-			"Track":                 track,
-			"Artists":               artists,
-			"Albums":                albums,
-			"SelectedAlbumArtistID": selectedAlbumArtistID,
-			"SelectedArtistIDs":     selectedArtistIDs,
-		})
-	}
-
-	// Return full page for direct navigation
-	return c.Render("main", fiber.Map{
-		"Track":                 track,
-		"IsTagEdit":             true,
-		"Artists":               artists,
-		"Albums":                albums,
-		"SelectedAlbumArtistID": selectedAlbumArtistID,
-		"SelectedArtistIDs":     selectedArtistIDs,
 	})
 }

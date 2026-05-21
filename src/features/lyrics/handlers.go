@@ -9,6 +9,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
@@ -79,35 +80,36 @@ func (h *Handler) RenderLyricsButtons(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
 	}
 
-	return c.Render("tag/lyrics_buttons", fiber.Map{
+	return respond.Partial(c, "tag/lyrics_buttons", fiber.Map{
 		"Track":           track,
 		"LyricsProviders": h.service.GetLyricsProvidersInfo(),
 	})
 }
 
-// GetLyricsText returns plain lyrics text for HTMX to set in textarea
+// GetLyricsText returns plain lyrics text for HTMX to set in textarea, or JSON for API clients.
 func (h *Handler) GetLyricsText(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	providerName := c.Params("provider")
 
 	if trackID == "" || providerName == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Track ID and provider name are required")
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Track ID and provider name are required")
 	}
 
-	// Fetch lyrics
 	lyrics, err := h.service.SearchLyrics(c.Context(), trackID, providerName)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			return c.Status(fiber.StatusNotFound).SendString("No lyrics found for this track")
+			return respond.ToastErr(c, fiber.StatusNotFound, "No lyrics found for this track")
 		}
 		slog.Error("Failed to fetch lyrics", "error", err, "trackId", trackID, "provider", providerName)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to fetch lyrics")
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to fetch lyrics")
 	}
 
 	slog.Info("Lyrics fetched successfully", "trackId", trackID, "provider", providerName, "lyricsLength", len(lyrics))
 
-	// Return plain lyrics text for HTMX to set in textarea
-	return c.SendString(lyrics)
+	if c.Get("HX-Request") == "true" {
+		return c.SendString(lyrics)
+	}
+	return c.JSON(fiber.Map{"track_id": trackID, "lyrics": lyrics})
 }
 
 // GetTrackLyrics returns the lyrics of a track in plain text.
@@ -121,7 +123,7 @@ func (h *Handler) GetTrackLyrics(c *fiber.Ctx) error {
 	if track == nil {
 		return c.Status(fiber.StatusNotFound).SendString("Track not found")
 	}
-	return c.SendString(track.Metadata.Lyrics)
+	return respond.Text(c, "lyrics", track.Metadata.Lyrics)
 }
 
 // GetQueueNewLyrics returns the new lyrics from a queue item's metadata.
@@ -133,9 +135,9 @@ func (h *Handler) GetQueueNewLyrics(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).SendString("Queue item not found")
 	}
 	if newLyrics, ok := item.Metadata["new_lyrics"]; ok && newLyrics != "" {
-		return c.SendString(newLyrics)
+		return respond.Text(c, "lyrics", newLyrics)
 	}
-	return c.SendString("No new lyrics available")
+	return respond.Text(c, "lyrics", "", "No new lyrics available")
 }
 
 // RenderLyricsQueueItems renders the lyrics queue content for HTMX
@@ -169,7 +171,7 @@ func (h *Handler) RenderLyricsQueueItems(c *fiber.Ctx) error {
 		slog.Info("First queue item sample", "id", queueItems[0].ID, "type", queueItems[0].Type, "trackTitle", queueItems[0].Track.Title)
 	}
 
-	return c.Render("lyrics/queue_items", fiber.Map{
+	return respond.Partial(c, "lyrics/queue_items", fiber.Map{
 		"QueueItems": queueItems,
 	})
 }
@@ -182,11 +184,8 @@ func (h *Handler) ProcessLyricsQueueItem(c *fiber.Ctx) error {
 	err := h.service.ProcessLyricsQueueItem(c.Context(), itemID, action)
 	if err != nil {
 		slog.Error("Failed to process lyrics queue item", "error", err, "itemID", itemID, "action", action)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to process lyrics queue item: %s", err.Error()),
-		})
+		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to process lyrics queue item: %s", err.Error()))
 	}
-	// Return success response that updates the UI
 	actionMsg := "processed"
 	switch action {
 	case "override":
@@ -201,18 +200,17 @@ func (h *Handler) ProcessLyricsQueueItem(c *fiber.Ctx) error {
 		actionMsg = "skipped"
 	}
 	c.Response().Header.Set("HX-Trigger", "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount,activateIndividualGroupingLyrics")
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": fmt.Sprintf("Track %s successfully", actionMsg),
-	})
+	return respond.ToastOk(c, fmt.Sprintf("Track %s successfully", actionMsg))
 }
 
 // LyricsQueueCount returns the current lyrics queue count formatted as "(X)" or empty if 0
 func (h *Handler) LyricsQueueCount(c *fiber.Ctx) error {
 	count := len(h.service.GetLyricsQueueItems())
-	if count == 0 {
-		return c.SendString("")
+	formatted := ""
+	if count > 0 {
+		formatted = fmt.Sprintf("(%d)", count)
 	}
-	return c.SendString(fmt.Sprintf("(%d)", count))
+	return respond.Text(c, "queue_count", count, formatted)
 }
 
 // ClearLyricsQueue handles clearing all items from the lyrics queue
@@ -220,14 +218,10 @@ func (h *Handler) ClearLyricsQueue(c *fiber.Ctx) error {
 	err := h.service.ClearLyricsQueue()
 	if err != nil {
 		slog.Error("Failed to clear lyrics queue", "error", err)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Failed to clear lyrics queue",
-		})
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to clear lyrics queue")
 	}
 	c.Response().Header.Set("HX-Trigger", "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount,activateIndividualGroupingLyrics")
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": "Lyrics queue cleared successfully",
-	})
+	return respond.ToastOk(c, "Lyrics queue cleared successfully")
 }
 
 // RenderGroupedLyricsQueueItems renders lyrics queue items grouped by artist or album
@@ -266,7 +260,7 @@ func (h *Handler) RenderGroupedLyricsQueueItems(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.Render(templateName, fiber.Map{
+	return respond.Partial(c, templateName, fiber.Map{
 		"Groups":    viewGroups,
 		"GroupType": groupType,
 	})
@@ -295,28 +289,24 @@ func (h *Handler) ProcessLyricsQueueGroup(c *fiber.Ctx) error {
 	err = h.service.ProcessLyricsQueueGroup(c.Context(), decodedGroupKey, groupType, action)
 	if err != nil {
 		slog.Error("Failed to process lyrics queue group", "error", err, "groupKey", decodedGroupKey, "groupType", groupType, "action", action)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": fmt.Sprintf("Failed to process group %s", decodedGroupKey),
-		})
+		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to process group %s", decodedGroupKey))
 	}
 
 	trigger := "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount"
 	if groupType == "artist" {
 		trigger += ",activateArtistGroupingLyrics"
-	} else if groupType == "album" {
+	} else {
 		trigger += ",activateAlbumGroupingLyrics"
 	}
 	c.Response().Header.Set("HX-Trigger", trigger)
-	return c.Render("toast/toastOk", fiber.Map{
-		"Msg": fmt.Sprintf("Group '%s' processed successfully", decodedGroupKey),
-	})
+	return respond.ToastOk(c, fmt.Sprintf("Group '%s' processed successfully", decodedGroupKey))
 }
 
 // RenderLyricsQueueHeader renders the lyrics queue header for HTMX
 func (h *Handler) RenderLyricsQueueHeader(c *fiber.Ctx) error {
 	slog.Debug("RenderLyricsQueueHeader handler called")
 	count := len(h.service.GetLyricsQueueItems())
-	return c.Render("lyrics/queue_header", fiber.Map{
+	return respond.Partial(c, "lyrics/queue_header", fiber.Map{
 		"QueueCount": count,
 	})
 }
@@ -328,9 +318,7 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 	// Get provider from form data
 	provider := c.FormValue("provider")
 	if provider == "" {
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Please select a lyrics provider",
-		})
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Please select a lyrics provider")
 	}
 
 	// Get options from form data
@@ -345,40 +333,21 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 	jobID, err := h.service.StartLyricsAnalysis(c.Context(), provider, skipExistingLyrics, overrideNoQueue)
 	if err != nil {
 		slog.Error("Failed to start lyrics analysis", "error", err)
-		return c.Render("toast/toastErr", fiber.Map{
-			"Msg": "Failed to start lyrics analysis: " + err.Error(),
-		})
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start lyrics analysis: "+err.Error())
 	}
 
 	slog.Info("Lyrics analysis job started successfully", "jobID", jobID, "provider", provider)
 
 	// Trigger HTMX to refresh the job list
 	c.Set("HX-Trigger", "refreshJobList")
-
-	if c.Get("HX-Request") == "true" {
-		return c.Render("toast/toastOk", fiber.Map{
-			"Msg": "Lyrics analysis started successfully",
-		})
-	}
-
-	return c.Redirect("/ui/analyze/lyrics")
+	return respond.ToastJob(c, jobID, "Lyrics analysis started successfully")
 }
 
 // RenderLyricsAnalysisSection renders the lyrics analysis section page
 func (h *Handler) RenderLyricsAnalysisSection(c *fiber.Ctx) error {
 	slog.Debug("Rendering lyrics analysis section")
-
-	data := fiber.Map{
-		"Title": "Lyrics Analysis",
-	}
-
-	// Get lyrics providers info for the UI
-	data["LyricsProviders"] = h.service.GetLyricsProvidersInfo()
-
-	if c.Get("HX-Request") != "true" {
-		data["Section"] = "analyze_lyrics"
-		return c.Render("main", data)
-	}
-
-	return c.Render("sections/analyze_lyrics", data)
+	return respond.Section(c, "analyze_lyrics", fiber.Map{
+		"Title":           "Lyrics Analysis",
+		"LyricsProviders": h.service.GetLyricsProvidersInfo(),
+	})
 }
