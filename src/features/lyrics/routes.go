@@ -12,11 +12,9 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	ui.Get("/lyrics/queue/header", handler.RenderLyricsQueueHeader)
 	ui.Get("/lyrics/queue/items", handler.RenderLyricsQueueItems)
 	ui.Get("/lyrics/queue/items/grouped", handler.RenderGroupedLyricsQueueItems)
-	tagGroup := ui.Group("/tag")
-
-	// Lyrics routes - these are accessed from the metadata/tag UI
-	tagGroup.Get("/edit/:trackId/lyrics/text/:provider", handler.GetLyricsText)
-	tagGroup.Get("/buttons/lyrics/:trackId", handler.RenderLyricsButtons)
+	tag := app.Group("/tag")
+	tag.Get("/buttons/lyrics/:trackId", handler.RenderLyricsButtons)
+	tag.Get("/:trackId/lyrics/text/:provider", handler.GetLyricsText)
 
 	// Library routes for lyrics
 	library := app.Group("/library")
