@@ -45,6 +45,51 @@
             </div>
         </div>
 
+         <!-- Audio players -->
+         {{if eq .Type "duplicate"}}
+         <div class="flex flex-wrap items-center gap-2">
+             <button _="on click toggle .hidden on #player-queue-{{.ID}}"
+                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-violet-500/10 border border-violet-400/30 text-violet-600 dark:text-violet-300 hover:bg-violet-500/20 transition-colors">
+                 <i class="fas fa-music fa-xs"></i> New
+             </button>
+             <button _="on click toggle .hidden on #player-lib-{{.ID}}"
+                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-500/10 border border-blue-400/30 text-blue-600 dark:text-blue-300 hover:bg-blue-500/20 transition-colors">
+                 <i class="fas fa-music fa-xs"></i> Existing
+             </button>
+         </div>
+         <div id="player-queue-{{.ID}}" class="audio-player hidden flex items-center gap-2.5 bg-violet-500/5 border border-violet-400/20 rounded-lg px-3 py-2 w-full">
+             <button onclick="toggleAudioPlayer(this)" class="play-btn flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-violet-500/20 hover:bg-violet-500/40 text-violet-600 dark:text-violet-300 transition-colors">
+                 <i class="fas fa-play fa-xs"></i>
+             </button>
+             <input type="range" oninput="seekAudioProgress(this)" class="flex-1 h-1 rounded-full cursor-pointer accent-[#463371] mx-1" value="0" min="0" max="100" step="0.1">
+             <span class="time-display text-xs text-gray-500 dark:text-gray-400 tabular-nums w-8 text-right flex-shrink-0">0:00</span>
+             <audio src="/stream/queue/{{.ID}}" preload="none" ontimeupdate="updateAudioProgress(this)" onended="resetAudioPlayer(this)"></audio>
+         </div>
+         <div id="player-lib-{{.ID}}" class="audio-player hidden flex items-center gap-2.5 bg-blue-500/5 border border-blue-400/20 rounded-lg px-3 py-2 w-full">
+             <button onclick="toggleAudioPlayer(this)" class="play-btn flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-blue-500/20 hover:bg-blue-500/40 text-blue-600 dark:text-blue-300 transition-colors">
+                 <i class="fas fa-play fa-xs"></i>
+             </button>
+             <input type="range" oninput="seekAudioProgress(this)" class="flex-1 h-1 rounded-full cursor-pointer accent-[#7BAADF] mx-1" value="0" min="0" max="100" step="0.1">
+             <span class="time-display text-xs text-gray-500 dark:text-gray-400 tabular-nums w-8 text-right flex-shrink-0">0:00</span>
+             <audio src="/stream/library/{{.ID}}" preload="none" ontimeupdate="updateAudioProgress(this)" onended="resetAudioPlayer(this)"></audio>
+         </div>
+         {{else}}
+         <div class="flex items-center gap-2">
+             <button _="on click toggle .hidden on #player-queue-{{.ID}}"
+                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-500/10 border border-gray-400/30 text-gray-600 dark:text-gray-300 hover:bg-gray-500/20 transition-colors">
+                 <i class="fas fa-music fa-xs"></i> Play
+             </button>
+         </div>
+         <div id="player-queue-{{.ID}}" class="audio-player hidden flex items-center gap-2.5 bg-gray-500/5 border border-gray-400/20 rounded-lg px-3 py-2 w-full">
+             <button onclick="toggleAudioPlayer(this)" class="play-btn flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-gray-500/20 hover:bg-gray-500/40 text-gray-600 dark:text-gray-300 transition-colors">
+                 <i class="fas fa-play fa-xs"></i>
+             </button>
+             <input type="range" oninput="seekAudioProgress(this)" class="flex-1 h-1 rounded-full cursor-pointer accent-gray-500 mx-1" value="0" min="0" max="100" step="0.1">
+             <span class="time-display text-xs text-gray-500 dark:text-gray-400 tabular-nums w-8 text-right flex-shrink-0">0:00</span>
+             <audio src="/stream/queue/{{.ID}}" preload="none" ontimeupdate="updateAudioProgress(this)" onended="resetAudioPlayer(this)"></audio>
+         </div>
+         {{end}}
+
          <!-- Details row -->
          <div class="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
              <p><strong>ID:</strong> <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs">{{.ID}}</code></p>

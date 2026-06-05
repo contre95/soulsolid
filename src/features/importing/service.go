@@ -78,6 +78,18 @@ func (s *Service) GetQueuedItems() map[string]music.QueueItem {
 	return s.queue.GetAll()
 }
 
+// GetPendingTrackPath returns the file path of a pending track in the import queue.
+func (s *Service) GetPendingTrackPath(itemID string) (string, error) {
+	item, err := s.queue.GetByID(itemID)
+	if err != nil {
+		return "", fmt.Errorf("queue item not found: %w", err)
+	}
+	if item.Track == nil {
+		return "", fmt.Errorf("queue item has no track")
+	}
+	return item.Track.Path, nil
+}
+
 // GetPendingTrackArtwork returns the embedded artwork for a pending (not yet imported) track file.
 func (s *Service) GetPendingTrackArtwork(itemID string) ([]byte, string, error) {
 	item, err := s.queue.GetByID(itemID)
