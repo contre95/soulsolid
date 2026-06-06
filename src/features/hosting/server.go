@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/contre95/soulsolid/src/features/config"
@@ -79,6 +80,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	engine.AddFunc("capitalize", func(s string) string {
 		return strings.Title(strings.ToLower(s))
 	})
+	engine.AddFunc("pathBase", filepath.Base)
 
 	app := fiber.New(fiber.Config{
 		Views: engine,
