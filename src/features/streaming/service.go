@@ -9,6 +9,23 @@ import (
 	"github.com/contre95/soulsolid/src/features/config"
 )
 
+// containedIn resolves symlinks on both paths and checks that candidate is
+// inside (or equal to) base, preventing symlink escapes.
+func containedIn(candidate, base string) (string, error) {
+	resolved, err := filepath.EvalSymlinks(filepath.Clean(candidate))
+	if err != nil {
+		return "", fmt.Errorf("cannot resolve path: %w", err)
+	}
+	resolvedBase, err := filepath.EvalSymlinks(filepath.Clean(base))
+	if err != nil {
+		return "", fmt.Errorf("cannot resolve base path: %w", err)
+	}
+	if resolved != resolvedBase && !strings.HasPrefix(resolved, resolvedBase+string(filepath.Separator)) {
+		return "", fmt.Errorf("track path outside allowed directory")
+	}
+	return resolved, nil
+}
+
 // Service handles audio streaming from both the download folder and the library.
 type Service struct {
 	queue   QueueLocator
@@ -27,12 +44,11 @@ func (s *Service) QueueTrackStream(itemID string) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("queue item not found: %w", err)
 	}
-	downloadPath := filepath.Clean(s.cfg.Get().DownloadPath)
-	if !strings.HasPrefix(filepath.Clean(path), downloadPath+string(filepath.Separator)) &&
-		filepath.Clean(path) != downloadPath {
-		return "", "", fmt.Errorf("track path outside allowed directory")
+	resolved, err := containedIn(path, s.cfg.Get().DownloadPath)
+	if err != nil {
+		return "", "", err
 	}
-	return path, mimeTypeFor(path), nil
+	return resolved, mimeTypeFor(resolved), nil
 }
 
 // LibraryTrackStream returns the validated file path and MIME type for a library track.
@@ -41,17 +57,18 @@ func (s *Service) LibraryTrackStream(ctx context.Context, trackID string) (strin
 	if err != nil {
 		return "", "", fmt.Errorf("track not found: %w", err)
 	}
-	libraryPath := filepath.Clean(s.cfg.Get().LibraryPath)
-	if !strings.HasPrefix(filepath.Clean(path), libraryPath+string(filepath.Separator)) &&
-		filepath.Clean(path) != libraryPath {
-		return "", "", fmt.Errorf("track path outside allowed directory")
+	resolved, err := containedIn(path, s.cfg.Get().LibraryPath)
+	if err != nil {
+		return "", "", err
 	}
-	return path, mimeTypeFor(path), nil
+	return resolved, mimeTypeFor(resolved), nil
 }
 
 func mimeTypeFor(path string) string {
-	if strings.HasSuffix(strings.ToLower(path), ".flac") {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".flac":
 		return "audio/flac"
+	default:
+		return "audio/mpeg"
 	}
-	return "audio/mpeg"
 }
