@@ -1,7 +1,9 @@
 # SoulSolid API Reference
 
-Every endpoint supports dual content negotiation via the `HX-Request` header.  
+Most endpoints that return Resource responses or support both HTML and API clients perform content negotiation.
 HTMX sends `HX-Request: true` automatically; anything else is treated as an API client.
+Resource responses additionally negotiate via the `Accept` header (`Accept: application/json` returns JSON metadata instead of the binary).
+Some endpoints are always JSON or HTMX-only and do not perform `HX-Request`-based negotiation.
 
 **Response types**
 
@@ -22,11 +24,10 @@ HTMX sends `HX-Request: true` automatically; anything else is treated as an API 
 
 | Method | Route | Type | HTMX | API / Browser |
 |--------|-------|------|------|---------------|
-| GET | `/` | — | redirect → `/ui` | redirect → `/ui` |
-| GET | `/ui` | Section | `sections/dashboard` | full page |
-| GET | `/ui/dashboard` | Section | `sections/dashboard` | full page |
-| GET | `/ui/analyze` | Section | `sections/analyze` | full page |
-| GET | `/ui/quick-actions-card` | Partial | HTML card | JSON data |
+| GET | `/` | Section | `sections/dashboard` | full page |
+| GET | `/dashboard` | Section | `sections/dashboard` | full page |
+| GET | `/analyze` | Section | `sections/analyze` | full page |
+| GET | `/dashboard/quick-actions` | Partial | HTML card | JSON data |
 
 ---
 
@@ -34,9 +35,9 @@ HTMX sends `HX-Request: true` automatically; anything else is treated as an API 
 
 | Method | Route | Type | HTMX | API / Browser |
 |--------|-------|------|------|---------------|
-| GET | `/ui/settings` | Section | `sections/settings` | full page |
-| GET | `/ui/config/form` | Partial | HTML form | JSON config |
-| POST | `/settings/update` | Toast OK | success toast | `{"message":"…"}` |
+| GET | `/settings` | Section | `sections/settings` | full page |
+| GET | `/config/form` | Partial | HTML form | JSON config |
+| PUT | `/settings` | Toast OK | success toast | `{"message":"…"}` |
 | GET | `/config` | JSON | — | config struct as JSON |
 | GET | `/config?fmt=yaml` | — | raw `text/yaml` | raw `text/yaml` |
 | GET | `/config/database/download` | Resource | SQLite file download | `{"type":"application/octet-stream","url":"…"}` |
@@ -47,9 +48,9 @@ HTMX sends `HX-Request: true` automatically; anything else is treated as an API 
 
 | Method | Route | Type | HTMX | API |
 |--------|-------|------|------|-----|
-| GET | `/ui/library` | Section | `sections/library` | full page |
-| GET | `/ui/library/table` | Partial | HTML table | JSON data |
-| GET | `/ui/library/tracks/:trackId/overview` | Partial | HTML panel | JSON data |
+| GET | `/library` | Section | `sections/library` | full page |
+| GET | `/library/table` | Partial | HTML table | JSON data |
+| GET | `/library/tracks/:trackId/overview` | Partial | HTML panel | JSON data |
 | GET | `/library/search` | Partial | HTML results list | JSON results + pagination |
 | GET | `/library/artists/count` | Text | `"N"` | `{"key":"artists_count","value":N}` |
 | GET | `/library/albums/count` | Text | `"N"` | `{"key":"albums_count","value":N}` |
@@ -79,9 +80,8 @@ HTMX sends `HX-Request: true` automatically; anything else is treated as an API 
 | GET | `/tag/:trackId/fingerprint/view` | Text | fingerprint string | `{"key":"fingerprint","value":"…"}` |
 | GET | `/tag/:trackId/search/:provider` | Partial | HTML modal | JSON results |
 | GET | `/tag/:trackId/select/:provider` | Partial | HTML form | JSON track data |
-| GET | `/tag/buttons/metadata/:trackId` | Partial | HTML buttons | JSON data |
 | POST | `/analyze/acoustid` | Toast Job | success toast | `202 {"job_id":"…"}` |
-| GET | `/ui/analyze/metadata` | Section | `sections/analyze_metadata` | full page |
+| GET | `/analyze/metadata` | Section | `sections/analyze_metadata` | full page |
 
 ---
 
@@ -89,11 +89,11 @@ HTMX sends `HX-Request: true` automatically; anything else is treated as an API 
 
 | Method | Route | Type | HTMX | API |
 |--------|-------|------|------|-----|
-| GET | `/ui/import` | Section | `sections/import` | full page |
-| GET | `/ui/importing/directory/form` | Partial | HTML form | JSON data |
-| GET | `/ui/importing/queue/items` | Partial | HTML list | JSON items |
-| GET | `/ui/importing/queue/items/grouped` | Partial | HTML grouped list | JSON groups |
-| GET | `/ui/importing/queue/header` | Partial | HTML header | JSON data |
+| GET | `/import` | Section | `sections/import` | full page |
+| GET | `/import/directory/form` | Partial | HTML form | JSON data |
+| GET | `/import/queue/items` | Partial | HTML list | JSON items |
+| GET | `/import/queue/items/grouped` | Partial | HTML grouped list | JSON groups |
+| GET | `/import/queue/header` | Partial | HTML header | JSON data |
 | GET | `/import/queue/:id/artwork` | Resource | image bytes | `{"type":"image/…","url":"…"}` |
 | GET | `/import/queue/count` | Text | `"(N)"` or `""` | `{"key":"queue_count","value":N}` |
 | POST | `/import/directory` | Toast Job | success toast | `202 {"job_id":"…"}` |
@@ -111,13 +111,13 @@ HTMX sends `HX-Request: true` automatically; anything else is treated as an API 
 
 | Method | Route | Type | HTMX | API |
 |--------|-------|------|------|-----|
-| GET | `/ui/jobs` | Section | `sections/jobs` | full page |
-| GET | `/ui/jobs/active` | Partial | HTML active list | JSON jobs |
-| GET | `/ui/jobs/list` | Partial | HTML list | JSON jobs |
-| GET | `/ui/jobs/latest` | Partial | HTML latest list | JSON jobs |
-| GET | `/ui/jobs/count` | Text | `"(N)"` or `""` | `{"key":"jobs_count","value":N}` |
-| POST | `/ui/jobs/clear-finished` | Toast OK | success toast | `{"message":"…"}` |
-| GET | `/jobs/` | JSON | — | `[{job, _links}]` |
+| GET | `/jobs` | Section | `sections/jobs` | full page |
+| GET | `/jobs/active` | Partial | HTML active list | JSON jobs |
+| GET | `/jobs/list` | Partial | HTML list | JSON jobs |
+| GET | `/jobs/latest` | Partial | HTML latest list | JSON jobs |
+| GET | `/jobs/count` | Text | `"(N)"` or `""` | `{"key":"jobs_count","value":N}` |
+| POST | `/jobs/clear-finished` | Toast OK | success toast | `{"message":"…"}` |
+| GET | `/jobs/all` | JSON | — | `[{job, _links}]` |
 | POST | `/jobs/start/:type` | Toast Job | success toast | `202 {"job_id":"…"}` |
 | GET | `/jobs/:id` | JSON | — | `{job, _links}` |
 | GET | `/jobs/:id/progress` | Partial | HTML progress bar | JSON progress |
@@ -131,8 +131,8 @@ HTMX sends `HX-Request: true` automatically; anything else is treated as an API 
 
 | Method | Route | Type | HTMX | API |
 |--------|-------|------|------|-----|
-| GET | `/ui/download` | Section | `sections/download` | full page |
-| GET | `/ui/downloading/chart/tracks` | Partial | HTML chart | JSON tracks |
+| GET | `/downloads` | Section | `sections/download` | full page |
+| GET | `/downloads/chart/tracks` | Partial | HTML chart | JSON tracks |
 | POST | `/downloads/search` | Partial | HTML results | JSON results |
 | POST | `/downloads/search/albums` | Partial | HTML results | JSON albums |
 | POST | `/downloads/search/tracks` | Partial | HTML results | JSON tracks |
@@ -151,13 +151,10 @@ HTMX sends `HX-Request: true` automatically; anything else is treated as an API 
 
 | Method | Route | Type | HTMX | API |
 |--------|-------|------|------|-----|
-| GET | `/ui/lyrics/queue/header` | Partial | HTML header | JSON data |
-| GET | `/ui/lyrics/queue/items` | Partial | HTML list | JSON items |
-| GET | `/ui/lyrics/queue/items/grouped` | Partial | HTML grouped list | JSON groups |
-| GET | `/ui/analyze/lyrics` | Section | `sections/analyze_lyrics` | full page |
-| GET | `/tag/buttons/lyrics/:trackId` | Partial | HTML buttons | JSON data |
+| GET | `/analyze/lyrics` | Section | `sections/analyze_lyrics` | full page |
 | GET | `/tag/:trackId/lyrics/text/:provider` | — | plain lyrics text | `{"track_id":"…","lyrics":"…"}` |
 | GET | `/library/tracks/:id/lyrics` | Text | plain lyrics | `{"key":"lyrics","value":"…"}` |
+| GET | `/lyrics/queue/header` | Partial | HTML header | JSON data |
 | GET | `/lyrics/queue/items` | Partial | HTML list | JSON items |
 | GET | `/lyrics/queue/items/grouped` | Partial | HTML grouped list | JSON groups |
 | GET | `/lyrics/queue/count` | Text | `"(N)"` or `""` | `{"key":"queue_count","value":N}` |
@@ -173,8 +170,8 @@ HTMX sends `HX-Request: true` automatically; anything else is treated as an API 
 
 | Method | Route | Type | HTMX | API / Browser |
 |--------|-------|------|------|---------------|
-| GET | `/ui/playlists` | Section | `sections/playlists` | full page |
-| GET | `/ui/playlists/:id` | Partial | HTML playlist view | JSON playlist |
+| GET | `/playlists` | Section | `sections/playlists` | full page |
+| GET | `/playlists/:id` | Partial | HTML playlist view | JSON playlist |
 | GET | `/playlists/create-modal` | Partial | HTML modal | JSON data |
 | GET | `/playlists/:type/:id/playlists` | Partial | HTML list | JSON playlists |
 | GET | `/playlists/:id/export` | Resource | `.m3u` file | `{"type":"audio/x-mpegurl","url":"…"}` |
@@ -190,7 +187,7 @@ HTMX sends `HX-Request: true` automatically; anything else is treated as an API 
 
 | Method | Route | Type | HTMX | API |
 |--------|-------|------|------|-----|
-| GET | `/ui/analyze/files` | Section | `sections/analyze_files` | full page |
+| GET | `/analyze/files` | Section | `sections/analyze_files` | full page |
 | POST | `/analyze/reorganize` | Toast Job | success toast | `202 {"job_id":"…"}` |
 
 ---
@@ -199,8 +196,8 @@ HTMX sends `HX-Request: true` automatically; anything else is treated as an API 
 
 | Method | Route | Type | HTMX | API |
 |--------|-------|------|------|-----|
-| GET | `/ui/metrics/overview` | Partial | HTML overview | JSON metrics |
-| GET | `/ui/metrics/charts/genre` | Partial | HTML chart | JSON data |
-| GET | `/ui/metrics/charts/year` | Partial | HTML chart | JSON data |
-| GET | `/ui/metrics/charts/format` | Partial | HTML chart | JSON data |
-| GET | `/ui/metrics/charts/metadata` | Partial | HTML chart | JSON data |
+| GET | `/metrics/overview` | Partial | HTML overview | JSON metrics |
+| GET | `/metrics/charts/genre` | Partial | HTML chart | JSON data |
+| GET | `/metrics/charts/year` | Partial | HTML chart | JSON data |
+| GET | `/metrics/charts/format` | Partial | HTML chart | JSON data |
+| GET | `/metrics/charts/metadata` | Partial | HTML chart | JSON data |
