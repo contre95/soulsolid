@@ -58,7 +58,7 @@
                   </svg>
                   <span class="mx-2 font-medium">Importing</span>
                   <div id="import-queue-badge-nav" hx-get="/import/queue/count" hx-push-url="false"
-                    hx-trigger="load, every 1s, refreshImportQueueBadge from:body" hx-target="#import-queue-count-nav"
+                    hx-trigger="load, every 15s, refreshImportQueueBadge from:body" hx-target="#import-queue-count-nav"
                     hx-swap="innerHTML">
                     <span id="import-queue-count-nav"
                       class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-orange-300 dark:drop-shadow-[0_0_10px_rgba(255,165,0,0.8)]"></span>
@@ -97,7 +97,7 @@
                 <div id="lyrics-queue-badge-nav"
                     hx-get="/lyrics/queue/count"
                     hx-push-url="false"
-                    hx-trigger="load, every 1s, refreshLyricsQueueBadge from:body"
+                    hx-trigger="load, every 15s, refreshLyricsQueueBadge from:body"
                     hx-target="#lyrics-queue-count-nav"
                     hx-swap="innerHTML">
                   <span id="lyrics-queue-count-nav" class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-purple-300 dark:drop-shadow-[0_0_10px_rgba(147,51,234,0.8)]"></span>
@@ -136,7 +136,7 @@
                     <div id="lyrics-queue-badge-sub"
                         hx-get="/lyrics/queue/count"
                         hx-push-url="false"
-                        hx-trigger="load, every 1s, refreshLyricsQueueBadge from:body"
+                        hx-trigger="load, every 15s, refreshLyricsQueueBadge from:body"
                         hx-target="#lyrics-queue-count-sub"
                         hx-swap="innerHTML">
                       <span id="lyrics-queue-count-sub" class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-purple-300 dark:drop-shadow-[0_0_10px_rgba(147,51,234,0.8)]"></span>
@@ -196,7 +196,7 @@
                <div id="active-jobs-badge"
                     hx-get="/ui/jobs/count?filter=active"
                    hx-push-url="false"
-                   hx-trigger="load, every 1s, refreshActiveJobsBadge from:body"
+                   hx-trigger="load, every 5s, refreshActiveJobsBadge from:body"
                    hx-target="#active-jobs-count-nav"
                    hx-swap="innerHTML">
                  <span id="active-jobs-count-nav" class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-blue-300 dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]"></span>
