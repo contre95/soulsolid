@@ -95,10 +95,10 @@
              <p><strong>ID:</strong> <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs">{{.ID}}</code></p>
              <p><strong>Artists ({{len .Track.Artists}}):</strong> {{if .Track.Artists}}{{range $i, $ar := .Track.Artists}}{{if $i}}, {{end}}{{$ar.Artist.Name}}{{end}}{{end}}</p>
              <p><strong>Album:</strong> {{with .Track.Album}}{{.Title}}{{else}}Unknown Album{{end}}</p>
-             <p><strong>Original path:</strong> {{.Track.Path}}</p>
+             <p><strong>New:</strong> {{.Track.Path}}</p>
               {{if len .ItemMetadata}}
                {{range $key, $value := .ItemMetadata}}
-               <p class="text-gray-600 dark:text-gray-400"><strong>{{$key}}:</strong> {{$value}}</p>
+               <p class="text-gray-600 dark:text-gray-400"><strong>{{if eq $key "duplicate_path"}}Existing{{else}}{{$key}}{{end}}:</strong> {{$value}}</p>
                {{end}}
                {{end}}
          </div>
