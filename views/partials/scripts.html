@@ -82,9 +82,6 @@
   document.addEventListener("htmx:afterSettle", function (event) {
     // Re-process HTMX on queue content and main area for dynamic buttons
     if (event.target) {
-      if (event.target.id === "contenido" || event.target.id === "lyrics-queue-content" || event.target.id === "queue-content") {
-        htmx.process(event.target);
-      }
       if (event.target.id === "contenido") {
         initSlimSelect();
       }
