@@ -201,3 +201,11 @@ Some endpoints are always JSON or HTMX-only and do not perform `HX-Request`-base
 | GET | `/metrics/charts/year` | Partial | HTML chart | JSON data |
 | GET | `/metrics/charts/format` | Partial | HTML chart | JSON data |
 | GET | `/metrics/charts/metadata` | Partial | HTML chart | JSON data |
+
+---
+
+## Streaming
+
+| Method | Route | Type | HTMX | API / Browser |
+|--------|-------|------|------|---------------|
+| GET | `/stream?path=<encoded-path>` | Resource | audio bytes | `{"type":"audio/…","url":"…"}` when `Accept: application/json` |
