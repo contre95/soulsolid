@@ -8,26 +8,21 @@ import (
 func RegisterRoutes(app *fiber.App, service *Service) {
 	handler := NewHandler(service)
 
-	ui := app.Group("/ui")
-	// UI endpoints
-	ui.Get("/import", handler.RenderImportSection)
-	ui.Get("/importing/directory/form", handler.GetDirectoryForm)
-	ui.Get("/importing/queue/items", handler.RenderQueueItems)
-	ui.Get("/importing/queue/items/grouped", handler.RenderGroupedQueueItems)
-	ui.Get("/importing/queue/header", handler.GetQueueHeader)
+	app.Get("/import", handler.RenderImportSection)
 
-	// Action endpoints
-	app.Get("/import/queue/:id/artwork", handler.ServeQueueItemArtwork)
-	app.Post("/import/directory", handler.ImportDirectory)
-	app.Post("/import/queue/:id/:action", handler.ProcessQueueItem)
-	app.Post("/import/queue/group/:groupType/:groupKey/:action", handler.ProcessQueueGroup)
-	app.Post("/import/queue/clear", handler.ClearQueue)
-	app.Post("/import/prune/download-path", handler.PruneDownloadPath)
-	app.Get("/import/queue/count", handler.QueueCount)
-
-	// Watcher endpoints
-	app.Post("/import/watcher/toggle", handler.ToggleWatcher)
-	app.Get("/import/watcher/status", handler.GetWatcherStatus)
-	app.Get("/import/watcher/toggle-state", handler.GetWatcherToggleState)
-
+	importGroup := app.Group("/import")
+	importGroup.Get("/directory/form", handler.GetDirectoryForm)
+	importGroup.Get("/queue/items", handler.RenderQueueItems)
+	importGroup.Get("/queue/items/grouped", handler.RenderGroupedQueueItems)
+	importGroup.Get("/queue/header", handler.GetQueueHeader)
+	importGroup.Get("/queue/:id/artwork", handler.ServeQueueItemArtwork)
+	importGroup.Post("/directory", handler.ImportDirectory)
+	importGroup.Post("/queue/:id/:action", handler.ProcessQueueItem)
+	importGroup.Post("/queue/group/:groupType/:groupKey/:action", handler.ProcessQueueGroup)
+	importGroup.Post("/queue/clear", handler.ClearQueue)
+	importGroup.Post("/prune/download-path", handler.PruneDownloadPath)
+	importGroup.Get("/queue/count", handler.QueueCount)
+	importGroup.Post("/watcher/toggle", handler.ToggleWatcher)
+	importGroup.Get("/watcher/status", handler.GetWatcherStatus)
+	importGroup.Get("/watcher/toggle-state", handler.GetWatcherToggleState)
 }

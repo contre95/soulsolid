@@ -3,7 +3,7 @@
   <div class="flex items-center justify-between gap-2">
      <div class="flex flex-row gap-1">
        <button
-         hx-get="/ui/lyrics/queue/items"
+         hx-get="/lyrics/queue/items"
          hx-target="#lyrics-queue-content"
          hx-swap="innerHTML"
          hx-trigger="click, lyricsQueueUpdated from:body, refreshLyricsQueueBadge from:body"
@@ -28,7 +28,7 @@
      <div class="flex gap-1 bg-gray-100/50 dark:bg-gray-800/50 rounded p-0.5">
         <button
           id="view-individual-lyrics"
-          hx-get="/ui/lyrics/queue/items"
+          hx-get="/lyrics/queue/items"
           hx-target="#lyrics-queue-content"
           hx-swap="innerHTML"
           hx-trigger="click, activateIndividualGroupingLyrics from:body, lyricsQueueUpdated from:body, refreshLyricsQueueBadge from:body"
@@ -40,7 +40,7 @@
         </button>
         <button
           id="view-artist-groups-lyrics"
-          hx-get="/ui/lyrics/queue/items/grouped?type=artist"
+          hx-get="/lyrics/queue/items/grouped?type=artist"
           hx-target="#lyrics-queue-content"
           hx-swap="innerHTML"
           hx-trigger="click, activateArtistGroupingLyrics from:body, lyricsQueueUpdated from:body, refreshLyricsQueueBadge from:body"
@@ -52,7 +52,7 @@
         </button>
         <button
           id="view-album-groups-lyrics"
-          hx-get="/ui/lyrics/queue/items/grouped?type=album"
+          hx-get="/lyrics/queue/items/grouped?type=album"
           hx-target="#lyrics-queue-content"
           hx-swap="innerHTML"
           hx-trigger="click, activateAlbumGroupingLyrics from:body, lyricsQueueUpdated from:body, refreshLyricsQueueBadge from:body"

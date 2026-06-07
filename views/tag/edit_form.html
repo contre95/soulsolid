@@ -15,10 +15,10 @@
 
           <!-- Album Art (desktop only, mobile shows in header) -->
           <div class="hidden sm:block flex-shrink-0">
-            <a href="/ui/tag/edit/{{.Track.ID}}/artwork" target="_blank" rel="noopener noreferrer"
+            <a href="/tag/{{.Track.ID}}/artwork" target="_blank" rel="noopener noreferrer"
                class="block w-44 h-44 rounded-xl overflow-hidden border-2 border-gray-300 dark:border-gray-600 shadow-md hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-zoom-in"
                onerror="this.style.display='none'">
-              <img src="/ui/tag/edit/{{.Track.ID}}/artwork"
+              <img src="/tag/{{.Track.ID}}/artwork"
                    alt="Album Art"
                    class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                    onerror="this.closest('a').style.display='none'">
@@ -111,6 +111,27 @@
               </div>
             </div>
 
+          </div>
+        </div>
+
+        <!-- Audio Player -->
+        <div class="flex items-center gap-2">
+          <a href="/stream?path={{urlEncode .Track.Path}}" download="{{pathBase .Track.Path}}"
+             class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            <i class="fas fa-download fa-xs"></i> Download
+          </a>
+          <div class="audio-player flex items-center gap-2 flex-1">
+            <button type="button" class="play-btn flex-shrink-0 w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 flex items-center justify-center transition-colors"
+                    onclick="toggleAudioPlayer(this)">
+              <i class="fas fa-play fa-xs text-gray-700 dark:text-gray-200"></i>
+            </button>
+            <input type="range" min="0" max="100" value="0" step="0.1"
+                   class="flex-1 h-1 mx-1 accent-gray-500 cursor-pointer"
+                   oninput="seekAudioProgress(this)">
+            <span class="time-display text-xs text-gray-500 dark:text-gray-400 w-8 text-right tabular-nums">0:00</span>
+            <audio src="/stream?path={{urlEncode .Track.Path}}" preload="none"
+                   ontimeupdate="updateAudioProgress(this)"
+                   onended="resetAudioPlayer(this)"></audio>
           </div>
         </div>
 
@@ -303,7 +324,7 @@
                  <div>Bitrate: {{.Track.Bitrate}} kbps</div>
                  {{end}}
                   {{if .Track.ChromaprintFingerprint}}
-                  <div class="text-red-400">Fingerprint: <a href="/tag/edit/{{.Track.ID}}/fingerprint/view" target="_blank" rel="noopener noreferrer" class="hover:underline">(open in new tab)</a></div>
+                  <div class="text-red-400">Fingerprint: <a href="/tag/{{.Track.ID}}/fingerprint/view" target="_blank" rel="noopener noreferrer" class="hover:underline">(open in new tab)</a></div>
                   {{end}}
                   {{if index .Track.Attributes "acoustid"}}
                   <div class="text-blue-400">AcoustID: {{index .Track.Attributes "acoustid"}}</div>
@@ -353,7 +374,7 @@
         <!-- Submit Buttons -->
        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
          <button type="button"
-                 hx-get="/ui/library"
+                 hx-get="/library"
                  hx-swap="outerHTML"
                  hx-target="#contenido"
                  class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 transition-all duration-200">

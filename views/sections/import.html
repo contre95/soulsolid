@@ -15,7 +15,7 @@
 
     <div class="grid grid-cols-1 2xl:grid-cols-2 gap-8">
       <!-- Directory Import Section -->
-       <div hx-get="/ui/importing/directory/form" hx-trigger="load" hx-swap="innerHTML">
+       <div hx-get="/import/directory/form" hx-trigger="load" hx-swap="innerHTML">
         <div class="bg-gray-100/50 dark:bg-gray-800/50 p-8 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 animate-pulse">
           <div class="h-6 bg-gray-300/50 dark:bg-gray-600/50 rounded w-1/2 mb-4"></div>
           <div class="h-4 bg-gray-300/50 dark:bg-gray-600/50 rounded w-3/4 mb-6"></div>
@@ -29,14 +29,14 @@
       <!-- Queue Section -->
       <div class="space-y-6">
          <div id="queue-header"
-              hx-get="/ui/importing/queue/header"
+              hx-get="/import/queue/header"
               hx-trigger="load"
               hx-swap="innerHTML"
               class="w-full bg-white/90 dark:bg-gray-900/90 shadow-sm rounded-xl p-4 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50">
         </div>
 
          <div id="queue-content"
-              hx-get="/ui/importing/queue/items"
+              hx-get="/import/queue/items"
               hx-trigger="load"
               hx-swap="innerHTML"
               class="w-full">

@@ -111,13 +111,13 @@
             </div>
             <div class="space-y-2 flex-grow flex flex-col min-h-0">
                 <div id="lyrics-queue-header"
-                     hx-get="/ui/lyrics/queue/header"
+                     hx-get="/lyrics/queue/header"
                      hx-trigger="load"
                      hx-swap="innerHTML"
                      class="w-full lyrics-queue-header-compact">
                 </div>
                 <div id="lyrics-queue-content"
-                     hx-get="/ui/lyrics/queue/items"
+                     hx-get="/lyrics/queue/items"
                      hx-trigger="load"
                      hx-swap="innerHTML"
                      class="w-full flex-grow overflow-y-auto max-h-[250px]">
@@ -129,7 +129,7 @@
     <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-6">Lyrics Jobs</h2>
 
     <div id="lyrics-job-list-container"
-         hx-get="/ui/jobs/list?prefix=analyze_lyrics"
+         hx-get="/jobs/list?prefix=analyze_lyrics"
          hx-trigger="load, refreshJobList from:body"
          hx-swap="innerHTML">
         <!-- Loading state -->
