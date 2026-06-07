@@ -1,7 +1,6 @@
 package streaming
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -26,42 +25,27 @@ func containedIn(candidate, base string) (string, error) {
 	return resolved, nil
 }
 
-// Service handles audio streaming from both the download folder and the library.
+// Service handles audio streaming by validating and serving file paths.
 type Service struct {
-	queue   QueueLocator
-	library LibraryLocator
-	cfg     *config.Manager
+	cfg *config.Manager
 }
 
 // NewService creates a new streaming service.
-func NewService(queue QueueLocator, library LibraryLocator, cfg *config.Manager) *Service {
-	return &Service{queue: queue, library: library, cfg: cfg}
+func NewService(cfg *config.Manager) *Service {
+	return &Service{cfg: cfg}
 }
 
-// QueueTrackStream returns the validated file path and MIME type for a pending queue item.
-func (s *Service) QueueTrackStream(itemID string) (string, string, error) {
-	path, err := s.queue.GetPendingTrackPath(itemID)
-	if err != nil {
-		return "", "", fmt.Errorf("queue item not found: %w", err)
+// Stream validates that path is within the library or download directory and
+// returns the resolved path and MIME type.
+func (s *Service) Stream(path string) (string, string, error) {
+	cfg := s.cfg.Get()
+	for _, base := range []string{cfg.LibraryPath, cfg.DownloadPath} {
+		resolved, err := containedIn(path, base)
+		if err == nil {
+			return resolved, mimeTypeFor(resolved), nil
+		}
 	}
-	resolved, err := containedIn(path, s.cfg.Get().DownloadPath)
-	if err != nil {
-		return "", "", err
-	}
-	return resolved, mimeTypeFor(resolved), nil
-}
-
-// LibraryTrackStream returns the validated file path and MIME type for a library track.
-func (s *Service) LibraryTrackStream(ctx context.Context, trackID string) (string, string, error) {
-	path, err := s.library.GetLibraryTrackPath(ctx, trackID)
-	if err != nil {
-		return "", "", fmt.Errorf("track not found: %w", err)
-	}
-	resolved, err := containedIn(path, s.cfg.Get().LibraryPath)
-	if err != nil {
-		return "", "", err
-	}
-	return resolved, mimeTypeFor(resolved), nil
+	return "", "", fmt.Errorf("track path outside allowed directories")
 }
 
 func mimeTypeFor(path string) string {

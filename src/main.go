@@ -134,7 +134,7 @@ func main() {
 		}
 	}
 
-	streamingService := streaming.NewService(importingService, libraryService, cfgManager)
+	streamingService := streaming.NewService(cfgManager)
 	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService, streamingService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {

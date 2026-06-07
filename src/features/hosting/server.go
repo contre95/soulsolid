@@ -3,6 +3,7 @@ package hosting
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,6 +82,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 		return strings.Title(strings.ToLower(s))
 	})
 	engine.AddFunc("pathBase", filepath.Base)
+	engine.AddFunc("urlEncode", url.QueryEscape)
 
 	app := fiber.New(fiber.Config{
 		Views: engine,

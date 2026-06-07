@@ -63,7 +63,7 @@
              </button>
              <input type="range" oninput="seekAudioProgress(this)" class="flex-1 h-1 rounded-full cursor-pointer accent-[#463371] mx-1" value="0" min="0" max="100" step="0.1">
              <span class="time-display text-xs text-gray-500 dark:text-gray-400 tabular-nums w-8 text-right flex-shrink-0">0:00</span>
-             <audio src="/stream/queue/{{.ID}}" preload="none" ontimeupdate="updateAudioProgress(this)" onended="resetAudioPlayer(this)"></audio>
+             <audio src="/stream?path={{urlEncode .Track.Path}}" preload="none" ontimeupdate="updateAudioProgress(this)" onended="resetAudioPlayer(this)"></audio>
          </div>
          <div id="player-lib-{{.ID}}" class="audio-player hidden flex items-center gap-2.5 bg-blue-500/5 border border-blue-400/20 rounded-lg px-3 py-2 w-full">
              <button onclick="toggleAudioPlayer(this)" class="play-btn flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-blue-500/20 hover:bg-blue-500/40 text-blue-600 dark:text-blue-300 transition-colors">
@@ -71,7 +71,7 @@
              </button>
              <input type="range" oninput="seekAudioProgress(this)" class="flex-1 h-1 rounded-full cursor-pointer accent-[#7BAADF] mx-1" value="0" min="0" max="100" step="0.1">
              <span class="time-display text-xs text-gray-500 dark:text-gray-400 tabular-nums w-8 text-right flex-shrink-0">0:00</span>
-             <audio src="/stream/library/{{.ID}}" preload="none" ontimeupdate="updateAudioProgress(this)" onended="resetAudioPlayer(this)"></audio>
+             <audio src="/stream?path={{urlEncode (index .ItemMetadata "duplicate_path")}}" preload="none" ontimeupdate="updateAudioProgress(this)" onended="resetAudioPlayer(this)"></audio>
          </div>
          {{else}}
          <div class="flex items-center gap-2">
@@ -86,7 +86,7 @@
              </button>
              <input type="range" oninput="seekAudioProgress(this)" class="flex-1 h-1 rounded-full cursor-pointer accent-gray-500 mx-1" value="0" min="0" max="100" step="0.1">
              <span class="time-display text-xs text-gray-500 dark:text-gray-400 tabular-nums w-8 text-right flex-shrink-0">0:00</span>
-             <audio src="/stream/queue/{{.ID}}" preload="none" ontimeupdate="updateAudioProgress(this)" onended="resetAudioPlayer(this)"></audio>
+             <audio src="/stream?path={{urlEncode .Track.Path}}" preload="none" ontimeupdate="updateAudioProgress(this)" onended="resetAudioPlayer(this)"></audio>
          </div>
          {{end}}
 
