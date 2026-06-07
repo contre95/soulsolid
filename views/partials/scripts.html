@@ -152,8 +152,11 @@
           }
         }
       });
-      audio.play();
-      icon.className = 'fas fa-pause fa-xs';
+      audio.play().then(function() {
+        icon.className = 'fas fa-pause fa-xs';
+      }).catch(function(err) {
+        console.error('Audio playback failed:', err);
+      });
     } else {
       audio.pause();
       icon.className = 'fas fa-play fa-xs';

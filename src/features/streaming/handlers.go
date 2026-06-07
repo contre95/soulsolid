@@ -20,6 +20,9 @@ func NewHandler(service *Service) *Handler {
 // Stream serves the file at the given path query parameter.
 func (h *Handler) Stream(c *fiber.Ctx) error {
 	rawPath := c.Query("path")
+	if rawPath == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("missing path")
+	}
 	path, err := url.QueryUnescape(rawPath)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString("invalid path")

@@ -87,7 +87,7 @@ func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
 	err := h.service.ProcessQueueItem(c.Context(), itemID, action)
 	if err != nil {
 		slog.Error("Failed to process queue item", "error", err, "itemID", itemID, "action", action)
-		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to process queue item: %s", err.Error()))
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to process queue item")
 	}
 	actionMsg := "skipped"
 	switch action {
