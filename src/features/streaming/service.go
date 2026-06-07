@@ -36,24 +36,31 @@ func NewService(cfg *config.Manager) *Service {
 	return &Service{cfg: cfg}
 }
 
-// Stream validates that path is within the library or download directory and
-// returns the resolved path and MIME type.
+var audioMIME = map[string]string{
+	".mp3":  "audio/mpeg",
+	".flac": "audio/flac",
+	// Not supported in soulsolid yet
+	".wav":  "audio/wav",
+	".aac":  "audio/aac",
+	".m4a":  "audio/mp4",
+	".ogg":  "audio/ogg",
+	".opus": "audio/ogg",
+	".wma":  "audio/x-ms-wma",
+}
+
+// Stream validates that path is within the library or download directory,
+// has an allowed audio extension, and returns the resolved path and MIME type.
 func (s *Service) Stream(path string) (string, string, error) {
 	cfg := s.cfg.Get()
 	for _, base := range []string{cfg.LibraryPath, cfg.DownloadPath} {
 		resolved, err := containedIn(path, base)
 		if err == nil {
-			return resolved, mimeTypeFor(resolved), nil
+			mime, ok := audioMIME[strings.ToLower(filepath.Ext(resolved))]
+			if !ok {
+				return "", "", fmt.Errorf("unsupported file type")
+			}
+			return resolved, mime, nil
 		}
 	}
 	return "", "", fmt.Errorf("track path outside allowed directories")
-}
-
-func mimeTypeFor(path string) string {
-	switch strings.ToLower(filepath.Ext(path)) {
-	case ".flac":
-		return "audio/flac"
-	default:
-		return "audio/mpeg"
-	}
 }
