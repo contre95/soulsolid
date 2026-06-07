@@ -9,7 +9,7 @@
     {{if .Enabled}}
     <button
       type="button"
-      hx-get="/ui/tag/edit/{{if $.Track.ID}}{{$.Track.ID}}{{else}}0{{end}}/lyrics/text/{{.Name}}"
+      hx-get="/tag/{{if $.Track.ID}}{{$.Track.ID}}{{else}}0{{end}}/lyrics/text/{{.Name}}"
       hx-target="#lyrics"
       hx-swap="innerHTML"
       hx-on:htmx:response-error="showErrToast(event.detail.xhr.responseText)"

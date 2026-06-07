@@ -6,13 +6,10 @@ import (
 
 // RegisterRoutes registers the metrics routes with the Fiber app.
 func RegisterRoutes(app *fiber.App, handler *Handler) {
-	// UI routes for HTMX partials
-	ui := app.Group("/ui/metrics")
-	ui.Get("/overview", handler.GetMetricsOverview)
-
-	// HTMX chart endpoints
-	ui.Get("/charts/genre", handler.GetGenreChartHTML)
-	ui.Get("/charts/year", handler.GetYearChartHTML)
-	ui.Get("/charts/format", handler.GetFormatChartHTML)
-	ui.Get("/charts/metadata", handler.GetMetadataChartHTML)
+	metrics := app.Group("/metrics")
+	metrics.Get("/overview", handler.GetMetricsOverview)
+	metrics.Get("/charts/genre", handler.GetGenreChartHTML)
+	metrics.Get("/charts/year", handler.GetYearChartHTML)
+	metrics.Get("/charts/format", handler.GetFormatChartHTML)
+	metrics.Get("/charts/metadata", handler.GetMetadataChartHTML)
 }

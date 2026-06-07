@@ -52,7 +52,7 @@
     <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-6">AcoustID Jobs</h2>
 
     <div id="acoustid-job-list-container"
-         hx-get="/ui/jobs/list?prefix=analyze_acoustid"
+         hx-get="/jobs/list?prefix=analyze_acoustid"
          hx-trigger="load, refreshJobList from:body"
          hx-swap="innerHTML">
         <!-- Loading state -->

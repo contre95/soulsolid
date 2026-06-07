@@ -118,7 +118,7 @@ All of these follow the same approach:
 3. Normal outcomes complete silently; edge cases (duplicate found, lyrics already exist, etc.) are added to a queue
 4. User visits the queue sub-section to review and take action on each item
 
-The landing `sections/analyze.html` shows a list of all `analyze_`-prefixed jobs via `/ui/jobs/list?prefix=analyze_`. Adding a new analyze-section feature means registering its job type with `analyze_` prefix so it appears there automatically.
+The landing `sections/analyze.html` shows a list of all `analyze_`-prefixed jobs via `/jobs/list?prefix=analyze_`. Adding a new analyze-section feature means registering its job type with `analyze_` prefix so it appears there automatically.
 
 ## Section Rendering and the HTMX URL-Push Problem
 
@@ -230,7 +230,7 @@ Conditional rendering based on `.Section` — add new entries here for every nav
     <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">
         Your Feature
     </h1>
-    <div hx-get="/ui/yourfeature/partial" hx-trigger="load">
+    <div hx-get="/yourfeature/partial" hx-trigger="load">
         Loading...
     </div>
 </div>
@@ -380,7 +380,7 @@ c.Set("HX-Trigger", "refreshJobList")   // ← makes the job card appear instant
 if c.Get("HX-Request") == "true" {
     return c.Render("toast/toastOk", fiber.Map{"Msg": "Analysis started"})
 }
-return c.Redirect("/ui/analyze/myfeature")
+return c.Redirect("/analyze/myfeature")
 ```
 
 The job list containers in section templates listen for this event via `hx-trigger="load, refreshJobList from:body"` and re-fetch their content when it fires.

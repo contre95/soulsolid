@@ -15,10 +15,10 @@
 
           <!-- Album Art (desktop only, mobile shows in header) -->
           <div class="hidden sm:block flex-shrink-0">
-            <a href="/ui/tag/edit/{{.Track.ID}}/artwork" target="_blank" rel="noopener noreferrer"
+            <a href="/tag/{{.Track.ID}}/artwork" target="_blank" rel="noopener noreferrer"
                class="block w-44 h-44 rounded-xl overflow-hidden border-2 border-gray-300 dark:border-gray-600 shadow-md hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-zoom-in"
                onerror="this.style.display='none'">
-              <img src="/ui/tag/edit/{{.Track.ID}}/artwork"
+              <img src="/tag/{{.Track.ID}}/artwork"
                    alt="Album Art"
                    class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                    onerror="this.closest('a').style.display='none'">
@@ -324,7 +324,7 @@
                  <div>Bitrate: {{.Track.Bitrate}} kbps</div>
                  {{end}}
                   {{if .Track.ChromaprintFingerprint}}
-                  <div class="text-red-400">Fingerprint: <a href="/tag/edit/{{.Track.ID}}/fingerprint/view" target="_blank" rel="noopener noreferrer" class="hover:underline">(open in new tab)</a></div>
+                  <div class="text-red-400">Fingerprint: <a href="/tag/{{.Track.ID}}/fingerprint/view" target="_blank" rel="noopener noreferrer" class="hover:underline">(open in new tab)</a></div>
                   {{end}}
                   {{if index .Track.Attributes "acoustid"}}
                   <div class="text-blue-400">AcoustID: {{index .Track.Attributes "acoustid"}}</div>
@@ -374,7 +374,7 @@
         <!-- Submit Buttons -->
        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
          <button type="button"
-                 hx-get="/ui/library"
+                 hx-get="/library"
                  hx-swap="outerHTML"
                  hx-target="#contenido"
                  class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 transition-all duration-200">

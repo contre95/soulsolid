@@ -15,7 +15,7 @@
     </h2>
      <div class="flex flex-row gap-2 justify-center flex-1">
       <button
-        hx-get="/ui/importing/queue/items"
+        hx-get="/import/queue/items"
         hx-target="#queue-content"
         hx-swap="innerHTML"
         hx-trigger="click, queueUpdated from:body, refreshImportQueueBadge from:body"
@@ -42,7 +42,7 @@
      <div class="flex gap-2 bg-gray-100/50 dark:bg-gray-800/50 rounded-lg p-1 backdrop-blur-sm">
        <button
          id="view-individual"
-         hx-get="/ui/importing/queue/items"
+         hx-get="/import/queue/items"
          hx-target="#queue-content"
          hx-swap="innerHTML"
          hx-trigger="click, activateIndividualGrouping from:body, queueUpdated from:body, refreshImportQueueBadge from:body"
@@ -55,7 +55,7 @@
        </button>
        <button
          id="view-artist-groups"
-         hx-get="/ui/importing/queue/items/grouped?type=artist"
+         hx-get="/import/queue/items/grouped?type=artist"
          hx-target="#queue-content"
          hx-swap="innerHTML"
          hx-trigger="click, activateArtistGrouping from:body, queueUpdated from:body, refreshImportQueueBadge from:body"
@@ -68,7 +68,7 @@
        </button>
        <button
          id="view-album-groups"
-         hx-get="/ui/importing/queue/items/grouped?type=album"
+         hx-get="/import/queue/items/grouped?type=album"
          hx-target="#queue-content"
          hx-swap="innerHTML"
          hx-trigger="click, activateAlbumGrouping from:body, queueUpdated from:body, refreshImportQueueBadge from:body"

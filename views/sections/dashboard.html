@@ -12,7 +12,7 @@
    </div>
 
    <!-- Library Overview - Main Metrics -->
-   <div hx-get="/ui/metrics/overview" hx-trigger="load" hx-swap="innerHTML" class="mb-6">
+   <div hx-get="/metrics/overview" hx-trigger="load" hx-swap="innerHTML" class="mb-6">
       <div class="grid grid-cols-3 gap-3">
         <div class="bg-white/80 dark:bg-gray-900/70 p-3 sm:p-4 md:p-5 rounded-xl shadow-lg">
           <div class="flex items-center gap-2 sm:gap-3">
@@ -67,7 +67,7 @@
 
 
     <!-- Quick Actions Card - Loaded from ui feature -->
-    <div hx-get="/ui/quick-actions-card" hx-trigger="load" hx-swap="outerHTML">
+    <div hx-get="/dashboard/quick-actions" hx-trigger="load" hx-swap="outerHTML">
       <!-- Loading state -->
       <div class="bg-white/80 dark:bg-gray-900/70 p-6 rounded-2xl shadow-lg animate-pulse">
         <div class="h-6 bg-gray-300 dark:bg-gray-700 rounded w-32 mb-4"></div>
@@ -80,7 +80,7 @@
     </div>
 
      <!-- Recent Jobs Card - Loaded from jobs feature -->
-     <div hx-get="/ui/jobs/latest" hx-trigger="load" hx-swap="outerHTML">
+     <div hx-get="/jobs/latest" hx-trigger="load" hx-swap="outerHTML">
        <!-- Loading state -->
        <div class="bg-white/80 dark:bg-gray-900/70 p-4 rounded-2xl shadow-lg animate-pulse">
          <div class="h-6 bg-gray-300 dark:bg-gray-700 rounded w-32 mb-4"></div>

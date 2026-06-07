@@ -2,8 +2,8 @@ package metrics
 
 import (
 	"log/slog"
-	"strings"
 
+	"github.com/contre95/soulsolid/src/features/hosting/respond"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -27,16 +27,7 @@ func (h *Handler) GetMetricsOverview(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Error loading metrics")
 	}
 
-	// Check if request accepts HTML (HTMX request)
-	acceptHeader := c.Get("Accept")
-	hxRequest := c.Get("HX-Request")
-	if strings.Contains(acceptHeader, "text/html") || hxRequest == "true" {
-		return c.Render("metrics/overview", fiber.Map{
-			"Metrics": metrics,
-		})
-	}
-
-	return c.JSON(metrics)
+	return respond.Partial(c, "metrics/overview", fiber.Map{"Metrics": metrics})
 }
 
 // GetGenreChartHTML returns genre chart as HTML fragment for HTMX.
@@ -50,7 +41,7 @@ func (h *Handler) GetGenreChartHTML(c *fiber.Ctx) error {
 	}
 
 	chartData := metrics.GenreChartData()
-	return c.Render("metrics/charts/genre_treemap", fiber.Map{
+	return respond.Partial(c, "metrics/charts/genre_treemap", fiber.Map{
 		"ChartData": chartData,
 	})
 }
@@ -66,7 +57,7 @@ func (h *Handler) GetYearChartHTML(c *fiber.Ctx) error {
 	}
 
 	chartData := metrics.YearBarData()
-	return c.Render("metrics/charts/year_vbars", fiber.Map{
+	return respond.Partial(c, "metrics/charts/year_vbars", fiber.Map{
 		"ChartData": chartData,
 	})
 }
@@ -82,7 +73,7 @@ func (h *Handler) GetFormatChartHTML(c *fiber.Ctx) error {
 	}
 
 	chartData := metrics.FormatBarData()
-	return c.Render("metrics/charts/format_pie", fiber.Map{
+	return respond.Partial(c, "metrics/charts/format_pie", fiber.Map{
 		"ChartData": chartData,
 	})
 }
@@ -98,7 +89,7 @@ func (h *Handler) GetMetadataChartHTML(c *fiber.Ctx) error {
 	}
 
 	if totalTracks == 0 {
-		return c.Render("metrics/charts/metadata_hbars", fiber.Map{
+		return respond.Partial(c, "metrics/charts/metadata_hbars", fiber.Map{
 			"ChartData": nil,
 		})
 	}
@@ -146,7 +137,7 @@ func (h *Handler) GetMetadataChartHTML(c *fiber.Ctx) error {
 		Colors: []string{"#00E396", "#FEB019", "#FF4560", "#008FFB", "#775DD0"},
 	}
 
-	return c.Render("metrics/charts/metadata_hbars", fiber.Map{
+	return respond.Partial(c, "metrics/charts/metadata_hbars", fiber.Map{
 		"ChartData": chartData,
 	})
 }

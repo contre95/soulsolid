@@ -141,7 +141,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 			job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "provider", provider, "overrideNoQueue", overrideNoQueue, "color", "cyan")
 			result, err := t.service.AddLyrics(ctx, track.ID, provider, overrideNoQueue)
 			if err != nil {
-				job.Logger.Error("Failed to add lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "error", err.Error(), "manual_fix", "<a href='/ui/library/tag/edit/"+track.ID+"' target='_blank'>track</a>")
+				job.Logger.Error("Failed to add lyrics for track", "trackID", track.ID, "title", track.Title, "provider", provider, "error", err.Error(), "manual_fix", "<a href='/tag/"+track.ID+"' target='_blank'>track</a>")
 				errors++
 				// Continue with other tracks - don't fail the entire job
 			} else {

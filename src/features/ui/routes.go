@@ -6,19 +6,8 @@ import (
 
 // RegisterRoutes registers the routes for the UI feature.
 func RegisterRoutes(app *fiber.App, handler *Handler) {
-	// Create a new group for the UI feature.
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Redirect("/ui")
-	})
-	ui := app.Group("/ui")
-	// Register the routes for pages.
-	ui.Get("/", handler.RenderDashboard)
-	ui.Get("/dashboard", handler.RenderDashboard)
-
-	// Analyze section - all analyze jobs
-	ui.Get("/analyze", handler.RenderAnalyzeSection)
-
-	// Dashboard card endpoints
-	ui.Get("/quick-actions-card", handler.GetQuickActionsCard)
-
+	app.Get("/", handler.RenderDashboard)
+	app.Get("/dashboard", handler.RenderDashboard)
+	app.Get("/analyze", handler.RenderAnalyzeSection)
+	app.Get("/dashboard/quick-actions", handler.GetQuickActionsCard)
 }
