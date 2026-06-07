@@ -3,7 +3,9 @@ package hosting
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/contre95/soulsolid/src/features/config"
@@ -16,6 +18,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/playlists"
 	"github.com/contre95/soulsolid/src/features/reorganize"
+	"github.com/contre95/soulsolid/src/features/streaming"
 	"github.com/contre95/soulsolid/src/features/ui"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
@@ -29,7 +32,7 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server.
-func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, playlistsService *playlists.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, reorganizeService *reorganize.Service) *Server {
+func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, playlistsService *playlists.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, reorganizeService *reorganize.Service, streamingService *streaming.Service) *Server {
 	engine := html.New("./views", ".html")
 	engine.Debug(cfg.Get().Logger.Level == "debug")
 	// Add custom template functions
@@ -78,6 +81,8 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	engine.AddFunc("capitalize", func(s string) string {
 		return strings.Title(strings.ToLower(s))
 	})
+	engine.AddFunc("pathBase", filepath.Base)
+	engine.AddFunc("urlEncode", url.QueryEscape)
 
 	app := fiber.New(fiber.Config{
 		Views: engine,
@@ -135,6 +140,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	lyrics.RegisterRoutes(app, lyricsHandler)
 	reorganizeHandler := reorganize.NewHandler(reorganizeService, cfg)
 	reorganize.RegisterRoutes(app, reorganizeHandler)
+	streaming.RegisterRoutes(app, streamingService)
 
 	return &Server{app: app, port: cfg.Get().Server.Port}
 }
