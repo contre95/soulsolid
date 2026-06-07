@@ -8,8 +8,9 @@ import (
 	"github.com/contre95/soulsolid/src/features/config"
 )
 
-// containedIn resolves symlinks on both paths and checks that candidate is
-// inside (or equal to) base, preventing symlink escapes.
+// containedIn guards against path traversal attacks: it resolves symlinks on
+// both paths before the prefix check, so neither ../.. sequences nor symlinks
+// inside the allowed directory can be used to escape it and read arbitrary files.
 func containedIn(candidate, base string) (string, error) {
 	resolved, err := filepath.EvalSymlinks(filepath.Clean(candidate))
 	if err != nil {
