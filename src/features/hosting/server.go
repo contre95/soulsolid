@@ -126,6 +126,11 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 
 	uiHandler := ui.NewHandler(cfg)
 
+	// Route registration order matters: Fiber matches routes in registration order.
+	// More specific routes (literal path segments) must be registered before wildcard
+	// parameter routes that share the same prefix. For example, lyrics registers
+	// GET /tag/:trackId/lyrics before metadata registers GET /tag/:trackId/:provider,
+	// otherwise the wildcard captures /lyrics requests first.
 	importing.RegisterRoutes(app, importingService)
 	library.RegisterRoutes(app, libraryService)
 	playlists.RegisterRoutes(app, playlistsService)
@@ -135,9 +140,9 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	metricsHandler := metrics.NewHandler(metricsService)
 	metrics.RegisterRoutes(app, metricsHandler)
 	downloading.RegisterRoutes(app, downloadingService)
-	metadata.RegisterRoutes(app, tagService)
 	lyricsHandler := lyrics.NewHandler(lyricsService, tagService)
 	lyrics.RegisterRoutes(app, lyricsHandler)
+	metadata.RegisterRoutes(app, tagService)
 	reorganizeHandler := reorganize.NewHandler(reorganizeService, cfg)
 	reorganize.RegisterRoutes(app, reorganizeHandler)
 	streaming.RegisterRoutes(app, streamingService)
