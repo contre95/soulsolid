@@ -108,34 +108,47 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 		tag.SetAlbum(track.Album.Title)
 	}
 
-	tag.SetGenre(track.Metadata.Genre)
+	// Genre - set, or remove the frame entirely when cleared
+	tag.DeleteFrames(tag.CommonID("Genre"))
+	if track.Metadata.Genre != "" {
+		tag.SetGenre(track.Metadata.Genre)
+	}
 
-	// Year - always set, replacing existing
+	// Year - set, or remove the frame entirely when cleared. Delete every
+	// year frame variant (v2.2/v2.3/v2.4) so a stale one can't resurface.
+	tag.DeleteFrames("TYER")
+	tag.DeleteFrames("TDRC")
+	tag.DeleteFrames("TDAT")
 	if track.Metadata.Year > 0 {
 		tag.SetYear(strconv.Itoa(track.Metadata.Year))
 	}
 
-	// ISRC
+	// ISRC - delete existing first so a cleared value removes the frame
+	tag.DeleteFrames("TSRC")
 	if track.ISRC != "" {
 		tag.AddTextFrame("TSRC", id3v2.EncodingUTF8, track.ISRC)
 	}
 
 	// Track number
+	tag.DeleteFrames("TRCK")
 	if track.Metadata.TrackNumber > 0 {
 		tag.AddTextFrame("TRCK", id3v2.EncodingUTF8, strconv.Itoa(track.Metadata.TrackNumber))
 	}
 
 	// Disc number
+	tag.DeleteFrames("TPOS")
 	if track.Metadata.DiscNumber > 0 {
 		tag.AddTextFrame("TPOS", id3v2.EncodingUTF8, strconv.Itoa(track.Metadata.DiscNumber))
 	}
 
 	// Composer
+	tag.DeleteFrames("TCOM")
 	if track.Metadata.Composer != "" {
 		tag.AddTextFrame("TCOM", id3v2.EncodingUTF8, track.Metadata.Composer)
 	}
 
 	// BPM
+	tag.DeleteFrames("TBPM")
 	if track.Metadata.BPM > 0 {
 		tag.AddTextFrame("TBPM", id3v2.EncodingUTF8, fmt.Sprintf("%.0f", track.Metadata.BPM))
 	}
@@ -153,6 +166,7 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 	}
 
 	// Title version (subtitle)
+	tag.DeleteFrames("TIT3")
 	if track.TitleVersion != "" {
 		tag.AddTextFrame("TIT3", id3v2.EncodingUTF8, track.TitleVersion)
 	}
@@ -304,34 +318,42 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 		}
 	}
 
+	// Always remove existing single-value fields first so a cleared value
+	// removes the field from the file instead of leaving the old one.
+	// Year is stored in both DATE (Vorbis standard) and the widely-used legacy
+	// YEAR field. Write/clear both so the value stays consistent and a stale
+	// field can't resurface when the year is cleared.
+	removeExistingFields(vorbisComment, flacvorbis.FIELD_DATE)
+	removeExistingFields(vorbisComment, "YEAR")
 	if track.Metadata.Year > 0 {
-		removeExistingFields(vorbisComment, flacvorbis.FIELD_DATE)
-		vorbisComment.Add(flacvorbis.FIELD_DATE, strconv.Itoa(track.Metadata.Year))
+		yearStr := strconv.Itoa(track.Metadata.Year)
+		vorbisComment.Add(flacvorbis.FIELD_DATE, yearStr)
+		vorbisComment.Add("YEAR", yearStr)
 	}
 
+	removeExistingFields(vorbisComment, flacvorbis.FIELD_GENRE)
 	if track.Metadata.Genre != "" {
-		removeExistingFields(vorbisComment, flacvorbis.FIELD_GENRE)
 		vorbisComment.Add(flacvorbis.FIELD_GENRE, track.Metadata.Genre)
 	}
 
 	// Additional metadata
+	removeExistingFields(vorbisComment, flacvorbis.FIELD_ISRC)
 	if track.ISRC != "" {
-		removeExistingFields(vorbisComment, flacvorbis.FIELD_ISRC)
 		vorbisComment.Add(flacvorbis.FIELD_ISRC, track.ISRC)
 	}
 
+	removeExistingFields(vorbisComment, flacvorbis.FIELD_TRACKNUMBER)
 	if track.Metadata.TrackNumber > 0 {
-		removeExistingFields(vorbisComment, flacvorbis.FIELD_TRACKNUMBER)
 		vorbisComment.Add(flacvorbis.FIELD_TRACKNUMBER, strconv.Itoa(track.Metadata.TrackNumber))
 	}
 
+	removeExistingFields(vorbisComment, "DISCNUMBER")
 	if track.Metadata.DiscNumber > 0 {
-		removeExistingFields(vorbisComment, "DISCNUMBER")
 		vorbisComment.Add("DISCNUMBER", strconv.Itoa(track.Metadata.DiscNumber))
 	}
 
+	removeExistingFields(vorbisComment, "COMPOSER")
 	if track.Metadata.Composer != "" {
-		removeExistingFields(vorbisComment, "COMPOSER")
 		vorbisComment.Add("COMPOSER", track.Metadata.Composer)
 	}
 
@@ -345,8 +367,8 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 	}
 
 	// Set additional metadata
+	removeExistingFields(vorbisComment, "VERSION")
 	if track.TitleVersion != "" {
-		removeExistingFields(vorbisComment, "VERSION")
 		vorbisComment.Add("VERSION", track.TitleVersion)
 	}
 	if track.ChromaprintFingerprint != "" {
@@ -357,12 +379,12 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 		removeExistingFields(vorbisComment, "ACOUSTID_ID")
 		vorbisComment.Add("ACOUSTID_ID", acoustID)
 	}
+	removeExistingFields(vorbisComment, "BPM")
 	if track.Metadata.BPM > 0 {
-		removeExistingFields(vorbisComment, "BPM")
 		vorbisComment.Add("BPM", fmt.Sprintf("%.0f", track.Metadata.BPM))
 	}
+	removeExistingFields(vorbisComment, "REPLAYGAIN_TRACK_GAIN")
 	if track.Metadata.Gain != 0 {
-		removeExistingFields(vorbisComment, "REPLAYGAIN_TRACK_GAIN")
 		vorbisComment.Add("REPLAYGAIN_TRACK_GAIN", fmt.Sprintf("%.2f dB", track.Metadata.Gain))
 	}
 	if track.Album != nil {
