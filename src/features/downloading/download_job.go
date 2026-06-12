@@ -12,6 +12,20 @@ import (
 	"github.com/contre95/soulsolid/src/music"
 )
 
+// safeArtistName returns the primary artist's name for a track, or an empty
+// string when the downloader returned no artist metadata. Downloads keep the
+// source metadata as-is, so a track may legitimately arrive with no artists;
+// this avoids panicking when reading the name for logging, filenames, or tags.
+func safeArtistName(track *music.Track) string {
+	if track == nil || len(track.Artists) == 0 {
+		return ""
+	}
+	if track.Artists[0].Artist == nil {
+		return ""
+	}
+	return track.Artists[0].Artist.Name
+}
+
 // Sanitize creates a filesystem-safe filename
 func Sanitize(filename string) string {
 	re := regexp.MustCompile(`[<>:"/\\|?*]`)
@@ -115,7 +129,7 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *music.J
 	// Print track pretty for debugging
 	slog.Debug("Track downloaded", "track", track.Pretty())
 
-	job.Name = fmt.Sprintf("Download: %s (with %s)", track.Title, track.Artists[0].Artist.Name)
+	job.Name = fmt.Sprintf("Download: %s (with %s)", track.Title, safeArtistName(track))
 	job.Metadata["trackTitle"] = track.Title
 	slog.Info("Updated job name with track title", "jobID", job.ID, "title", track.Title)
 
@@ -215,7 +229,7 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *music.J
 
 		// Tag the file (artwork is already downloaded by plugin and set in track.Album.ArtworkData)
 		filePath := track.Path
-		slog.Debug("Tagging album track file", "trackID", track.ID, "filePath", filePath, "title", track.Title, "artist", track.Artists[0].Artist.Name)
+		slog.Debug("Tagging album track file", "trackID", track.ID, "filePath", filePath, "title", track.Title, "artist", safeArtistName(track))
 
 		// Check if file exists
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -296,11 +310,12 @@ func (e *DownloadJobTask) executeArtistDownload(ctx context.Context, job *music.
 	}
 
 	// Update job name with artist name if available (extract from first track)
-	if job.Name == "Download Artist" && len(tracks) > 0 && len(tracks[0].Artists) > 0 {
-		artistName := tracks[0].Artists[0].Artist.Name
-		job.Name = fmt.Sprintf("Download: %s (Artist)", artistName)
-		job.Metadata["artistName"] = artistName
-		slog.Info("Updated job name with artist name", "jobID", job.ID, "name", artistName)
+	if job.Name == "Download Artist" && len(tracks) > 0 {
+		if artistName := safeArtistName(tracks[0]); artistName != "" {
+			job.Name = fmt.Sprintf("Download: %s (Artist)", artistName)
+			job.Metadata["artistName"] = artistName
+			slog.Info("Updated job name with artist name", "jobID", job.ID, "name", artistName)
+		}
 	}
 
 	totalTracks := len(tracks)
@@ -329,7 +344,7 @@ func (e *DownloadJobTask) executeArtistDownload(ctx context.Context, job *music.
 
 		// Tag the file
 		filePath := track.Path
-		slog.Debug("Tagging artist track file", "trackID", track.ID, "filePath", filePath, "title", track.Title, "artist", track.Artists[0].Artist.Name)
+		slog.Debug("Tagging artist track file", "trackID", track.ID, "filePath", filePath, "title", track.Title, "artist", safeArtistName(track))
 
 		// Check if file exists
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {

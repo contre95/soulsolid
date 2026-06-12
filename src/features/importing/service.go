@@ -293,6 +293,7 @@ func (s *Service) ProcessQueueGroup(ctx context.Context, groupKey string, groupT
 	}
 
 	// Process each item in the group, filtering by type based on action
+	var processedCount, failedCount int
 	for _, item := range groupItems {
 		// "import" skips duplicates (use "replace" for those); "replace" only processes duplicates
 		if action == "import" && item.HasType(music.Duplicate) {
@@ -302,9 +303,19 @@ func (s *Service) ProcessQueueGroup(ctx context.Context, groupKey string, groupT
 			continue
 		}
 		if err := s.ProcessQueueItem(ctx, item.ID, action); err != nil {
+			failedCount++
 			slog.Error("Failed to process queue item in group", "itemID", item.ID, "action", action, "error", err)
 			// Continue processing other items even if one fails
+			continue
 		}
+		processedCount++
+	}
+
+	// Items can pass the filter above but still be rejected by ProcessQueueItem
+	// (e.g. a Duplicate that also has MissingMetadata under "replace"). If every
+	// attempted item failed, the group op did nothing and must not report success.
+	if processedCount == 0 && failedCount > 0 {
+		return fmt.Errorf("failed to %s any items in group %s: %d item(s) could not be processed", action, groupKey, failedCount)
 	}
 
 	return nil
@@ -411,6 +422,12 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 	var newPath string
 	var err error
 
+	// Fill any permitted missing metadata fields with fallback defaults before
+	// building the destination path, so fallback artist/album/title/year/genre
+	// values feed path resolution in MoveTrackToLibrary/CopyTrackToLibrary.
+	amm := s.config.Get().Import.AllowMissingMetadata
+	track.EnsureMetadataDefaults(amm.Artist, amm.Album, amm.Title, amm.Year, amm.Genre)
+
 	if move {
 		newPath, err = s.fileManager.MoveTrackToLibrary(ctx, track)
 	} else {
@@ -425,10 +442,6 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 	if err := s.populateTrackArtistsAndAlbum(ctx, track, logger); err != nil {
 		return err
 	}
-
-	// Fill any permitted missing metadata fields with fallback defaults
-	amm := s.config.Get().Import.AllowMissingMetadata
-	track.EnsureMetadataDefaults(amm.Artist, amm.Album, amm.Title, amm.Year, amm.Genre)
 
 	if err := track.Validate(); err != nil {
 		logger.Error("Service.importTrack: track validation failed after population", "error", err, "title", track.Title)

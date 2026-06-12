@@ -362,7 +362,10 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 				continue
 			}
 			viewItems = append(viewItems, view)
-			if view.IsDuplicate {
+			// Only surface the bulk replace button when at least one item can
+			// actually be replaced; a duplicate that is missing metadata or failed
+			// import has IsDuplicate==true but ReplaceEnabled==false.
+			if view.ReplaceEnabled {
 				hasDuplicates = true
 			}
 			if view.ImportEnabled {

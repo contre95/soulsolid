@@ -227,6 +227,18 @@ func (t *Track) Pretty() string {
 	return builder.String()
 }
 
+// firstValidArtist returns the first ArtistRole whose Artist is non-nil and has a
+// non-blank name, or nil when the track has no usable artist. This avoids treating a
+// track as missing its artist when only an earlier entry is empty.
+func firstValidArtist(t *Track) *ArtistRole {
+	for i := range t.Artists {
+		if t.Artists[i].Artist != nil && strings.TrimSpace(t.Artists[i].Artist.Name) != "" {
+			return &t.Artists[i]
+		}
+	}
+	return nil
+}
+
 // EnsureMetadataDefaults adds fallback values for missing metadata fields whose absence is
 // permitted by the per-field flags. Fields that are not permitted are left untouched so that
 // downstream validation can reject the track. The caller (e.g. the importing feature) owns the
@@ -234,14 +246,14 @@ func (t *Track) Pretty() string {
 // This function doesn't mean track struct completeness.
 func (t *Track) EnsureMetadataDefaults(artist, album, title, year, genre bool) {
 	// Fallback for missing artist
-	if artist && (len(t.Artists) == 0 || t.Artists[0].Artist == nil || t.Artists[0].Artist.Name == "") {
+	if artist && firstValidArtist(t) == nil {
 		t.Artists = []ArtistRole{{
 			Artist: &Artist{ID: "00000000-0000-0000-0000-000000000001", Name: "Unknown Artist", SortName: "Unknown Artist"},
 			Role:   "main",
 		}}
 	}
 	// Fallback for missing album
-	if album && (t.Album == nil || t.Album.Title == "") {
+	if album && (t.Album == nil || strings.TrimSpace(t.Album.Title) == "") {
 		t.Album = &Album{
 			ID:    "00000000-0000-0000-0000-000000000002",
 			Title: "Unknown Album",
@@ -253,7 +265,7 @@ func (t *Track) EnsureMetadataDefaults(artist, album, title, year, genre bool) {
 		}
 	}
 	// Fallback for missing title, derived from the file name when available
-	if title && t.Title == "" {
+	if title && strings.TrimSpace(t.Title) == "" {
 		t.Title = unknownTitle(t.Path)
 	}
 	// Fallback for missing year (0000)
@@ -261,7 +273,7 @@ func (t *Track) EnsureMetadataDefaults(artist, album, title, year, genre bool) {
 		t.Metadata.Year = 0000
 	}
 	// Fallback for missing genre
-	if genre && t.Metadata.Genre == "" {
+	if genre && strings.TrimSpace(t.Metadata.Genre) == "" {
 		t.Metadata.Genre = "Unknown"
 	}
 }
@@ -285,19 +297,19 @@ func unknownTitle(path string) string {
 // reported; pass every flag as false to require all fields.
 func (t *Track) ValidateRequiredMetadata(artist, album, title, year, genre bool) error {
 	var missingFields []string
-	if !artist && (len(t.Artists) == 0 || t.Artists[0].Artist == nil || t.Artists[0].Artist.Name == "") {
+	if !artist && firstValidArtist(t) == nil {
 		missingFields = append(missingFields, "Artist")
 	}
-	if !album && (t.Album == nil || t.Album.Title == "") {
+	if !album && (t.Album == nil || strings.TrimSpace(t.Album.Title) == "") {
 		missingFields = append(missingFields, "Album")
 	}
-	if !title && t.Title == "" {
+	if !title && strings.TrimSpace(t.Title) == "" {
 		missingFields = append(missingFields, "Title")
 	}
 	if !year && t.Metadata.Year == 0 {
 		missingFields = append(missingFields, "Year")
 	}
-	if !genre && t.Metadata.Genre == "" {
+	if !genre && strings.TrimSpace(t.Metadata.Genre) == "" {
 		missingFields = append(missingFields, "Genre")
 	}
 	if len(missingFields) > 0 {
