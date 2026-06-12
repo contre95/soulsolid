@@ -19,7 +19,12 @@ import:
   move: false           # if false, files are copied; if true, originals are removed after import
   always_queue: false   # queue every track for manual review, even non-duplicates
   duplicates: queue     # queue | skip | replace
-  allow_missing_metadata: false  # allow importing tracks with no artist/album metadata
+  allow_missing_metadata:        # per-field control over importing tracks with missing metadata
+    artist: false                # when true, a missing field is filled with a fallback default on import;
+    album: false                 # when false, a track missing that field is sent to the missing_metadata queue
+    title: false
+    year: false
+    genre: false
   auto_start_watcher: false      # automatically watch the download path on startup
   paths:
     compilations: '%asciify{$genre}/%asciify{$format}/%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
@@ -141,12 +146,22 @@ The import queue provides manual review capabilities for tracks that require use
 
 ### Queue Types
 
+A queue item can carry **more than one type at once** (e.g. a track that is both a `duplicate`
+and `missing_metadata`). Each applicable type is shown as its own badge, and the available
+actions are the combination of what each type allows.
+
 | Type | Trigger | Available Actions |
 |------|---------|-------------------|
-| `manual_review` | `always_queue: true` or first-time imports pending approval | `import`, `cancel` |
-| `duplicate` | Track with matching fingerprint already exists in library | `replace`, `cancel` |
-| `missing_metadata` | Track has no artist or album metadata and `allow_missing_metadata: false` | `import`, `cancel`, `delete` |
+| `manual_review` | `always_queue: true` or first-time imports pending approval | `import`, `cancel`, `delete` |
+| `missing_metadata` | Track is missing a required metadata field whose `allow_missing_metadata.<field>` is `false` | `cancel`, `delete` |
+| `duplicate` | Track with matching fingerprint already exists in library | `replace`, `cancel`, `delete` |
 | `failed_import` | Import attempt errored (e.g. file unreadable) | `cancel`, `delete` |
+
+**Missing metadata blocks the library.** While an item carries `missing_metadata`, the
+`import` and `replace` actions are disabled (only `cancel`/skip and `delete` remain) so an
+incomplete track can never enter or overwrite the library. This is enforced both in the UI and
+on the server. For example, a `duplicate` + `missing_metadata` item offers only skip/delete
+until the metadata is fixed.
 
 ### Telegram Integration
 

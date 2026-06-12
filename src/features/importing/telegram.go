@@ -289,12 +289,7 @@ func (h *TelegramHandler) formatQueueItemMessage(item music.QueueItem, totalCoun
 		}
 	}
 
-	typeText := "Manual Review"
-	if item.Type == Duplicate {
-		typeText = "Duplicate"
-	} else if item.Type == FailedImport {
-		typeText = "Failed Import"
-	}
+	typeText := queueTypeLabel(item)
 
 	// Escape text fields for Markdown, but use code formatting for file path
 	escapedTitle := h.escapeMarkdown(track.Title)
@@ -350,27 +345,60 @@ func (h *TelegramHandler) escapeMarkdown(text string) string {
 }
 
 // createInlineKeyboard creates appropriate buttons based on item type
+// queueTypeLabel builds a human-readable label listing every type an item carries,
+// e.g. "Duplicate, Missing Metadata".
+func queueTypeLabel(item music.QueueItem) string {
+	var parts []string
+	if item.HasType(Duplicate) {
+		parts = append(parts, "Duplicate")
+	}
+	if item.HasType(MissingMetadata) {
+		parts = append(parts, "Missing Metadata")
+	}
+	if item.HasType(FailedImport) {
+		parts = append(parts, "Failed Import")
+	}
+	if item.HasType(ManualReview) {
+		parts = append(parts, "Manual Review")
+	}
+	if len(parts) == 0 {
+		return "Manual Review"
+	}
+	return strings.Join(parts, ", ")
+}
+
 func (h *TelegramHandler) createInlineKeyboard(item music.QueueItem) tgbotapi.InlineKeyboardMarkup {
 	var buttons [][]tgbotapi.InlineKeyboardButton
 
-	// Action buttons based on type
-	if item.Type == Duplicate {
+	// Action buttons based on type. A track missing required metadata is blocked from
+	// import/replace until the metadata is fixed (only skip/cancel and delete remain).
+	blocked := item.HasType(MissingMetadata)
+	switch {
+	case item.HasType(Duplicate):
+		row := []tgbotapi.InlineKeyboardButton{}
+		if !blocked {
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData("✴️ Replace", fmt.Sprintf("queue_replace_%s", item.ID)))
+		}
+		row = append(row,
+			tgbotapi.NewInlineKeyboardButtonData("⏭️ Skip", fmt.Sprintf("queue_cancel_%s", item.ID)),
+			tgbotapi.NewInlineKeyboardButtonData("🗑️ Delete", fmt.Sprintf("queue_delete_%s", item.ID)),
+		)
+		buttons = append(buttons, row)
+	case item.HasType(FailedImport):
 		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
-			tgbotapi.NewInlineKeyboardButtonData("✴️ Replace", fmt.Sprintf("queue_replace_%s", item.ID)),
 			tgbotapi.NewInlineKeyboardButtonData("⏭️ Skip", fmt.Sprintf("queue_cancel_%s", item.ID)),
 			tgbotapi.NewInlineKeyboardButtonData("🗑️ Delete", fmt.Sprintf("queue_delete_%s", item.ID)),
 		})
-	} else if item.Type == FailedImport {
-		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
-			tgbotapi.NewInlineKeyboardButtonData("⏭️ Skip", fmt.Sprintf("queue_cancel_%s", item.ID)),
-			tgbotapi.NewInlineKeyboardButtonData("🗑️ Delete", fmt.Sprintf("queue_delete_%s", item.ID)),
-		})
-	} else {
-		buttons = append(buttons, []tgbotapi.InlineKeyboardButton{
-			tgbotapi.NewInlineKeyboardButtonData("✅ Import", fmt.Sprintf("queue_import_%s", item.ID)),
+	default:
+		row := []tgbotapi.InlineKeyboardButton{}
+		if !blocked {
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData("✅ Import", fmt.Sprintf("queue_import_%s", item.ID)))
+		}
+		row = append(row,
 			tgbotapi.NewInlineKeyboardButtonData("❌ Cancel", fmt.Sprintf("queue_cancel_%s", item.ID)),
 			tgbotapi.NewInlineKeyboardButtonData("🗑️ Delete", fmt.Sprintf("queue_delete_%s", item.ID)),
-		})
+		)
+		buttons = append(buttons, row)
 	}
 
 	// Navigation buttons

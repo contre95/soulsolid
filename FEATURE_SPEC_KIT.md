@@ -436,9 +436,9 @@ For items requiring a user decision, integrate with the queue system:
 | QueueItemType | Value | Purpose | Used By |
 |---------------|-------|---------|---------|
 | `ManualReview` | `"manual_review"` | Track needs manual review before import | importing |
+| `MissingMetadata` | `"missing_metadata"` | Track is missing a required metadata field not permitted by `allow_missing_metadata` | importing |
 | `Duplicate` | `"duplicate"` | Track is a duplicate of existing track | importing |
 | `FailedImport` | `"failed_import"` | Track failed to import | importing |
-| `MissingMetadata` | `"missing_metadata"` | Track is missing required metadata | importing |
 | `ExistingLyrics` | `"existing_lyrics"` | Track already has lyrics | lyrics |
 | `Lyric404` | `"lyric_404"` | Lyrics not found (404) | lyrics |
 | `FailedLyrics` | `"failed_lyrics"` | Lyrics fetch failed due to error | lyrics |
@@ -468,7 +468,7 @@ Job runs (background)
 ```go
 item := music.QueueItem{
     ID:        track.ID,
-    Type:      music.Duplicate,
+    Types:     []music.QueueItemType{music.Duplicate, music.MissingMetadata}, // one item can carry several
     Track:     track,
     Timestamp: time.Now(),
     JobID:     jobID,
@@ -476,6 +476,10 @@ item := music.QueueItem{
 }
 return s.queue.Add(item)
 ```
+
+`QueueItem.Types` is a list: a single item may carry several types at once (e.g. `Duplicate` +
+`MissingMetadata`). Use `item.HasType(t)` to test for a type, or `item.PrimaryType()` when an
+item only ever has one (e.g. the lyrics queue).
 
 Only add when user decision is required — not for retriable failures or normal processing.
 
@@ -489,7 +493,7 @@ func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action st
     if err != nil {
         return fmt.Errorf("queue item not found: %w", err)
     }
-    switch item.Type {
+    switch item.PrimaryType() {
     case music.ExistingLyrics:
         switch action {
         case "override":

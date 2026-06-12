@@ -41,11 +41,17 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 		DownloadPath: c.FormValue("downloadPath"),
 		Database:     currentConfig.Database, // Preserve database settings
 		Import: Import{
-			AutoStartWatcher:     currentConfig.Import.AutoStartWatcher,
-			Move:                 c.FormValue("import.move") == "true",
-			AlwaysQueue:          c.FormValue("import.always_queue") == "true",
-			Duplicates:           c.FormValue("import.duplicates"),
-			AllowMissingMetadata: c.FormValue("import.allow_missing_metadata") == "true",
+			AutoStartWatcher: currentConfig.Import.AutoStartWatcher,
+			Move:             c.FormValue("import.move") == "true",
+			AlwaysQueue:      c.FormValue("import.always_queue") == "true",
+			Duplicates:       c.FormValue("import.duplicates"),
+			AllowMissingMetadata: AllowMissingMetadata{
+				Artist: c.FormValue("import.allow_missing_metadata.artist") == "true",
+				Album:  c.FormValue("import.allow_missing_metadata.album") == "true",
+				Title:  c.FormValue("import.allow_missing_metadata.title") == "true",
+				Year:   c.FormValue("import.allow_missing_metadata.year") == "true",
+				Genre:  c.FormValue("import.allow_missing_metadata.genre") == "true",
+			},
 			PathOptions: Paths{
 				DefaultPath:     c.FormValue("import.paths.default_path"),
 				Compilations:    c.FormValue("import.paths.compilations"),

@@ -37,6 +37,13 @@ var defaultConfig = Config{
 		AlwaysQueue:      false,
 		Duplicates:       "queue",
 		AutoStartWatcher: false,
+		AllowMissingMetadata: AllowMissingMetadata{
+			Artist: false,
+			Album:  false,
+			Title:  false,
+			Year:   true,
+			Genre:  true,
+		},
 		PathOptions: Paths{
 			Compilations:    "%asciify{$genre}/%asciify{$format}/%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}",
 			AlbumSoundtrack: "%asciify{$genre}/%asciify{$format}/%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}",

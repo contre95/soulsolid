@@ -175,7 +175,7 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 
 	for id, item := range finalQueueItems {
 		if !initialQueueIDs[id] {
-			switch item.Type {
+			switch item.PrimaryType() {
 			case ExistingLyrics:
 				existingLyricsQueued++
 				job.Logger.Info("New existing_lyrics queue item added", "trackID", id, "color", "cyan")

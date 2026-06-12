@@ -121,16 +121,8 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *music.J
 
 	progressUpdater(75, "Track downloaded, processing metadata...")
 
-	// Enhance track metadata with fallbacks
-	slog.Debug("Enhancing track metadata with fallbacks", "trackID", track.ID)
-	track.EnsureMetadataDefaults()
-
-	// Validate required metadata
-	slog.Debug("Validating required metadata", "trackID", track.ID)
-	if err := track.ValidateRequiredMetadata(); err != nil {
-		slog.Error("Metadata validation failed", "trackID", track.ID, "error", err)
-		return nil, fmt.Errorf("metadata validation failed: %w", err)
-	}
+	// Downloads keep the source metadata as-is; missing fields are left empty.
+	// Filling fallback defaults only happens when importing into the library.
 
 	filePath := track.Path
 	// Tag the file
@@ -217,14 +209,9 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *music.J
 		progressUpdater(progress, fmt.Sprintf("Processing track %d/%d: %s...", i+1, totalTracks, track.Title))
 		slog.Debug("Processing album track", "albumID", albumID, "trackID", track.ID, "trackNumber", i+1, "title", track.Title)
 
-		// Track is already downloaded by plugin, just validate and tag
+		// Track is already downloaded by plugin, just tag it. Downloads keep the source
+		// metadata as-is; missing-field defaulting only applies when importing.
 		slog.Debug("Processing album track metadata", "trackID", track.ID, "hasAlbum", track.Album != nil, "hasArtwork", track.Album != nil && len(track.Album.ArtworkData) > 0)
-		// Enhance and validate metadata
-		track.EnsureMetadataDefaults()
-		if err := track.ValidateRequiredMetadata(); err != nil {
-			slog.Error("Album track metadata validation failed", "trackID", track.ID, "error", err)
-			return nil, fmt.Errorf("album track metadata validation failed: %w", err)
-		}
 
 		// Tag the file (artwork is already downloaded by plugin and set in track.Album.ArtworkData)
 		filePath := track.Path
@@ -337,12 +324,8 @@ func (e *DownloadJobTask) executeArtistDownload(ctx context.Context, job *music.
 		// Track is already downloaded by plugin, just validate and tag
 		slog.Debug("Processing artist track metadata", "trackID", track.ID, "hasAlbum", track.Album != nil, "hasArtwork", track.Album != nil && len(track.Album.ArtworkData) > 0)
 
-		// Enhance and validate metadata
-		track.EnsureMetadataDefaults()
-		if err := track.ValidateRequiredMetadata(); err != nil {
-			slog.Error("Artist track metadata validation failed", "trackID", track.ID, "error", err)
-			return nil, fmt.Errorf("artist track metadata validation failed: %w", err)
-		}
+		// Downloads keep the source metadata as-is; missing-field defaulting only applies
+		// when importing.
 
 		// Tag the file
 		filePath := track.Path
@@ -451,12 +434,8 @@ func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *music.
 			continue // Skip this track but continue with others
 		}
 
-		// Process the downloaded track
-		track.EnsureMetadataDefaults()
-		if err := track.ValidateRequiredMetadata(); err != nil {
-			slog.Error("Track metadata validation failed", "trackID", trackID, "error", err)
-			return nil, fmt.Errorf("track metadata validation failed: %w", err)
-		}
+		// Process the downloaded track. Downloads keep the source metadata as-is; missing-field
+		// defaulting only applies when importing.
 
 		filePath := track.Path
 		slog.Debug("Tagging track file", "trackID", trackID, "filePath", filePath, "title", track.Title)
@@ -550,12 +529,8 @@ func (e *DownloadJobTask) executePlaylistDownload(ctx context.Context, job *musi
 			continue // Skip this track but continue with others
 		}
 
-		// Process the downloaded track
-		track.EnsureMetadataDefaults()
-		if err := track.ValidateRequiredMetadata(); err != nil {
-			slog.Error("Track metadata validation failed", "trackID", trackID, "error", err)
-			return nil, fmt.Errorf("track metadata validation failed: %w", err)
-		}
+		// Process the downloaded track. Downloads keep the source metadata as-is; missing-field
+		// defaulting only applies when importing.
 
 		filePath := track.Path
 		slog.Debug("Tagging playlist track file", "trackID", trackID, "filePath", filePath, "title", track.Title)
