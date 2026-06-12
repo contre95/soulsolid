@@ -97,11 +97,15 @@ func (t *TagWriter) tagMP3(filePath string, track *music.Track) error {
 
 	// Artist - always set, replacing existing
 	if len(track.Artists) > 0 {
-		artists := make([]string, len(track.Artists))
-		for i, ar := range track.Artists {
-			artists[i] = ar.Artist.Name
+		artists := make([]string, 0, len(track.Artists))
+		for _, ar := range track.Artists {
+			if ar.Artist != nil {
+				artists = append(artists, ar.Artist.Name)
+			}
 		}
-		tag.SetArtist(strings.Join(artists, " / "))
+		if len(artists) > 0 {
+			tag.SetArtist(strings.Join(artists, " / "))
+		}
 	}
 
 	if track.Album != nil {
@@ -305,7 +309,9 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 	// Artists - remove existing and add new ARTIST fields
 	removeExistingFields(vorbisComment, flacvorbis.FIELD_ARTIST)
 	for _, ar := range track.Artists {
-		vorbisComment.Add(flacvorbis.FIELD_ARTIST, ar.Artist.Name)
+		if ar.Artist != nil {
+			vorbisComment.Add(flacvorbis.FIELD_ARTIST, ar.Artist.Name)
+		}
 	}
 
 	if track.Album != nil {
@@ -314,7 +320,9 @@ func (t *TagWriter) tagFLAC(filePath string, track *music.Track) error {
 		// Album artists - remove existing and add new
 		removeExistingFields(vorbisComment, "ALBUMARTIST")
 		for _, ar := range track.Album.Artists {
-			vorbisComment.Add("ALBUMARTIST", ar.Artist.Name)
+			if ar.Artist != nil {
+				vorbisComment.Add("ALBUMARTIST", ar.Artist.Name)
+			}
 		}
 	}
 

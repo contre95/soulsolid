@@ -268,7 +268,12 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 				nullTrackForQueue.Path = path
 				nullTrackForQueue.EnsureMetadataDefaults(true, true, true, true, true)
 				nullTrackForQueue.ID = generateTrackIDFromPath(path) // ID generate for queue duplicates.
-				if err := e.addTrackToQueue(&nullTrackForQueue, []music.QueueItemType{FailedImport}, job.ID, nil, logger, map[string]string{"error": err.Error()}); err != nil {
+				// err can be nil here when metadata read succeeded but the file is zero bytes.
+				errMsg := "file is empty (zero bytes)"
+				if err != nil {
+					errMsg = err.Error()
+				}
+				if err := e.addTrackToQueue(&nullTrackForQueue, []music.QueueItemType{FailedImport}, job.ID, nil, logger, map[string]string{"error": errMsg}); err != nil {
 					logger.Error("Service.runDirectoryImport: failed to add metadata-failed track to queue", "error", err)
 				}
 				processedFiles++

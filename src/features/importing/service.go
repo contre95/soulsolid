@@ -411,6 +411,12 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 	var newPath string
 	var err error
 
+	// Fill any permitted missing metadata fields with fallback defaults before
+	// building the destination path, so fallback artist/album/title/year/genre
+	// values feed path resolution in MoveTrackToLibrary/CopyTrackToLibrary.
+	amm := s.config.Get().Import.AllowMissingMetadata
+	track.EnsureMetadataDefaults(amm.Artist, amm.Album, amm.Title, amm.Year, amm.Genre)
+
 	if move {
 		newPath, err = s.fileManager.MoveTrackToLibrary(ctx, track)
 	} else {
@@ -425,10 +431,6 @@ func (s *Service) importTrack(ctx context.Context, track *music.Track, move bool
 	if err := s.populateTrackArtistsAndAlbum(ctx, track, logger); err != nil {
 		return err
 	}
-
-	// Fill any permitted missing metadata fields with fallback defaults
-	amm := s.config.Get().Import.AllowMissingMetadata
-	track.EnsureMetadataDefaults(amm.Artist, amm.Album, amm.Title, amm.Year, amm.Genre)
 
 	if err := track.Validate(); err != nil {
 		logger.Error("Service.importTrack: track validation failed after population", "error", err, "title", track.Title)
