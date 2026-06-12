@@ -293,6 +293,7 @@ func (s *Service) ProcessQueueGroup(ctx context.Context, groupKey string, groupT
 	}
 
 	// Process each item in the group, filtering by type based on action
+	var processedCount, failedCount int
 	for _, item := range groupItems {
 		// "import" skips duplicates (use "replace" for those); "replace" only processes duplicates
 		if action == "import" && item.HasType(music.Duplicate) {
@@ -302,9 +303,19 @@ func (s *Service) ProcessQueueGroup(ctx context.Context, groupKey string, groupT
 			continue
 		}
 		if err := s.ProcessQueueItem(ctx, item.ID, action); err != nil {
+			failedCount++
 			slog.Error("Failed to process queue item in group", "itemID", item.ID, "action", action, "error", err)
 			// Continue processing other items even if one fails
+			continue
 		}
+		processedCount++
+	}
+
+	// Items can pass the filter above but still be rejected by ProcessQueueItem
+	// (e.g. a Duplicate that also has MissingMetadata under "replace"). If every
+	// attempted item failed, the group op did nothing and must not report success.
+	if processedCount == 0 && failedCount > 0 {
+		return fmt.Errorf("failed to %s any items in group %s: %d item(s) could not be processed", action, groupKey, failedCount)
 	}
 
 	return nil
