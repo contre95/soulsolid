@@ -87,14 +87,27 @@ npm run dev
 go run ./src/main.go
 ```
 
-### Option 2: Using Nix (recommended if you have Nix)
+### Option 2: Using devenv (recommended)
 
-If you have Nix installed, use the provided dev.nix shell:
+If you have [devenv](https://devenv.sh) installed, it sets up every dependency
+(Go, Node.js, TailwindCSS, chromaprint, flac, id3v2, ...) and builds the
+frontend assets for you:
 
 ```bash
-# Set up all dependencies (Node.js, Go, etc.) and run the necessary commands
-nix-shell dev.nix
-# Then, simply run:
+# Enter the dev shell (installs deps, creates config.yaml, builds assets)
+devenv shell
+# Then run the app:
 go run ./src/main.go
 ```
+
+Or start everything (asset build + server) in one command:
+
+```bash
+devenv up
+```
+
+To activate the environment automatically when you `cd` into the project,
+install [direnv](https://direnv.net/) and run `direnv allow` once (uses the
+included `.envrc`).
+
 The web interface will be available at `http://localhost:3535`.
