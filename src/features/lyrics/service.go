@@ -197,7 +197,7 @@ func (s *Service) AddLyricsQueueItem(track *music.Track, qType music.QueueItemTy
 	}
 	item := music.QueueItem{
 		ID:        track.ID,
-		Type:      qType,
+		Types:     []music.QueueItemType{qType},
 		Track:     track,
 		Timestamp: time.Now(),
 		Metadata:  metadata,
@@ -221,7 +221,7 @@ func (s *Service) ProcessLyricsQueueItem(ctx context.Context, itemID string, act
 	}
 
 	track := item.Track
-	switch item.Type {
+	switch item.PrimaryType() {
 	case ExistingLyrics:
 		switch action {
 		case "override":
@@ -295,7 +295,7 @@ func (s *Service) ProcessLyricsQueueItem(ctx context.Context, itemID string, act
 			return fmt.Errorf("invalid action '%s' for failed_lyrics, expected 'skip', 'edit_manual', or 'no_lyrics'", action)
 		}
 	default:
-		return fmt.Errorf("unsupported queue item type: %s", item.Type)
+		return fmt.Errorf("unsupported queue item type: %s", item.PrimaryType())
 	}
 }
 

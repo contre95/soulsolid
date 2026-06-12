@@ -54,12 +54,12 @@ type groupView struct {
 // convertQueueItem converts a music.QueueItem to queueItemView
 func convertQueueItem(item music.QueueItem) (queueItemView, error) {
 	if item.Track == nil {
-		slog.Error("Queue item has no track", "itemID", item.ID, "type", item.Type)
+		slog.Error("Queue item has no track", "itemID", item.ID, "type", item.PrimaryType())
 		return queueItemView{}, errors.New("queue item has no track")
 	}
 	return queueItemView{
 		ID:           item.ID,
-		Type:         string(item.Type),
+		Type:         string(item.PrimaryType()),
 		Timestamp:    item.Timestamp,
 		Track:        item.Track,
 		ItemMetadata: item.Metadata,

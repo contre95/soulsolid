@@ -18,14 +18,28 @@ type Handler struct {
 	service *Service
 }
 
-// queueItemView is a view model for queue items that includes the track
+// queueItemView is a view model for queue items that includes the track. A single item can
+// carry several statuses at once, so the booleans below are not mutually exclusive.
 type queueItemView struct {
 	ID           string
-	Type         string
 	Timestamp    time.Time
 	JobID        string
 	Track        *music.Track
 	ItemMetadata map[string]string
+
+	// Status flags (derived from the item's types; may be true in combination)
+	IsDuplicate       bool
+	IsMissingMetadata bool
+	IsFailedImport    bool
+	IsManualReview    bool
+
+	// Action availability, implementing the "block until metadata is fixed" rule
+	ShowReplace    bool
+	ReplaceEnabled bool
+	ShowImport     bool
+	ImportEnabled  bool
+	CancelLabel    string // "Skip" for duplicates/failed imports, otherwise "Cancel"
+	BlockReason    string // tooltip shown on disabled import/replace buttons
 }
 
 // groupView is a view model for grouped queue items
@@ -40,14 +54,41 @@ func convertQueueItem(item music.QueueItem) (queueItemView, error) {
 	if item.Track == nil {
 		return queueItemView{}, errors.New("queue item has no track")
 	}
-	return queueItemView{
-		ID:           item.ID,
-		Type:         string(item.Type),
-		Timestamp:    item.Timestamp,
-		JobID:        item.JobID,
-		Track:        item.Track,
-		ItemMetadata: item.Metadata,
-	}, nil
+	isDup := item.HasType(music.Duplicate)
+	isMissing := item.HasType(music.MissingMetadata)
+	isFailed := item.HasType(music.FailedImport)
+	isManual := item.HasType(music.ManualReview)
+
+	view := queueItemView{
+		ID:                item.ID,
+		Timestamp:         item.Timestamp,
+		JobID:             item.JobID,
+		Track:             item.Track,
+		ItemMetadata:      item.Metadata,
+		IsDuplicate:       isDup,
+		IsMissingMetadata: isMissing,
+		IsFailedImport:    isFailed,
+		IsManualReview:    isManual,
+	}
+
+	// Replace is a duplicate-only action; it is blocked while metadata is missing or the
+	// import failed, so the library is never overwritten with an incomplete track.
+	view.ShowReplace = isDup
+	view.ReplaceEnabled = isDup && !isMissing && !isFailed
+
+	// Import applies to manual-review / missing-metadata items (never duplicates or failed
+	// imports). It stays disabled until the missing required metadata is fixed.
+	view.ShowImport = !isDup && !isFailed && (isManual || isMissing)
+	view.ImportEnabled = view.ShowImport && !isMissing
+
+	view.CancelLabel = "Cancel"
+	if isDup || isFailed {
+		view.CancelLabel = "Skip"
+	}
+	if isMissing {
+		view.BlockReason = "Fix the missing metadata before importing"
+	}
+	return view, nil
 }
 
 // NewHandler creates a new handler for the organizing feature.
@@ -321,9 +362,10 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 				continue
 			}
 			viewItems = append(viewItems, view)
-			if view.Type == "duplicate" {
+			if view.IsDuplicate {
 				hasDuplicates = true
-			} else if view.Type != "failed_import" && view.Type != "missing_metadata" {
+			}
+			if view.ImportEnabled {
 				hasImportable = true
 			}
 		}

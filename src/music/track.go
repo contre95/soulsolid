@@ -2,6 +2,7 @@ package music
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -226,17 +227,21 @@ func (t *Track) Pretty() string {
 	return builder.String()
 }
 
-// EnsureMetadataDefaults adds fallback values for missing metadata fields. This function doesn't mean track struct completeness
-func (t *Track) EnsureMetadataDefaults() {
+// EnsureMetadataDefaults adds fallback values for missing metadata fields whose absence is
+// permitted by the per-field flags. Fields that are not permitted are left untouched so that
+// downstream validation can reject the track. The caller (e.g. the importing feature) owns the
+// policy of which fields may be defaulted; pass every flag as true to fully default a track.
+// This function doesn't mean track struct completeness.
+func (t *Track) EnsureMetadataDefaults(artist, album, title, year, genre bool) {
 	// Fallback for missing artist
-	if len(t.Artists) == 0 || t.Artists[0].Artist.Name == "" {
+	if artist && (len(t.Artists) == 0 || t.Artists[0].Artist == nil || t.Artists[0].Artist.Name == "") {
 		t.Artists = []ArtistRole{{
 			Artist: &Artist{ID: "00000000-0000-0000-0000-000000000001", Name: "Unknown Artist", SortName: "Unknown Artist"},
 			Role:   "main",
 		}}
 	}
 	// Fallback for missing album
-	if t.Album == nil || t.Album.Title == "" {
+	if album && (t.Album == nil || t.Album.Title == "") {
 		t.Album = &Album{
 			ID:    "00000000-0000-0000-0000-000000000002",
 			Title: "Unknown Album",
@@ -247,30 +252,53 @@ func (t *Track) EnsureMetadataDefaults() {
 			ReleaseDate: time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC),
 		}
 	}
-	// Fallback for missing year
-	if t.Metadata.Year == 0 {
+	// Fallback for missing title, derived from the file name when available
+	if title && t.Title == "" {
+		t.Title = unknownTitle(t.Path)
+	}
+	// Fallback for missing year (0000)
+	if year && t.Metadata.Year == 0 {
 		t.Metadata.Year = 0000
 	}
 	// Fallback for missing genre
-	if t.Metadata.Genre == "" {
+	if genre && t.Metadata.Genre == "" {
 		t.Metadata.Genre = "Unknown"
 	}
 }
 
-// ValidateRequiredMetadata checks for required metadata fields and returns an error if any are missing
-func (t *Track) ValidateRequiredMetadata() error {
+// unknownTitle builds a fallback title for a track with no title, using the source file
+// name (without extension) when a path is available, e.g. "Unknown Title (song)".
+func unknownTitle(path string) string {
+	if path == "" {
+		return "Unknown Title"
+	}
+	name := filepath.Base(path)
+	name = strings.TrimSuffix(name, filepath.Ext(name))
+	if name == "" {
+		return "Unknown Title"
+	}
+	return fmt.Sprintf("Unknown Title (%s)", name)
+}
+
+// ValidateRequiredMetadata checks for required metadata fields and returns an error listing
+// any that are missing. Fields whose absence is permitted by the per-field flags are not
+// reported; pass every flag as false to require all fields.
+func (t *Track) ValidateRequiredMetadata(artist, album, title, year, genre bool) error {
 	var missingFields []string
-	if len(t.Artists) == 0 || t.Artists[0].Artist.Name == "" {
+	if !artist && (len(t.Artists) == 0 || t.Artists[0].Artist == nil || t.Artists[0].Artist.Name == "") {
 		missingFields = append(missingFields, "Artist")
 	}
-	if t.Album == nil || t.Album.Title == "" {
+	if !album && (t.Album == nil || t.Album.Title == "") {
 		missingFields = append(missingFields, "Album")
 	}
-	if t.Title == "" {
+	if !title && t.Title == "" {
 		missingFields = append(missingFields, "Title")
 	}
-	if t.Metadata.Year == 0 {
+	if !year && t.Metadata.Year == 0 {
 		missingFields = append(missingFields, "Year")
+	}
+	if !genre && t.Metadata.Genre == "" {
+		missingFields = append(missingFields, "Genre")
 	}
 	if len(missingFields) > 0 {
 		return fmt.Errorf("missing required metadata fields: %s", strings.Join(missingFields, ", "))
