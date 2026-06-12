@@ -115,10 +115,6 @@ func determineAction(track *music.Track, duplicateTrack *music.Track, config con
 	}
 
 	if duplicateTrack != nil {
-		// Fast paths apply only when force-queuing is off. "skip" discards the duplicate
-		// regardless of metadata (nothing enters the library). "replace" only auto-replaces a
-		// complete track; an incomplete one is queued instead so it can't silently overwrite
-		// the library with missing metadata.
 		if !config.AlwaysQueue {
 			switch config.Duplicates {
 			case "skip":
