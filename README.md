@@ -89,12 +89,15 @@ go run ./src/main.go
 
 ### Option 2: Using devenv (recommended)
 
-If you have [devenv](https://devenv.sh) installed, it sets up every dependency
-(Go, Node.js, TailwindCSS, chromaprint, flac, id3v2, ...) and builds the
-frontend assets for you:
+If you have [devenv](https://devenv.sh) installed, it provides every dependency
+(Go, Node.js 24, TailwindCSS, chromaprint, flac, id3v2, tree). On entering the
+shell it runs `npm install`, builds the frontend assets, and exports
+`SOULSOLID_CONFIG_PATH=./config.yaml`:
 
 ```bash
-# Enter the dev shell (installs deps, creates config.yaml, builds assets)
+# Create your config once (devenv sets the path but doesn't create the file):
+cp config.example.yaml config.yaml
+# Enter the dev shell (installs npm deps + builds assets automatically):
 devenv shell
 # Then run the app:
 go run ./src/main.go
@@ -107,7 +110,7 @@ devenv up
 ```
 
 To activate the environment automatically when you `cd` into the project,
-install [direnv](https://direnv.net/) and run `direnv allow` once (uses the
-included `.envrc`).
+install [direnv](https://direnv.net/), add `use devenv` to a `.envrc`, and run
+`direnv allow` once.
 
 The web interface will be available at `http://localhost:3535`.
