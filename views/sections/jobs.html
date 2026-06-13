@@ -2,7 +2,7 @@
    <div class="flex items-center justify-between mb-8">
      <h1 class="text-3xl font-bold text-slate-800 dark:text-white">Jobs</h1>
      <button
-       hx-post="/ui/jobs/clear-finished"
+       hx-post="/jobs/clear-finished"
        hx-target="#toast-container"
        hx-swap="beforeend"
        hx-confirm="Are you sure you want to clear all finished jobs?"
@@ -14,7 +14,7 @@
    <!-- </div> -->
 
    <div id="job-list-container"
-        hx-get="/ui/jobs/list"
+        hx-get="/jobs/list"
         hx-trigger="load, refreshJobList from:body"
         hx-swap="innerHTML">
     <!-- Loading state -->

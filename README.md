@@ -87,14 +87,30 @@ npm run dev
 go run ./src/main.go
 ```
 
-### Option 2: Using Nix (recommended if you have Nix)
+### Option 2: Using devenv (recommended)
 
-If you have Nix installed, use the provided dev.nix shell:
+If you have [devenv](https://devenv.sh) installed, it provides every dependency
+(Go, Node.js 24, TailwindCSS, chromaprint, flac, id3v2, tree). On entering the
+shell it runs `npm install`, builds the frontend assets, and exports
+`SOULSOLID_CONFIG_PATH=./config.yaml`:
 
 ```bash
-# Set up all dependencies (Node.js, Go, etc.) and run the necessary commands
-nix-shell dev.nix
-# Then, simply run:
+# Create your config once (devenv sets the path but doesn't create the file):
+cp config.example.yaml config.yaml
+# Enter the dev shell (installs npm deps + builds assets automatically):
+devenv shell
+# Then run the app:
 go run ./src/main.go
 ```
+
+Or start everything (asset build + server) in one command:
+
+```bash
+devenv up
+```
+
+To activate the environment automatically when you `cd` into the project,
+install [direnv](https://direnv.net/), add `use devenv` to a `.envrc`, and run
+`direnv allow` once.
+
 The web interface will be available at `http://localhost:3535`.

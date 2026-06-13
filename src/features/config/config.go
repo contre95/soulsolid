@@ -27,12 +27,23 @@ type WebhookConfig struct {
 }
 
 type Import struct {
-	Move                 bool   `yaml:"move"` // If not copies
-	AlwaysQueue          bool   `yaml:"always_queue"`
-	Duplicates           string `yaml:"duplicates"` // "replace", "skip", "queue"
-	PathOptions          Paths  `yaml:"paths"`
-	AutoStartWatcher     bool   `yaml:"auto_start_watcher"`
-	AllowMissingMetadata bool   `yaml:"allow_missing_metadata"`
+	Move                 bool                 `yaml:"move"` // If not copies
+	AlwaysQueue          bool                 `yaml:"always_queue"`
+	Duplicates           string               `yaml:"duplicates"` // "replace", "skip", "queue"
+	PathOptions          Paths                `yaml:"paths"`
+	AutoStartWatcher     bool                 `yaml:"auto_start_watcher"`
+	AllowMissingMetadata AllowMissingMetadata `yaml:"allow_missing_metadata"`
+}
+
+// AllowMissingMetadata controls, per field, whether tracks missing that metadata field may
+// still be imported. When a field is allowed, a fallback default is filled in on import;
+// when it is not allowed, a track missing that field is sent to the manual review queue.
+type AllowMissingMetadata struct {
+	Artist bool `yaml:"artist"`
+	Album  bool `yaml:"album"`
+	Title  bool `yaml:"title"`
+	Year   bool `yaml:"year"`
+	Genre  bool `yaml:"genre"`
 }
 
 type Paths struct {

@@ -3,7 +3,9 @@ package hosting
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/contre95/soulsolid/src/features/config"
@@ -16,6 +18,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/playlists"
 	"github.com/contre95/soulsolid/src/features/reorganize"
+	"github.com/contre95/soulsolid/src/features/streaming"
 	"github.com/contre95/soulsolid/src/features/ui"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
@@ -29,7 +32,7 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server.
-func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, playlistsService *playlists.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, reorganizeService *reorganize.Service) *Server {
+func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, playlistsService *playlists.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, reorganizeService *reorganize.Service, streamingService *streaming.Service) *Server {
 	engine := html.New("./views", ".html")
 	engine.Debug(cfg.Get().Logger.Level == "debug")
 	// Add custom template functions
@@ -78,6 +81,8 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	engine.AddFunc("capitalize", func(s string) string {
 		return strings.Title(strings.ToLower(s))
 	})
+	engine.AddFunc("pathBase", filepath.Base)
+	engine.AddFunc("urlEncode", url.QueryEscape)
 
 	app := fiber.New(fiber.Config{
 		Views: engine,
@@ -121,6 +126,11 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 
 	uiHandler := ui.NewHandler(cfg)
 
+	// Route registration order matters: Fiber matches routes in registration order.
+	// More specific routes (literal path segments) must be registered before wildcard
+	// parameter routes that share the same prefix. For example, lyrics registers
+	// GET /tag/:trackId/lyrics before metadata registers GET /tag/:trackId/:provider,
+	// otherwise the wildcard captures /lyrics requests first.
 	importing.RegisterRoutes(app, importingService)
 	library.RegisterRoutes(app, libraryService)
 	playlists.RegisterRoutes(app, playlistsService)
@@ -130,11 +140,12 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	metricsHandler := metrics.NewHandler(metricsService)
 	metrics.RegisterRoutes(app, metricsHandler)
 	downloading.RegisterRoutes(app, downloadingService)
-	metadata.RegisterRoutes(app, tagService)
 	lyricsHandler := lyrics.NewHandler(lyricsService, tagService)
 	lyrics.RegisterRoutes(app, lyricsHandler)
+	metadata.RegisterRoutes(app, tagService)
 	reorganizeHandler := reorganize.NewHandler(reorganizeService, cfg)
 	reorganize.RegisterRoutes(app, reorganizeHandler)
+	streaming.RegisterRoutes(app, streamingService)
 
 	return &Server{app: app, port: cfg.Get().Server.Port}
 }

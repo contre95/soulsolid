@@ -54,35 +54,40 @@ type groupView struct {
 // convertQueueItem converts a music.QueueItem to queueItemView
 func convertQueueItem(item music.QueueItem) (queueItemView, error) {
 	if item.Track == nil {
-		slog.Error("Queue item has no track", "itemID", item.ID, "type", item.Type)
+		slog.Error("Queue item has no track", "itemID", item.ID, "type", item.PrimaryType())
 		return queueItemView{}, errors.New("queue item has no track")
 	}
 	return queueItemView{
 		ID:           item.ID,
-		Type:         string(item.Type),
+		Type:         string(item.PrimaryType()),
 		Timestamp:    item.Timestamp,
 		Track:        item.Track,
 		ItemMetadata: item.Metadata,
 	}, nil
 }
 
-// RenderLyricsButtons renders the lyrics provider buttons for a track
-func (h *Handler) RenderLyricsButtons(c *fiber.Ctx) error {
+// GetLyricsProviders returns lyrics provider buttons for HTMX or provider list as JSON.
+func (h *Handler) GetLyricsProviders(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	if trackID == "" {
 		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
 	}
 
-	// Get track data for button context
+	providers := h.service.GetLyricsProvidersInfo()
+
+	if c.Get("HX-Request") != "true" {
+		return c.JSON(providers)
+	}
+
 	track, err := h.metadataService.GetTrackFileTags(c.Context(), trackID)
 	if err != nil {
-		slog.Error("Failed to get track for lyrics buttons", "error", err, "trackId", trackID)
+		slog.Error("Failed to get track for lyrics providers", "error", err, "trackId", trackID)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load track data")
 	}
 
 	return respond.Partial(c, "tag/lyrics_buttons", fiber.Map{
 		"Track":           track,
-		"LyricsProviders": h.service.GetLyricsProvidersInfo(),
+		"LyricsProviders": providers,
 	})
 }
 

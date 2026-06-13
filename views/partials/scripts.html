@@ -82,9 +82,6 @@
   document.addEventListener("htmx:afterSettle", function (event) {
     // Re-process HTMX on queue content and main area for dynamic buttons
     if (event.target) {
-      if (event.target.id === "contenido" || event.target.id === "lyrics-queue-content" || event.target.id === "queue-content") {
-        htmx.process(event.target);
-      }
       if (event.target.id === "contenido") {
         initSlimSelect();
       }
@@ -137,6 +134,63 @@
     row.appendChild(closeWrap);
     el.appendChild(row);
     document.getElementById('toast-container').appendChild(el);
+  }
+
+  // Audio player controls
+  function toggleAudioPlayer(playBtn) {
+    var player = playBtn.closest('.audio-player');
+    var audio = player.querySelector('audio');
+    var icon = playBtn.querySelector('i');
+    if (audio.paused) {
+      document.querySelectorAll('.audio-player audio').forEach(function(a) {
+        if (a !== audio && !a.paused) {
+          a.pause();
+          var p = a.closest('.audio-player');
+          if (p) {
+            var bi = p.querySelector('.play-btn i');
+            if (bi) bi.className = 'fas fa-play fa-xs';
+          }
+        }
+      });
+      audio.play().then(function() {
+        icon.className = 'fas fa-pause fa-xs';
+      }).catch(function(err) {
+        console.error('Audio playback failed:', err);
+      });
+    } else {
+      audio.pause();
+      icon.className = 'fas fa-play fa-xs';
+    }
+  }
+
+  function updateAudioProgress(audio) {
+    if (!audio.duration) return;
+    var player = audio.closest('.audio-player');
+    if (!player) return;
+    var range = player.querySelector('input[type=range]');
+    if (range) range.value = (audio.currentTime / audio.duration) * 100;
+    var timeEl = player.querySelector('.time-display');
+    if (timeEl) {
+      var s = Math.floor(audio.currentTime);
+      timeEl.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    }
+  }
+
+  function seekAudioProgress(rangeEl) {
+    var player = rangeEl.closest('.audio-player');
+    var audio = player.querySelector('audio');
+    if (audio.duration) audio.currentTime = (rangeEl.value / 100) * audio.duration;
+  }
+
+  function resetAudioPlayer(audio) {
+    var player = audio.closest('.audio-player');
+    if (!player) return;
+    var bi = player.querySelector('.play-btn i');
+    if (bi) bi.className = 'fas fa-play fa-xs';
+    var range = player.querySelector('input[type=range]');
+    if (range) range.value = 0;
+    var timeEl = player.querySelector('.time-display');
+    if (timeEl) timeEl.textContent = '0:00';
   }
 
   // Lyrics-specific grouping (matches queue_header.html IDs)

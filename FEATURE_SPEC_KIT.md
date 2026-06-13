@@ -118,7 +118,7 @@ All of these follow the same approach:
 3. Normal outcomes complete silently; edge cases (duplicate found, lyrics already exist, etc.) are added to a queue
 4. User visits the queue sub-section to review and take action on each item
 
-The landing `sections/analyze.html` shows a list of all `analyze_`-prefixed jobs via `/ui/jobs/list?prefix=analyze_`. Adding a new analyze-section feature means registering its job type with `analyze_` prefix so it appears there automatically.
+The landing `sections/analyze.html` shows a list of all `analyze_`-prefixed jobs via `/jobs/list?prefix=analyze_`. Adding a new analyze-section feature means registering its job type with `analyze_` prefix so it appears there automatically.
 
 ## Section Rendering and the HTMX URL-Push Problem
 
@@ -230,7 +230,7 @@ Conditional rendering based on `.Section` — add new entries here for every nav
     <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-8">
         Your Feature
     </h1>
-    <div hx-get="/ui/yourfeature/partial" hx-trigger="load">
+    <div hx-get="/yourfeature/partial" hx-trigger="load">
         Loading...
     </div>
 </div>
@@ -380,7 +380,7 @@ c.Set("HX-Trigger", "refreshJobList")   // ← makes the job card appear instant
 if c.Get("HX-Request") == "true" {
     return c.Render("toast/toastOk", fiber.Map{"Msg": "Analysis started"})
 }
-return c.Redirect("/ui/analyze/myfeature")
+return c.Redirect("/analyze/myfeature")
 ```
 
 The job list containers in section templates listen for this event via `hx-trigger="load, refreshJobList from:body"` and re-fetch their content when it fires.
@@ -436,9 +436,9 @@ For items requiring a user decision, integrate with the queue system:
 | QueueItemType | Value | Purpose | Used By |
 |---------------|-------|---------|---------|
 | `ManualReview` | `"manual_review"` | Track needs manual review before import | importing |
+| `MissingMetadata` | `"missing_metadata"` | Track is missing a required metadata field not permitted by `allow_missing_metadata` | importing |
 | `Duplicate` | `"duplicate"` | Track is a duplicate of existing track | importing |
 | `FailedImport` | `"failed_import"` | Track failed to import | importing |
-| `MissingMetadata` | `"missing_metadata"` | Track is missing required metadata | importing |
 | `ExistingLyrics` | `"existing_lyrics"` | Track already has lyrics | lyrics |
 | `Lyric404` | `"lyric_404"` | Lyrics not found (404) | lyrics |
 | `FailedLyrics` | `"failed_lyrics"` | Lyrics fetch failed due to error | lyrics |
@@ -468,7 +468,7 @@ Job runs (background)
 ```go
 item := music.QueueItem{
     ID:        track.ID,
-    Type:      music.Duplicate,
+    Types:     []music.QueueItemType{music.Duplicate, music.MissingMetadata}, // one item can carry several
     Track:     track,
     Timestamp: time.Now(),
     JobID:     jobID,
@@ -476,6 +476,10 @@ item := music.QueueItem{
 }
 return s.queue.Add(item)
 ```
+
+`QueueItem.Types` is a list: a single item may carry several types at once (e.g. `Duplicate` +
+`MissingMetadata`). Use `item.HasType(t)` to test for a type, or `item.PrimaryType()` when an
+item only ever has one (e.g. the lyrics queue).
 
 Only add when user decision is required — not for retriable failures or normal processing.
 
@@ -489,7 +493,7 @@ func (s *Service) ProcessQueueItem(ctx context.Context, itemID string, action st
     if err != nil {
         return fmt.Errorf("queue item not found: %w", err)
     }
-    switch item.Type {
+    switch item.PrimaryType() {
     case music.ExistingLyrics:
         switch action {
         case "override":

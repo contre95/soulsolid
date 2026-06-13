@@ -392,6 +392,18 @@ func (s *Service) GetTrack(ctx context.Context, id string) (*library.Track, erro
 	return track, nil
 }
 
+// GetLibraryTrackPath returns the file path of an imported library track.
+func (s *Service) GetLibraryTrackPath(ctx context.Context, trackID string) (string, error) {
+	track, err := s.library.GetTrack(ctx, trackID)
+	if err != nil {
+		return "", fmt.Errorf("track not found: %w", err)
+	}
+	if track == nil {
+		return "", fmt.Errorf("track not found")
+	}
+	return track.Path, nil
+}
+
 // GetArtistByName finds an artist by name without creating it.
 func (s *Service) GetArtistByName(ctx context.Context, artistName string) (*library.Artist, error) {
 	artist, err := s.library.GetArtistByName(ctx, artistName)

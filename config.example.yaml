@@ -39,7 +39,12 @@ import:
   move: false # If false tracks will be kepts in the folder where you are importing them from and copied from it to your 'libraryPath:'
   always_queue: false # When true, it will queue every single imported track for manual review.
   duplicates: queue # queue | skip | replace
-  allow_missing_metadata: false # When true, allows importing tracks without artist or album metadata
+  allow_missing_metadata: # Per-field: when true the missing value is filled with a fallback default on import, otherwise the track is sent to the manual review queue
+    artist: false
+    album: false
+    title: false
+    year: false
+    genre: false
   paths:
     compilations: '%asciify{$albumartist}/%asciify{$album} (%if{$original_year,$original_year,$year})/%asciify{$track $title}'
     album:soundtrack: '%asciify{$albumartist}/%asciify{$album} [OST] (%if{$original_year,$original_year,$year})/%asciify{$track $title}'

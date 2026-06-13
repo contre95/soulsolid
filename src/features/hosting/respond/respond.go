@@ -9,6 +9,7 @@ import (
 
 // Section renders the section partial for HTMX requests or the full main layout otherwise.
 // Assumes templates follow the "sections/<section>" naming convention.
+// data must not be nil — a nil map causes a panic when "Section" is injected for non-HTMX requests.
 func Section(c *fiber.Ctx, section string, data fiber.Map) error {
 	if c.Get("HX-Request") != "true" {
 		data["Section"] = section

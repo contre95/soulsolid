@@ -6,7 +6,7 @@ import "github.com/contre95/soulsolid/src/music"
 
 const (
 	ManualReview    music.QueueItemType = "manual_review"
+	MissingMetadata music.QueueItemType = "missing_metadata"
 	Duplicate       music.QueueItemType = "duplicate"
 	FailedImport    music.QueueItemType = "failed_import"
-	MissingMetadata music.QueueItemType = "missing_metadata"
 )

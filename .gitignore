@@ -43,8 +43,14 @@ public/css/style.css
 # Air
 tmp
 
-# JS 
+# JS
 node_modules/
+
+# devenv
+.devenv/
+.devenv.flake.nix
+devenv.local.nix
+.direnv/
 
 # Soulsolid
 pocs
