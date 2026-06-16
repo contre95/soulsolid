@@ -3,13 +3,15 @@
 # Environment variables can be referenced using the !env_var tag:
 #   token: !env_var TELEGRAM_BOT_TOKEN
 #
-# The application will fail to start if a referenced environment variable is not set.
+# Missing environment variables will cause startup errors.
+# To simplify setup, secrets are commented out in config.example.yaml so you can copy it to config.yaml without requiring unused variables. 
+# If no config is found, Soulsolid generates a default one automatically.
 
 libraryPath: ./music
 downloadPath: ./downloads
 telegram:
   enabled: false
-  token: !env_var TELEGRAM_BOT_TOKEN
+  # token: !env_var TELEGRAM_BOT_TOKEN
   allowedUsers:
     - <your telegram username>
   bot_handle: SoulsolidExampleBot # Without the @
@@ -56,12 +58,12 @@ metadata:
   providers:
   acoustid:
     enabled: true
-    secret: !env_var ACOUSTID_CLIENT_KEY # You can login with Musicbrainz -> https://acoustid.org/new-application
+    # secret: !env_var ACOUSTID_CLIENT_KEY # You can login with Musicbrainz -> https://acoustid.org/new-application
     deezer:
       enabled: true
     discogs:
       enabled: true
-      secret: !env_var DISCOGS_API_KEY # You can get it here -> https://www.discogs.com/settings/developers
+      # secret: !env_var DISCOGS_API_KEY # You can get it here -> https://www.discogs.com/settings/developers
     musicbrainz:
       enabled: true
 lyrics:

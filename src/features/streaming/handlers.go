@@ -34,5 +34,9 @@ func (h *Handler) Stream(c *fiber.Ctx) error {
 	}
 	c.Set("Content-Type", mimeType)
 	c.Set("Accept-Ranges", "bytes")
-	return c.SendFile(resolved)
+	// Fiber's SendFile feeds the path to fasthttp as a request URI, so characters
+	// like '?' or '#' in a filename are parsed as query/fragment and truncate the
+	// path, causing a spurious 404. Percent-encode the path so it round-trips
+	// through fasthttp's URI decoding intact.
+	return c.SendFile((&url.URL{Path: resolved}).EscapedPath())
 }
