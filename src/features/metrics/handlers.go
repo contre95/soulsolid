@@ -78,6 +78,22 @@ func (h *Handler) GetFormatChartHTML(c *fiber.Ctx) error {
 	})
 }
 
+// GetQualityChartHTML returns the audio quality (bitrate) chart as HTML fragment for HTMX.
+func (h *Handler) GetQualityChartHTML(c *fiber.Ctx) error {
+	slog.Debug("GetQualityChartHTML handler called")
+
+	metrics, err := h.service.GetAllMetrics(c.Context())
+	if err != nil {
+		slog.Error("Error loading metrics for chart", "error", err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Error loading chart data")
+	}
+
+	chartData := metrics.QualityChartData()
+	return respond.Partial(c, "metrics/charts/quality_pie", fiber.Map{
+		"ChartData": chartData,
+	})
+}
+
 // GetMetadataChartHTML returns metadata chart as HTML fragment for HTMX.
 func (h *Handler) GetMetadataChartHTML(c *fiber.Ctx) error {
 	slog.Debug("GetMetadataChartHTML handler called")
@@ -120,6 +136,16 @@ func (h *Handler) GetMetadataChartHTML(c *fiber.Ctx) error {
 		slog.Error("Error getting lyrics stats", "error", err)
 		lyricsStats = LyricsStats{}
 	}
+	acoustIDCount, err := h.service.metrics.GetTracksWithAcoustID(c.Context())
+	if err != nil {
+		slog.Error("Error getting AcoustID count", "error", err)
+		acoustIDCount = 0
+	}
+	chromaprintCount, err := h.service.metrics.GetTracksWithChromaprint(c.Context())
+	if err != nil {
+		slog.Error("Error getting Chromaprint count", "error", err)
+		chromaprintCount = 0
+	}
 
 	// Calculate percentages
 	isrcPct := float64(isrcCount) / float64(totalTracks) * 100
@@ -127,14 +153,16 @@ func (h *Handler) GetMetadataChartHTML(c *fiber.Ctx) error {
 	yearPct := float64(yearCount) / float64(totalTracks) * 100
 	genrePct := float64(genreCount) / float64(totalTracks) * 100
 	lyricsPct := float64(lyricsStats.WithLyrics) / float64(totalTracks) * 100
+	acoustIDPct := float64(acoustIDCount) / float64(totalTracks) * 100
+	chromaprintPct := float64(chromaprintCount) / float64(totalTracks) * 100
 
-	labels := []string{"ISRC", "BPM", "Year", "Genre", "Lyrics"}
-	data := []float64{isrcPct, bpmPct, yearPct, genrePct, lyricsPct}
+	labels := []string{"ISRC", "BPM", "Year", "Genre", "Lyrics", "AcoustID", "Fingerprint"}
+	data := []float64{isrcPct, bpmPct, yearPct, genrePct, lyricsPct, acoustIDPct, chromaprintPct}
 
 	chartData := &ApexChartData{
 		Labels: labels,
 		Series: data,
-		Colors: []string{"#00E396", "#FEB019", "#FF4560", "#008FFB", "#775DD0"},
+		Colors: []string{"#00E396", "#FEB019", "#FF4560", "#008FFB", "#775DD0", "#00D9FF", "#FF6B6B"},
 	}
 
 	return respond.Partial(c, "metrics/charts/metadata_hbars", fiber.Map{

@@ -11,5 +11,6 @@ func RegisterRoutes(app *fiber.App, handler *Handler) {
 	metrics.Get("/charts/genre", handler.GetGenreChartHTML)
 	metrics.Get("/charts/year", handler.GetYearChartHTML)
 	metrics.Get("/charts/format", handler.GetFormatChartHTML)
+	metrics.Get("/charts/quality", handler.GetQualityChartHTML)
 	metrics.Get("/charts/metadata", handler.GetMetadataChartHTML)
 }

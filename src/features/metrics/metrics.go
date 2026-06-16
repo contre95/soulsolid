@@ -13,6 +13,9 @@ type LibraryMetrics interface {
 	// Audio format analysis
 	GetFormatDistribution(ctx context.Context) (map[string]int, error)
 
+	// Audio quality analysis (tracks bucketed by bitrate)
+	GetBitrateDistribution(ctx context.Context) (map[string]int, error)
+
 	// Temporal analysis (tracks by year)
 	GetYearDistribution(ctx context.Context) (map[string]int, error)
 
@@ -24,6 +27,8 @@ type LibraryMetrics interface {
 	GetTracksWithValidBPM(ctx context.Context) (int, error)
 	GetTracksWithValidYear(ctx context.Context) (int, error)
 	GetTracksWithValidGenre(ctx context.Context) (int, error)
+	GetTracksWithAcoustID(ctx context.Context) (int, error)
+	GetTracksWithChromaprint(ctx context.Context) (int, error)
 
 	// Total counts
 	GetTotalTracks(ctx context.Context) (int, error)
