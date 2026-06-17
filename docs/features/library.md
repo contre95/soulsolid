@@ -16,10 +16,10 @@ view, and cascading deletes.
 
 ## What it does
 
-- Browses the collection by **artist**, **album**, and **track** with server-side
-  pagination.
-- Provides a single **unified search** box that matches across artists, albums, and
-  tracks at once, with optional filters (genre, AcoustID presence, lyrics state).
+- Browses the collection as a paginated **track** list (server-side pagination).
+- Provides a single **unified search** box that matches across albums, artists, and
+  tracks at once — showing **albums and artists before tracks** — with optional
+  filters (genre, AcoustID presence, lyrics state).
 - Renders **detail panels** — a floating track-overview panel and per-entity JSON
   endpoints.
 - Reports **collection statistics**: artist/album/track counts and total storage
@@ -62,18 +62,19 @@ SQL `LIMIT/OFFSET` via the service's `*Paginated` methods.
 paginated list of `SearchResult` items (each tagged `artist`, `album`, or `track`)
 and has two modes:
 
-- **Browse-all** (no query, no filters): artists, then albums, then tracks are
-  concatenated into one virtual list and a window is sliced out by offset/limit.
-- **Search/filter**: when a text query is present, artists and albums are matched by
-  name/title (capped at 20 each); tracks are matched with a single
-  `TrackFilter` query that OR-matches title, artist name, and album title and AND-
-  combines the active filters:
+- **Browse-all** (no query, no filters): only **tracks** are listed, paginated by
+  offset/limit. Albums and artists are not included in the browse view.
+- **Search/filter**: when a text query is present, results are ordered **albums,
+  then artists, then tracks**. Albums and artists are matched by name/title (capped
+  at 20 each) and shown first; tracks are matched with a single `TrackFilter` query
+  that OR-matches title, artist name, and album title and AND-combines the active
+  filters:
   - `query` → `TextSearch`
   - `genre` → exact genre match
   - `has_acoustid=true|false` → presence of an AcoustID fingerprint
   - `lyrics_filter` / `lyrics_text` → lyrics state and full-text lyrics search
 
-  Track results are offset relative to the artist/album results that precede them so
+  Track results are offset relative to the album/artist results that precede them so
   pagination stays correct across the combined list.
 
 Album search uses a dedicated lightweight `SearchAlbums` query (single JOIN, no N+1)
