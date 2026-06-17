@@ -320,38 +320,18 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 	hasActiveFilters := genre != "" || hasAcoustID != nil || lyricsFilter != "" || lyricsText != ""
 
 	if query == "" && !hasActiveFilters {
-		// Browse-all: paginated view ordered tracks → albums → artists
+		// Browse-all: paginated tracks only.
 		tracksCount, err := h.service.GetTracksCount(c.Context())
 		if err != nil {
 			slog.Error("Error getting tracks count", "error", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks count")
 		}
+		totalCount = tracksCount
 
-		artists, err := h.service.GetArtists(c.Context())
-		if err != nil {
-			slog.Error("Error loading artists", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading artists")
-		}
-
-		albums, err := h.service.GetAlbums(c.Context())
-		if err != nil {
-			slog.Error("Error loading albums", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
-		}
-
-		albumsCount := len(albums)
-		artistsCount := len(artists)
-		totalCount = tracksCount + albumsCount + artistsCount
-
-		start := offset
-		end := min(offset+limit, totalCount)
-
-		// Tracks: [0, tracksCount)
-		if start < tracksCount {
-			trackStart := start
-			trackLimit := min(end, tracksCount) - trackStart
+		if offset < tracksCount {
+			trackLimit := min(offset+limit, tracksCount) - offset
 			if trackLimit > 0 {
-				tracks, err := h.service.GetTracksPaginated(c.Context(), trackLimit, trackStart)
+				tracks, err := h.service.GetTracksPaginated(c.Context(), trackLimit, offset)
 				if err != nil {
 					slog.Error("Error loading tracks", "error", err)
 					return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
@@ -361,27 +341,8 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 				}
 			}
 		}
-
-		// Albums: [tracksCount, tracksCount+albumsCount)
-		if end > tracksCount {
-			albumStart := max(0, start-tracksCount)
-			albumEnd := min(end-tracksCount, albumsCount)
-			for i := albumStart; i < albumEnd; i++ {
-				results = append(results, albumToSearchResult(albums[i]))
-			}
-		}
-
-		// Artists: [tracksCount+albumsCount, totalCount)
-		artistOffset := tracksCount + albumsCount
-		if end > artistOffset {
-			artistStart := max(0, start-artistOffset)
-			artistEnd := min(end-artistOffset, artistsCount)
-			for i := artistStart; i < artistEnd; i++ {
-				results = append(results, artistToSearchResult(artists[i]))
-			}
-		}
 	} else {
-		// Search/filter: same tracks → albums → artists order.
+		// Search/filter: albums → artists → tracks order.
 		// Artist/album matches only apply to a text query and are capped (not paginated).
 		trackFilter := &music.TrackFilter{
 			TextSearch:   query,
@@ -411,15 +372,33 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 		}
 		albumsCount := len(albums)
 		artistsCount := len(artists)
-		totalCount = trackCount + albumsCount + artistsCount
+		totalCount = albumsCount + artistsCount + trackCount
 
 		start := offset
 		end := min(offset+limit, totalCount)
 
-		// Tracks: [0, trackCount)
-		if start < trackCount {
-			trackStart := start
-			trackLimit := min(end, trackCount) - trackStart
+		// Albums: [0, albumsCount)
+		if start < albumsCount {
+			albumEnd := min(end, albumsCount)
+			for i := start; i < albumEnd; i++ {
+				results = append(results, albumToSearchResult(albums[i]))
+			}
+		}
+
+		// Artists: [albumsCount, albumsCount+artistsCount)
+		if end > albumsCount {
+			artistStart := max(0, start-albumsCount)
+			artistEnd := min(end-albumsCount, artistsCount)
+			for i := artistStart; i < artistEnd; i++ {
+				results = append(results, artistToSearchResult(artists[i]))
+			}
+		}
+
+		// Tracks: [albumsCount+artistsCount, totalCount)
+		trackOffset := albumsCount + artistsCount
+		if end > trackOffset {
+			trackStart := max(0, start-trackOffset)
+			trackLimit := (end - trackOffset) - trackStart
 			if trackLimit > 0 {
 				tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), trackLimit, trackStart, trackFilter)
 				if err != nil {
@@ -429,25 +408,6 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 						results = append(results, trackToSearchResult(track))
 					}
 				}
-			}
-		}
-
-		// Albums: [trackCount, trackCount+albumsCount)
-		if end > trackCount {
-			albumStart := max(0, start-trackCount)
-			albumEnd := min(end-trackCount, albumsCount)
-			for i := albumStart; i < albumEnd; i++ {
-				results = append(results, albumToSearchResult(albums[i]))
-			}
-		}
-
-		// Artists: [trackCount+albumsCount, totalCount)
-		artistOffset := trackCount + albumsCount
-		if end > artistOffset {
-			artistStart := max(0, start-artistOffset)
-			artistEnd := min(end-artistOffset, artistsCount)
-			for i := artistStart; i < artistEnd; i++ {
-				results = append(results, artistToSearchResult(artists[i]))
 			}
 		}
 	}
