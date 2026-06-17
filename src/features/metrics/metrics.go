@@ -24,6 +24,8 @@ type LibraryMetrics interface {
 	GetTracksWithValidBPM(ctx context.Context) (int, error)
 	GetTracksWithValidYear(ctx context.Context) (int, error)
 	GetTracksWithValidGenre(ctx context.Context) (int, error)
+	GetTracksWithAcoustID(ctx context.Context) (int, error)
+	GetTracksWithChromaprint(ctx context.Context) (int, error)
 
 	// Total counts
 	GetTotalTracks(ctx context.Context) (int, error)
