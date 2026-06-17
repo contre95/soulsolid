@@ -21,7 +21,25 @@ type SqliteLibrary struct {
 
 // NewSqliteLibrary creates a new SqliteLibrary.
 func NewSqliteLibrary(path string) (*SqliteLibrary, error) {
-	db, err := sql.Open("sqlite3", path)
+	// Apply tuning via the DSN so it takes effect on every pooled connection:
+	// busy_timeout, foreign_keys and synchronous are per-connection settings and
+	// would otherwise only apply to whichever connection happened to run a
+	// PRAGMA. WAL lets readers proceed during a write, busy_timeout makes a
+	// writer wait for a held lock instead of erroring out, foreign_keys enables
+	// the ON DELETE CASCADE declared on playlist_tracks, and synchronous=NORMAL
+	// is the safe, faster sync level under WAL.
+	//
+	// We intentionally do not pin the pool to a single connection: much of the
+	// read code keeps multiple result sets (and nested reads) open at once,
+	// which only works with more than one connection. WAL + busy_timeout handle
+	// write contention without serializing everything onto one connection.
+	sep := "?"
+	if strings.Contains(path, "?") {
+		sep = "&"
+	}
+	dsn := path + sep + "_journal_mode=WAL&_busy_timeout=5000&_foreign_keys=on&_synchronous=NORMAL"
+
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -31,6 +49,363 @@ func NewSqliteLibrary(path string) (*SqliteLibrary, error) {
 	}
 
 	return &SqliteLibrary{db: db}, nil
+}
+
+// sqliteMaxParams bounds how many bound parameters we put in a single
+// IN (...) clause so batched queries stay under SQLite's host-parameter limit
+// (999 on older builds). IDs are chunked to this size.
+const sqliteMaxParams = 900
+
+// trackColumns is the full set of columns selected when hydrating a Track,
+// matching the order scanned in scanTrackRow.
+const trackColumns = `id, path, title, title_version, duration, track_number, disc_number,
+	isrc, chromaprint_fingerprint, bitrate, format, sample_rate, bit_depth, channels, explicit_content,
+	preview_url, composer, genre, year, original_year, lyrics, explicit_lyrics, has_lyrics,
+	bpm, gain, source, source_url, added_date, modified_date`
+
+// chunkStrings splits ids into slices of at most size elements.
+func chunkStrings(ids []string, size int) [][]string {
+	if len(ids) <= size {
+		return [][]string{ids}
+	}
+	var chunks [][]string
+	for i := 0; i < len(ids); i += size {
+		end := i + size
+		if end > len(ids) {
+			end = len(ids)
+		}
+		chunks = append(chunks, ids[i:end])
+	}
+	return chunks
+}
+
+// buildInClause returns a "?,?,..." placeholder string and the matching args
+// slice for use in an IN (...) clause.
+func buildInClause(ids []string) (string, []interface{}) {
+	placeholders := strings.Repeat("?,", len(ids))
+	placeholders = placeholders[:len(placeholders)-1]
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	return placeholders, args
+}
+
+// scanTrackRow scans a single track row (selected via trackColumns) into a
+// Track with its scalar fields populated. Relationship fields (Artists, Album,
+// Attributes) are filled in separately by the batch hydration helpers.
+func scanTrackRow(s interface{ Scan(...interface{}) error }) (*music.Track, error) {
+	track := &music.Track{}
+	var addedDateStr, modifiedDateStr string
+	var sourceNull, sourceURLNull sql.NullString
+	err := s.Scan(&track.ID, &track.Path, &track.Title, &track.TitleVersion, &track.Metadata.Duration,
+		&track.Metadata.TrackNumber, &track.Metadata.DiscNumber,
+		&track.ISRC, &track.ChromaprintFingerprint, &track.Bitrate, &track.Format, &track.SampleRate, &track.BitDepth,
+		&track.Channels, &track.ExplicitContent, &track.PreviewURL,
+		&track.Metadata.Composer, &track.Metadata.Genre, &track.Metadata.Year,
+		&track.Metadata.OriginalYear, &track.Metadata.Lyrics, &track.Metadata.ExplicitLyrics, &track.HasLyrics,
+		&track.Metadata.BPM, &track.Metadata.Gain, &sourceNull, &sourceURLNull, &addedDateStr, &modifiedDateStr)
+	if err != nil {
+		return nil, err
+	}
+	track.MetadataSource.Source = sourceNull.String
+	track.MetadataSource.MetadataSourceURL = sourceURLNull.String
+	track.AddedDate, _ = time.Parse(time.RFC3339, addedDateStr)
+	track.ModifiedDate, _ = time.Parse(time.RFC3339, modifiedDateStr)
+	track.Attributes = make(map[string]string)
+	return track, nil
+}
+
+// attachArtistAttributes loads attributes for every artist referenced in the
+// given map (keyed by artist ID, values are all Artist objects sharing that ID)
+// in a constant number of batched queries, then assigns them.
+func (d *SqliteLibrary) attachArtistAttributes(ctx context.Context, artists map[string][]*music.Artist) error {
+	if len(artists) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(artists))
+	for id, list := range artists {
+		ids = append(ids, id)
+		for _, a := range list {
+			if a.Attributes == nil {
+				a.Attributes = make(map[string]string)
+			}
+		}
+	}
+
+	for _, chunk := range chunkStrings(ids, sqliteMaxParams) {
+		in, args := buildInClause(chunk)
+		rows, err := d.db.QueryContext(ctx, `SELECT artist_id, key, value FROM artist_attributes WHERE artist_id IN (`+in+`)`, args...)
+		if err != nil {
+			return err
+		}
+		for rows.Next() {
+			var artistID, key, value string
+			if err := rows.Scan(&artistID, &key, &value); err != nil {
+				rows.Close()
+				return err
+			}
+			for _, a := range artists[artistID] {
+				a.Attributes[key] = value
+			}
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// hydrateAlbumsByIDs loads fully populated Albums (attributes + artists with
+// their attributes) for the given IDs in a constant number of batched queries,
+// returning a map keyed by album ID. Albums are shared by pointer across all
+// callers that reference the same ID.
+func (d *SqliteLibrary) hydrateAlbumsByIDs(ctx context.Context, ids []string) (map[string]*music.Album, error) {
+	albumMap := make(map[string]*music.Album, len(ids))
+	if len(ids) == 0 {
+		return albumMap, nil
+	}
+	artistsByID := make(map[string][]*music.Artist)
+
+	for _, chunk := range chunkStrings(ids, sqliteMaxParams) {
+		in, args := buildInClause(chunk)
+
+		// Album rows
+		rows, err := d.db.QueryContext(ctx, `
+			SELECT id, title, type, release_date, release_group_id,
+				label, catalog_number, country, status, barcode
+			FROM albums WHERE id IN (`+in+`)`, args...)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			album := &music.Album{}
+			var releaseDateStr, albumType string
+			if err := rows.Scan(&album.ID, &album.Title, &albumType, &releaseDateStr,
+				&album.ReleaseGroupID, &album.Label, &album.CatalogNumber, &album.Country,
+				&album.Status, &album.Barcode); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			album.Type = music.AlbumType(albumType)
+			album.ReleaseDate, _ = time.Parse(time.RFC3339, releaseDateStr)
+			album.Attributes = make(map[string]string)
+			albumMap[album.ID] = album
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		// Album attributes
+		attrRows, err := d.db.QueryContext(ctx, `SELECT album_id, key, value FROM album_attributes WHERE album_id IN (`+in+`)`, args...)
+		if err != nil {
+			return nil, err
+		}
+		for attrRows.Next() {
+			var albumID, key, value string
+			if err := attrRows.Scan(&albumID, &key, &value); err != nil {
+				attrRows.Close()
+				return nil, err
+			}
+			if album := albumMap[albumID]; album != nil {
+				album.Attributes[key] = value
+			}
+		}
+		err = attrRows.Err()
+		attrRows.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		// Album artists
+		arRows, err := d.db.QueryContext(ctx, `
+			SELECT aa.album_id, a.id, a.name, a.sort_name, aa.role
+			FROM album_artists aa JOIN artists a ON aa.artist_id = a.id
+			WHERE aa.album_id IN (`+in+`)`, args...)
+		if err != nil {
+			return nil, err
+		}
+		for arRows.Next() {
+			var albumID, role string
+			artist := &music.Artist{}
+			if err := arRows.Scan(&albumID, &artist.ID, &artist.Name, &artist.SortName, &role); err != nil {
+				arRows.Close()
+				return nil, err
+			}
+			if album := albumMap[albumID]; album != nil {
+				album.Artists = append(album.Artists, music.ArtistRole{Artist: artist, Role: role})
+				artistsByID[artist.ID] = append(artistsByID[artist.ID], artist)
+			}
+		}
+		err = arRows.Err()
+		arRows.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := d.attachArtistAttributes(ctx, artistsByID); err != nil {
+		return nil, err
+	}
+	return albumMap, nil
+}
+
+// hydrateTracksByIDs loads fully populated Tracks for the given IDs in a
+// constant number of batched queries (instead of one GetTrack call per ID),
+// returning them in the same order as ids. Missing IDs are skipped.
+func (d *SqliteLibrary) hydrateTracksByIDs(ctx context.Context, ids []string) ([]*music.Track, error) {
+	if len(ids) == 0 {
+		return []*music.Track{}, nil
+	}
+	trackMap := make(map[string]*music.Track, len(ids))
+	trackAlbumID := make(map[string]string)
+	albumIDSet := make(map[string]struct{})
+	trackArtistsByID := make(map[string][]*music.Artist)
+
+	for _, chunk := range chunkStrings(ids, sqliteMaxParams) {
+		in, args := buildInClause(chunk)
+
+		// Track rows
+		rows, err := d.db.QueryContext(ctx, `SELECT `+trackColumns+` FROM tracks WHERE id IN (`+in+`)`, args...)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			track, err := scanTrackRow(rows)
+			if err != nil {
+				rows.Close()
+				return nil, err
+			}
+			trackMap[track.ID] = track
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		// Track artists
+		arRows, err := d.db.QueryContext(ctx, `
+			SELECT ta.track_id, a.id, a.name, a.sort_name, ta.role
+			FROM track_artists ta JOIN artists a ON ta.artist_id = a.id
+			WHERE ta.track_id IN (`+in+`)`, args...)
+		if err != nil {
+			return nil, err
+		}
+		for arRows.Next() {
+			var trackID, role string
+			artist := &music.Artist{}
+			if err := arRows.Scan(&trackID, &artist.ID, &artist.Name, &artist.SortName, &role); err != nil {
+				arRows.Close()
+				return nil, err
+			}
+			if t := trackMap[trackID]; t != nil {
+				t.Artists = append(t.Artists, music.ArtistRole{Artist: artist, Role: role})
+				trackArtistsByID[artist.ID] = append(trackArtistsByID[artist.ID], artist)
+			}
+		}
+		err = arRows.Err()
+		arRows.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		// Track albums (track -> album id)
+		alRows, err := d.db.QueryContext(ctx, `SELECT track_id, album_id FROM track_albums WHERE track_id IN (`+in+`)`, args...)
+		if err != nil {
+			return nil, err
+		}
+		for alRows.Next() {
+			var trackID, albumID string
+			if err := alRows.Scan(&trackID, &albumID); err != nil {
+				alRows.Close()
+				return nil, err
+			}
+			trackAlbumID[trackID] = albumID
+			albumIDSet[albumID] = struct{}{}
+		}
+		err = alRows.Err()
+		alRows.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		// Track attributes
+		atRows, err := d.db.QueryContext(ctx, `SELECT track_id, key, value FROM track_attributes WHERE track_id IN (`+in+`)`, args...)
+		if err != nil {
+			return nil, err
+		}
+		for atRows.Next() {
+			var trackID, key, value string
+			if err := atRows.Scan(&trackID, &key, &value); err != nil {
+				atRows.Close()
+				return nil, err
+			}
+			if t := trackMap[trackID]; t != nil {
+				t.Attributes[key] = value
+			}
+		}
+		err = atRows.Err()
+		atRows.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Attach track-artist attributes in one batched pass.
+	if err := d.attachArtistAttributes(ctx, trackArtistsByID); err != nil {
+		return nil, err
+	}
+
+	// Hydrate albums in one batched pass and attach to tracks.
+	albumIDs := make([]string, 0, len(albumIDSet))
+	for id := range albumIDSet {
+		albumIDs = append(albumIDs, id)
+	}
+	albumMap, err := d.hydrateAlbumsByIDs(ctx, albumIDs)
+	if err != nil {
+		return nil, err
+	}
+	for trackID, albumID := range trackAlbumID {
+		if album := albumMap[albumID]; album != nil {
+			if t := trackMap[trackID]; t != nil {
+				t.Album = album
+			}
+		}
+	}
+
+	// Preserve the input ordering.
+	result := make([]*music.Track, 0, len(ids))
+	for _, id := range ids {
+		if t := trackMap[id]; t != nil {
+			result = append(result, t)
+		}
+	}
+	return result, nil
+}
+
+// queryIDColumn runs a query that selects a single ID column and returns the
+// ordered list of IDs.
+func (d *SqliteLibrary) queryIDColumn(ctx context.Context, query string, args ...interface{}) ([]string, error) {
+	rows, err := d.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 func createTables(db *sql.DB) error {
@@ -1284,101 +1659,39 @@ func (d *SqliteLibrary) GetArtists(ctx context.Context) ([]*music.Artist, error)
 
 // GetAlbums gets all albums from the database.
 func (d *SqliteLibrary) GetAlbums(ctx context.Context) ([]*music.Album, error) {
-	// Get all album IDs first
-	rows, err := d.db.QueryContext(ctx, `SELECT id FROM albums`)
+	ids, err := d.queryIDColumn(ctx, `SELECT id FROM albums`)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	albums := []*music.Album{}
-
-	for rows.Next() {
-		var albumID string
-		err := rows.Scan(&albumID)
-		if err != nil {
-			return nil, err
-		}
-
-		album, err := d.GetAlbum(ctx, albumID)
-		if err != nil {
-			return nil, err
-		}
-		// Skip albums that weren't found (shouldn't happen in a consistent database)
-		if album == nil {
-			continue
-		}
-
-		albums = append(albums, album)
+	albumMap, err := d.hydrateAlbumsByIDs(ctx, ids)
+	if err != nil {
+		return nil, err
 	}
-
+	albums := make([]*music.Album, 0, len(ids))
+	for _, id := range ids {
+		if album := albumMap[id]; album != nil {
+			albums = append(albums, album)
+		}
+	}
 	return albums, nil
 }
 
 // GetTracks gets all tracks from the database.
 func (d *SqliteLibrary) GetTracks(ctx context.Context) ([]*music.Track, error) {
-	// Get all track IDs first
-	rows, err := d.db.QueryContext(ctx, `SELECT id FROM tracks`)
+	ids, err := d.queryIDColumn(ctx, `SELECT id FROM tracks`)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	tracks := []*music.Track{}
-
-	for rows.Next() {
-		var trackID string
-		err := rows.Scan(&trackID)
-		if err != nil {
-			return nil, err
-		}
-
-		track, err := d.GetTrack(ctx, trackID)
-		if err != nil {
-			return nil, err
-		}
-		// Skip tracks that weren't found (shouldn't happen in a consistent database)
-		if track == nil {
-			continue
-		}
-
-		tracks = append(tracks, track)
-	}
-
-	return tracks, nil
+	return d.hydrateTracksByIDs(ctx, ids)
 }
 
 // GetTracksPaginated gets paginated tracks from the database.
 func (d *SqliteLibrary) GetTracksPaginated(ctx context.Context, limit, offset int) ([]*music.Track, error) {
-	// Get paginated track IDs first
-	rows, err := d.db.QueryContext(ctx, `SELECT id FROM tracks ORDER BY title LIMIT ? OFFSET ?`, limit, offset)
+	ids, err := d.queryIDColumn(ctx, `SELECT id FROM tracks ORDER BY title LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	tracks := []*music.Track{}
-
-	for rows.Next() {
-		var trackID string
-		err := rows.Scan(&trackID)
-		if err != nil {
-			return nil, err
-		}
-
-		track, err := d.GetTrack(ctx, trackID)
-		if err != nil {
-			return nil, err
-		}
-		// Skip tracks that weren't found (shouldn't happen in a consistent database)
-		if track == nil {
-			continue
-		}
-
-		tracks = append(tracks, track)
-	}
-
-	return tracks, nil
+	return d.hydrateTracksByIDs(ctx, ids)
 }
 
 // GetTracksFilteredPaginated gets paginated tracks from the database with filtering.
@@ -1458,34 +1771,11 @@ func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, o
 	query += " ORDER BY t.title LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 
-	rows, err := d.db.QueryContext(ctx, query, args...)
+	ids, err := d.queryIDColumn(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	tracks := []*music.Track{}
-
-	for rows.Next() {
-		var trackID string
-		err := rows.Scan(&trackID)
-		if err != nil {
-			return nil, err
-		}
-
-		track, err := d.GetTrack(ctx, trackID)
-		if err != nil {
-			return nil, err
-		}
-		// Skip tracks that weren't found (shouldn't happen in a consistent database)
-		if track == nil {
-			continue
-		}
-
-		tracks = append(tracks, track)
-	}
-
-	return tracks, nil
+	return d.hydrateTracksByIDs(ctx, ids)
 }
 
 // GetTracksFilteredCount gets the filtered count of tracks in the database.
@@ -1706,34 +1996,20 @@ func (d *SqliteLibrary) GetArtistsCount(ctx context.Context) (int, error) {
 
 // GetAlbumsPaginated gets paginated albums from the database.
 func (d *SqliteLibrary) GetAlbumsPaginated(ctx context.Context, limit, offset int) ([]*music.Album, error) {
-	// Get paginated album IDs first
-	rows, err := d.db.QueryContext(ctx, `SELECT id FROM albums ORDER BY title LIMIT ? OFFSET ?`, limit, offset)
+	ids, err := d.queryIDColumn(ctx, `SELECT id FROM albums ORDER BY title LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	albums := []*music.Album{}
-
-	for rows.Next() {
-		var albumID string
-		err := rows.Scan(&albumID)
-		if err != nil {
-			return nil, err
-		}
-
-		album, err := d.GetAlbum(ctx, albumID)
-		if err != nil {
-			return nil, err
-		}
-		// Skip albums that weren't found (shouldn't happen in a consistent database)
-		if album == nil {
-			continue
-		}
-
-		albums = append(albums, album)
+	albumMap, err := d.hydrateAlbumsByIDs(ctx, ids)
+	if err != nil {
+		return nil, err
 	}
-
+	albums := make([]*music.Album, 0, len(ids))
+	for _, id := range ids {
+		if album := albumMap[id]; album != nil {
+			albums = append(albums, album)
+		}
+	}
 	return albums, nil
 }
 
@@ -1766,33 +2042,20 @@ func (d *SqliteLibrary) GetAlbumsFilteredPaginated(ctx context.Context, limit, o
 	query += " ORDER BY a.title LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 
-	rows, err := d.db.QueryContext(ctx, query, args...)
+	ids, err := d.queryIDColumn(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	albums := []*music.Album{}
-
-	for rows.Next() {
-		var albumID string
-		err := rows.Scan(&albumID)
-		if err != nil {
-			return nil, err
-		}
-
-		album, err := d.GetAlbum(ctx, albumID)
-		if err != nil {
-			return nil, err
-		}
-		// Skip albums that weren't found (shouldn't happen in a consistent database)
-		if album == nil {
-			continue
-		}
-
-		albums = append(albums, album)
+	albumMap, err := d.hydrateAlbumsByIDs(ctx, ids)
+	if err != nil {
+		return nil, err
 	}
-
+	albums := make([]*music.Album, 0, len(ids))
+	for _, id := range ids {
+		if album := albumMap[id]; album != nil {
+			albums = append(albums, album)
+		}
+	}
 	return albums, nil
 }
 
@@ -2336,13 +2599,7 @@ func (d *SqliteLibrary) RemoveTrackFromPlaylist(ctx context.Context, playlistID,
 
 // GetTracksForPlaylist gets all tracks for a specific playlist.
 func (d *SqliteLibrary) GetTracksForPlaylist(ctx context.Context, playlistID string) ([]*music.Track, error) {
-	tx, err := d.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	rows, err := tx.QueryContext(ctx, `
+	ids, err := d.queryIDColumn(ctx, `
 		SELECT t.id
 		FROM playlist_tracks pt
 		JOIN tracks t ON pt.track_id = t.id
@@ -2352,28 +2609,7 @@ func (d *SqliteLibrary) GetTracksForPlaylist(ctx context.Context, playlistID str
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	tracks := []*music.Track{}
-
-	for rows.Next() {
-		var trackID string
-		err := rows.Scan(&trackID)
-		if err != nil {
-			return nil, err
-		}
-
-		// Get full track data
-		track, err := d.GetTrack(ctx, trackID)
-		if err != nil {
-			return nil, err
-		}
-		if track != nil {
-			tracks = append(tracks, track)
-		}
-	}
-
-	return tracks, tx.Commit()
+	return d.hydrateTracksByIDs(ctx, ids)
 }
 
 // FindTrackByPath finds a track by its file path
