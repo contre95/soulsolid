@@ -268,11 +268,11 @@ func trackToSearchResult(track *music.Track) SearchResult {
 // albumToSearchResult converts a music.Album to a SearchResult.
 func albumToSearchResult(album *music.Album) SearchResult {
 	var artistNames strings.Builder
-	for i, ar := range album.Artists {
+	for _, ar := range album.Artists {
 		if ar.Artist == nil {
 			continue
 		}
-		if i > 0 {
+		if artistNames.Len() > 0 {
 			artistNames.WriteString(", ")
 		}
 		artistNames.WriteString(ar.Artist.Name)
