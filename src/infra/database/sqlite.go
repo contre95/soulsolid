@@ -172,6 +172,7 @@ func createTables(db *sql.DB) error {
 		CREATE INDEX IF NOT EXISTS idx_album_artists_album ON album_artists(album_id);
 		CREATE INDEX IF NOT EXISTS idx_album_artists_artist ON album_artists(artist_id);
 		CREATE INDEX IF NOT EXISTS idx_track_attributes_track ON track_attributes(track_id);
+		CREATE INDEX IF NOT EXISTS idx_track_attributes_key_value ON track_attributes(key, value);
 		CREATE INDEX IF NOT EXISTS idx_album_attributes_album ON album_attributes(album_id);
 		CREATE INDEX IF NOT EXISTS idx_artist_attributes_artist ON artist_attributes(artist_id);
 		CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist ON playlist_tracks(playlist_id);
