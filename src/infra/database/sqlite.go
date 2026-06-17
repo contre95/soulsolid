@@ -223,6 +223,16 @@ func (d *SqliteLibrary) AddTrack(ctx context.Context, track *music.Track) error 
 		return err
 	}
 
+	// Stamp added/modified dates on first insert when the caller didn't set
+	// them, so they don't get persisted as the zero time (0001-01-01).
+	now := time.Now()
+	if track.AddedDate.IsZero() {
+		track.AddedDate = now
+	}
+	if track.ModifiedDate.IsZero() {
+		track.ModifiedDate = now
+	}
+
 	tx, err := d.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -1467,6 +1477,17 @@ func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, o
 		args = append(args, "%"+filter.LyricsText+"%")
 	}
 
+	// Added-date range filter (inclusive). Compares calendar dates so the
+	// RFC3339 timestamps stored in added_date match by day.
+	if filter.AddedAfter != "" {
+		conditions = append(conditions, "date(t.added_date) >= ?")
+		args = append(args, filter.AddedAfter)
+	}
+	if filter.AddedBefore != "" {
+		conditions = append(conditions, "date(t.added_date) <= ?")
+		args = append(args, filter.AddedBefore)
+	}
+
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
@@ -1572,6 +1593,17 @@ func (d *SqliteLibrary) GetTracksFilteredCount(ctx context.Context, filter *musi
 	if filter.LyricsText != "" {
 		conditions = append(conditions, "t.lyrics LIKE ?")
 		args = append(args, "%"+filter.LyricsText+"%")
+	}
+
+	// Added-date range filter (inclusive). Compares calendar dates so the
+	// RFC3339 timestamps stored in added_date match by day.
+	if filter.AddedAfter != "" {
+		conditions = append(conditions, "date(t.added_date) >= ?")
+		args = append(args, filter.AddedAfter)
+	}
+	if filter.AddedBefore != "" {
+		conditions = append(conditions, "date(t.added_date) <= ?")
+		args = append(args, filter.AddedBefore)
 	}
 
 	if len(conditions) > 0 {

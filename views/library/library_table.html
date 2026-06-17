@@ -71,6 +71,34 @@
                 hx-include="closest form">
        </div>
 
+       <!-- Added after -->
+       <div class="flex-1 min-w-36">
+         <label for="added_after" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Added after</label>
+         <input type="date"
+                id="added_after"
+                name="added_after"
+                class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                hx-get="/library/search"
+                hx-trigger="change"
+                hx-target="#search-results"
+                hx-swap="innerHTML"
+                hx-include="closest form">
+       </div>
+
+       <!-- Added before -->
+       <div class="flex-1 min-w-36">
+         <label for="added_before" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Added before</label>
+         <input type="date"
+                id="added_before"
+                name="added_before"
+                class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                hx-get="/library/search"
+                hx-trigger="change"
+                hx-target="#search-results"
+                hx-swap="innerHTML"
+                hx-include="closest form">
+       </div>
+
        <!-- AcoustID checkbox -->
        <div class="flex items-center gap-4 pb-1.5">
          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
