@@ -259,6 +259,19 @@
     end
   end
 
+  -- Stop playback, abort the stream and hide the player bar.
+  def playerClose()
+    call #player-audio.pause()
+    set #player-audio.src to ''
+    call #player-audio.removeAttribute('src')
+    call #player-audio.load()
+    remove .is-playing from .player-track-row
+    add .hidden to #player-bar
+    put 'Nothing playing' into #player-title
+    put 'Pick a track to start' into #player-artist
+    set #player-art.src to ''
+  end
+
   -- Move dir steps (+1 next, -1 prev) through the visible track list, wrapping around.
   def playerStep(dir)
     set rows to document.querySelectorAll('.player-track-row')
