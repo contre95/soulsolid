@@ -311,13 +311,15 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 	hasAcoustID := parseBoolFilter(c.Query("has_acoustid", ""))
 	lyricsFilter := c.Query("lyrics_filter", "")
 	lyricsText := strings.TrimSpace(c.Query("lyrics_text", ""))
+	addedAfter := strings.TrimSpace(c.Query("added_after", ""))
+	addedBefore := strings.TrimSpace(c.Query("added_before", ""))
 
 	var results []SearchResult
 	var totalCount int
 
 	offset := (page - 1) * limit
 
-	hasActiveFilters := genre != "" || hasAcoustID != nil || lyricsFilter != "" || lyricsText != ""
+	hasActiveFilters := genre != "" || hasAcoustID != nil || lyricsFilter != "" || lyricsText != "" || addedAfter != "" || addedBefore != ""
 
 	if query == "" && !hasActiveFilters {
 		// Browse-all: paginated tracks only.
@@ -350,6 +352,8 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 			HasAcoustID:  hasAcoustID,
 			LyricsFilter: lyricsFilter,
 			LyricsText:   lyricsText,
+			AddedAfter:   addedAfter,
+			AddedBefore:  addedBefore,
 		}
 		trackCount, err := h.service.GetTracksFilteredCount(c.Context(), trackFilter)
 		if err != nil {
