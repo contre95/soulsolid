@@ -3,7 +3,8 @@
 <div class="flex items-center justify-between px-1 py-1">
   <button class="px-3 py-1.5 rounded-md text-sm transition-colors {{if not .Pagination.HasPrev}}text-gray-400 dark:text-gray-600 cursor-not-allowed{{else}}text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700{{end}}"
           {{if not .Pagination.HasPrev}}disabled{{end}}
-          hx-get="/library/search?page={{.Pagination.PrevPage}}&limit={{.Pagination.Limit}}&query={{.Query}}"
+          hx-get="/library/search?page={{.Pagination.PrevPage}}&limit={{.Pagination.Limit}}"
+          hx-include="#search-form"
           hx-target="#search-results" hx-swap="innerHTML">
     <i class="fas fa-chevron-left mr-1 text-xs"></i> Previous
   </button>
@@ -13,7 +14,8 @@
   </span>
   <button class="px-3 py-1.5 rounded-md text-sm transition-colors {{if not .Pagination.HasNext}}text-gray-400 dark:text-gray-600 cursor-not-allowed{{else}}text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700{{end}}"
           {{if not .Pagination.HasNext}}disabled{{end}}
-          hx-get="/library/search?page={{.Pagination.NextPage}}&limit={{.Pagination.Limit}}&query={{.Query}}"
+          hx-get="/library/search?page={{.Pagination.NextPage}}&limit={{.Pagination.Limit}}"
+          hx-include="#search-form"
           hx-target="#search-results" hx-swap="innerHTML">
     Next <i class="fas fa-chevron-right ml-1 text-xs"></i>
   </button>
