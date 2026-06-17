@@ -216,4 +216,61 @@
     }
   }
 </script>
+
+<!-- Mini player helpers (Hyperscript) -->
+<script type="text/hyperscript">
+  -- Format a number of seconds as m:ss (0:00 for empty / NaN / 0).
+  def fmtTime(t)
+    if not t
+      return '0:00'
+    end
+    set t to Math.floor(t)
+    set m to Math.floor(t / 60)
+    set s to t mod 60
+    if s is less than 10
+      return m + ':0' + s
+    end
+    return m + ':' + s
+  end
+
+  -- Load a track row into the player bar and start playback.
+  -- Clicking the row that's already loaded toggles play/pause instead.
+  def playerPlayRow(row)
+    if row matches .is-playing and #player-audio.getAttribute('src')
+      call playerToggle()
+      exit
+    end
+    remove .is-playing from .player-track-row
+    add .is-playing to row
+    put row.getAttribute('data-title') into #player-title
+    put row.getAttribute('data-artist') into #player-artist
+    set #player-art.style.display to ''
+    set #player-art.src to '/tag/' + row.getAttribute('data-id') + '/artwork'
+    remove .hidden from #player-bar
+    set #player-audio.src to '/stream?path=' + encodeURIComponent(row.getAttribute('data-path'))
+    call #player-audio.play()
+  end
+
+  def playerToggle()
+    if #player-audio.paused
+      call #player-audio.play()
+    else
+      call #player-audio.pause()
+    end
+  end
+
+  -- Move dir steps (+1 next, -1 prev) through the visible track list, wrapping around.
+  def playerStep(dir)
+    set rows to document.querySelectorAll('.player-track-row')
+    if rows.length is 0
+      exit
+    end
+    set cur to document.querySelector('.player-track-row.is-playing')
+    set idx to -1
+    if cur
+      set idx to Array.from(rows).indexOf(cur)
+    end
+    call playerPlayRow(rows[(idx + dir + rows.length) mod rows.length])
+  end
+</script>
 {{end}}
