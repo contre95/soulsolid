@@ -56,11 +56,6 @@ func (t *MetricsCalculationTask) Execute(ctx context.Context, job *music.Job, pr
 		return nil, fmt.Errorf("failed to calculate format distribution: %w", err)
 	}
 
-	// Calculate and store quality (bitrate) distribution
-	if err := t.calculateAndStoreQualityDistribution(ctx, progressUpdater); err != nil {
-		return nil, fmt.Errorf("failed to calculate quality distribution: %w", err)
-	}
-
 	// Calculate and store year distribution
 	if err := t.calculateAndStoreYearDistribution(ctx, progressUpdater); err != nil {
 		return nil, fmt.Errorf("failed to calculate year distribution: %w", err)
@@ -156,24 +151,6 @@ func (t *MetricsCalculationTask) calculateAndStoreFormatDistribution(ctx context
 
 	for format, count := range formatDist {
 		if err := t.storeMetric(ctx, "format_distribution", format, count); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// calculateAndStoreQualityDistribution calculates and stores bitrate bucket distribution.
-func (t *MetricsCalculationTask) calculateAndStoreQualityDistribution(ctx context.Context, progressUpdater func(int, string)) error {
-	progressUpdater(90, "Analyzing audio quality")
-
-	qualityDist, err := t.metrics.GetBitrateDistribution(ctx)
-	if err != nil {
-		return err
-	}
-
-	for bucket, count := range qualityDist {
-		if err := t.storeMetric(ctx, "quality_distribution", bucket, count); err != nil {
 			return err
 		}
 	}

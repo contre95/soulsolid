@@ -34,7 +34,6 @@ type MetricsData struct {
 	LyricsStats          []Metric `json:"lyrics_stats"`
 	MetadataCompleteness []Metric `json:"metadata_completeness"`
 	FormatDistribution   []Metric `json:"format_distribution"`
-	QualityDistribution  []Metric `json:"quality_distribution"`
 	YearDistribution     []Metric `json:"year_distribution"`
 	TotalTracks          int      `json:"total_tracks"`
 	TotalArtists         int      `json:"total_artists"`
@@ -82,11 +81,6 @@ func (s *Service) GetAllMetrics(ctx context.Context) (*MetricsData, error) {
 	data.FormatDistribution, err = s.getMetricsByType(ctx, "format_distribution")
 	if err != nil {
 		slog.Warn("Failed to get format distribution", "error", err)
-	}
-
-	data.QualityDistribution, err = s.getMetricsByType(ctx, "quality_distribution")
-	if err != nil {
-		slog.Warn("Failed to get quality distribution", "error", err)
 	}
 
 	data.YearDistribution, err = s.getMetricsByType(ctx, "year_distribution")

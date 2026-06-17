@@ -674,41 +674,6 @@ func (d *SqliteLibrary) GetFormatDistribution(ctx context.Context) (map[string]i
 	return distribution, rows.Err()
 }
 
-// GetBitrateDistribution returns the distribution of tracks bucketed by audio bitrate (kbps).
-func (d *SqliteLibrary) GetBitrateDistribution(ctx context.Context) (map[string]int, error) {
-	rows, err := d.db.QueryContext(ctx, `
-		SELECT
-			CASE
-				WHEN bitrate IS NULL OR bitrate <= 0 THEN 'Unknown'
-				WHEN bitrate < 128 THEN '< 128 kbps'
-				WHEN bitrate < 256 THEN '128-255 kbps'
-				WHEN bitrate < 320 THEN '256-319 kbps'
-				WHEN bitrate < 960 THEN '320-959 kbps'
-				ELSE 'Lossless (960+ kbps)'
-			END AS bucket,
-			COUNT(*) as count
-		FROM tracks
-		GROUP BY bucket
-		ORDER BY count DESC
-	`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	distribution := make(map[string]int)
-	for rows.Next() {
-		var bucket string
-		var count int
-		if err := rows.Scan(&bucket, &count); err != nil {
-			return nil, err
-		}
-		distribution[bucket] = count
-	}
-
-	return distribution, rows.Err()
-}
-
 // GetYearDistribution returns the distribution of tracks by release year.
 func (d *SqliteLibrary) GetYearDistribution(ctx context.Context) (map[string]int, error) {
 	rows, err := d.db.QueryContext(ctx, `

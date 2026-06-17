@@ -83,50 +83,6 @@ func (m *MetricsData) MetadataChartData() *ApexChartData {
 	}
 }
 
-// QualityChartData converts bitrate bucket distribution to ApexCharts format.
-// Buckets are emitted in ascending quality order rather than by count so the
-// chart reads consistently across libraries.
-func (m *MetricsData) QualityChartData() *ApexChartData {
-	bucketOrder := []string{
-		"Unknown",
-		"< 128 kbps",
-		"128-255 kbps",
-		"256-319 kbps",
-		"320-959 kbps",
-		"Lossless (960+ kbps)",
-	}
-	colorByBucket := map[string]string{
-		"Unknown":              "#8E8E8E",
-		"< 128 kbps":           "#FF4560",
-		"128-255 kbps":         "#FEB019",
-		"256-319 kbps":         "#FFD600",
-		"320-959 kbps":         "#00E396",
-		"Lossless (960+ kbps)": "#008FFB",
-	}
-
-	counts := make(map[string]int, len(m.QualityDistribution))
-	for _, metric := range m.QualityDistribution {
-		counts[metric.Key] = metric.Value
-	}
-
-	var labels []string
-	var series []float64
-	var colors []string
-	for _, bucket := range bucketOrder {
-		if count, ok := counts[bucket]; ok {
-			labels = append(labels, bucket)
-			series = append(series, float64(count))
-			colors = append(colors, colorByBucket[bucket])
-		}
-	}
-
-	return &ApexChartData{
-		Labels: labels,
-		Series: series,
-		Colors: colors,
-	}
-}
-
 // YearBarData converts year distribution to ApexCharts format.
 func (m *MetricsData) YearBarData() *ApexChartData {
 	// Filter years from 1900 to current year

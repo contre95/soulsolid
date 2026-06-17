@@ -78,22 +78,6 @@ func (h *Handler) GetFormatChartHTML(c *fiber.Ctx) error {
 	})
 }
 
-// GetQualityChartHTML returns the audio quality (bitrate) chart as HTML fragment for HTMX.
-func (h *Handler) GetQualityChartHTML(c *fiber.Ctx) error {
-	slog.Debug("GetQualityChartHTML handler called")
-
-	metrics, err := h.service.GetAllMetrics(c.Context())
-	if err != nil {
-		slog.Error("Error loading metrics for chart", "error", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Error loading chart data")
-	}
-
-	chartData := metrics.QualityChartData()
-	return respond.Partial(c, "metrics/charts/quality_pie", fiber.Map{
-		"ChartData": chartData,
-	})
-}
-
 // GetMetadataChartHTML returns metadata chart as HTML fragment for HTMX.
 func (h *Handler) GetMetadataChartHTML(c *fiber.Ctx) error {
 	slog.Debug("GetMetadataChartHTML handler called")

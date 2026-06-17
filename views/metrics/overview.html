@@ -118,23 +118,6 @@
     </div>
   </div>
 
-  <!-- Audio Quality Chart -->
-  <div
-    class="bg-white/80 dark:bg-gray-900/70 p-3 rounded-lg shadow-lg lg:col-span-1"
-    style="height: 300px"
-    hx-get="/metrics/charts/quality"
-    hx-trigger="apexcharts-ready from:body, load"
-    hx-swap="innerHTML"
-    hx-indicator="#qualityChartLoading"
-  >
-    <div id="qualityChartLoading" class="htmx-indicator flex items-center justify-center h-full">
-      <div class="text-center">
-        <i class="fas fa-spinner fa-spin text-2xl text-blue-500"></i>
-        <p class="text-sm text-gray-500 mt-2">Loading chart...</p>
-      </div>
-    </div>
-  </div>
-
   <!-- Metadata Completeness Chart -->
   <div
     class="bg-white/80 dark:bg-gray-900/70 p-3 rounded-lg shadow-lg lg:col-span-2"
