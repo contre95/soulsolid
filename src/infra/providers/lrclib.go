@@ -82,7 +82,7 @@ func (p *LRCLibProvider) SearchLyrics(ctx context.Context, params music.LyricsSe
 	}
 
 	if len(searchResp) == 0 {
-		return "", fmt.Errorf("no lyrics found")
+		return "", music.ErrLyricsNotFound
 	}
 
 	// Iterate over all songs to find synced lyrics
@@ -105,7 +105,7 @@ func (p *LRCLibProvider) SearchLyrics(ctx context.Context, params music.LyricsSe
 		return p.extractPlainLyricsFromSynced(song.SyncedLyrics), nil
 	}
 
-	return "", fmt.Errorf("no lyrics content available")
+	return "", fmt.Errorf("no lyrics content available: %w", music.ErrLyricsNotFound)
 }
 
 func (p *LRCLibProvider) extractPlainLyricsFromSynced(syncedLyrics string) string {
