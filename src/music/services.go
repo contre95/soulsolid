@@ -2,9 +2,13 @@ package music
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 )
+
+// ErrLyricsNotFound is returned by lyrics providers when no lyrics exist for a track.
+var ErrLyricsNotFound = errors.New("lyrics not found")
 
 // LyricsSearchParams contains parameters for searching lyrics
 type LyricsSearchParams struct {
