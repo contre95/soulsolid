@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -137,15 +136,9 @@ func (m *Manager) saveDefaultConfig(cfg *Config) error {
 		return fmt.Errorf("failed to create config file: %w", err)
 	}
 	defer file.Close()
-	// Write the default config with every field present at its zero value,
-	// ignoring omitempty, so a freshly created config.yaml is fully populated.
-	node, err := encodeFull(reflect.ValueOf(cfg))
-	if err != nil {
-		return fmt.Errorf("failed to build default config: %w", err)
-	}
 	encoder := yaml.NewEncoder(file)
 	encoder.SetIndent(2)
-	if err := encoder.Encode(node); err != nil {
+	if err := encoder.Encode(cfg); err != nil {
 		return fmt.Errorf("failed to encode config: %w", err)
 	}
 	slog.Info("Default configuration saved", "path", m.configPath)
