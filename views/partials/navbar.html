@@ -3,7 +3,7 @@
   <div class="max-w-screen-xl flex flex-wrap items-center justify-start p-2 mx-auto w-full gap-4">
      <a href="/" class="flex items-center space-x-3 rtl:space-x-reverse">
         <img id="logo-ship" src="/img/galaxy.png" class="h-16 animate__animated animate__rotateIn" alt="Soulsolid">
-        <span class="self-center whitespace-nowrap text-gray-800 dark:text-blue-300 dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.8)] hover:text-blue-300 hover:drop-shadow-[0_0_15px_rgba(96,165,250,0.9)] transition-all duration-300">
+        <span class="self-center whitespace-nowrap text-gray-800 dark:text-blue-300 hover:text-blue-300 transition-all duration-300">
           <span class="text-3xl font-semibold">Soulsolid</span><br>
           <span id="song-count-navbar" class="text-base font-semibold text-gray-500 dark:text-gray-400" hx-get="/library/tracks/count" hx-push-url="false" hx-trigger="load" hx-swap="innerHTML"></span>
           <span class="text-base font-semibold text-gray-500 dark:text-gray-400"> · </span>
@@ -48,7 +48,7 @@
               <span class="mx-4">Library</span>
             </a>
           </button>
-          <ul class="ml-6 mt-2 space-y-2">
+          <ul class="ml-9 mt-2 space-y-2">
             <li>
               <button type="button" class="w-full">
                 <a hx-get="/import" hx-trigger="click,reloadImport from:body{{ .ImportTrigger }}" hx-push-url="true" hx-swap="outerHTML" hx-target="#contenido"
@@ -61,7 +61,7 @@
                     hx-trigger="load, every 15s, refreshImportQueueBadge from:body" hx-target="#import-queue-count-nav"
                     hx-swap="innerHTML">
                     <span id="import-queue-count-nav"
-                      class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-orange-300 dark:drop-shadow-[0_0_10px_rgba(255,165,0,0.8)]"></span>
+                      class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-orange-300"></span>
                   </div>
                 </a>
               </button>
@@ -100,12 +100,12 @@
                     hx-trigger="load, every 15s, refreshLyricsQueueBadge from:body"
                     hx-target="#lyrics-queue-count-nav"
                     hx-swap="innerHTML">
-                  <span id="lyrics-queue-count-nav" class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-purple-300 dark:drop-shadow-[0_0_10px_rgba(147,51,234,0.8)]"></span>
+                  <span id="lyrics-queue-count-nav" class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-purple-300"></span>
                 </div>
               </a>
             </button>
             <!-- Sub-buttons for each analysis type -->
-            <ul class="ml-6 mt-2 space-y-2">
+            <ul class="ml-9 mt-2 space-y-2">
 
               <li>
                 <button type="button" class="w-full">
@@ -139,7 +139,7 @@
                         hx-trigger="load, every 15s, refreshLyricsQueueBadge from:body"
                         hx-target="#lyrics-queue-count-sub"
                         hx-swap="innerHTML">
-                      <span id="lyrics-queue-count-sub" class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-purple-300 dark:drop-shadow-[0_0_10px_rgba(147,51,234,0.8)]"></span>
+                      <span id="lyrics-queue-count-sub" class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-purple-300"></span>
                     </div>
                   </a>
                 </button>
@@ -199,7 +199,7 @@
                    hx-trigger="load, every 5s, refreshActiveJobsBadge from:body"
                    hx-target="#active-jobs-count-nav"
                    hx-swap="innerHTML">
-                 <span id="active-jobs-count-nav" class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-blue-300 dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]"></span>
+                 <span id="active-jobs-count-nav" class="self-center text-sm font-semibold whitespace-nowrap text-gray-800 dark:text-blue-300"></span>
                </div>
              </a>
            </button>
@@ -211,7 +211,7 @@
               <span class="mx-4 font-semibold">Downloaders</span>
             </div>
             <!-- Sub-buttons for each downloader -->
-              <ul class="ml-6 mt-2 space-y-2">
+              <ul class="ml-9 mt-2 space-y-2">
               {{range $name, $downloader := .Downloaders}}
               <li>
                 <button type="button" class="w-full">
@@ -254,7 +254,7 @@
                    d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
                </svg>
                <span
-                 class="mx-4 text-blue-400 dark:text-yellow-400 drop-shadow-[0_0_5px_rgba(59,130,246,0.6)] hover:text-blue-300 dark:hover:text-yellow-300 hover:drop-shadow-[0_0_8px_rgba(96,165,250,0.8)] transition-all duration-300">Dark/Light</span>
+                 class="mx-4 text-blue-400 dark:text-yellow-400 hover:text-blue-300 dark:hover:text-yellow-300 transition-all duration-300">Dark/Light</span>
              </a>
            </button>
          </li>

@@ -1,0 +1,217 @@
+{{define "player"}}
+<!-- Mini player bar (global, persists across section changes; shows when a track is clicked) -->
+<div id="player-bar"
+     class="hidden fixed bottom-0 inset-x-0 z-50 border-t border-white/40 dark:border-white/10 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl">
+  <div class="w-full px-3 sm:px-6 py-2.5">
+    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
+      <!-- Col 1: artwork + title -->
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="relative flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-neutral-200 dark:bg-neutral-800 shadow-sm">
+          <img id="player-art" alt="" class="w-full h-full object-cover" _="on error set my style.display to 'none'">
+        </div>
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="min-w-0">
+            <p id="player-title" class="truncate text-sm font-semibold text-gray-900 dark:text-white">Nothing playing</p>
+            <p id="player-artist" class="truncate text-xs text-gray-500 dark:text-gray-400">Pick a track to start</p>
+          </div>
+          <div id="player-eq" class="player-eq hidden sm:flex" aria-hidden="true">
+            <span style="--d:0s"></span><span style="--d:.25s"></span><span style="--d:.45s"></span><span style="--d:.1s"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Col 2: controls -->
+      <div class="flex items-center justify-center gap-1.5 sm:gap-3">
+        <button type="button" title="Previous" _="on click call playerStep(-1)"
+                class="w-9 h-9 flex items-center justify-center rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors">
+          <i class="fas fa-backward-step"></i>
+        </button>
+        <button type="button" id="player-toggle" title="Play / Pause" _="on click call playerToggle()"
+                class="w-11 h-11 flex items-center justify-center rounded-full bg-[#8EC5FF] hover:bg-[#7ab6f5] text-slate-900 shadow-sm transition-colors">
+          <i id="player-icon" class="fas fa-play"></i>
+        </button>
+        <button type="button" title="Next" _="on click call playerStep(1)"
+                class="w-9 h-9 flex items-center justify-center rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors">
+          <i class="fas fa-forward-step"></i>
+        </button>
+      </div>
+
+      <!-- Col 3: volume + close -->
+      <div class="flex items-center justify-end gap-2">
+        <i class="fas fa-volume-high text-gray-400 text-xs"></i>
+        <input type="range" min="0" max="100" value="100"
+               _="on load call playerRangeFill(me)
+                  on input set #player-audio.volume to (my value / 100) then call playerRangeFill(me)"
+               class="w-14 sm:w-20 lg:w-28 player-range cursor-pointer">
+        <button type="button" title="Stop and close player" _="on click call playerClose()"
+                class="w-9 h-9 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-colors">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="flex items-center gap-2 mt-2">
+      <span id="player-current" class="text-[11px] text-gray-500 dark:text-gray-400 tabular-nums w-9 text-right">0:00</span>
+      <input id="player-seek" type="range" min="0" max="100" value="0" step="0.1"
+             _="on input
+                  if #player-audio.duration set #player-audio.currentTime to (my value / 100) * #player-audio.duration end
+                  call playerRangeFill(me)"
+             class="flex-1 player-range cursor-pointer">
+      <span id="player-duration" class="text-[11px] text-gray-500 dark:text-gray-400 tabular-nums w-9">0:00</span>
+    </div>
+
+    <audio id="player-audio" preload="none"
+           _="on play set #player-icon.className to 'fas fa-pause' then add .is-active to #player-eq
+              on pause set #player-icon.className to 'fas fa-play' then remove .is-active from #player-eq
+              on timeupdate or loadedmetadata
+                if my duration set #player-seek.value to (my currentTime / my duration) * 100 end
+                call playerRangeFill(#player-seek)
+                put fmtTime(my currentTime) into #player-current
+                put fmtTime(my duration) into #player-duration
+              on ended call playerStep(1)"></audio>
+  </div>
+</div>
+
+<style>
+  /* Slim range with a small round thumb, keeping a blue progress fill. */
+  .player-range {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 10px;
+    background: transparent;
+  }
+  .player-range::-webkit-slider-runnable-track {
+    height: 3px;
+    border-radius: 9999px;
+    background: rgba(142, 197, 255, 0.28);
+    background-image: linear-gradient(#8EC5FF, #8EC5FF);
+    background-size: var(--val, 0%) 100%;
+    background-repeat: no-repeat;
+  }
+  .player-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 9px;
+    height: 9px;
+    margin-top: -3px;
+    border-radius: 9999px;
+    background: #8EC5FF;
+  }
+  .player-range::-moz-range-track {
+    height: 3px;
+    border-radius: 9999px;
+    background: rgba(142, 197, 255, 0.28);
+  }
+  .player-range::-moz-range-progress {
+    height: 3px;
+    border-radius: 9999px;
+    background: #8EC5FF;
+  }
+  .player-range::-moz-range-thumb {
+    width: 9px;
+    height: 9px;
+    border: none;
+    border-radius: 9999px;
+    background: #8EC5FF;
+  }
+
+  .player-eq { align-items: flex-end; gap: 2px; height: 18px; }
+  .player-eq span {
+    width: 3px; height: 4px; border-radius: 2px;
+    background: #8EC5FF;
+  }
+  .player-eq.is-active span {
+    animation: playerEqBounce 0.9s ease-in-out infinite;
+    animation-delay: var(--d);
+  }
+  @keyframes playerEqBounce { 0%, 100% { height: 4px; } 50% { height: 16px; } }
+
+  .player-track-row.is-playing { background: rgba(142, 197, 255, 0.14); }
+  .player-track-row.is-playing .block:first-child { color: #2563eb; }
+  .dark .player-track-row.is-playing .block:first-child { color: #8EC5FF; }
+  .player-track-row.is-playing .player-row-icon { opacity: 1; }
+</style>
+
+<script>
+  // Update a range slider's blue fill (WebKit needs a CSS var; Firefox uses ::-moz-range-progress).
+  function playerRangeFill(el) {
+    var min = parseFloat(el.min) || 0;
+    var max = parseFloat(el.max) || 100;
+    var pct = ((el.value - min) / (max - min)) * 100;
+    el.style.setProperty('--val', pct + '%');
+  }
+</script>
+
+<!-- Mini player helpers (Hyperscript) -->
+<script type="text/hyperscript">
+  -- Format a number of seconds as m:ss (0:00 for empty / NaN / 0).
+  def fmtTime(t)
+    if not t
+      return '0:00'
+    end
+    set t to Math.floor(t)
+    set m to Math.floor(t / 60)
+    set s to t mod 60
+    if s is less than 10
+      return m + ':0' + s
+    end
+    return m + ':' + s
+  end
+
+  -- Load a track row into the player bar and start playback.
+  -- Clicking the row that's already loaded toggles play/pause instead.
+  def playerPlayRow(row)
+    if row matches .is-playing and #player-audio.getAttribute('src')
+      call playerToggle()
+      exit
+    end
+    remove .is-playing from .player-track-row
+    add .is-playing to row
+    put row.getAttribute('data-title') into #player-title
+    put row.getAttribute('data-artist') into #player-artist
+    set #player-art.style.display to ''
+    set #player-art.src to '/tag/' + row.getAttribute('data-id') + '/artwork'
+    remove .hidden from #player-bar
+    add .pb-32 to #main-content
+    set #player-audio.src to '/stream?path=' + encodeURIComponent(row.getAttribute('data-path'))
+    call #player-audio.play()
+  end
+
+  def playerToggle()
+    if #player-audio.paused
+      call #player-audio.play()
+    else
+      call #player-audio.pause()
+    end
+  end
+
+  -- Stop playback, abort the stream and hide the player bar.
+  def playerClose()
+    call #player-audio.pause()
+    set #player-audio.src to ''
+    call #player-audio.removeAttribute('src')
+    call #player-audio.load()
+    remove .is-playing from .player-track-row
+    add .hidden to #player-bar
+    remove .pb-32 from #main-content
+    put 'Nothing playing' into #player-title
+    put 'Pick a track to start' into #player-artist
+    set #player-art.src to ''
+  end
+
+  -- Move dir steps (+1 next, -1 prev) through the visible track list, wrapping around.
+  def playerStep(dir)
+    set rows to document.querySelectorAll('.player-track-row')
+    if rows.length is 0
+      exit
+    end
+    set cur to document.querySelector('.player-track-row.is-playing')
+    set idx to -1
+    if cur
+      set idx to Array.from(rows).indexOf(cur)
+    end
+    call playerPlayRow(rows[(idx + dir + rows.length) mod rows.length])
+  end
+</script>
+{{end}}
