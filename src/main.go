@@ -44,6 +44,7 @@ func main() {
 	pathParser := files.NewTemplatePathParser(cfgManager)
 	fileOrganizer := files.NewFileOrganizer(
 		func() string { return cfgManager.Get().LibraryPath },
+		func() string { return cfgManager.Get().DownloadPath },
 		pathParser,
 		func() bool { return cfgManager.Get().Import.PathOptions.Fat32Safe },
 	)
@@ -138,7 +139,7 @@ func main() {
 	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService, streamingService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
-		slog.Error("server stopped: %v", "error", err)
+		slog.Error("server stopped", "error", err)
 	}
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)

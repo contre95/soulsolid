@@ -99,7 +99,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, progressU
 			} else {
 				// Check if AcoustID was actually added
 				updatedTrack, err := t.service.libraryRepo.GetTrack(ctx, track.ID)
-				if err != nil {
+				if err != nil || updatedTrack == nil {
 					job.Logger.Warn("Failed to verify AcoustID addition for track", "trackID", track.ID, "title", track.Title, "error", err, "color", "orange")
 					fingerprintsAdded++ // Assume fingerprint was added
 				} else {

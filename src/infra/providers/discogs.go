@@ -119,8 +119,7 @@ func (p *DiscogsProvider) SearchTracks(ctx context.Context, params metadata.Sear
 	}
 
 	// Make request
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
@@ -334,8 +333,7 @@ func (p *DiscogsProvider) fetchReleaseDetails(ctx context.Context, resourceURL s
 	}
 
 	// Make request
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}

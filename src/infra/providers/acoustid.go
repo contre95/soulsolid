@@ -83,8 +83,7 @@ func (s *AcoustIDAPI) LookupAcoustID(ctx context.Context, chromaprint string, du
 	}
 
 	// Make HTTP request
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to query AcoustID API: %w", err)
 	}

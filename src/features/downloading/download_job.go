@@ -129,8 +129,7 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *music.J
 	// Print track pretty for debugging
 	slog.Debug("Track downloaded", "track", track.Pretty())
 
-	job.Name = fmt.Sprintf("Download: %s (with %s)", track.Title, safeArtistName(track))
-	job.Metadata["trackTitle"] = track.Title
+	e.service.jobService.SetJobName(job.ID, fmt.Sprintf("Download: %s (with %s)", track.Title, safeArtistName(track)))
 	slog.Info("Updated job name with track title", "jobID", job.ID, "title", track.Title)
 
 	progressUpdater(75, "Track downloaded, processing metadata...")
@@ -183,6 +182,9 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *music.J
 	}
 	progressUpdater(10, fmt.Sprintf("Downloading album from %s...", downloader.Name()))
 	tracks, err := downloader.DownloadAlbum(albumID, downloadPath, func(downloaded, total int64) {
+		if total <= 0 {
+			return // plugin reported no total; avoid division by zero
+		}
 		// Convert plugin progress (0-100) to job progress (10-90)
 		jobProgress := 10 + (downloaded * 80 / total)
 		progressUpdater(int(jobProgress), fmt.Sprintf("Downloading album from %s... (%d%%)", downloader.Name(), downloaded*100/total))
@@ -202,8 +204,7 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *music.J
 	// Update job name with album title if it's still generic (extract from first track)
 	if job.Name == "Download Album" && len(tracks) > 0 && tracks[0].Album != nil {
 		albumTitle := tracks[0].Album.Title
-		job.Name = fmt.Sprintf("Download: %s", albumTitle)
-		job.Metadata["albumTitle"] = albumTitle
+		e.service.jobService.SetJobName(job.ID, fmt.Sprintf("Download: %s", albumTitle))
 		slog.Info("Updated job name with album title", "jobID", job.ID, "title", albumTitle)
 	}
 
@@ -292,6 +293,9 @@ func (e *DownloadJobTask) executeArtistDownload(ctx context.Context, job *music.
 
 	progressUpdater(10, fmt.Sprintf("Downloading artist from %s...", downloader.Name()))
 	tracks, err := downloader.DownloadArtist(artistID, downloadPath, func(downloaded, total int64) {
+		if total <= 0 {
+			return // plugin reported no total; avoid division by zero
+		}
 		// Convert plugin progress (0-100) to job progress (10-90)
 		jobProgress := 10 + (downloaded * 80 / total)
 		progressUpdater(int(jobProgress), fmt.Sprintf("Downloading artist from %s... (%d%%)", downloader.Name(), downloaded*100/total))
@@ -312,8 +316,7 @@ func (e *DownloadJobTask) executeArtistDownload(ctx context.Context, job *music.
 	// Update job name with artist name if available (extract from first track)
 	if job.Name == "Download Artist" && len(tracks) > 0 {
 		if artistName := safeArtistName(tracks[0]); artistName != "" {
-			job.Name = fmt.Sprintf("Download: %s (Artist)", artistName)
-			job.Metadata["artistName"] = artistName
+			e.service.jobService.SetJobName(job.ID, fmt.Sprintf("Download: %s (Artist)", artistName))
 			slog.Info("Updated job name with artist name", "jobID", job.ID, "name", artistName)
 		}
 	}
@@ -440,6 +443,9 @@ func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *music.
 
 		// Download the track
 		track, err := downloader.DownloadTrack(trackID, downloadPath, func(downloaded, total int64) {
+			if total <= 0 {
+				return // plugin reported no total; avoid division by zero
+			}
 			// Track-level progress (small portion of overall progress)
 			trackProgress := progress + int(downloaded*5/total)
 			progressUpdater(trackProgress, fmt.Sprintf("Downloading track %d/%d... (%d%%)", i+1, totalTracks, downloaded*100/total))
@@ -536,6 +542,9 @@ func (e *DownloadJobTask) executePlaylistDownload(ctx context.Context, job *musi
 
 		// Download the track directly to the playlist folder (flat structure)
 		track, err := downloader.DownloadTrack(trackID, playlistDownloadPath, func(downloaded, total int64) {
+			if total <= 0 {
+				return // plugin reported no total; avoid division by zero
+			}
 			trackProgress := progress + int(downloaded*5/total)
 			progressUpdater(trackProgress, fmt.Sprintf("Downloading track %d/%d... (%d%%)", i+1, totalTracks, downloaded*100/total))
 		})

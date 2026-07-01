@@ -10,6 +10,10 @@ import (
 // ErrLyricsNotFound is returned by lyrics providers when no lyrics exist for a track.
 var ErrLyricsNotFound = errors.New("lyrics not found")
 
+// ErrJobPartialSuccess marks a job that finished with some failures but should be
+// reported as completed (with a warning message) rather than failed.
+var ErrJobPartialSuccess = errors.New("job completed with some failures")
+
 // LyricsSearchParams contains parameters for searching lyrics
 type LyricsSearchParams struct {
 	TrackID     string
@@ -46,6 +50,7 @@ type LyricsService interface {
 type JobService interface {
 	StartJob(jobType string, name string, metadata map[string]any) (string, error)
 	UpdateJobProgress(jobID string, progress int, message string)
+	SetJobName(jobID string, name string)
 	GetJob(jobID string) (*Job, bool)
 	CancelJob(jobID string) error
 	GetJobs() []*Job

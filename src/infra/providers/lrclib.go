@@ -65,8 +65,7 @@ func (p *LRCLibProvider) SearchLyrics(ctx context.Context, params music.LyricsSe
 
 	req.Header.Set("User-Agent", "SoulSolid/1.0")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to make request: %w", err)
 	}
