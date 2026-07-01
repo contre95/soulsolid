@@ -1237,6 +1237,123 @@ func (d *SqliteLibrary) DeleteArtist(ctx context.Context, id string) error {
 	return tx.Commit()
 }
 
+// MergeArtists repoints every track/album relationship from each merged artist onto the
+// canonical artist, then deletes the merged artist rows. The relationship tables use composite
+// primary keys, so repoints use UPDATE OR IGNORE to skip rows that would collide with an
+// existing (entity, canonical_artist, role) tuple; any rows left behind by a skipped update are
+// then deleted. The canonical artist keeps its existing name.
+func (d *SqliteLibrary) MergeArtists(ctx context.Context, canonicalID string, mergedIDs []string) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, mergedID := range mergedIDs {
+		if mergedID == canonicalID || mergedID == "" {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE OR IGNORE track_artists SET artist_id = ? WHERE artist_id = ?`, canonicalID, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM track_artists WHERE artist_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE OR IGNORE album_artists SET artist_id = ? WHERE artist_id = ?`, canonicalID, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM album_artists WHERE artist_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM artist_attributes WHERE artist_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM artists WHERE id = ?`, mergedID); err != nil {
+			return err
+		}
+		slog.Info("MergeArtists: merged artist", "canonicalID", canonicalID, "mergedID", mergedID)
+	}
+	return tx.Commit()
+}
+
+// MergeAlbums repoints every track from each merged album onto the canonical album, merges the
+// album-artist relationships, then deletes the merged album rows. The canonical album keeps its
+// existing title.
+func (d *SqliteLibrary) MergeAlbums(ctx context.Context, canonicalID string, mergedIDs []string) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, mergedID := range mergedIDs {
+		if mergedID == canonicalID || mergedID == "" {
+			continue
+		}
+		// track_albums.track_id is the primary key (one album per track), so repointing
+		// album_id can never collide.
+		if _, err := tx.ExecContext(ctx, `UPDATE track_albums SET album_id = ? WHERE album_id = ?`, canonicalID, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE OR IGNORE album_artists SET album_id = ? WHERE album_id = ?`, canonicalID, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM album_artists WHERE album_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM album_attributes WHERE album_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM albums WHERE id = ?`, mergedID); err != nil {
+			return err
+		}
+		slog.Info("MergeAlbums: merged album", "canonicalID", canonicalID, "mergedID", mergedID)
+	}
+	return tx.Commit()
+}
+
+// StandardizeGenre rewrites the genre of every track whose current genre is one of variants to
+// the canonical value, returning the IDs of the tracks that were changed.
+func (d *SqliteLibrary) StandardizeGenre(ctx context.Context, canonical string, variants []string) ([]string, error) {
+	if len(variants) == 0 {
+		return nil, nil
+	}
+	placeholders := strings.Repeat("?,", len(variants))
+	placeholders = placeholders[:len(placeholders)-1]
+
+	args := make([]any, 0, len(variants))
+	for _, v := range variants {
+		args = append(args, v)
+	}
+
+	rows, err := d.db.QueryContext(ctx, `SELECT id FROM tracks WHERE genre IN (`+placeholders+`)`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	updateArgs := make([]any, 0, len(variants)+2)
+	updateArgs = append(updateArgs, canonical, time.Now().Format(time.RFC3339))
+	updateArgs = append(updateArgs, args...)
+	if _, err := d.db.ExecContext(ctx, `UPDATE tracks SET genre = ?, modified_date = ? WHERE genre IN (`+placeholders+`)`, updateArgs...); err != nil {
+		return nil, err
+	}
+	slog.Info("StandardizeGenre: rewrote genre", "canonical", canonical, "variants", variants, "tracks", len(ids))
+	return ids, nil
+}
+
 // GetArtist gets an artist from the database.
 func (d *SqliteLibrary) GetArtist(ctx context.Context, id string) (*music.Artist, error) {
 	tx, err := d.db.BeginTx(ctx, nil)

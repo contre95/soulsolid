@@ -14,6 +14,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/library"
 	"github.com/contre95/soulsolid/src/features/logging"
 	"github.com/contre95/soulsolid/src/features/lyrics"
+	"github.com/contre95/soulsolid/src/features/merge"
 	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/playlists"
@@ -71,6 +72,8 @@ func main() {
 
 	reorganizeService := reorganize.NewService(db, fileOrganizer, cfgManager, jobService)
 
+	mergeService := merge.NewService(db, tagWriter, tagReader, jobService)
+
 	directoryImportTask := importing.NewDirectoryImportTask(importingService)
 	jobService.RegisterHandler("directory_import", jobs.NewBaseTaskHandler(directoryImportTask))
 
@@ -122,6 +125,9 @@ func main() {
 	reorganizeTask := reorganize.NewReorganizeJobTask(reorganizeService)
 	jobService.RegisterHandler("analyze_reorganize", jobs.NewBaseTaskHandler(reorganizeTask))
 
+	mergeTask := merge.NewMergeJobTask(mergeService)
+	jobService.RegisterHandler("analyze_merge", jobs.NewBaseTaskHandler(mergeTask))
+
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {
 		var err error
@@ -135,7 +141,7 @@ func main() {
 	}
 
 	streamingService := streaming.NewService(cfgManager)
-	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService, streamingService)
+	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService, streamingService, mergeService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped: %v", "error", err)

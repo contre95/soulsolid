@@ -1,0 +1,78 @@
+<div id="contenido" class="animate__animated animate__fadeIn">
+    <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-2">Merge Metadata</h1>
+    <p class="text-slate-600 dark:text-slate-400 mb-8 max-w-3xl">
+        Find artists, albums and genres that are the same but spelled differently — case,
+        punctuation, accents or spacing (e.g. <span class="font-medium">un verano sin ti</span> vs
+        <span class="font-medium">Un Verano Sin Ti</span>). Pick the name to keep and merge the rest
+        into it. Changes are applied to the library and written back to the audio file tags.
+    </p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+        <!-- Artists -->
+        <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-md backdrop-blur-sm bg-white/30 dark:bg-gray-900/30">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-purple-500"></span> Artists
+                </h2>
+                <button hx-get="/merge/groups/artists" hx-target="#merge-artists" hx-swap="innerHTML"
+                        hx-indicator="#merge-artists-ind"
+                        class="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-purple-500 transition-colors"
+                        title="Scan for duplicate artists">
+                    <i class="fas fa-rotate-right"></i> Scan
+                    <i id="merge-artists-ind" class="htmx-indicator fas fa-spinner fa-spin text-purple-500"></i>
+                </button>
+            </div>
+            <div id="merge-artists" class="max-h-96 overflow-y-auto pr-1">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Click <span class="font-medium">Scan</span> to find duplicate artists.</p>
+            </div>
+        </div>
+
+        <!-- Albums -->
+        <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-md backdrop-blur-sm bg-white/30 dark:bg-gray-900/30">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500"></span> Albums
+                </h2>
+                <button hx-get="/merge/groups/albums" hx-target="#merge-albums" hx-swap="innerHTML"
+                        hx-indicator="#merge-albums-ind"
+                        class="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-blue-500 transition-colors"
+                        title="Scan for duplicate albums">
+                    <i class="fas fa-rotate-right"></i> Scan
+                    <i id="merge-albums-ind" class="htmx-indicator fas fa-spinner fa-spin text-blue-500"></i>
+                </button>
+            </div>
+            <div id="merge-albums" class="max-h-96 overflow-y-auto pr-1">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Click <span class="font-medium">Scan</span> to find duplicate albums.</p>
+            </div>
+        </div>
+
+        <!-- Genres -->
+        <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-md backdrop-blur-sm bg-white/30 dark:bg-gray-900/30">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-green-500"></span> Genres
+                </h2>
+                <button hx-get="/merge/groups/genres" hx-target="#merge-genres" hx-swap="innerHTML"
+                        hx-indicator="#merge-genres-ind"
+                        class="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-green-500 transition-colors"
+                        title="Scan for duplicate genres">
+                    <i class="fas fa-rotate-right"></i> Scan
+                    <i id="merge-genres-ind" class="htmx-indicator fas fa-spinner fa-spin text-green-500"></i>
+                </button>
+            </div>
+            <div id="merge-genres" class="max-h-96 overflow-y-auto pr-1">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Click <span class="font-medium">Scan</span> to find duplicate genres.</p>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-6">Merge Jobs</h2>
+    <div id="merge-job-list-container"
+         hx-get="/jobs/list?prefix=analyze_merge"
+         hx-trigger="load, refreshJobList from:body"
+         hx-swap="innerHTML">
+        <div class="text-center py-8">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Loading merge jobs...</p>
+        </div>
+    </div>
+</div>
