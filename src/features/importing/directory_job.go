@@ -72,7 +72,7 @@ func (e *DirectoryImportTask) Execute(ctx context.Context, job *music.Job, progr
 	} else if stats.Errors > 0 {
 		// Partial success - some failures occurred
 		slog.Warn("Some tracks failed to process", "stats", stats)
-		return map[string]any{"stats": stats, "msg": finalMessage}, errors.New("Some tracks failed to process")
+		return map[string]any{"stats": stats, "msg": finalMessage}, fmt.Errorf("%w: %d track(s) failed to process", music.ErrJobPartialSuccess, stats.Errors)
 	}
 
 	// Full success - all tracks processed without errors (including skips)
@@ -303,7 +303,7 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 				processedFiles++
 				return nil
 			}
-			slog.Info("Generated fingerprint for track", "path", path, "track", trackToImport, "fingerprint", fingerprint[:15])
+			slog.Info("Generated fingerprint for track", "path", path, "track", trackToImport, "fingerprint", fingerprint[:min(15, len(fingerprint))])
 			slog.Debug("Generated fingerprint for track", "path", path, "track", trackToImport, "fingerprint", fingerprint)
 			trackToImport.ChromaprintFingerprint = fingerprint
 			trackToImport.ID = music.GenerateTrackID(fingerprint)

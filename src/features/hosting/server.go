@@ -22,6 +22,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/ui"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/template/html/v2"
 )
 
@@ -93,12 +94,14 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 		AppName:               "Soulsolid",
 		DisableStartupMessage: true,
 		EnablePrintRoutes:     cfg.Get().Server.PrintRoutes,
-		BodyLimit:             1000 * 1024 * 1024, // 100MB limit for file uploads
+		BodyLimit:             1000 * 1024 * 1024, // ~1GB limit for file uploads
 		PassLocalsToViews:     true,
 		Immutable:             true,
 	})
 
 	// Add middleware
+	// Recover from handler panics with a 500 instead of killing the process.
+	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
 	app.Use(HTMXMiddleware())
 	app.Use(LogAllRequestsMiddleware())
 

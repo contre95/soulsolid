@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -200,35 +201,23 @@ func (s *Service) executeJob(job *music.Job) {
 		if job.Metadata == nil {
 			job.Metadata = make(map[string]any)
 		}
-		for k, v := range stats {
-			job.Metadata[k] = v
-		}
+		maps.Copy(job.Metadata, stats)
 	}
 	s.mu.Unlock()
 
-	if err != nil {
-		if errors.Is(err, context.Canceled) || cancelled {
-			s.updateJobStatus(job.ID, music.JobStatusCancelled, "Job cancelled")
-			s.executeWebhook(job)
-		} else {
-			// Check if this is a partial import success
-			errMsg := err.Error()
-			if strings.Contains(errMsg, "partial import:") && strings.Contains(errMsg, "tracks imported") {
-				s.updateJobStatus(job.ID, music.JobStatusCompleted, "Job completed with errors - "+errMsg)
-				s.executeWebhook(job)
-			} else {
-				s.updateJobStatus(job.ID, music.JobStatusFailed, err.Error())
-				s.executeWebhook(job)
-			}
-		}
-	} else {
-		if cancelled {
-			s.updateJobStatus(job.ID, music.JobStatusCancelled, "Job cancelled")
-			s.executeWebhook(job)
-		} else {
-			s.updateJobStatus(job.ID, music.JobStatusCompleted, "Job completed successfully")
-			s.executeWebhook(job)
-		}
+	switch {
+	case errors.Is(err, context.Canceled) || cancelled:
+		s.updateJobStatus(job.ID, music.JobStatusCancelled, "Job cancelled")
+	case errors.Is(err, music.ErrJobPartialSuccess):
+		s.updateJobStatus(job.ID, music.JobStatusCompleted, "Job completed with errors - "+err.Error())
+	case err != nil:
+		s.updateJobStatus(job.ID, music.JobStatusFailed, err.Error())
+	default:
+		s.updateJobStatus(job.ID, music.JobStatusCompleted, "Job completed successfully")
+	}
+	// Read the job back as a snapshot so the webhook doesn't touch shared state.
+	if snap, ok := s.GetJob(job.ID); ok {
+		s.executeWebhook(snap)
 	}
 	// After job completes, check for pending jobs
 	s.startNextPendingJob()
@@ -244,6 +233,18 @@ func (s *Service) updateJobStatus(jobID string, status music.JobStatus, message 
 		if status == music.JobStatusCompleted {
 			job.Progress = 100
 		}
+	}
+}
+
+// SetJobName renames a job (e.g. once a download task learns the real title).
+// Tasks must use this instead of writing job.Name directly, so the write happens
+// under the service lock and cannot race with handlers serializing the job.
+func (s *Service) SetJobName(jobID string, name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if job, exists := s.jobs[jobID]; exists {
+		job.Name = name
+		job.UpdatedAt = time.Now()
 	}
 }
 
@@ -284,11 +285,23 @@ func (s *Service) CancelJob(jobID string) error {
 	return nil
 }
 
+// snapshotJob returns a copy of job (with its own Metadata map) that is safe to
+// read and JSON-serialize without holding s.mu. Handlers must never receive the
+// live *music.Job: running tasks and the service mutate it concurrently.
+func snapshotJob(job *music.Job) *music.Job {
+	j := *job
+	j.Metadata = maps.Clone(job.Metadata)
+	return &j
+}
+
 func (s *Service) GetJob(jobID string) (*music.Job, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	job, exists := s.jobs[jobID]
-	return job, exists
+	if !exists {
+		return nil, false
+	}
+	return snapshotJob(job), true
 }
 
 func (s *Service) GetJobs() []*music.Job {
@@ -296,7 +309,7 @@ func (s *Service) GetJobs() []*music.Job {
 	defer s.mu.RUnlock()
 	jobs := make([]*music.Job, 0, len(s.jobs))
 	for _, job := range s.jobs {
-		jobs = append(jobs, job)
+		jobs = append(jobs, snapshotJob(job))
 	}
 	return jobs
 }

@@ -107,8 +107,7 @@ func (p *MusicBrainzProvider) SearchTracks(ctx context.Context, params metadata.
 	req.Header.Set("User-Agent", "SoulSolid/1.0 (https://github.com/sst/opencode)")
 
 	// Make request
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
