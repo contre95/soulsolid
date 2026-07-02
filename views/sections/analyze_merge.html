@@ -6,7 +6,7 @@
         into it. Changes are applied to the library and written back to the audio file tags.
         Also find duplicate tracks — the same recording stored in more than one file (e.g. a FLAC
         and an MP3), detected by <a hx-get="/analyze/metadata" hx-target="#contenido" hx-push-url="true" hx-swap="outerHTML"
-        class="font-medium text-[#2774EA] hover:underline cursor-pointer">AcoustID</a>. Merging tracks
+        class="font-medium text-[#2774EA] hover:underline cursor-pointer">AcoustID</a>. Delete selected
         <span class="font-semibold text-red-500 dark:text-red-400">permanently deletes the checked files from disk</span>;
         Keep leaves every file in place and records the group as intentional duplicates (database only).
     </p>
@@ -117,7 +117,7 @@
                     Click <span class="font-medium">Scan</span> to find duplicate tracks — files sharing the same
                     <a hx-get="/analyze/metadata" hx-target="#contenido" hx-push-url="true" hx-swap="outerHTML"
                        class="font-medium text-[#2774EA] hover:underline cursor-pointer">AcoustID</a>.
-                    <span class="font-medium text-red-500 dark:text-red-400">Merging deletes the duplicate files from disk.</span>
+                    <span class="font-medium text-red-500 dark:text-red-400">Delete selected removes the checked files from disk.</span>
                 </p>
             </div>
         </div>
