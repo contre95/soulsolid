@@ -1,13 +1,16 @@
 <div id="contenido" class="animate__animated animate__fadeIn">
     <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-2">Merge Metadata</h1>
-    <p class="text-slate-600 dark:text-slate-400 mb-8 max-w-3xl">
+    <p class="text-slate-600 dark:text-slate-400 mb-4">
         Find artists, albums and genres that are the same but spelled differently — case,
-        punctuation, accents or spacing (e.g. <span class="font-medium">un verano sin ti</span> vs
-        <span class="font-medium">Un Verano Sin Ti</span>). Pick the name to keep and merge the rest
+        punctuation, accents or spacing. Pick the name to keep and merge the rest
         into it. Changes are applied to the library and written back to the audio file tags.
     </p>
+    <div class="flex items-start gap-2 mb-4 rounded-lg border border-purple-200 dark:border-purple-700 bg-purple-50/60 dark:bg-purple-900/20 px-4 py-3 text-sm text-purple-800 dark:text-purple-300">
+        <i class="fas fa-circle-info mt-0.5 shrink-0"></i>
+        <span><span class="font-semibold">File paths are not updated after merge.</span> Run <a hx-get="/analyze/files" hx-target="#contenido" hx-push-url="true" hx-swap="outerHTML" class="font-mono font-medium text-green-600 dark:text-green-400 hover:underline cursor-pointer">/analyze/files</a> afterwards to recompute paths based on the updated metadata.</span>
+    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-4">
         <!-- Artists -->
         <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-md backdrop-blur-sm bg-white/30 dark:bg-gray-900/30">
             <div class="flex items-center justify-between mb-4">
@@ -66,7 +69,7 @@
         </div>
     </div>
 
-    <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-6">Merge Jobs</h2>
+    <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-4">Merge Jobs</h2>
     <div id="merge-job-list-container"
          hx-get="/jobs/list?prefix=analyze_merge"
          hx-trigger="load, refreshJobList from:body"
