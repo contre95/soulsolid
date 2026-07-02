@@ -244,8 +244,11 @@ func parseBoolFilter(s string) *bool {
 // trackToSearchResult converts a music.Track to a SearchResult.
 func trackToSearchResult(track *music.Track) SearchResult {
 	var artistNames strings.Builder
-	for i, ar := range track.Artists {
-		if i > 0 {
+	for _, ar := range track.Artists {
+		if ar.Artist == nil {
+			continue
+		}
+		if artistNames.Len() > 0 {
 			artistNames.WriteString(", ")
 		}
 		artistNames.WriteString(ar.Artist.Name)

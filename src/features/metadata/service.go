@@ -109,6 +109,9 @@ func (s *Service) UpdateTrackTags(ctx context.Context, trackID string, formData 
 	if err != nil {
 		return fmt.Errorf("failed to get track: %w", err)
 	}
+	if track == nil {
+		return fmt.Errorf("track not found: %s", trackID)
+	}
 
 	// Build updated track from form data
 	updatedTrack, err := s.buildTrackFromFormData(ctx, track, formData)
@@ -324,6 +327,9 @@ func (s *Service) AddChromaprintAndAcoustID(ctx context.Context, trackID string)
 	if err != nil {
 		return fmt.Errorf("failed to get track: %w", err)
 	}
+	if track == nil {
+		return fmt.Errorf("track not found: %s", trackID)
+	}
 
 	// Generate chromaprint and get duration
 	fingerprint, duration, err := s.chromaprintAcoustID.GenerateChromaprint(ctx, track.Path)
@@ -364,7 +370,7 @@ func (s *Service) AddChromaprintAndAcoustID(ctx context.Context, trackID string)
 	if track.Attributes != nil {
 		acoustID = track.Attributes["acoustid"]
 	}
-	slog.Info("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint[:15], "acoustid", acoustID)
+	slog.Info("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint[:min(15, len(track.ChromaprintFingerprint))], "acoustid", acoustID)
 	slog.Debug("Fingerprint calculated and updated", "trackId", trackID, "fingerprint", track.ChromaprintFingerprint, "acoustid", acoustID)
 	return nil
 }
