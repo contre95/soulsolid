@@ -69,6 +69,27 @@
         {{end}}
       </div>
 
+      <!-- Kept Duplicates -->
+      {{if .Duplicates}}
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
+          <i class="fas fa-clone mr-1"></i>Kept duplicate of
+        </p>
+        <div class="flex flex-wrap gap-1.5">
+          {{range .Duplicates}}
+          <button type="button"
+                  hx-get="/tag/{{.ID}}" hx-target="#contenido" hx-swap="outerHTML" hx-push-url="true"
+                  onclick="document.getElementById('track-overview-panel').remove()"
+                  title="Edit tags of {{.Path}}"
+                  class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-amber-500/10 border border-amber-400/40 text-amber-600 dark:text-amber-300 hover:bg-amber-500/20 transition-colors cursor-pointer">
+            {{.Title}}{{if .Format}}<span class="uppercase opacity-70">· {{.Format}}</span>{{end}}
+            <i class="fas fa-arrow-right text-[10px] opacity-70"></i>
+          </button>
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+
       <!-- Technical Details -->
       <div class="bg-gray-200 dark:bg-gray-900 rounded-lg p-3 space-y-1.5 text-xs">
         <p class="text-gray-400 dark:text-gray-500 uppercase font-semibold tracking-wider mb-2 text-xs">Technical</p>

@@ -54,6 +54,16 @@ func (h *Handler) RenderGenreGroups(c *fiber.Ctx) error {
 	return respond.HTMX(c, "merge/genre_groups", fiber.Map{"Groups": groups, "Msg": scanMsg("genre", len(groups))})
 }
 
+// RenderTrackGroups scans for and renders the candidate duplicate-track groups (same AcoustID).
+func (h *Handler) RenderTrackGroups(c *fiber.Ctx) error {
+	groups, err := h.service.FindTrackGroups(c.Context())
+	if err != nil {
+		slog.Error("failed to find duplicate track groups", "error", err)
+		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to find duplicate tracks: "+err.Error())
+	}
+	return respond.HTMX(c, "merge/track_groups", fiber.Map{"Groups": groups, "Msg": scanMsg("duplicate track", len(groups))})
+}
+
 // scanMsg builds the human-readable result message shown in the scan toast.
 func scanMsg(kind string, n int) string {
 	switch n {
@@ -74,6 +84,34 @@ func (h *Handler) MergeAlbums(c *fiber.Ctx) error { return h.startMerge(c, KindA
 
 // MergeGenres starts a merge job for a group of genres.
 func (h *Handler) MergeGenres(c *fiber.Ctx) error { return h.startMerge(c, KindGenre) }
+
+// MergeTracks starts a merge job for a group of duplicate tracks: every checked file ("delete")
+// is hard-deleted from the library and from disk; the unchecked ones stay.
+func (h *Handler) MergeTracks(c *fiber.Ctx) error {
+	all := formValues(c, "all")
+	remove := formValues(c, "delete")
+	cardID := c.FormValue("card_id")
+	if _, err := h.service.StartTrackMerge(c.Context(), all, remove); err != nil {
+		slog.Error("failed to start track merge", "error", err)
+		return h.mergeResult(c, "", false, "Failed to start merge: "+err.Error())
+	}
+	c.Set("HX-Trigger", "refreshJobList")
+	return h.mergeResult(c, cardID, true, "Merge started")
+}
+
+// KeepTracks marks a duplicate-track group as intentional: every track of the group is recorded
+// as a known duplicate in the database (files and tags untouched) and the group leaves future
+// scans. The checkboxes play no role here — all files are kept.
+func (h *Handler) KeepTracks(c *fiber.Ctx) error {
+	acoustID := c.FormValue("acoustid")
+	members := formValues(c, "all")
+	cardID := c.FormValue("card_id")
+	if err := h.service.KeepTracks(c.Context(), acoustID, members); err != nil {
+		slog.Error("failed to keep duplicate tracks", "acoustID", acoustID, "error", err)
+		return h.mergeResult(c, "", false, "Failed to keep duplicates: "+err.Error())
+	}
+	return h.mergeResult(c, cardID, true, "Kept all files — group marked as intentional duplicates")
+}
 
 func (h *Handler) startMerge(c *fiber.Ctx, kind Kind) error {
 	canonical := c.FormValue("canonical")

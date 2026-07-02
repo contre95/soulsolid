@@ -7,23 +7,27 @@ const (
 	KindArtist Kind = "artist"
 	KindAlbum  Kind = "album"
 	KindGenre  Kind = "genre"
+	KindTrack  Kind = "track"
 )
 
-// Variant is one member of a merge group: an existing entity (artist/album) or a raw genre value.
+// Variant is one member of a merge group: an existing entity (artist/album/track) or a raw genre value.
 type Variant struct {
-	// ID is the entity ID for artists/albums; for genres it equals Value.
+	// ID is the entity ID for artists/albums/tracks; for genres it equals Value.
 	ID string
-	// Value is the display string (artist name / album title / genre).
+	// Value is the display string (artist name / album title / genre / track title).
 	Value string
-	// Sub is an optional secondary line (e.g. an album's primary artist); empty otherwise.
+	// Sub is an optional secondary line (e.g. an album's primary artist or a track's file path).
 	Sub string
+	// Badge is an optional quality label (e.g. "FLAC · 1411 kbps"); only set for tracks.
+	Badge string
 }
 
-// Group is a set of variants whose names normalize to the same key and can be merged into one.
+// Group is a set of variants that share a merge key and can be merged into one.
 type Group struct {
-	// Key is the shared normalized key (used only internally / for stable ordering).
+	// Key is the shared key: a normalized name for artists/albums/genres, an AcoustID for tracks.
 	Key string
-	// Canonical is the suggested canonical Value (a smart default the user can override).
+	// Canonical is the suggested member to keep: a Value for artists/albums/genres, an ID for
+	// tracks (track titles in a group are usually identical, so the ID disambiguates).
 	Canonical string
 	// Variants are the members of the group, sorted by Value.
 	Variants []Variant

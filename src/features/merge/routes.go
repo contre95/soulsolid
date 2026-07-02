@@ -15,7 +15,10 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	g.Get("/groups/artists", handler.RenderArtistGroups)
 	g.Get("/groups/albums", handler.RenderAlbumGroups)
 	g.Get("/groups/genres", handler.RenderGenreGroups)
+	g.Get("/groups/tracks", handler.RenderTrackGroups)
 	g.Post("/artists", handler.MergeArtists)
 	g.Post("/albums", handler.MergeAlbums)
 	g.Post("/genres", handler.MergeGenres)
+	g.Post("/tracks", handler.MergeTracks)
+	g.Post("/tracks/keep", handler.KeepTracks)
 }

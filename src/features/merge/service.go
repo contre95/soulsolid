@@ -20,6 +20,14 @@ type Library interface {
 	MergeArtists(ctx context.Context, canonicalID string, mergedIDs []string) error
 	MergeAlbums(ctx context.Context, canonicalID string, mergedIDs []string) error
 	StandardizeGenre(ctx context.Context, canonical string, variants []string) ([]string, error)
+	GetDuplicateAcoustIDs(ctx context.Context) (map[string][]string, error)
+	KeepDuplicates(ctx context.Context, acoustID string, trackIDs []string) error
+	MergeTracks(ctx context.Context, canonicalID string, mergedIDs []string) error
+}
+
+// FileDeleter removes a track file from disk (subset of music.FileManager).
+type FileDeleter interface {
+	DeleteTrack(ctx context.Context, trackPath string) error
 }
 
 // TagReader reads tags from a music file (subset of the shared infra implementation).
@@ -32,21 +40,24 @@ type TagWriter interface {
 	WriteFileTags(ctx context.Context, filePath string, track *music.Track) error
 }
 
-// Service detects and applies metadata merges (artists, albums, genres).
+// Service detects and applies metadata merges (artists, albums, genres) and duplicate-track
+// merges (same AcoustID; the losing files are deleted).
 type Service struct {
-	library    Library
-	tagWriter  TagWriter
-	tagReader  TagReader
-	jobService music.JobService
+	library     Library
+	tagWriter   TagWriter
+	tagReader   TagReader
+	fileDeleter FileDeleter
+	jobService  music.JobService
 }
 
 // NewService creates a new merge service.
-func NewService(lib Library, tagWriter TagWriter, tagReader TagReader, jobService music.JobService) *Service {
+func NewService(lib Library, tagWriter TagWriter, tagReader TagReader, fileDeleter FileDeleter, jobService music.JobService) *Service {
 	return &Service{
-		library:    lib,
-		tagWriter:  tagWriter,
-		tagReader:  tagReader,
-		jobService: jobService,
+		library:     lib,
+		tagWriter:   tagWriter,
+		tagReader:   tagReader,
+		fileDeleter: fileDeleter,
+		jobService:  jobService,
 	}
 }
 
@@ -112,6 +123,57 @@ func (s *Service) FindGenreGroups(ctx context.Context) ([]Group, error) {
 	return buildGroups(buckets), nil
 }
 
+// FindTrackGroups returns groups of tracks that share an AcoustID — i.e. the same recording in
+// different files (formats/encodings). The suggested canonical is the highest-quality file.
+// Groups the user already resolved with "Keep" are excluded by the library query.
+func (s *Service) FindTrackGroups(ctx context.Context) ([]Group, error) {
+	duplicates, err := s.library.GetDuplicateAcoustIDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	groups := make([]Group, 0)
+	for acoustID, trackIDs := range duplicates {
+		tracks := make([]*music.Track, 0, len(trackIDs))
+		for _, id := range trackIDs {
+			t, err := s.library.GetTrack(ctx, id)
+			if err != nil || t == nil {
+				slog.Warn("skipping unresolvable duplicate track", "trackID", id, "acoustID", acoustID, "error", err)
+				continue
+			}
+			tracks = append(tracks, t)
+		}
+		if len(tracks) < 2 {
+			continue
+		}
+		variants := make([]Variant, len(tracks))
+		for i, t := range tracks {
+			variants[i] = Variant{ID: t.ID, Value: t.Title, Sub: t.Path, Badge: qualityBadge(t)}
+		}
+		sort.Slice(variants, func(i, j int) bool {
+			if variants[i].Value != variants[j].Value {
+				return variants[i].Value < variants[j].Value
+			}
+			return variants[i].Sub < variants[j].Sub
+		})
+		groups = append(groups, Group{Key: acoustID, Canonical: bestQualityTrack(tracks).ID, Variants: variants})
+	}
+	sort.Slice(groups, func(i, j int) bool { return groups[i].Key < groups[j].Key })
+	return groups, nil
+}
+
+// KeepTracks records that the given tracks are intentional duplicates (e.g. a FLAC and an MP3 of
+// the same recording kept on purpose). Only the database is touched — no files, no tags — and the
+// group stops appearing in future duplicate scans.
+func (s *Service) KeepTracks(ctx context.Context, acoustID string, trackIDs []string) error {
+	if acoustID == "" {
+		return fmt.Errorf("missing AcoustID group key")
+	}
+	if len(trackIDs) < 2 {
+		return fmt.Errorf("a duplicate group needs at least two tracks")
+	}
+	return s.library.KeepDuplicates(ctx, acoustID, trackIDs)
+}
+
 // buildGroups keeps only buckets with two or more variants and attaches a smart canonical default.
 func buildGroups(buckets map[string][]Variant) []Group {
 	groups := make([]Group, 0)
@@ -175,8 +237,53 @@ func (s *Service) StartMerge(ctx context.Context, kind Kind, canonical string, m
 	return jobID, nil
 }
 
-// applyMerge performs the database merge and rewrites file tags. It is invoked from the job task.
+// StartTrackMerge validates the selection and launches the background job that removes duplicate
+// files. removeIDs are deleted from the library and from disk; the rest of allIDs stay, and
+// playlist entries of the removed tracks are repointed to the highest-quality remaining track.
+func (s *Service) StartTrackMerge(ctx context.Context, allIDs, removeIDs []string) (string, error) {
+	if len(removeIDs) == 0 {
+		return "", fmt.Errorf("check at least one file to merge away")
+	}
+	removeSet := make(map[string]bool, len(removeIDs))
+	for _, id := range removeIDs {
+		removeSet[id] = true
+	}
+	var kept []*music.Track
+	for _, id := range allIDs {
+		if id == "" || removeSet[id] {
+			continue
+		}
+		t, err := s.library.GetTrack(ctx, id)
+		if err != nil {
+			return "", fmt.Errorf("failed to load track %s: %w", id, err)
+		}
+		if t != nil {
+			kept = append(kept, t)
+		}
+	}
+	if len(kept) == 0 {
+		return "", fmt.Errorf("at least one file must be left unchecked to survive the merge")
+	}
+	canonical := bestQualityTrack(kept).ID
+
+	jobID, err := s.jobService.StartJob("analyze_merge", "Merge tracks", map[string]any{
+		"kind":      string(KindTrack),
+		"canonical": canonical,
+		"merged":    removeIDs,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to start merge job: %w", err)
+	}
+	slog.Info("track merge job started", "canonical", canonical, "merged", removeIDs, "jobID", jobID)
+	return jobID, nil
+}
+
+// applyMerge performs the database merge and rewrites file tags (or, for tracks, deletes the
+// duplicate files). It is invoked from the job task.
 func (s *Service) applyMerge(ctx context.Context, job *music.Job, kind Kind, canonical string, merged []string, progress func(int, string)) (map[string]any, error) {
+	if kind == KindTrack {
+		return s.applyTrackMerge(ctx, job, canonical, merged, progress)
+	}
 	var affectedIDs []string
 	switch kind {
 	case KindArtist:
@@ -233,6 +340,72 @@ func (s *Service) applyMerge(ctx context.Context, job *music.Job, kind Kind, can
 		"kind":         string(kind),
 		"mergedCount":  len(merged),
 		"filesUpdated": updated,
+		"filesFailed":  failed,
+		"msg":          msg,
+	}, nil
+}
+
+// applyTrackMerge removes duplicate tracks (same AcoustID) from the database — repointing any
+// playlist entries onto the canonical track — and hard-deletes their files from disk. The merged
+// tracks are loaded up front because their paths are gone from the database afterwards.
+func (s *Service) applyTrackMerge(ctx context.Context, job *music.Job, canonical string, merged []string, progress func(int, string)) (map[string]any, error) {
+	canonicalTrack, err := s.library.GetTrack(ctx, canonical)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load canonical track: %w", err)
+	}
+	if canonicalTrack == nil {
+		return nil, fmt.Errorf("canonical track not found: %s", canonical)
+	}
+
+	duplicates := make([]*music.Track, 0, len(merged))
+	for _, id := range merged {
+		t, err := s.library.GetTrack(ctx, id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load duplicate track %s: %w", id, err)
+		}
+		if t == nil {
+			job.Logger.Warn("duplicate track no longer exists, skipping", "trackID", id, "color", "orange")
+			continue
+		}
+		duplicates = append(duplicates, t)
+	}
+	if len(duplicates) == 0 {
+		return nil, fmt.Errorf("no duplicate tracks left to merge")
+	}
+
+	ids := make([]string, len(duplicates))
+	for i, t := range duplicates {
+		ids[i] = t.ID
+	}
+	if err := s.library.MergeTracks(ctx, canonical, ids); err != nil {
+		return nil, fmt.Errorf("failed to merge tracks: %w", err)
+	}
+
+	deleted, failed := 0, 0
+	total := len(duplicates)
+	for i, t := range duplicates {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+		progress((i*100)/total, fmt.Sprintf("Deleting file %d/%d", i+1, total))
+		if err := s.fileDeleter.DeleteTrack(ctx, t.Path); err != nil {
+			job.Logger.Warn("failed to delete duplicate file", "path", t.Path, "error", err, "color", "orange")
+			failed++
+			continue
+		}
+		job.Logger.Info("deleted duplicate file", "path", t.Path)
+		deleted++
+	}
+
+	msg := fmt.Sprintf("Kept %q; removed %d duplicate track(s), deleted %d file(s), %d failed.", canonicalTrack.Title, len(duplicates), deleted, failed)
+	job.Logger.Info("track merge completed", "canonical", canonicalTrack.Path, "merged", len(duplicates), "filesDeleted", deleted, "filesFailed", failed, "color", "green")
+	progress(100, msg)
+	return map[string]any{
+		"kind":         string(KindTrack),
+		"mergedCount":  len(duplicates),
+		"filesDeleted": deleted,
 		"filesFailed":  failed,
 		"msg":          msg,
 	}, nil

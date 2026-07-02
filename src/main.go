@@ -73,7 +73,7 @@ func main() {
 
 	reorganizeService := reorganize.NewService(db, fileOrganizer, cfgManager, jobService)
 
-	mergeService := merge.NewService(db, tagWriter, tagReader, jobService)
+	mergeService := merge.NewService(db, tagWriter, tagReader, fileOrganizer, jobService)
 
 	directoryImportTask := importing.NewDirectoryImportTask(importingService)
 	jobService.RegisterHandler("directory_import", jobs.NewBaseTaskHandler(directoryImportTask))
