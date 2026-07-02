@@ -25,7 +25,7 @@
 
    <!-- Playlist Stats -->
    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" hx-trigger="playlistUpdated" hx-get="/playlists/{{.Playlist.ID}}" hx-target="#contenido" hx-swap="innerHTML">
-    <div class="bg-white/80 dark:bg-gray-900/70 rounded-xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 p-4">
+    <div class="rounded-xl shadow-lg backdrop-blur-sm bg-white/30 hover:bg-white/60 dark:bg-gray-900/30 dark:hover:bg-gray-900/60 transition-colors border border-gray-200/50 dark:border-gray-800/70 p-4">
       <div class="flex items-center">
         <div class="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-lg mr-4">
           <i class="fas fa-music text-blue-600 dark:text-blue-400"></i>
@@ -36,7 +36,7 @@
         </div>
       </div>
     </div>
-    <div class="bg-white/80 dark:bg-gray-900/70 rounded-xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 p-4">
+    <div class="rounded-xl shadow-lg backdrop-blur-sm bg-white/30 hover:bg-white/60 dark:bg-gray-900/30 dark:hover:bg-gray-900/60 transition-colors border border-gray-200/50 dark:border-gray-800/70 p-4">
       <div class="flex items-center">
         <div class="p-3 bg-green-100 dark:bg-green-900/40 rounded-lg mr-4">
           <i class="fas fa-clock text-green-600 dark:text-green-400"></i>
@@ -47,7 +47,7 @@
         </div>
       </div>
     </div>
-    <div class="bg-white/80 dark:bg-gray-900/70 rounded-xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70 p-4">
+    <div class="rounded-xl shadow-lg backdrop-blur-sm bg-white/30 hover:bg-white/60 dark:bg-gray-900/30 dark:hover:bg-gray-900/60 transition-colors border border-gray-200/50 dark:border-gray-800/70 p-4">
       <div class="flex items-center">
         <div class="p-3 bg-purple-100 dark:bg-purple-900/40 rounded-lg mr-4">
           <i class="fas fa-calendar text-purple-600 dark:text-purple-400"></i>
@@ -61,7 +61,7 @@
   </div>
 
    <!-- Tracks Table -->
-   <div class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70" hx-trigger="playlistUpdated" hx-get="/playlists/{{.Playlist.ID}}" hx-target="#contenido" hx-swap="innerHTML">
+   <div class="rounded-2xl shadow-lg backdrop-blur-sm bg-white/30 hover:bg-white/60 dark:bg-gray-900/30 dark:hover:bg-gray-900/60 transition-colors border border-gray-200/50 dark:border-gray-800/70" hx-trigger="playlistUpdated" hx-get="/playlists/{{.Playlist.ID}}" hx-target="#contenido" hx-swap="innerHTML">
     <div class="p-6">
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Tracks</h2>
       {{if .Playlist.Tracks}}

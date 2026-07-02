@@ -103,6 +103,9 @@ func (s *Service) fetchTrack(ctx context.Context, trackID string) (*music.Track,
 	if err != nil {
 		return nil, fmt.Errorf("failed to get track: %w", err)
 	}
+	if track == nil {
+		return nil, fmt.Errorf("track not found: %s: %w", trackID, ErrNotFound)
+	}
 	return track, nil
 }
 

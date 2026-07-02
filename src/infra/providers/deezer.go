@@ -103,8 +103,7 @@ func (p *DeezerProvider) SearchTracks(ctx context.Context, params metadata.Searc
 	}
 
 	// Make request
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
@@ -155,8 +154,7 @@ func (p *DeezerProvider) fetchAlbumDetails(ctx context.Context, albumID int) (*d
 
 	req.Header.Set("User-Agent", "SoulSolid/1.0")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch album details: %w", err)
 	}

@@ -1,10 +1,7 @@
 {{ if .Jobs }}
   <div class="grid grid-cols-1 gap-4">
     {{ range .Jobs }}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-2 mb-3">
         {{ template "jobs/job_card" . }}
-        {{ template "jobs/job_card_logs" . }}
-    </div>
     {{ end }}
   </div>
 {{ else }}

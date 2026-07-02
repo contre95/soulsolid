@@ -74,7 +74,7 @@ var defaultConfig = Config{
 		Providers: map[string]LyricsProvider{
 			"lrclib": {
 				Enabled:      true,
-				PreferSynced: false,
+				PreferSynced: true,
 			},
 		},
 	},

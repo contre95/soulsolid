@@ -14,16 +14,17 @@ import (
 
 // FileOrganizer is the infrastructure implementation of the music.FileManager interface.
 type FileOrganizer struct {
-	libraryPath func() string
-	pathParser  importing.PathParser
-	fat32Safe   func() bool
+	libraryPath  func() string
+	downloadPath func() string
+	pathParser   importing.PathParser
+	fat32Safe    func() bool
 }
 
 // NewFileOrganizer creates a new file organizer implementation.
-// Both libraryPath and fat32Safe are called at operation time so config changes
+// The path and fat32Safe funcs are called at operation time so config changes
 // are picked up without restarting.
-func NewFileOrganizer(libraryPath func() string, pathParser importing.PathParser, fat32Safe func() bool) *FileOrganizer {
-	return &FileOrganizer{libraryPath: libraryPath, pathParser: pathParser, fat32Safe: fat32Safe}
+func NewFileOrganizer(libraryPath, downloadPath func() string, pathParser importing.PathParser, fat32Safe func() bool) *FileOrganizer {
+	return &FileOrganizer{libraryPath: libraryPath, downloadPath: downloadPath, pathParser: pathParser, fat32Safe: fat32Safe}
 }
 
 // buildPath renders the raw library path for a track without FAT32 sanitization.
@@ -116,9 +117,20 @@ func (o *FileOrganizer) DeleteTrack(ctx context.Context, trackPath string) error
 	return nil
 }
 
-// removeEmptyDirectories recursively removes empty directories up the path
+// removeEmptyDirectories recursively removes empty directories up the path.
+// It never removes the library or download roots themselves: the download root
+// is watched by fsnotify, and removing either would break the application.
 func (o *FileOrganizer) removeEmptyDirectories(dir string) error {
+	roots := map[string]bool{
+		filepath.Clean(o.libraryPath()):  true,
+		filepath.Clean(o.downloadPath()): true,
+	}
 	for {
+		// Stop before touching a root directory
+		if roots[filepath.Clean(dir)] {
+			return nil
+		}
+
 		// Check if directory exists
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			return nil // Directory doesn't exist, nothing to do
@@ -142,8 +154,7 @@ func (o *FileOrganizer) removeEmptyDirectories(dir string) error {
 
 		// Move up to parent directory
 		parent := filepath.Dir(dir)
-		// Stop if we've reached the library root or a non-empty directory
-		if parent == dir || filepath.Clean(parent) == filepath.Clean(o.libraryPath()) {
+		if parent == dir {
 			break
 		}
 		dir = parent

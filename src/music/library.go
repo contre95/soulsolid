@@ -14,6 +14,8 @@ type TrackFilter struct {
 	HasAcoustID *bool  // nil=any, true=has acoustid, false=missing
 	LyricsFilter string // "": any, "has": has_lyrics=true AND lyrics not empty, "empty": has_lyrics=true AND lyrics empty, "instrumental": has_lyrics=false
 	LyricsText  string // LIKE search within lyrics content
+	AddedAfter  string // "": any, else "YYYY-MM-DD"; matches tracks added on or after this date (inclusive)
+	AddedBefore string // "": any, else "YYYY-MM-DD"; matches tracks added on or before this date (inclusive)
 }
 
 // Library is the interface for managing the music library.

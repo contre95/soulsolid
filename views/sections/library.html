@@ -1,4 +1,4 @@
-<div id="contenido" class="animate__animated animate__fadeIn">
+<div id="contenido" class="animate__animated animate__fadeIn pb-40 sm:pb-32">
   <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
     <h1 class="text-3xl font-bold text-slate-800 dark:text-white">Music Library</h1>
     <div class="flex items-center gap-3">
@@ -38,8 +38,7 @@
   <!-- Library Table Section - Loaded from UI library feature -->
   <div hx-get="/library/table" hx-trigger="load" hx-swap="outerHTML">
     <!-- Loading state -->
-    <div
-      class="bg-white/80 dark:bg-gray-900/70 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/70">
+    <div>
       <div class="border-b border-slate-200 dark:border-slate-700">
         <nav class="flex -mb-px">
           <div class="py-4 px-6 text-sm font-medium border-b-2 border-transparent text-slate-500">
@@ -62,3 +61,4 @@
       </div>
     </div>
   </div>
+</div>

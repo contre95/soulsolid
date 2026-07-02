@@ -106,7 +106,7 @@ type Lyrics struct {
 // Provider holds configuration for individual lyric providers
 type LyricsProvider struct {
 	Enabled      bool `yaml:"enabled"`
-	PreferSynced bool `yaml:"prefer_synced,omitempty"`
+	PreferSynced bool `yaml:"prefer_synced"`
 }
 
 // Artwork holds configuration for artwork handling

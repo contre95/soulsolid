@@ -172,6 +172,7 @@ func createTables(db *sql.DB) error {
 		CREATE INDEX IF NOT EXISTS idx_album_artists_album ON album_artists(album_id);
 		CREATE INDEX IF NOT EXISTS idx_album_artists_artist ON album_artists(artist_id);
 		CREATE INDEX IF NOT EXISTS idx_track_attributes_track ON track_attributes(track_id);
+		CREATE INDEX IF NOT EXISTS idx_track_attributes_key_value ON track_attributes(key, value);
 		CREATE INDEX IF NOT EXISTS idx_album_attributes_album ON album_attributes(album_id);
 		CREATE INDEX IF NOT EXISTS idx_artist_attributes_artist ON artist_attributes(artist_id);
 		CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist ON playlist_tracks(playlist_id);
@@ -220,6 +221,16 @@ func (d *SqliteLibrary) AddTrack(ctx context.Context, track *music.Track) error 
 	if err := track.Validate(); err != nil {
 		slog.Error("AddTrack: validation failed", "error", err, "trackID", track.ID)
 		return err
+	}
+
+	// Stamp added/modified dates on first insert when the caller didn't set
+	// them, so they don't get persisted as the zero time (0001-01-01).
+	now := time.Now()
+	if track.AddedDate.IsZero() {
+		track.AddedDate = now
+	}
+	if track.ModifiedDate.IsZero() {
+		track.ModifiedDate = now
 	}
 
 	tx, err := d.db.BeginTx(ctx, nil)
@@ -745,6 +756,21 @@ func (d *SqliteLibrary) GetTracksWithValidYear(ctx context.Context) (int, error)
 func (d *SqliteLibrary) GetTracksWithValidGenre(ctx context.Context) (int, error) {
 	var count int
 	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE genre IS NOT NULL AND genre != '' AND LOWER(genre) != 'unknown'").Scan(&count)
+	return count, err
+}
+
+// GetTracksWithAcoustID returns the number of tracks that have a non-empty AcoustID.
+// AcoustID is stored in track_attributes under the "acoustid" key, not on the tracks table.
+func (d *SqliteLibrary) GetTracksWithAcoustID(ctx context.Context) (int, error) {
+	var count int
+	err := d.db.QueryRowContext(ctx, "SELECT COUNT(DISTINCT track_id) FROM track_attributes WHERE key = 'acoustid' AND value != ''").Scan(&count)
+	return count, err
+}
+
+// GetTracksWithChromaprint returns the number of tracks that have a Chromaprint fingerprint.
+func (d *SqliteLibrary) GetTracksWithChromaprint(ctx context.Context) (int, error) {
+	var count int
+	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE chromaprint_fingerprint IS NOT NULL AND chromaprint_fingerprint != ''").Scan(&count)
 	return count, err
 }
 
@@ -1451,6 +1477,17 @@ func (d *SqliteLibrary) GetTracksFilteredPaginated(ctx context.Context, limit, o
 		args = append(args, "%"+filter.LyricsText+"%")
 	}
 
+	// Added-date range filter (inclusive). Compares calendar dates so the
+	// RFC3339 timestamps stored in added_date match by day.
+	if filter.AddedAfter != "" {
+		conditions = append(conditions, "date(t.added_date) >= ?")
+		args = append(args, filter.AddedAfter)
+	}
+	if filter.AddedBefore != "" {
+		conditions = append(conditions, "date(t.added_date) <= ?")
+		args = append(args, filter.AddedBefore)
+	}
+
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
@@ -1556,6 +1593,17 @@ func (d *SqliteLibrary) GetTracksFilteredCount(ctx context.Context, filter *musi
 	if filter.LyricsText != "" {
 		conditions = append(conditions, "t.lyrics LIKE ?")
 		args = append(args, "%"+filter.LyricsText+"%")
+	}
+
+	// Added-date range filter (inclusive). Compares calendar dates so the
+	// RFC3339 timestamps stored in added_date match by day.
+	if filter.AddedAfter != "" {
+		conditions = append(conditions, "date(t.added_date) >= ?")
+		args = append(args, filter.AddedAfter)
+	}
+	if filter.AddedBefore != "" {
+		conditions = append(conditions, "date(t.added_date) <= ?")
+		args = append(args, filter.AddedBefore)
 	}
 
 	if len(conditions) > 0 {
