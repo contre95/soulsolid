@@ -13,6 +13,12 @@ type Config struct {
 	Metadata     Metadata    `yaml:"metadata"`
 	Lyrics       Lyrics      `yaml:"lyrics"`
 	Jobs         Jobs        `yaml:"jobs"`
+	MCP          MCP         `yaml:"mcp"`
+}
+
+// MCP holds the configuration for the Model Context Protocol endpoint
+type MCP struct {
+	Enabled bool `yaml:"enabled"`
 }
 type Jobs struct {
 	Log      bool          `yaml:"log"`

@@ -87,4 +87,7 @@ var defaultConfig = Config{
 			Command:  "",
 		},
 	},
+	MCP: MCP{
+		Enabled: false,
+	},
 }
