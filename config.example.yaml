@@ -35,6 +35,8 @@ downloaders:
 server:
   show_routes: false
   port: 3535
+mcp:
+  enabled: false # Exposes an MCP endpoint (Streamable HTTP) at POST /mcp for AI agents
 database:
   path: ./library.db # Path to the SQLite Database
 import:

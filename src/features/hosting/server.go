@@ -14,6 +14,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
 	"github.com/contre95/soulsolid/src/features/lyrics"
+	"github.com/contre95/soulsolid/src/features/mcp"
 	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/playlists"
@@ -149,6 +150,12 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	reorganizeHandler := reorganize.NewHandler(reorganizeService, cfg)
 	reorganize.RegisterRoutes(app, reorganizeHandler)
 	streaming.RegisterRoutes(app, streamingService)
+
+	if cfg.Get().MCP.Enabled {
+		mcpService := mcp.NewService(libraryService, tagService, lyricsService, jobService, downloadingService, playlistsService, importingService, reorganizeService, cfg)
+		mcp.RegisterRoutes(app, mcpService)
+		slog.Info("MCP endpoint enabled", "path", "/mcp")
+	}
 
 	return &Server{app: app, port: cfg.Get().Server.Port}
 }
