@@ -18,8 +18,6 @@ type Variant struct {
 	Value string
 	// Sub is an optional secondary line (e.g. an album's primary artist or a track's file path).
 	Sub string
-	// Badge is an optional quality label (e.g. "FLAC · 1411 kbps"); only set for tracks.
-	Badge string
 }
 
 // Group is a set of variants that share a merge key and can be merged into one.

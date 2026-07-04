@@ -147,7 +147,7 @@ func (s *Service) FindTrackGroups(ctx context.Context) ([]Group, error) {
 		}
 		variants := make([]Variant, len(tracks))
 		for i, t := range tracks {
-			variants[i] = Variant{ID: t.ID, Value: t.Title, Sub: t.Path, Badge: qualityBadge(t)}
+			variants[i] = Variant{ID: t.ID, Value: t.Title, Sub: t.Path}
 		}
 		sort.Slice(variants, func(i, j int) bool {
 			if variants[i].Value != variants[j].Value {
@@ -155,7 +155,7 @@ func (s *Service) FindTrackGroups(ctx context.Context) ([]Group, error) {
 			}
 			return variants[i].Sub < variants[j].Sub
 		})
-		groups = append(groups, Group{Key: acoustID, Canonical: bestQualityTrack(tracks).ID, Variants: variants})
+		groups = append(groups, Group{Key: acoustID, Canonical: variants[0].ID, Variants: variants})
 	}
 	sort.Slice(groups, func(i, j int) bool { return groups[i].Key < groups[j].Key })
 	return groups, nil
@@ -264,7 +264,7 @@ func (s *Service) StartTrackMerge(ctx context.Context, allIDs, removeIDs []strin
 	if len(kept) == 0 {
 		return "", fmt.Errorf("at least one file must be left unchecked to survive the merge")
 	}
-	canonical := bestQualityTrack(kept).ID
+	canonical := kept[0].ID
 
 	jobID, err := s.jobService.StartJob("analyze_merge", "Merge tracks", map[string]any{
 		"kind":      string(KindTrack),
