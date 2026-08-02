@@ -55,8 +55,11 @@ func (h *Handler) RenderGenreGroups(c *fiber.Ctx) error {
 }
 
 // RenderTrackGroups scans for and renders the candidate duplicate-track groups (same AcoustID).
+// The includeKept query param brings back groups already dismissed via "Keep", so an accidental
+// click can be found again and corrected.
 func (h *Handler) RenderTrackGroups(c *fiber.Ctx) error {
-	groups, err := h.service.FindTrackGroups(c.Context())
+	includeKept := c.Query("includeKept") == "true"
+	groups, err := h.service.FindTrackGroups(c.Context(), includeKept)
 	if err != nil {
 		slog.Error("failed to find duplicate track groups", "error", err)
 		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to find duplicate tracks: "+err.Error())

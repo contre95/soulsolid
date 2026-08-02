@@ -20,7 +20,7 @@ type Library interface {
 	MergeArtists(ctx context.Context, canonicalID string, mergedIDs []string) error
 	MergeAlbums(ctx context.Context, canonicalID string, mergedIDs []string) error
 	StandardizeGenre(ctx context.Context, canonical string, variants []string) ([]string, error)
-	GetDuplicateAcoustIDs(ctx context.Context) (map[string][]string, error)
+	GetDuplicateAcoustIDs(ctx context.Context, includeKept bool) (map[string][]string, error)
 	KeepDuplicates(ctx context.Context, acoustID string, trackIDs []string) error
 	MergeTracks(ctx context.Context, canonicalID string, mergedIDs []string) error
 }
@@ -125,9 +125,10 @@ func (s *Service) FindGenreGroups(ctx context.Context) ([]Group, error) {
 
 // FindTrackGroups returns groups of tracks that share an AcoustID — i.e. the same recording in
 // different files (formats/encodings). The suggested canonical is the highest-quality file.
-// Groups the user already resolved with "Keep" are excluded by the library query.
-func (s *Service) FindTrackGroups(ctx context.Context) ([]Group, error) {
-	duplicates, err := s.library.GetDuplicateAcoustIDs(ctx)
+// Groups the user already resolved with "Keep" are excluded, unless includeKept is set — which
+// brings back every group regardless, so an accidental "Keep" can be found and corrected.
+func (s *Service) FindTrackGroups(ctx context.Context, includeKept bool) ([]Group, error) {
+	duplicates, err := s.library.GetDuplicateAcoustIDs(ctx, includeKept)
 	if err != nil {
 		return nil, err
 	}

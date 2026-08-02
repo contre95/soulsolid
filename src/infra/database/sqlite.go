@@ -1368,24 +1368,31 @@ func (d *SqliteLibrary) StandardizeGenre(ctx context.Context, canonical string, 
 }
 
 // GetDuplicateAcoustIDs returns, for every AcoustID shared by two or more tracks, the IDs of
-// those tracks. Groups where every member has already been marked as an intentional duplicate
-// (kept_duplicates) are excluded — but a group reappears in full as soon as a new track with the
-// same AcoustID shows up, so the user can decide about the newcomer.
-func (d *SqliteLibrary) GetDuplicateAcoustIDs(ctx context.Context) (map[string][]string, error) {
-	rows, err := d.db.QueryContext(ctx, `
+// those tracks. Unless includeKept is set, groups where every member has already been marked as
+// an intentional duplicate (kept_duplicates) are excluded — but a group reappears in full as soon
+// as a new track with the same AcoustID shows up, so the user can decide about the newcomer.
+// includeKept surfaces every group regardless of kept_duplicates, so a group dismissed by mistake
+// (e.g. an accidental "Keep") can be found again and acted on.
+func (d *SqliteLibrary) GetDuplicateAcoustIDs(ctx context.Context, includeKept bool) (map[string][]string, error) {
+	query := `
 		SELECT ta.value, ta.track_id
 		FROM track_attributes ta
 		WHERE ta.key = 'acoustid' AND ta.value != ''
 		AND ta.value IN (
 			SELECT value FROM track_attributes
 			WHERE key = 'acoustid' AND value != ''
-			GROUP BY value HAVING COUNT(*) > 1)
+			GROUP BY value HAVING COUNT(*) > 1)`
+	if !includeKept {
+		query += `
 		AND EXISTS (
 			SELECT 1 FROM track_attributes ta2
 			WHERE ta2.key = 'acoustid' AND ta2.value = ta.value
 			AND ta2.track_id NOT IN (
-				SELECT track_id FROM kept_duplicates kd WHERE kd.acoustid = ta.value))
-		ORDER BY ta.value, ta.track_id`)
+				SELECT track_id FROM kept_duplicates kd WHERE kd.acoustid = ta.value))`
+	}
+	query += `
+		ORDER BY ta.value, ta.track_id`
+	rows, err := d.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
