@@ -1,0 +1,32 @@
+<div hx-swap-oob="beforeend:#toast-container">{{ template "toast/toastInfo" . }}</div>
+{{ if .Groups }}
+<div class="space-y-4">
+    {{ range $i, $g := .Groups }}
+    <form id="merge-genre-card-{{ $i }}" hx-post="/merge/genres" hx-swap="none"
+          class="border border-gray-200/70 dark:border-gray-700/70 rounded-xl p-3 bg-white/40 dark:bg-gray-800/40">
+        <input type="hidden" name="card_id" value="merge-genre-card-{{ $i }}">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ len $g.Variants }} variants</span>
+            <span class="text-[10px] uppercase tracking-wide text-gray-400">keep</span>
+        </div>
+        <div class="space-y-1.5">
+            {{ range $g.Variants }}
+            <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
+                <input type="checkbox" name="members" value="{{ .Value }}" checked
+                       class="rounded border-gray-300 dark:border-gray-600 text-green-500 focus:ring-green-500">
+                <span class="flex-1 truncate" title="{{ .Value }}">{{ .Value }}</span>
+                <input type="radio" name="canonical" value="{{ .Value }}" {{ if eq .Value $g.Canonical }}checked{{ end }}
+                       class="text-green-500 focus:ring-green-500" title="Keep this genre">
+            </label>
+            {{ end }}
+        </div>
+        <button type="submit"
+                class="mt-3 w-full border border-green-500 dark:border-green-400 text-green-600 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/30 text-sm font-medium py-1.5 px-3 rounded-md transition-colors">
+            Merge
+        </button>
+    </form>
+    {{ end }}
+</div>
+{{ else }}
+<p class="text-sm text-gray-500 dark:text-gray-400">No duplicate genres found 🎉</p>
+{{ end }}

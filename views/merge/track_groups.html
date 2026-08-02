@@ -1,0 +1,49 @@
+<div hx-swap-oob="beforeend:#toast-container">{{ template "toast/toastInfo" . }}</div>
+{{ if .Groups }}
+<div class="space-y-4">
+    {{ range $i, $g := .Groups }}
+    <form id="merge-track-card-{{ $i }}" hx-post="/merge/tracks" hx-swap="none"
+          hx-confirm="Delete the selected files? Every checked file will be permanently deleted from the library AND from disk. This cannot be undone."
+          class="border border-gray-200/70 dark:border-gray-700/70 rounded-xl p-3 bg-white/40 dark:bg-gray-800/40">
+        <input type="hidden" name="card_id" value="merge-track-card-{{ $i }}">
+        <input type="hidden" name="acoustid" value="{{ $g.Key }}">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ len $g.Variants }} files · same recording</span>
+            <span class="text-[10px] uppercase tracking-wide text-red-400 dark:text-red-500">check = delete</span>
+        </div>
+        <div class="space-y-1.5">
+            {{ range $g.Variants }}
+            <input type="hidden" name="all" value="{{ .ID }}">
+            <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
+                <input type="checkbox" name="delete" value="{{ .ID }}" {{ if ne .ID $g.Canonical }}checked{{ end }}
+                       class="rounded border-gray-300 dark:border-gray-600 text-red-500 focus:ring-red-500"
+                       title="Check to delete this file">
+                <span class="flex-1 min-w-0">
+                    <span class="block truncate" title="{{ .Value }}">{{ .Value }}</span>
+                    <span class="block truncate text-xs text-gray-400" title="{{ .Sub }}">{{ .Sub }}</span>
+                </span>
+            </label>
+            {{ end }}
+        </div>
+        <p class="mt-2 text-[11px] text-red-600 dark:text-red-400">
+            <i class="fas fa-triangle-exclamation mr-0.5"></i>
+            <span class="font-semibold">Delete selected</span> removes every checked file — from the library and from disk. Unchecked files stay.
+        </p>
+        <div class="mt-2 flex gap-2">
+            <button type="submit"
+                    title="Permanently delete the checked files and keep the rest"
+                    class="flex-1 border border-red-500 dark:border-red-400 text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 text-sm font-medium py-1.5 px-3 rounded-md transition-colors">
+                Delete selected
+            </button>
+            <button type="button" hx-post="/merge/tracks/keep" hx-include="closest form" hx-swap="none" hx-confirm="unset"
+                    title="Keep every file in this group and stop flagging it as duplicates (database only, files and tags untouched)"
+                    class="flex-1 border border-emerald-500 dark:border-emerald-400 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-sm font-medium py-1.5 px-3 rounded-md transition-colors">
+                Keep
+            </button>
+        </div>
+    </form>
+    {{ end }}
+</div>
+{{ else }}
+<p class="text-sm text-gray-500 dark:text-gray-400">No duplicate tracks found 🎉</p>
+{{ end }}

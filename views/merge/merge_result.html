@@ -1,0 +1,6 @@
+{{ if .OK }}
+<div hx-swap-oob="beforeend:#toast-container">{{ template "toast/toastOk" . }}</div>
+{{ if .CardID }}<div id="{{ .CardID }}" hx-swap-oob="delete"></div>{{ end }}
+{{ else }}
+<div hx-swap-oob="beforeend:#toast-container">{{ template "toast/toastErr" . }}</div>
+{{ end }}

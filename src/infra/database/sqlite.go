@@ -158,6 +158,13 @@ func createTables(db *sql.DB) error {
 			FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
 		);
 
+		CREATE TABLE IF NOT EXISTS kept_duplicates (
+			acoustid TEXT NOT NULL,
+			track_id TEXT NOT NULL,
+			PRIMARY KEY (acoustid, track_id),
+			FOREIGN KEY (track_id) REFERENCES tracks(id)
+		);
+
 		CREATE TABLE IF NOT EXISTS library_metrics (
 			id INTEGER PRIMARY KEY,
 			metric_type TEXT NOT NULL,
@@ -937,6 +944,12 @@ func (d *SqliteLibrary) DeleteTrack(ctx context.Context, id string) error {
 		return err
 	}
 
+	// Delete kept-duplicate markers
+	_, err = tx.ExecContext(ctx, `DELETE FROM kept_duplicates WHERE track_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
 	// Delete track artists
 	_, err = tx.ExecContext(ctx, `DELETE FROM track_artists WHERE track_id = ?`, id)
 	if err != nil {
@@ -1234,6 +1247,266 @@ func (d *SqliteLibrary) DeleteArtist(ctx context.Context, id string) error {
 		return err
 	}
 
+	return tx.Commit()
+}
+
+// MergeArtists repoints every track/album relationship from each merged artist onto the
+// canonical artist, then deletes the merged artist rows. The relationship tables use composite
+// primary keys, so repoints use UPDATE OR IGNORE to skip rows that would collide with an
+// existing (entity, canonical_artist, role) tuple; any rows left behind by a skipped update are
+// then deleted. The canonical artist keeps its existing name.
+func (d *SqliteLibrary) MergeArtists(ctx context.Context, canonicalID string, mergedIDs []string) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, mergedID := range mergedIDs {
+		if mergedID == canonicalID || mergedID == "" {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE OR IGNORE track_artists SET artist_id = ? WHERE artist_id = ?`, canonicalID, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM track_artists WHERE artist_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE OR IGNORE album_artists SET artist_id = ? WHERE artist_id = ?`, canonicalID, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM album_artists WHERE artist_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM artist_attributes WHERE artist_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM artists WHERE id = ?`, mergedID); err != nil {
+			return err
+		}
+		slog.Info("MergeArtists: merged artist", "canonicalID", canonicalID, "mergedID", mergedID)
+	}
+	return tx.Commit()
+}
+
+// MergeAlbums repoints every track from each merged album onto the canonical album, merges the
+// album-artist relationships, then deletes the merged album rows. The canonical album keeps its
+// existing title.
+func (d *SqliteLibrary) MergeAlbums(ctx context.Context, canonicalID string, mergedIDs []string) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, mergedID := range mergedIDs {
+		if mergedID == canonicalID || mergedID == "" {
+			continue
+		}
+		// track_albums.track_id is the primary key (one album per track), so repointing
+		// album_id can never collide.
+		if _, err := tx.ExecContext(ctx, `UPDATE track_albums SET album_id = ? WHERE album_id = ?`, canonicalID, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE OR IGNORE album_artists SET album_id = ? WHERE album_id = ?`, canonicalID, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM album_artists WHERE album_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM album_attributes WHERE album_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM albums WHERE id = ?`, mergedID); err != nil {
+			return err
+		}
+		slog.Info("MergeAlbums: merged album", "canonicalID", canonicalID, "mergedID", mergedID)
+	}
+	return tx.Commit()
+}
+
+// StandardizeGenre rewrites the genre of every track whose current genre is one of variants to
+// the canonical value, returning the IDs of the tracks that were changed.
+func (d *SqliteLibrary) StandardizeGenre(ctx context.Context, canonical string, variants []string) ([]string, error) {
+	if len(variants) == 0 {
+		return nil, nil
+	}
+	placeholders := strings.Repeat("?,", len(variants))
+	placeholders = placeholders[:len(placeholders)-1]
+
+	args := make([]any, 0, len(variants))
+	for _, v := range variants {
+		args = append(args, v)
+	}
+
+	rows, err := d.db.QueryContext(ctx, `SELECT id FROM tracks WHERE genre IN (`+placeholders+`)`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	updateArgs := make([]any, 0, len(variants)+2)
+	updateArgs = append(updateArgs, canonical, time.Now().Format(time.RFC3339))
+	updateArgs = append(updateArgs, args...)
+	if _, err := d.db.ExecContext(ctx, `UPDATE tracks SET genre = ?, modified_date = ? WHERE genre IN (`+placeholders+`)`, updateArgs...); err != nil {
+		return nil, err
+	}
+	slog.Info("StandardizeGenre: rewrote genre", "canonical", canonical, "variants", variants, "tracks", len(ids))
+	return ids, nil
+}
+
+// GetDuplicateAcoustIDs returns, for every AcoustID shared by two or more tracks, the IDs of
+// those tracks. Unless includeKept is set, groups where every member has already been marked as
+// an intentional duplicate (kept_duplicates) are excluded — but a group reappears in full as soon
+// as a new track with the same AcoustID shows up, so the user can decide about the newcomer.
+// includeKept surfaces every group regardless of kept_duplicates, so a group dismissed by mistake
+// (e.g. an accidental "Keep") can be found again and acted on.
+func (d *SqliteLibrary) GetDuplicateAcoustIDs(ctx context.Context, includeKept bool) (map[string][]string, error) {
+	query := `
+		SELECT ta.value, ta.track_id
+		FROM track_attributes ta
+		WHERE ta.key = 'acoustid' AND ta.value != ''
+		AND ta.value IN (
+			SELECT value FROM track_attributes
+			WHERE key = 'acoustid' AND value != ''
+			GROUP BY value HAVING COUNT(*) > 1)`
+	if !includeKept {
+		query += `
+		AND EXISTS (
+			SELECT 1 FROM track_attributes ta2
+			WHERE ta2.key = 'acoustid' AND ta2.value = ta.value
+			AND ta2.track_id NOT IN (
+				SELECT track_id FROM kept_duplicates kd WHERE kd.acoustid = ta.value))`
+	}
+	query += `
+		ORDER BY ta.value, ta.track_id`
+	rows, err := d.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	groups := map[string][]string{}
+	for rows.Next() {
+		var acoustID, trackID string
+		if err := rows.Scan(&acoustID, &trackID); err != nil {
+			return nil, err
+		}
+		groups[acoustID] = append(groups[acoustID], trackID)
+	}
+	return groups, rows.Err()
+}
+
+// KeepDuplicates marks a set of tracks sharing an AcoustID as intentional duplicates so
+// GetDuplicateAcoustIDs stops reporting them. Nothing is written to the files themselves.
+func (d *SqliteLibrary) KeepDuplicates(ctx context.Context, acoustID string, trackIDs []string) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, id := range trackIDs {
+		if id == "" {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO kept_duplicates (acoustid, track_id) VALUES (?, ?)`, acoustID, id); err != nil {
+			return err
+		}
+	}
+	slog.Info("KeepDuplicates: marked tracks as intentional duplicates", "acoustID", acoustID, "tracks", len(trackIDs))
+	return tx.Commit()
+}
+
+// GetKeptDuplicates returns the other tracks that were marked — via the merge feature's "Keep"
+// action — as intentional duplicates of the given track (same AcoustID, kept on purpose).
+func (d *SqliteLibrary) GetKeptDuplicates(ctx context.Context, trackID string) ([]*music.Track, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT DISTINCT kd2.track_id
+		FROM kept_duplicates kd1
+		JOIN kept_duplicates kd2 ON kd2.acoustid = kd1.acoustid AND kd2.track_id != kd1.track_id
+		WHERE kd1.track_id = ?
+		ORDER BY kd2.track_id`, trackID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	tracks := make([]*music.Track, 0, len(ids))
+	for _, id := range ids {
+		t, err := d.GetTrack(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if t != nil {
+			tracks = append(tracks, t)
+		}
+	}
+	return tracks, nil
+}
+
+// MergeTracks removes each merged (duplicate) track from the database, repointing any playlist
+// entries onto the canonical track first. playlist_tracks has a composite primary key, so the
+// repoint uses UPDATE OR IGNORE and deletes rows left behind when the canonical track is already
+// in the playlist. File deletion is the caller's responsibility.
+func (d *SqliteLibrary) MergeTracks(ctx context.Context, canonicalID string, mergedIDs []string) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, mergedID := range mergedIDs {
+		if mergedID == canonicalID || mergedID == "" {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE OR IGNORE playlist_tracks SET track_id = ? WHERE track_id = ?`, canonicalID, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM playlist_tracks WHERE track_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM track_attributes WHERE track_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM kept_duplicates WHERE track_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM track_artists WHERE track_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM track_albums WHERE track_id = ?`, mergedID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM tracks WHERE id = ?`, mergedID); err != nil {
+			return err
+		}
+		slog.Info("MergeTracks: merged duplicate track", "canonicalID", canonicalID, "mergedID", mergedID)
+	}
 	return tx.Commit()
 }
 

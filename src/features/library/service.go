@@ -488,6 +488,11 @@ func (s *Service) DeleteArtist(ctx context.Context, id string) error {
 	return nil
 }
 
+// GetKeptDuplicates returns the tracks marked as intentional duplicates of the given track.
+func (s *Service) GetKeptDuplicates(ctx context.Context, trackID string) ([]*library.Track, error) {
+	return s.library.GetKeptDuplicates(ctx, trackID)
+}
+
 // DeleteTrack deletes a track from the library.
 func (s *Service) DeleteTrack(ctx context.Context, id string) error {
 	slog.Debug("DeleteTrack service called", "id", id)

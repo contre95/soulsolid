@@ -1,5 +1,22 @@
 {{define "tag/edit_form"}}
 
+      {{if .Duplicates}}
+      <div class="flex items-center gap-2 flex-wrap mb-4">
+        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+          <i class="fas fa-clone mr-1"></i>Kept duplicate of
+        </span>
+        {{range .Duplicates}}
+        <button type="button"
+                hx-get="/tag/{{.ID}}" hx-target="#contenido" hx-swap="outerHTML" hx-push-url="true"
+                title="Edit tags of {{.Path}}"
+                class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-amber-500/10 border border-amber-400/40 text-amber-600 dark:text-amber-300 hover:bg-amber-500/20 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+          {{.Title}}{{if .Format}}<span class="uppercase opacity-70">· {{.Format}}</span>{{end}}
+          <i class="fas fa-arrow-right text-[10px] opacity-70"></i>
+        </button>
+        {{end}}
+      </div>
+      {{end}}
+
       <form id="tag-edit-form"
             hx-post="/tag/{{.Track.ID}}"
             hx-target="#toast-container"

@@ -19,6 +19,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	golang.org/x/image v0.32.0
+	golang.org/x/text v0.30.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -51,5 +52,4 @@ require (
 	golang.org/x/crypto v0.42.0 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
 )
