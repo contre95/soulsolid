@@ -315,16 +315,17 @@ files out of five hundred is not a failed import — the other 497 tracks are in
 the library and the job did its work. Reporting it as `failed` would
 misrepresent the state of the library.
 
-### 5. Job input is a typed struct; job output stays an untyped map
+### 5. Job input is a typed struct end to end; job output stays an untyped map
 
 Metadata travels as `map[string]any`, because the registry is heterogeneous and
-the map is what gets JSON-serialized and indexed by templates. But tasks never
-see it. Each `Task[P]` declares a parameter struct, and the handler decodes and
-validates the map into `P` before `Execute` is called:
+the map is what gets JSON-serialized and indexed by templates. But neither the
+caller starting a job nor the task running it ever handles that map directly —
+the same parameter struct sits at both ends of the round trip:
 
 ```mermaid
 flowchart TD
-    A["StartJob(type, name, map[string]any)"] --> B["job.Metadata<br/>map[string]any"]
+    S["Feature service<br/><i>music.StartTypedJob(js, type, name, P{...})</i>"] --> A
+    A["paramsToMetadata(P)<br/>struct → map"] --> B["job.Metadata<br/>map[string]any"]
     B --> C{"len(metadata) > 0?"}
     C -->|no| E["zero value of P"]
     C -->|yes| D["json.Marshal → json.Unmarshal into P"]
@@ -340,6 +341,28 @@ flowchart TD
 The struct fields *are* the schema, so there is no separate key declaration to
 drift out of sync with what the task reads. Validation covers presence, type and
 constraints, and it fails before any library mutation happens.
+
+**Callers are typed too.** `music.StartTypedJob` is a generic free function that
+marshals a parameter struct into the metadata map, so a misspelled or
+wrongly-typed field is a compile error at the call site rather than a validation
+failure once the job runs:
+
+```go
+music.StartTypedJob(s.jobService, "directory_import", "Directory Import",
+    ImportParams{Path: pathToImport})
+```
+
+It is a free function rather than a method because **Go does not permit type
+parameters on methods**. `StartJob[P]` cannot exist on the `music.JobService`
+interface, and deleting that interface to make it generic would put every
+feature back to importing `src/features/jobs`, violating ADR 0002. A generic
+function taking the interface as its first argument sidesteps both problems.
+
+The one caller that stays untyped is `POST /jobs/start/:type`, which accepts an
+arbitrary job-type string at runtime and passes `nil` metadata. That is also how
+the dashboard triggers `calculate_metrics`, and it is why param-less tasks
+declare an empty struct with no required fields — nil metadata must decode
+successfully for them.
 
 The JSON round-trip is deliberate rather than merely convenient: it normalizes
 values that would otherwise arrive in several shapes (`[]any` vs `[]string`,
@@ -530,13 +553,14 @@ deployments, this decision must be revisited.
   re-queued; the user must start them again.
 - **In-flight work is truncated on restart,** and only importing has a clean
   re-run story. A cut reorganize or download may leave partial state on disk.
-- **Bad metadata still fails at runtime, not compile time.** `StartJob` accepts
-  `map[string]any`, so a caller passing the wrong shape is caught by validation
-  when the job runs, not by the compiler at the call site. The failure is now
-  clean and immediate rather than silent or fatal, but the call sites remain
-  untyped.
-- **Decoding costs a reflection pass per job.** Irrelevant for jobs measured in
-  minutes; it would not be for a high-frequency queue.
+- **One untyped entry point remains.** Every feature-initiated job goes through
+  `music.StartTypedJob` and is checked at compile time, but `POST
+  /jobs/start/:type` takes a job-type string from the URL and cannot be. Bad
+  input there is caught by validation at run time — cleanly, but not by the
+  compiler.
+- **Two JSON round trips per job start** (struct → map on the way in, map →
+  struct on the way out). Irrelevant for jobs measured in minutes; it would not
+  be for a high-frequency queue.
 - **Cancellation is only as good as the task.** A task that ignores `ctx` runs to
   completion regardless, while the UI reports `cancelled`.
 - **Webhook config is arbitrary command execution,** mitigated but not eliminated

@@ -53,11 +53,11 @@ func NewDownloadJobTask(service *Service) *DownloadJobTask {
 type DownloadParams struct {
 	Type         string   `json:"type" validate:"required,oneof=track album artist tracks playlist"`
 	Downloader   string   `json:"downloader" validate:"required"`
-	TrackID      string   `json:"trackID"`
-	AlbumID      string   `json:"albumID"`
-	ArtistID     string   `json:"artistID"`
-	TrackIDs     []string `json:"trackIDs"`
-	PlaylistName string   `json:"playlistName"`
+	TrackID      string   `json:"trackID,omitempty"`
+	AlbumID      string   `json:"albumID,omitempty"`
+	ArtistID     string   `json:"artistID,omitempty"`
+	TrackIDs     []string `json:"trackIDs,omitempty"`
+	PlaylistName string   `json:"playlistName,omitempty"`
 }
 
 // Execute performs the download operation
