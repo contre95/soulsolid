@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"log/slog"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
@@ -28,6 +30,32 @@ import (
 	"github.com/contre95/soulsolid/src/infra/tag"
 	"github.com/contre95/soulsolid/src/infra/watcher"
 )
+
+// warnOnLibraryRootMismatch reports stored track paths that no longer sit under
+// the configured library root.
+func warnOnLibraryRootMismatch(db *database.SqliteLibrary, libraryPath string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	report, err := db.InspectLibraryRoot(ctx, libraryPath)
+	if err != nil {
+		slog.Warn("Could not verify the library path against the database", "error", err)
+		return
+	}
+	if !report.Mismatch() {
+		return
+	}
+
+	slog.Warn("Library path does not match the database. "+
+		"Tracks stored outside the configured library root will not stream and will not be "+
+		"detected as duplicates on import. Restore the previous libraryPath in config.yaml, "+
+		"or run a reorganize job to move the files under the new root.",
+		"libraryPath", report.Root,
+		"tracksOutside", report.Outside,
+		"tracksTotal", report.Total,
+		"examples", report.Samples,
+	)
+}
 
 func main() {
 	configPath := "/config/config.yaml"
@@ -54,6 +82,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create library: %v", err)
 	}
+	warnOnLibraryRootMismatch(db, cfgManager.Get().LibraryPath)
+
 	libraryService := library.NewService(db, cfgManager, fileOrganizer)
 	playlistsService := playlists.NewService(db, db, cfgManager)
 	metricsService := metrics.NewService(db, cfgManager)

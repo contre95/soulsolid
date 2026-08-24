@@ -29,10 +29,19 @@
           </h2>
          <div class="space-y-3">
            <div>
-             <label for="libraryPath" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Library Path</label>
-             <input type="text" id="libraryPath" name="libraryPath" value="{{.Config.LibraryPath}}"
-                    class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+             <label for="libraryPath" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+               Library Path
+               <i class="fas fa-lock ml-1 text-xs text-gray-400" title="Read-only"></i>
+             </label>
+             <input type="text" id="libraryPath" value="{{.Config.LibraryPath}}" readonly disabled
+                    class="bg-gray-100/70 dark:bg-gray-800/70 border border-gray-300/50 dark:border-gray-600/50 text-gray-500 dark:text-gray-400 text-sm rounded-lg block w-full px-3 py-1.5 cursor-not-allowed backdrop-blur-sm"
                     placeholder="/path/to/music/library">
+             <div class="mt-1 text-sm text-yellow-600 dark:text-yellow-300 italic py-2 px-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
+               The library path is fixed while Soulsolid is running. Every track in the database is
+               recorded under this root, so changing it would leave the existing library unreachable.
+               To move your library, edit <code>libraryPath</code> in <code>config.yaml</code>, move the
+               files yourself, and restart.
+             </div>
            </div>
            <div>
              <label for="downloadPath" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Download Path</label>
