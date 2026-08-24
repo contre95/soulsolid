@@ -1,10 +1,6 @@
 package metrics
 
-import (
-	"context"
-
-	"github.com/contre95/soulsolid/src/music"
-)
+import "context"
 
 // LibraryMetrics provides analytics and reporting functionality for the music library.
 type LibraryMetrics interface {
@@ -12,7 +8,7 @@ type LibraryMetrics interface {
 	GetGenreDistribution(ctx context.Context) (map[string]int, error)
 
 	// Metadata completeness analysis
-	GetMetadataCompleteness(ctx context.Context) (music.MetadataCompletenessStats, error)
+	GetMetadataCompleteness(ctx context.Context) (MetadataCompletenessStats, error)
 
 	// Audio format analysis
 	GetFormatDistribution(ctx context.Context) (map[string]int, error)
@@ -21,7 +17,7 @@ type LibraryMetrics interface {
 	GetYearDistribution(ctx context.Context) (map[string]int, error)
 
 	// Lyrics presence analysis
-	GetLyricsStats(ctx context.Context) (music.LyricsStats, error)
+	GetLyricsStats(ctx context.Context) (LyricsStats, error)
 
 	// Specific metadata field counts
 	GetTracksWithISRC(ctx context.Context) (int, error)
@@ -38,6 +34,32 @@ type LibraryMetrics interface {
 
 	// Storage operations for cached metrics
 	StoreMetric(ctx context.Context, metricType, key string, value int) error
-	GetStoredMetrics(ctx context.Context, metricType string) ([]music.StoredMetric, error)
+	GetStoredMetrics(ctx context.Context, metricType string) ([]StoredMetric, error)
 	ClearStoredMetrics(ctx context.Context) error
+}
+
+// The types below are this feature's contract vocabulary. They live here, next
+// to the port that names them, so the adapter in src/infra implements a
+// contract this feature fully owns — the same arrangement as
+// importing.FileEvent and metadata.SearchParams.
+
+// MetadataCompletenessStats represents the completeness of metadata across tracks.
+type MetadataCompletenessStats struct {
+	Complete      int // Tracks with all required metadata
+	MissingGenre  int // Tracks missing genre
+	MissingYear   int // Tracks missing year
+	MissingLyrics int // Tracks missing lyrics
+}
+
+// LyricsStats represents lyrics presence statistics.
+type LyricsStats struct {
+	WithLyrics    int // Tracks that have lyrics
+	WithoutLyrics int // Tracks that don't have lyrics
+}
+
+// StoredMetric represents a cached metric stored in the database.
+type StoredMetric struct {
+	Type  string // The type of metric (e.g., "genre_counts", "lyrics_stats")
+	Key   string // The metric key (e.g., genre name, "has_lyrics")
+	Value int    // The metric value (count)
 }

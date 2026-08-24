@@ -4,7 +4,6 @@ import (
 	"log/slog"
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
-	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -119,7 +118,7 @@ func (h *Handler) GetMetadataChartHTML(c *fiber.Ctx) error {
 	lyricsStats, err := h.service.metrics.GetLyricsStats(c.Context())
 	if err != nil {
 		slog.Error("Error getting lyrics stats", "error", err)
-		lyricsStats = music.LyricsStats{}
+		lyricsStats = LyricsStats{}
 	}
 	acoustIDCount, err := h.service.metrics.GetTracksWithAcoustID(c.Context())
 	if err != nil {

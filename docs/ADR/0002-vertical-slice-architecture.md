@@ -144,9 +144,17 @@ with the comment: *"the subset of the library repository the merge feature
 needs… defined here so the feature depends only on what it uses."* That is the
 intended pattern for anything one feature needs.
 
-`src/music` is reserved for contracts that genuinely cross feature boundaries.
-Putting everything there would turn the core domain into a dumping ground;
-putting nothing there would force features to import each other.
+`src/music` is reserved for contracts that genuinely cross **feature**
+boundaries. Putting everything there would turn the core domain into a dumping
+ground; putting nothing there would force features to import each other.
+
+**A port's data types follow the port.** If `metrics` declares `LibraryMetrics`,
+then `MetadataCompletenessStats` and `StoredMetric` live in `metrics` too — the
+feature owns its whole contract. Being consumed by an adapter in `src/infra`
+does not promote a type into the core domain; only being spoken by more than one
+*feature* does. This keeps every feature's contract shaped the same way, and it
+is why `importing.FileEvent`, `metadata.SearchParams` and `metrics.StoredMetric`
+all live beside the ports that name them rather than in `src/music`.
 
 ### 4. Adapters point inward — `infra` imports `features`, not the reverse
 
@@ -165,14 +173,31 @@ flowchart RL
     A -->|"returns importing.FingerprintProvider"| P
 ```
 
-The rule is **interfaces only**. An adapter may import a feature to name the
-port it implements; it must never depend on a feature's concrete types. When it
-does, the layering inverts for real — see decision 6.
+**An adapter imports the whole contract surface, not just the interface.** A
+port is rarely only a method set — its signatures name types, and those types
+are part of the same contract. The feature owns both, and the adapter imports
+both:
 
-The alternative, structural satisfaction with no import at all, is used wherever
-the types allow it. Every job task satisfies `jobs.Task[P]` without importing
-`src/features/jobs`, and `infra/files.PathSanitizer` satisfies
-`reorganize.PathSanitizer` the same way.
+| Adapter | Feature | Contract types it uses |
+|---|---|---|
+| `infra/watcher` | `importing` | `Watcher`, `FileEvent`, `FileCreated` |
+| `infra/fingerprint` | `importing` | `FingerprintProvider` |
+| `infra/files` | `importing` | `PathParser` |
+| `infra/providers` | `metadata` | `MetadataProvider`, `ChromaprintAcoustID`, `SearchParams` |
+| `infra/providers` | `lyrics` | `LyricsProvider` |
+| `infra/database` | `metrics` | `LibraryMetrics`, `MetadataCompletenessStats`, `LyricsStats`, `StoredMetric` |
+| `infra/tag` | `config` | `EmbeddedArtwork` |
+
+Splitting a port from its vocabulary — interface in the feature, structs
+elsewhere — would give one feature a contract it only half owns, and would make
+that feature inconsistent with every other one. The contract lives in one place.
+
+Where a port happens to be expressible with no custom types at all, structural
+satisfaction lets the adapter skip the import entirely: every job task satisfies
+`jobs.Task[P]` without importing `src/features/jobs`, and
+`infra/files.PathSanitizer` satisfies `reorganize.PathSanitizer` the same way.
+That is a nice-to-have, not the rule — it only works when the signatures use
+stdlib or `music` types.
 
 ### 5. A conventional shape inside every feature folder
 
@@ -237,6 +262,7 @@ positional service arguments, and `importing.NewService` takes eight.
 | **True modules (separate Go modules per feature)** | Would enforce boundaries mechanically rather than by discipline, but imposes multi-module versioning overhead on a solo project shipping one binary. The current layout preserves the seam without paying that cost. |
 | **All interfaces in `src/music`** | One obvious place to look, but the core domain becomes a dumping ground of narrow single-consumer ports, and every feature ends up depending on declarations it does not use. |
 | **All interfaces consumer-side, none in `music`** | The strict Go idiom. Rejected because cross-cutting contracts like `JobService` would then be duplicated in six features, and there would be no single place that documents how features are permitted to interact. |
+| **Promoting a feature's contract types into `src/music`** | Tried for the metrics DTOs and reverted. It does produce a cleaner import graph for the one adapter involved, but it splits a port from its vocabulary, makes that feature the only one whose contract it does not fully own, and does not generalize — the same trick applied to `config` would mean moving the entire configuration model into the core domain. Consistency beat a locally cleaner graph. |
 | **DI container (wire, fx, dig)** | Would shorten `main.go`, but trades compile-time clarity for generated or reflective wiring — poor value when there is exactly one composition root and one binary. |
 | **`hosting` kept under `src/features/`** | Status quo before this ADR. Rejected: it is not a slice, and co-locating the top-of-graph aggregator with the bottom-of-graph `respond` helper made the dependency graph misread. |
 
@@ -281,21 +307,34 @@ positional service arguments, and `importing.NewService` takes eight.
 
 ## Open Questions
 
-1. **`config` drags the web framework into infrastructure.** `features/config`
-   is both a shared-kernel library (`config.Manager`) and a normal feature with
-   `handlers.go` and `routes.go`. Because Go's compilation unit is the package,
-   any package importing it for the `Manager` also inherits its HTTP layer.
-   Five of seven `infra` subpackages therefore transitively depend on
+1. **Feature packages mix contracts with delivery, so adapters inherit the web
+   framework.** Every feature package holds its ports *and* its `handlers.go` /
+   `routes.go`. Go's compilation unit is the package, so an adapter that imports
+   a feature to implement its port also inherits that feature's HTTP layer. Six
+   of seven `infra` subpackages therefore transitively depend on
    `gofiber/fiber/v2`:
 
    ```
-   infra/tag → features/config → hosting/respond → gofiber/fiber/v2
+   infra/database → features/metrics → hosting/respond → gofiber/fiber/v2
+   infra/tag      → features/config  → hosting/respond → gofiber/fiber/v2
    ```
 
-   The fix is to split the package: a dependency-free `config` holding the
-   `Manager` and the config types, and a separate feature owning the config UI.
-   `infra/database` and `infra/queue` are already clean and show what the end
-   state looks like.
+   Only `infra/queue` is clean, and only because it needs nothing but `music`.
+
+   This is a **package-granularity problem, not a layering one**. The dependency
+   arrows all point the right way; the packages are simply too coarse. Two
+   possible fixes:
+
+   - Split each feature so its contract surface (ports + their types) is a
+     package with no HTTP dependency, and delivery lives beside it.
+   - Or accept it: in a single binary that links Fiber anyway, the cost is
+     conceptual rather than measurable.
+
+   Whichever is chosen should be applied uniformly. Special-casing individual
+   features — for instance by promoting one feature's data types into
+   `src/music` to dodge the import — buys a cleaner graph for that package at
+   the cost of making that feature inconsistent with every other one, and does
+   not generalize to `config`.
 
 2. **Positional constructor arguments.** `hosting.NewServer` takes twelve
    services in a fixed order, all pointers. Two of the same type could be
