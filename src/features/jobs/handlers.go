@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/contre95/soulsolid/src/features/hosting/respond"
+	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )

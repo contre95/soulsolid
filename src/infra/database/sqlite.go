@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
@@ -172,6 +171,11 @@ func createTables(db *sql.DB) error {
 			metric_value INTEGER,
 			updated_at TEXT,
 			UNIQUE(metric_type, metric_key)
+		);
+
+		CREATE TABLE IF NOT EXISTS library_config (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_track_artists_track ON track_artists(track_id);
@@ -607,8 +611,8 @@ func (d *SqliteLibrary) GetGenreDistribution(ctx context.Context) (map[string]in
 }
 
 // GetMetadataCompleteness returns statistics about metadata completeness.
-func (d *SqliteLibrary) GetMetadataCompleteness(ctx context.Context) (metrics.MetadataCompletenessStats, error) {
-	var stats metrics.MetadataCompletenessStats
+func (d *SqliteLibrary) GetMetadataCompleteness(ctx context.Context) (music.MetadataCompletenessStats, error) {
+	var stats music.MetadataCompletenessStats
 
 	// Count tracks with complete metadata (title, artist, album, genre, year)
 	err := d.db.QueryRowContext(ctx, `
@@ -720,8 +724,8 @@ func (d *SqliteLibrary) GetYearDistribution(ctx context.Context) (map[string]int
 }
 
 // GetLyricsStats returns statistics about lyrics presence.
-func (d *SqliteLibrary) GetLyricsStats(ctx context.Context) (metrics.LyricsStats, error) {
-	var stats metrics.LyricsStats
+func (d *SqliteLibrary) GetLyricsStats(ctx context.Context) (music.LyricsStats, error) {
+	var stats music.LyricsStats
 
 	// Count tracks with lyrics
 	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM tracks WHERE lyrics IS NOT NULL AND lyrics != ''").Scan(&stats.WithLyrics)
@@ -791,7 +795,7 @@ func (d *SqliteLibrary) StoreMetric(ctx context.Context, metricType, key string,
 }
 
 // GetStoredMetrics retrieves stored metrics of a specific type.
-func (d *SqliteLibrary) GetStoredMetrics(ctx context.Context, metricType string) ([]metrics.StoredMetric, error) {
+func (d *SqliteLibrary) GetStoredMetrics(ctx context.Context, metricType string) ([]music.StoredMetric, error) {
 	rows, err := d.db.QueryContext(ctx, `
 		SELECT metric_key, metric_value
 		FROM library_metrics
@@ -803,9 +807,9 @@ func (d *SqliteLibrary) GetStoredMetrics(ctx context.Context, metricType string)
 	}
 	defer rows.Close()
 
-	var storedMetrics []metrics.StoredMetric
+	var storedMetrics []music.StoredMetric
 	for rows.Next() {
-		var m metrics.StoredMetric
+		var m music.StoredMetric
 		m.Type = metricType
 		if err := rows.Scan(&m.Key, &m.Value); err != nil {
 			return nil, err
@@ -2752,6 +2756,31 @@ func (d *SqliteLibrary) FindTrackByPath(ctx context.Context, path string) (*musi
 	}
 
 	return track, nil
+}
+
+// libraryRootKey is the library_config key holding the library path this
+// database was initialized against.
+const libraryRootKey = "library_path"
+
+// LibraryRoot returns the library path recorded when this database was first
+// initialized, or "" if no previous run recorded one.
+func (d *SqliteLibrary) LibraryRoot(ctx context.Context) (string, error) {
+	var root string
+	err := d.db.QueryRowContext(ctx,
+		`SELECT value FROM library_config WHERE key = ?`, libraryRootKey).Scan(&root)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return root, err
+}
+
+// RecordLibraryRoot stores root as the library path this database belongs to.
+// An already recorded value is kept, so the original root survives later runs
+// that point somewhere else.
+func (d *SqliteLibrary) RecordLibraryRoot(ctx context.Context, root string) error {
+	_, err := d.db.ExecContext(ctx,
+		`INSERT OR IGNORE INTO library_config (key, value) VALUES (?, ?)`, libraryRootKey, root)
+	return err
 }
 
 // Ensure SqliteLibrary implements PlaylistRepository

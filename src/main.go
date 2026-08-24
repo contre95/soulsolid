@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
-	"github.com/contre95/soulsolid/src/features/hosting"
 	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
@@ -22,6 +22,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/playlists"
 	"github.com/contre95/soulsolid/src/features/reorganize"
 	"github.com/contre95/soulsolid/src/features/streaming"
+	"github.com/contre95/soulsolid/src/hosting"
 	"github.com/contre95/soulsolid/src/infra/database"
 	"github.com/contre95/soulsolid/src/infra/files"
 	"github.com/contre95/soulsolid/src/infra/fingerprint"
@@ -31,34 +32,41 @@ import (
 	"github.com/contre95/soulsolid/src/infra/watcher"
 )
 
-// warnOnLibraryRootMismatch reports stored track paths that no longer sit under
-// the configured library root.
+// warnOnLibraryRootMismatch warns when the database was initialized against a
+// different library path than the one currently configured. On a database that
+// has not recorded one yet, the current path becomes the recorded baseline.
 func warnOnLibraryRootMismatch(db *database.SqliteLibrary, libraryPath string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	report, err := db.InspectLibraryRoot(ctx, libraryPath)
+	recorded, err := db.LibraryRoot(ctx)
 	if err != nil {
-		slog.Warn("Could not verify the library path against the database", "error", err)
-		return
-	}
-	if !report.Mismatch() {
+		slog.Warn("Could not read the library path recorded in the database", "error", err)
 		return
 	}
 
-	slog.Warn("Library path does not match the database. "+
-		"Tracks stored outside the configured library root will not stream and will not be "+
+	if recorded == "" {
+		if err := db.RecordLibraryRoot(ctx, libraryPath); err != nil {
+			slog.Warn("Could not record the library path in the database", "error", err)
+		}
+		return
+	}
+
+	if filepath.Clean(recorded) == filepath.Clean(libraryPath) {
+		return
+	}
+
+	slog.Warn("Library path changed since this database was initialized. "+
+		"Tracks are recorded under the previous path, so they will not stream and will not be "+
 		"detected as duplicates on import. Restore the previous libraryPath in config.yaml, "+
-		"or run a reorganize job to move the files under the new root.",
-		"libraryPath", report.Root,
-		"tracksOutside", report.Outside,
-		"tracksTotal", report.Total,
-		"examples", report.Samples,
+		"or run a reorganize job to move the files under the new one.",
+		"recordedLibraryPath", recorded,
+		"configuredLibraryPath", libraryPath,
 	)
 }
 
 func main() {
-	configPath := "/config/config.yaml"
+	configPath := "./config.yaml"
 	if envPath := os.Getenv("SOULSOLID_CONFIG_PATH"); envPath != "" {
 		configPath = envPath
 	}
@@ -101,7 +109,7 @@ func main() {
 	}
 	importingService := importing.NewService(db, tagReader, fingerprintReader, fileOrganizer, cfgManager, jobService, importQueue, dirWatcher)
 
-	reorganizeService := reorganize.NewService(db, fileOrganizer, cfgManager, jobService)
+	reorganizeService := reorganize.NewService(db, fileOrganizer, cfgManager, jobService, files.NewPathSanitizer())
 
 	mergeService := merge.NewService(db, tagWriter, tagReader, fileOrganizer, jobService)
 

@@ -15,15 +15,17 @@ type Service struct {
 	library     music.Library
 	config      *config.Manager
 	jobService  music.JobService
+	sanitizer   PathSanitizer
 }
 
 // NewService creates a new reorganize service.
-func NewService(lib music.Library, fileManager music.FileManager, cfg *config.Manager, jobService music.JobService) *Service {
+func NewService(lib music.Library, fileManager music.FileManager, cfg *config.Manager, jobService music.JobService, sanitizer PathSanitizer) *Service {
 	return &Service{
 		library:     lib,
 		fileManager: fileManager,
 		config:      cfg,
 		jobService:  jobService,
+		sanitizer:   sanitizer,
 	}
 }
 
