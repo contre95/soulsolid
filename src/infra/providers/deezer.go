@@ -89,7 +89,9 @@ func (p *DeezerProvider) SearchTracks(ctx context.Context, params metadata.Searc
 		queryParts = append(queryParts, fmt.Sprintf("track:\"%s\"", params.Title))
 	}
 	if params.AlbumArtist != "" {
-		queryParts = append(queryParts, fmt.Sprintf("artist:\"%s\"", params.AlbumArtist))
+		// Deezer's search parser silently returns zero results whenever the artist
+		// field is quoted (even alone) - unlike track/album, it must stay unquoted.
+		queryParts = append(queryParts, fmt.Sprintf("artist:%s", params.AlbumArtist))
 	}
 	if params.Album != "" {
 		queryParts = append(queryParts, fmt.Sprintf("album:\"%s\"", params.Album))
