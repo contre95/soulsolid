@@ -66,6 +66,26 @@ metadata:
       secret: !env_var DISCOGS_SECRET
 ```
 
+A scalar tagged `!env_file` is resolved the same way, except the named environment
+variable is expected to hold a *path* rather than the secret itself — the file at
+that path is read and its (trimmed) contents become the value. This follows the
+Docker/Kubernetes secrets convention of mounting a secret as a file and pointing to
+it with a `_FILE`-suffixed variable, so the secret value never has to touch the
+process environment or shell history:
+
+```yaml
+telegram:
+  token: !env_file TELEGRAM_TOKEN_FILE   # TELEGRAM_TOKEN_FILE=/run/secrets/telegram_token
+metadata:
+  providers:
+    acoustid:
+      secret: !env_file ACOUSTID_CLIENT_KEY_FILE
+```
+
+The app **fails to start** if the referenced variable is unset, the file can't be
+read, or the file is empty. `!env_var` and `!env_file` can be mixed freely across
+different fields.
+
 After expansion the struct is validated with `go-playground/validator`; `libraryPath`,
 `downloadPath`, and `database.path` are required.
 

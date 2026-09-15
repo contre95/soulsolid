@@ -49,6 +49,40 @@ func (m *Manager) processEnvVarNodes(node *yaml.Node, path []string) error {
 		return nil
 	}
 
+	// Check if this node has a !env_file tag: the named environment variable
+	// holds a *path* to a file (Docker/Kubernetes secrets convention, e.g.
+	// ACOUSTID_CLIENT_KEY_FILE=/run/secrets/acoustid_client_key), and the
+	// file's contents become the value.
+	if node.Tag == "!env_file" {
+		if node.Kind != yaml.ScalarNode {
+			return fmt.Errorf("!env_file tag can only be used with scalar values (line %d)", node.Line)
+		}
+
+		envVarName := strings.TrimSpace(node.Value)
+		if envVarName == "" {
+			return fmt.Errorf("!env_file tag requires environment variable name (line %d)", node.Line)
+		}
+
+		filePath := os.Getenv(envVarName)
+		if filePath == "" {
+			return fmt.Errorf("environment variable %s is not set or empty (referenced at line %d)", envVarName, node.Line)
+		}
+
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to read file %q referenced by %s (line %d): %w", filePath, envVarName, node.Line, err)
+		}
+
+		value := strings.TrimSpace(string(content))
+		if value == "" {
+			return fmt.Errorf("file %q referenced by %s is empty (line %d)", filePath, envVarName, node.Line)
+		}
+
+		node.Tag = ""
+		node.Value = value
+		return nil
+	}
+
 	// Recursively process child nodes
 	// Start with DocumentNode content if present
 	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {

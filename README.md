@@ -55,7 +55,20 @@ metadata:
       secret: !env_var DISCOGS_API_KEY
 ```
 
-The application will fail to start if a referenced environment variable is not set.
+Secrets can also be loaded from a file instead — handy for Docker/Kubernetes
+secrets, which are mounted as files. Use the `!env_file` tag: the named
+environment variable holds the *path* to the file, and the file's contents
+become the value:
+
+```yaml
+metadata:
+  providers:
+    acoustid:
+      secret: !env_file ACOUSTID_CLIENT_KEY_FILE # e.g. ACOUSTID_CLIENT_KEY_FILE=/run/secrets/acoustid_client_key
+```
+
+The application will fail to start if a referenced environment variable is not
+set, or (for `!env_file`) if the file it points to can't be read or is empty.
 
 ### Build and/or run it  
 
