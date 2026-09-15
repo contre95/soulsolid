@@ -53,17 +53,17 @@ func NewAcoustIDService(cfg *config.Manager) metadata.ChromaprintAcoustID {
 }
 
 // LookupAcoustID looks up AcoustID using chromaprint
-func (s *AcoustIDAPI) LookupAcoustID(ctx context.Context, chromaprint string, duration int) (string, error) {
+func (s *AcoustIDAPI) LookupAcoustID(ctx context.Context, chromaprint string, duration int) (metadata.AcoustIDLookupResult, error) {
 	cfg := s.config.Get()
 
 	// Check if AcoustID is enabled
 	acoustidProvider, exists := cfg.Metadata.Providers["acoustid"]
 	if !exists || !acoustidProvider.Enabled {
-		return "", fmt.Errorf("AcoustID lookup is disabled in configuration")
+		return metadata.AcoustIDLookupResult{}, fmt.Errorf("AcoustID lookup is disabled in configuration")
 	}
 
 	if acoustidProvider.Secret == nil || *acoustidProvider.Secret == "" {
-		return "", fmt.Errorf("AcoustID secret not configured")
+		return metadata.AcoustIDLookupResult{}, fmt.Errorf("AcoustID secret not configured")
 	}
 
 	// Prepare API request
@@ -79,35 +79,35 @@ func (s *AcoustIDAPI) LookupAcoustID(ctx context.Context, chromaprint string, du
 	// Create HTTP request
 	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create HTTP request: %w", err)
+		return metadata.AcoustIDLookupResult{}, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
 	// Make HTTP request
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to query AcoustID API: %w", err)
+		return metadata.AcoustIDLookupResult{}, fmt.Errorf("failed to query AcoustID API: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("AcoustID API returned status: %d", resp.StatusCode)
+		return metadata.AcoustIDLookupResult{}, fmt.Errorf("AcoustID API returned status: %d", resp.StatusCode)
 	}
 
 	// Parse response
 	var response AcoustIDResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return "", fmt.Errorf("failed to parse AcoustID response: %w", err)
+		return metadata.AcoustIDLookupResult{}, fmt.Errorf("failed to parse AcoustID response: %w", err)
 	}
 
 	if response.Status != "ok" {
 		if response.Error != nil {
-			return "", fmt.Errorf("AcoustID API error: %s", response.Error.Message)
+			return metadata.AcoustIDLookupResult{}, fmt.Errorf("AcoustID API error: %s", response.Error.Message)
 		}
-		return "", fmt.Errorf("AcoustID API returned status: %s", response.Status)
+		return metadata.AcoustIDLookupResult{}, fmt.Errorf("AcoustID API returned status: %s", response.Status)
 	}
 
 	if len(response.Results) == 0 {
-		return "", nil // No results found
+		return metadata.AcoustIDLookupResult{}, nil // No results found
 	}
 
 	// Return best match (highest score)
@@ -118,7 +118,15 @@ func (s *AcoustIDAPI) LookupAcoustID(ctx context.Context, chromaprint string, du
 		}
 	}
 
-	return bestResult.ID, nil
+	result := metadata.AcoustIDLookupResult{AcoustID: bestResult.ID}
+	if len(bestResult.Recordings) > 0 {
+		recording := bestResult.Recordings[0]
+		result.Title = recording.Title
+		if len(recording.Artists) > 0 {
+			result.Artist = recording.Artists[0].Name
+		}
+	}
+	return result, nil
 }
 
 // GenerateChromaprint generates a chromaprint fingerprint for an audio file and returns the duration

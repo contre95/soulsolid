@@ -39,8 +39,13 @@ type deezerTrack struct {
 }
 
 type deezerArtist struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID            int    `json:"id"`
+	Name          string `json:"name"`
+	Picture       string `json:"picture"`
+	PictureSmall  string `json:"picture_small"`
+	PictureMedium string `json:"picture_medium"`
+	PictureBig    string `json:"picture_big"`
+	PictureXL     string `json:"picture_xl"`
 }
 
 type deezerGenre struct {
@@ -59,6 +64,11 @@ type deezerAlbum struct {
 	Title       string       `json:"title"`
 	ReleaseDate string       `json:"release_date"`
 	Genres      deezerGenres `json:"genres"`
+	Cover       string       `json:"cover"`
+	CoverSmall  string       `json:"cover_small"`
+	CoverMedium string       `json:"cover_medium"`
+	CoverBig    string       `json:"cover_big"`
+	CoverXL     string       `json:"cover_xl"`
 }
 
 // DeezerProvider implements MetadataProvider for Deezer
@@ -175,7 +185,19 @@ func (p *DeezerProvider) fetchAlbumDetails(ctx context.Context, albumID int) (*d
 // convertDeezerTrackToTrack converts a Deezer track to a music.Track
 func (p *DeezerProvider) convertDeezerTrackToTrack(deezerTrack deezerTrack, albumDetails *deezerAlbum) *music.Track {
 	// Create main artist
-	mainArtist := &music.Artist{Name: deezerTrack.Artist.Name}
+	mainArtist := &music.Artist{
+		Name:        deezerTrack.Artist.Name,
+		ImageSmall:  deezerTrack.Artist.PictureSmall,
+		ImageMedium: deezerTrack.Artist.PictureMedium,
+		ImageLarge:  deezerTrack.Artist.PictureBig,
+		ImageXL:     deezerTrack.Artist.PictureXL,
+	}
+
+	// Cover art (prefer the full album details if we fetched them)
+	cover := deezerTrack.Album
+	if albumDetails != nil {
+		cover = *albumDetails
+	}
 
 	// Create album
 	album := &music.Album{
@@ -183,6 +205,10 @@ func (p *DeezerProvider) convertDeezerTrackToTrack(deezerTrack deezerTrack, albu
 		Artists: []music.ArtistRole{
 			{Artist: mainArtist, Role: "main"},
 		},
+		ImageSmall:  cover.CoverSmall,
+		ImageMedium: cover.CoverMedium,
+		ImageLarge:  cover.CoverBig,
+		ImageXL:     cover.CoverXL,
 	}
 
 	// Parse year from release date (prefer album details if available)

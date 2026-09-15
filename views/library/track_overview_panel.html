@@ -46,7 +46,21 @@
         {{if .Artists}}
         <div class="flex gap-2">
           <span class="text-gray-400 dark:text-gray-500 w-20 shrink-0 text-xs pt-0.5 uppercase font-medium">Artist</span>
-          <span class="text-gray-800 dark:text-gray-200">{{.Artists}}</span>
+          <div class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-gray-800 dark:text-gray-200">
+            {{range $i, $ar := .Track.Artists}}
+              {{if $ar.Artist}}
+              {{if $i}}<span class="text-gray-400 dark:text-gray-600">,</span>{{end}}
+              <span class="inline-flex items-center gap-1.5">
+                {{$img := ""}}
+                {{if $ar.Artist.ImageSmall}}{{$img = $ar.Artist.ImageSmall}}{{else if $ar.Artist.ImageMedium}}{{$img = $ar.Artist.ImageMedium}}{{else if $ar.Artist.ImageLarge}}{{$img = $ar.Artist.ImageLarge}}{{else if $ar.Artist.ImageXL}}{{$img = $ar.Artist.ImageXL}}{{end}}
+                {{if $img}}
+                <img src="{{$img}}" alt="{{$ar.Artist.Name}}" class="w-5 h-5 rounded-full object-cover shrink-0">
+                {{end}}
+                {{$ar.Artist.Name}}
+              </span>
+              {{end}}
+            {{end}}
+          </div>
         </div>
         {{end}}
         {{if .Track.Album}}

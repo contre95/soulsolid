@@ -6,16 +6,16 @@ import (
 
 // TrackFilter represents the filter criteria for tracks.
 type TrackFilter struct {
-	Title       string
-	ArtistIDs   []string
-	AlbumIDs    []string
-	TextSearch  string // OR-match across track title, artist name, and album title
-	Genre       string // exact genre match
-	HasAcoustID *bool  // nil=any, true=has acoustid, false=missing
+	Title        string
+	ArtistIDs    []string
+	AlbumIDs     []string
+	TextSearch   string // OR-match across track title, artist name, and album title
+	Genre        string // exact genre match
+	HasAcoustID  *bool  // nil=any, true=has acoustid, false=missing
 	LyricsFilter string // "": any, "has": has_lyrics=true AND lyrics not empty, "empty": has_lyrics=true AND lyrics empty, "instrumental": has_lyrics=false
-	LyricsText  string // LIKE search within lyrics content
-	AddedAfter  string // "": any, else "YYYY-MM-DD"; matches tracks added on or after this date (inclusive)
-	AddedBefore string // "": any, else "YYYY-MM-DD"; matches tracks added on or before this date (inclusive)
+	LyricsText   string // LIKE search within lyrics content
+	AddedAfter   string // "": any, else "YYYY-MM-DD"; matches tracks added on or after this date (inclusive)
+	AddedBefore  string // "": any, else "YYYY-MM-DD"; matches tracks added on or before this date (inclusive)
 }
 
 // Library is the interface for managing the music library.
@@ -61,4 +61,5 @@ type Library interface {
 	GetArtistsFilteredCount(ctx context.Context, nameFilter string) (int, error)
 	GetArtistByName(ctx context.Context, name string) (*Artist, error)
 	FindOrCreateArtist(ctx context.Context, artistName string) (*Artist, error)
+	UpdateArtistImages(ctx context.Context, artistID string, small, medium, large, xl string) error
 }

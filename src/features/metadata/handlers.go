@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -425,6 +426,20 @@ func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
 	})
 }
 
+// persistArtistImages saves any image URLs a metadata provider returned for an artist
+// onto the corresponding library artist, without overwriting images with blanks.
+func (h *Handler) persistArtistImages(ctx context.Context, dbArtist, sourceArtist *music.Artist) {
+	if sourceArtist.ImageSmall == "" && sourceArtist.ImageMedium == "" && sourceArtist.ImageLarge == "" && sourceArtist.ImageXL == "" {
+		return
+	}
+	if err := h.service.libraryRepo.UpdateArtistImages(ctx, dbArtist.ID, sourceArtist.ImageSmall, sourceArtist.ImageMedium, sourceArtist.ImageLarge, sourceArtist.ImageXL); err != nil {
+		slog.Warn("Failed to persist artist images", "artistID", dbArtist.ID, "error", err)
+		return
+	}
+	dbArtist.ImageSmall, dbArtist.ImageMedium, dbArtist.ImageLarge, dbArtist.ImageXL =
+		sourceArtist.ImageSmall, sourceArtist.ImageMedium, sourceArtist.ImageLarge, sourceArtist.ImageXL
+}
+
 // SelectTrackFromResults handles selecting a track from search results and applying its metadata
 func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 	trackID := c.Params("trackId")
@@ -456,6 +471,7 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 			slog.Warn("Failed to find/create selected track artist", "artistName", artistRole.Artist.Name, "error", err)
 			continue
 		}
+		h.persistArtistImages(c.Context(), dbArtist, artistRole.Artist)
 		selectedTrack.Artists[j].Artist = dbArtist
 	}
 
@@ -468,6 +484,7 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 				slog.Warn("Failed to find/create selected album artist", "artistName", artistRole.Artist.Name, "error", err)
 				continue
 			}
+			h.persistArtistImages(c.Context(), dbArtist, artistRole.Artist)
 			selectedTrack.Album.Artists[j].Artist = dbArtist
 		}
 

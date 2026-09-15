@@ -38,7 +38,11 @@ func createTables(db *sql.DB) error {
 		CREATE TABLE IF NOT EXISTS artists (
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL UNIQUE,
-			sort_name TEXT
+			sort_name TEXT,
+			image_small TEXT,
+			image_medium TEXT,
+			image_large TEXT,
+			image_xl TEXT
 		);
 		
 		CREATE TABLE IF NOT EXISTS albums (
@@ -217,6 +221,29 @@ func createTables(db *sql.DB) error {
 	var verifyCount int
 	if err := db.QueryRow("SELECT count(*) FROM pragma_table_info('tracks') WHERE name='has_lyrics'").Scan(&verifyCount); err != nil || verifyCount == 0 {
 		return fmt.Errorf("has_lyrics migration failed post-check")
+	}
+
+	// Migrate #2
+	for _, col := range []colDef{{"image_small", "TEXT"}, {"image_medium", "TEXT"}, {"image_large", "TEXT"}, {"image_xl", "TEXT"}} {
+		var count int
+		if err := db.QueryRow("SELECT count(*) FROM pragma_table_info('artists') WHERE name=?", col.name).Scan(&count); err != nil || count > 0 {
+			continue
+		}
+		sql := fmt.Sprintf("ALTER TABLE artists ADD COLUMN %s %s", col.name, col.typ)
+		var addErr error
+		for i := 0; i < 3; i++ {
+			_, addErr = db.Exec(sql)
+			if addErr == nil {
+				break
+			}
+			slog.Warn("Column add retry", "col", col.name, "attempt", i+1, "err", addErr)
+			db.Exec("PRAGMA wal_checkpoint(FULL); PRAGMA synchronous = NORMAL;")
+			time.Sleep(time.Second * time.Duration(i+1))
+		}
+		if addErr != nil {
+			return fmt.Errorf("failed to add %s: %w", col.name, addErr)
+		}
+		slog.Info("Added missing column", "col", col.name)
 	}
 
 	return nil
@@ -509,7 +536,7 @@ func (d *SqliteLibrary) GetTrack(ctx context.Context, id string) (*music.Track, 
 
 	// Get track artists
 	rows, err := d.db.QueryContext(ctx, `
-		SELECT a.id, a.name, a.sort_name, ta.role
+		SELECT a.id, a.name, a.sort_name, a.image_small, a.image_medium, a.image_large, a.image_xl, ta.role
 		FROM track_artists ta
 		JOIN artists a ON ta.artist_id = a.id
 		WHERE ta.track_id = ?
@@ -522,10 +549,12 @@ func (d *SqliteLibrary) GetTrack(ctx context.Context, id string) (*music.Track, 
 	for rows.Next() {
 		var artist music.Artist
 		var role string
-		err := rows.Scan(&artist.ID, &artist.Name, &artist.SortName, &role)
+		var imgSmall, imgMedium, imgLarge, imgXL sql.NullString
+		err := rows.Scan(&artist.ID, &artist.Name, &artist.SortName, &imgSmall, &imgMedium, &imgLarge, &imgXL, &role)
 		if err != nil {
 			return nil, err
 		}
+		artist.ImageSmall, artist.ImageMedium, artist.ImageLarge, artist.ImageXL = imgSmall.String, imgMedium.String, imgLarge.String, imgXL.String
 
 		// Load artist attributes
 		artistAttrRows, err := d.db.QueryContext(ctx, `
@@ -1074,7 +1103,7 @@ func (d *SqliteLibrary) GetAlbum(ctx context.Context, id string) (*music.Album, 
 
 	// Get album artists
 	rows, err := tx.QueryContext(ctx, `
-		SELECT a.id, a.name, a.sort_name, aa.role
+		SELECT a.id, a.name, a.sort_name, a.image_small, a.image_medium, a.image_large, a.image_xl, aa.role
 		FROM album_artists aa
 		JOIN artists a ON aa.artist_id = a.id
 		WHERE aa.album_id = ?
@@ -1087,10 +1116,12 @@ func (d *SqliteLibrary) GetAlbum(ctx context.Context, id string) (*music.Album, 
 	for rows.Next() {
 		var artist music.Artist
 		var role string
-		err := rows.Scan(&artist.ID, &artist.Name, &artist.SortName, &role)
+		var imgSmall, imgMedium, imgLarge, imgXL sql.NullString
+		err := rows.Scan(&artist.ID, &artist.Name, &artist.SortName, &imgSmall, &imgMedium, &imgLarge, &imgXL, &role)
 		if err != nil {
 			return nil, err
 		}
+		artist.ImageSmall, artist.ImageMedium, artist.ImageLarge, artist.ImageXL = imgSmall.String, imgMedium.String, imgLarge.String, imgXL.String
 
 		// Load artist attributes
 		artistAttrRows, err := tx.QueryContext(ctx, `
@@ -1134,9 +1165,9 @@ func (d *SqliteLibrary) AddArtist(ctx context.Context, artist *music.Artist) err
 
 	// Insert artist
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO artists (id, name, sort_name)
-		VALUES (?, ?, ?)
-	`, artist.ID, artist.Name, artist.SortName)
+		INSERT INTO artists (id, name, sort_name, image_small, image_medium, image_large, image_xl)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, artist.ID, artist.Name, artist.SortName, artist.ImageSmall, artist.ImageMedium, artist.ImageLarge, artist.ImageXL)
 	if err != nil {
 		slog.Error("AddArtist: failed to insert artist", "error", err, "artistID", artist.ID, "artistName", artist.Name)
 		return err
@@ -1520,20 +1551,22 @@ func (d *SqliteLibrary) GetArtist(ctx context.Context, id string) (*music.Artist
 
 	// Get artist basic info
 	row := tx.QueryRowContext(ctx, `
-		SELECT id, name, sort_name
+		SELECT id, name, sort_name, image_small, image_medium, image_large, image_xl
 		FROM artists
 		WHERE id = ?
 	`, id)
 
 	artist := &music.Artist{}
+	var imgSmall, imgMedium, imgLarge, imgXL sql.NullString
 
-	err = row.Scan(&artist.ID, &artist.Name, &artist.SortName)
+	err = row.Scan(&artist.ID, &artist.Name, &artist.SortName, &imgSmall, &imgMedium, &imgLarge, &imgXL)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
+	artist.ImageSmall, artist.ImageMedium, artist.ImageLarge, artist.ImageXL = imgSmall.String, imgMedium.String, imgLarge.String, imgXL.String
 
 	// Get artist attributes
 	attrRows, err := tx.QueryContext(ctx, `SELECT key, value FROM artist_attributes WHERE artist_id = ?`, id)
@@ -1558,7 +1591,7 @@ func (d *SqliteLibrary) GetArtist(ctx context.Context, id string) (*music.Artist
 // GetArtists gets all artists from the database.
 func (d *SqliteLibrary) GetArtists(ctx context.Context) ([]*music.Artist, error) {
 	rows, err := d.db.QueryContext(ctx, `
-		SELECT id, name
+		SELECT id, name, image_small, image_medium, image_large, image_xl
 		FROM artists
 		WHERE name != '' AND name IS NOT NULL
 	`)
@@ -1571,10 +1604,12 @@ func (d *SqliteLibrary) GetArtists(ctx context.Context) ([]*music.Artist, error)
 
 	for rows.Next() {
 		artist := &music.Artist{}
-		err := rows.Scan(&artist.ID, &artist.Name)
+		var imgSmall, imgMedium, imgLarge, imgXL sql.NullString
+		err := rows.Scan(&artist.ID, &artist.Name, &imgSmall, &imgMedium, &imgLarge, &imgXL)
 		if err != nil {
 			return nil, err
 		}
+		artist.ImageSmall, artist.ImageMedium, artist.ImageLarge, artist.ImageXL = imgSmall.String, imgMedium.String, imgLarge.String, imgXL.String
 		artists = append(artists, artist)
 	}
 
@@ -1942,7 +1977,7 @@ func (d *SqliteLibrary) GetTracksCount(ctx context.Context) (int, error) {
 
 // GetArtistsPaginated gets paginated artists from the database.
 func (d *SqliteLibrary) GetArtistsPaginated(ctx context.Context, limit, offset int) ([]*music.Artist, error) {
-	rows, err := d.db.QueryContext(ctx, `SELECT id, name FROM artists WHERE name != '' AND name IS NOT NULL ORDER BY name LIMIT ? OFFSET ?`, limit, offset)
+	rows, err := d.db.QueryContext(ctx, `SELECT id, name, image_small, image_medium, image_large, image_xl FROM artists WHERE name != '' AND name IS NOT NULL ORDER BY name LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -1952,10 +1987,12 @@ func (d *SqliteLibrary) GetArtistsPaginated(ctx context.Context, limit, offset i
 
 	for rows.Next() {
 		artist := &music.Artist{}
-		err := rows.Scan(&artist.ID, &artist.Name)
+		var imgSmall, imgMedium, imgLarge, imgXL sql.NullString
+		err := rows.Scan(&artist.ID, &artist.Name, &imgSmall, &imgMedium, &imgLarge, &imgXL)
 		if err != nil {
 			return nil, err
 		}
+		artist.ImageSmall, artist.ImageMedium, artist.ImageLarge, artist.ImageXL = imgSmall.String, imgMedium.String, imgLarge.String, imgXL.String
 		artists = append(artists, artist)
 	}
 
@@ -1964,7 +2001,7 @@ func (d *SqliteLibrary) GetArtistsPaginated(ctx context.Context, limit, offset i
 
 // GetArtistsFilteredPaginated gets paginated artists from the database with filtering.
 func (d *SqliteLibrary) GetArtistsFilteredPaginated(ctx context.Context, limit, offset int, nameFilter string) ([]*music.Artist, error) {
-	query := `SELECT id, name FROM artists WHERE name != '' AND name IS NOT NULL`
+	query := `SELECT id, name, image_small, image_medium, image_large, image_xl FROM artists WHERE name != '' AND name IS NOT NULL`
 	args := []interface{}{}
 
 	// Add name filter
@@ -1986,10 +2023,12 @@ func (d *SqliteLibrary) GetArtistsFilteredPaginated(ctx context.Context, limit, 
 
 	for rows.Next() {
 		artist := &music.Artist{}
-		err := rows.Scan(&artist.ID, &artist.Name)
+		var imgSmall, imgMedium, imgLarge, imgXL sql.NullString
+		err := rows.Scan(&artist.ID, &artist.Name, &imgSmall, &imgMedium, &imgLarge, &imgXL)
 		if err != nil {
 			return nil, err
 		}
+		artist.ImageSmall, artist.ImageMedium, artist.ImageLarge, artist.ImageXL = imgSmall.String, imgMedium.String, imgLarge.String, imgXL.String
 		artists = append(artists, artist)
 	}
 
@@ -2162,15 +2201,17 @@ func (d *SqliteLibrary) GetAlbumsCount(ctx context.Context) (int, error) {
 }
 
 func (d *SqliteLibrary) GetArtistByName(ctx context.Context, name string) (*music.Artist, error) {
-	row := d.db.QueryRowContext(ctx, `SELECT id, name, sort_name FROM artists WHERE name = ? AND name != '' AND name IS NOT NULL`, name)
+	row := d.db.QueryRowContext(ctx, `SELECT id, name, sort_name, image_small, image_medium, image_large, image_xl FROM artists WHERE name = ? AND name != '' AND name IS NOT NULL`, name)
 	artist := &music.Artist{}
-	err := row.Scan(&artist.ID, &artist.Name, &artist.SortName)
+	var imgSmall, imgMedium, imgLarge, imgXL sql.NullString
+	err := row.Scan(&artist.ID, &artist.Name, &artist.SortName, &imgSmall, &imgMedium, &imgLarge, &imgXL)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
+	artist.ImageSmall, artist.ImageMedium, artist.ImageLarge, artist.ImageXL = imgSmall.String, imgMedium.String, imgLarge.String, imgXL.String
 
 	// Get artist attributes
 	attrRows, err := d.db.QueryContext(ctx, `SELECT key, value FROM artist_attributes WHERE artist_id = ?`, artist.ID)
@@ -2232,6 +2273,22 @@ func (d *SqliteLibrary) FindOrCreateArtist(ctx context.Context, artistName strin
 		return nil, err
 	}
 	return newArtist, nil
+}
+
+// UpdateArtistImages sets an artist's image URLs, leaving any field passed as "" untouched.
+func (d *SqliteLibrary) UpdateArtistImages(ctx context.Context, artistID string, small, medium, large, xl string) error {
+	_, err := d.db.ExecContext(ctx, `
+		UPDATE artists SET
+			image_small = CASE WHEN ? <> '' THEN ? ELSE image_small END,
+			image_medium = CASE WHEN ? <> '' THEN ? ELSE image_medium END,
+			image_large = CASE WHEN ? <> '' THEN ? ELSE image_large END,
+			image_xl = CASE WHEN ? <> '' THEN ? ELSE image_xl END
+		WHERE id = ?
+	`, small, small, medium, medium, large, large, xl, xl, artistID)
+	if err != nil {
+		slog.Error("UpdateArtistImages: failed to update artist images", "error", err, "artistID", artistID)
+	}
+	return err
 }
 
 func (d *SqliteLibrary) FindOrCreateAlbum(ctx context.Context, artist *music.Artist, albumTitle string, year int) (*music.Album, error) {
@@ -2321,7 +2378,7 @@ func (d *SqliteLibrary) FindTrackByMetadata(ctx context.Context, title, artistNa
 
 	// Get track artists
 	rows, err := d.db.QueryContext(ctx, `
-		SELECT a.id, a.name, a.sort_name, ta.role
+		SELECT a.id, a.name, a.sort_name, a.image_small, a.image_medium, a.image_large, a.image_xl, ta.role
 		FROM track_artists ta
 		JOIN artists a ON ta.artist_id = a.id
 		WHERE ta.track_id = ?
@@ -2334,10 +2391,12 @@ func (d *SqliteLibrary) FindTrackByMetadata(ctx context.Context, title, artistNa
 	for rows.Next() {
 		var artist music.Artist
 		var role string
-		err := rows.Scan(&artist.ID, &artist.Name, &artist.SortName, &role)
+		var imgSmall, imgMedium, imgLarge, imgXL sql.NullString
+		err := rows.Scan(&artist.ID, &artist.Name, &artist.SortName, &imgSmall, &imgMedium, &imgLarge, &imgXL, &role)
 		if err != nil {
 			return nil, err
 		}
+		artist.ImageSmall, artist.ImageMedium, artist.ImageLarge, artist.ImageXL = imgSmall.String, imgMedium.String, imgLarge.String, imgXL.String
 		track.Artists = append(track.Artists, music.ArtistRole{Artist: &artist, Role: role})
 	}
 

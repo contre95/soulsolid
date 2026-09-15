@@ -300,6 +300,23 @@ func artistToSearchResult(artist *music.Artist) SearchResult {
 		ID:          artist.ID,
 		PrimaryName: artist.Name,
 		Secondary:   artist.ID,
+		ImageURL:    artistImageURL(artist),
+	}
+}
+
+// artistImageURL returns the best available artist image URL, preferring higher resolutions.
+func artistImageURL(artist *music.Artist) string {
+	switch {
+	case artist.ImageXL != "":
+		return artist.ImageXL
+	case artist.ImageLarge != "":
+		return artist.ImageLarge
+	case artist.ImageMedium != "":
+		return artist.ImageMedium
+	case artist.ImageSmall != "":
+		return artist.ImageSmall
+	default:
+		return ""
 	}
 }
 

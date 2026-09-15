@@ -49,6 +49,8 @@
           </span>
         {{else if eq .Type "album"}}
           <i class="fas fa-compact-disc text-white"></i>
+        {{else if .ImageURL}}
+          <img src="{{.ImageURL}}" alt="" class="w-full h-full object-cover rounded-full" loading="lazy" _="on error set my style.display to 'none'">
         {{else}}
           <span class="text-white font-semibold">{{if .PrimaryName}}{{slice .PrimaryName 0 1}}{{else}}?{{end}}</span>
         {{end}}

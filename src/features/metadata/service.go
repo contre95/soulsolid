@@ -339,16 +339,30 @@ func (s *Service) AddChromaprintAndAcoustID(ctx context.Context, trackID string)
 	track.ChromaprintFingerprint = fingerprint
 
 	// Lookup AcoustID using the fingerprint and duration
-	acoustID, err := s.chromaprintAcoustID.LookupAcoustID(ctx, fingerprint, duration)
+	lookup, err := s.chromaprintAcoustID.LookupAcoustID(ctx, fingerprint, duration)
 	if err != nil {
 		slog.Warn("Failed to lookup AcoustID", "error", err, "trackId", trackID)
 		// Continue without AcoustID
-	} else if acoustID != "" {
+	} else if lookup.AcoustID != "" {
 		if track.Attributes == nil {
 			track.Attributes = make(map[string]string)
 		}
-		track.Attributes["acoustid"] = acoustID
-		slog.Info("Successfully generated fingerprint and AcoustID", "trackId", trackID, "acoustid", acoustID)
+		track.Attributes["acoustid"] = lookup.AcoustID
+		slog.Info("Successfully generated fingerprint and AcoustID", "trackId", trackID, "acoustid", lookup.AcoustID)
+
+		// Fill in title/artist from the AcoustID lookup when the track doesn't have them yet,
+		// so text-search providers (e.g. Deezer) have something to search with.
+		if track.Title == "" && lookup.Title != "" {
+			track.Title = lookup.Title
+		}
+		if len(track.Artists) == 0 && lookup.Artist != "" {
+			dbArtist, err := s.libraryRepo.FindOrCreateArtist(ctx, lookup.Artist)
+			if err != nil {
+				slog.Warn("Failed to find/create artist from AcoustID result", "artist", lookup.Artist, "error", err)
+			} else {
+				track.Artists = append(track.Artists, music.ArtistRole{Artist: dbArtist, Role: "main"})
+			}
+		}
 	} else {
 		slog.Info("Successfully generated fingerprint, no AcoustID found", "trackId", trackID)
 	}
@@ -367,6 +381,7 @@ func (s *Service) AddChromaprintAndAcoustID(ctx context.Context, trackID string)
 		return fmt.Errorf("failed to update track with fingerprint: %w", err)
 	}
 
+	acoustID := ""
 	if track.Attributes != nil {
 		acoustID = track.Attributes["acoustid"]
 	}
