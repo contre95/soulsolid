@@ -1,10 +1,15 @@
 # Soulsolid Configuration Example
-# 
+#
 # Environment variables can be referenced using the !env_var tag:
 #   token: !env_var TELEGRAM_BOT_TOKEN
 #
-# Missing environment variables will cause startup errors.
-# To simplify setup, secrets are commented out in config.example.yaml so you can copy it to config.yaml without requiring unused variables. 
+# Secrets can also be loaded from a file (Docker/Kubernetes secrets convention)
+# using the !env_file tag: the named environment variable holds a *path*, and
+# the file's contents become the value:
+#   token: !env_file TELEGRAM_BOT_TOKEN_FILE   # TELEGRAM_BOT_TOKEN_FILE=/run/secrets/telegram_token
+#
+# Missing environment variables (or unreadable/empty files) will cause startup errors.
+# To simplify setup, secrets are commented out in config.example.yaml so you can copy it to config.yaml without requiring unused variables.
 # If no config is found, Soulsolid generates a default one automatically.
 
 libraryPath: ./music
@@ -59,11 +64,13 @@ metadata:
   acoustid:
     enabled: true
     # secret: !env_var ACOUSTID_CLIENT_KEY # You can login with Musicbrainz -> https://acoustid.org/new-application
+    # secret: !env_file ACOUSTID_CLIENT_KEY_FILE # Or load it from a file instead, e.g. a Docker secret
     deezer:
       enabled: true
     discogs:
       enabled: true
       # secret: !env_var DISCOGS_API_KEY # You can get it here -> https://www.discogs.com/settings/developers
+      # secret: !env_file DISCOGS_API_KEY_FILE # Or load it from a file instead, e.g. a Docker secret
     musicbrainz:
       enabled: true
 lyrics:
