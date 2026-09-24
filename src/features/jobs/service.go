@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/music"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -29,39 +31,82 @@ type TaskHandler interface {
 	Cancel(jobID string) error
 }
 
-// Task defines the specific logic for a job type.
-type Task interface {
-	MetadataKeys() []string
-	Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error)
+// Task defines the specific logic for a job type. P is the task's parameter
+// struct, decoded and validated from job.Metadata before Execute is called, so
+// tasks never assert on map[string]any themselves. Job types that take no input
+// declare their own empty struct.
+//
+// Nothing in this interface is exported back to the feature: tasks satisfy it
+// structurally, so a feature package never has to import this one.
+type Task[P any] interface {
+	Execute(ctx context.Context, job *music.Job, params P, progressUpdater func(int, string)) (map[string]any, error)
 	Cleanup(job *music.Job) error
 }
 
-// BaseTaskHandler provides a base implementation for TaskHandler.
-type BaseTaskHandler struct {
-	Task Task
+// paramsValidator is shared: validator.Validate is safe for concurrent use and
+// caches struct reflection, so it must not be rebuilt per job.
+var paramsValidator = validator.New()
+
+// BaseTaskHandler adapts a Task[P] to the TaskHandler the service calls. It owns
+// every cross-cutting concern so no task can forget one: decoding metadata into
+// P, validating it, adapting the progress channel to a plain callback, and
+// running Cleanup via defer.
+type BaseTaskHandler[P any] struct {
+	Task Task[P]
 }
 
-// NewBaseTaskHandler creates a new BaseTaskHandler.
-func NewBaseTaskHandler(task Task) *BaseTaskHandler {
-	return &BaseTaskHandler{Task: task}
+// NewBaseTaskHandler wraps a typed task into a non-generic TaskHandler. The type
+// parameter is erased here, which is what lets the service keep a single
+// map[string]TaskHandler across heterogeneous job types.
+func NewBaseTaskHandler[P any](task Task[P]) TaskHandler {
+	return &BaseTaskHandler[P]{Task: task}
+}
+
+// decodeParams converts job.Metadata into P and validates it.
+//
+// The conversion goes through JSON rather than direct assertion so that values
+// surviving a JSON round-trip ([]any vs []string, float64 vs int) normalize to
+// the struct's declared types instead of every task hand-rolling a type switch.
+func decodeParams[P any](metadata map[string]any) (P, error) {
+	var params P
+
+	// A nil/empty map is legitimate for tasks whose fields are all optional;
+	// validation below is what rejects it when fields are required.
+	if len(metadata) > 0 {
+		raw, err := json.Marshal(metadata)
+		if err != nil {
+			return params, fmt.Errorf("invalid job metadata: %w", err)
+		}
+		if err := json.Unmarshal(raw, &params); err != nil {
+			return params, fmt.Errorf("invalid job metadata: %w", err)
+		}
+	}
+
+	if err := paramsValidator.Struct(params); err != nil {
+		var invalid *validator.InvalidValidationError
+		// Non-struct P (e.g. a type alias) can't be validated; that's not a job error.
+		if errors.As(err, &invalid) {
+			return params, nil
+		}
+		return params, fmt.Errorf("invalid job metadata: %w", err)
+	}
+
+	return params, nil
 }
 
 // Execute runs the job using the provided task and returns any result stats for
 // the caller to merge into job.Metadata under the appropriate lock.
-func (h *BaseTaskHandler) Execute(ctx context.Context, job *music.Job, progressChan chan<- music.JobProgress) (map[string]any, error) {
+func (h *BaseTaskHandler[P]) Execute(ctx context.Context, job *music.Job, progressChan chan<- music.JobProgress) (map[string]any, error) {
 	if job.Logger != nil {
 		job.Logger.Info("Starting job", "name", job.Name)
 	}
 
-	// Validate metadata
-	for _, key := range h.Task.MetadataKeys() {
-		if _, ok := job.Metadata[key]; !ok {
-			err := fmt.Errorf("missing %s in job metadata", key)
-			if job.Logger != nil {
-				job.Logger.Error("Error: " + err.Error())
-			}
-			return nil, err
+	params, err := decodeParams[P](job.Metadata)
+	if err != nil {
+		if job.Logger != nil {
+			job.Logger.Error("Error: " + err.Error())
 		}
+		return nil, err
 	}
 
 	progressUpdater := func(percentage int, status string) {
@@ -84,7 +129,7 @@ func (h *BaseTaskHandler) Execute(ctx context.Context, job *music.Job, progressC
 		}
 	}()
 
-	stats, err := h.Task.Execute(ctx, job, progressUpdater)
+	stats, err := h.Task.Execute(ctx, job, params, progressUpdater)
 	if err != nil {
 		if job.Logger != nil {
 			job.Logger.Error("Error during job execution", "error", err)
@@ -101,7 +146,7 @@ func (h *BaseTaskHandler) Execute(ctx context.Context, job *music.Job, progressC
 // Cancel stops a running job.
 // The actual cancellation is handled by the context in the job service,
 // this method is for any specific cleanup required by the handler.
-func (h *BaseTaskHandler) Cancel(jobID string) error {
+func (h *BaseTaskHandler[P]) Cancel(jobID string) error {
 	// Specific cancellation logic can be implemented in the task if needed.
 	return nil
 }

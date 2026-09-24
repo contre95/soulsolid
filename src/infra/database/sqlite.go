@@ -174,6 +174,11 @@ func createTables(db *sql.DB) error {
 			UNIQUE(metric_type, metric_key)
 		);
 
+		CREATE TABLE IF NOT EXISTS library_config (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL
+		);
+
 		CREATE INDEX IF NOT EXISTS idx_track_artists_track ON track_artists(track_id);
 		CREATE INDEX IF NOT EXISTS idx_track_artists_artist ON track_artists(artist_id);
 		CREATE INDEX IF NOT EXISTS idx_album_artists_album ON album_artists(album_id);
@@ -2752,6 +2757,31 @@ func (d *SqliteLibrary) FindTrackByPath(ctx context.Context, path string) (*musi
 	}
 
 	return track, nil
+}
+
+// libraryRootKey is the library_config key holding the library path this
+// database was initialized against.
+const libraryRootKey = "library_path"
+
+// LibraryRoot returns the library path recorded when this database was first
+// initialized, or "" if no previous run recorded one.
+func (d *SqliteLibrary) LibraryRoot(ctx context.Context) (string, error) {
+	var root string
+	err := d.db.QueryRowContext(ctx,
+		`SELECT value FROM library_config WHERE key = ?`, libraryRootKey).Scan(&root)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return root, err
+}
+
+// RecordLibraryRoot stores root as the library path this database belongs to.
+// An already recorded value is kept, so the original root survives later runs
+// that point somewhere else.
+func (d *SqliteLibrary) RecordLibraryRoot(ctx context.Context, root string) error {
+	_, err := d.db.ExecContext(ctx,
+		`INSERT OR IGNORE INTO library_config (key, value) VALUES (?, ?)`, libraryRootKey, root)
+	return err
 }
 
 // Ensure SqliteLibrary implements PlaylistRepository

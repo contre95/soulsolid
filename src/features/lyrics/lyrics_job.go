@@ -20,13 +20,15 @@ func NewLyricsJobTask(service *Service) *LyricsJobTask {
 	}
 }
 
-// MetadataKeys returns the required metadata keys for lyrics analysis jobs
-func (t *LyricsJobTask) MetadataKeys() []string {
-	return []string{}
+// LyricsParams is the metadata contract for a lyrics analysis job.
+type LyricsParams struct {
+	Provider        string `json:"provider" validate:"required"`
+	SkipExisting    bool   `json:"skip_existing"`
+	OverrideNoQueue bool   `json:"override_no_queue"`
 }
 
 // Execute performs the lyrics analysis operation
-func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
+func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, params LyricsParams, progressUpdater func(int, string)) (map[string]any, error) {
 	job.Logger.Info("EXECUTE STARTED: Lyrics job task is running", "color", "pink")
 
 	// Check if any lyrics providers are enabled
@@ -107,8 +109,8 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 			job.Logger.Debug("Processing track", "trackID", track.ID, "title", track.Title, "hasLyrics", track.HasLyrics, "lyricsLength", len(track.Metadata.Lyrics))
 
 			// Get job options
-			skipExisting, _ := job.Metadata["skip_existing"].(bool)
-			overrideNoQueue, _ := job.Metadata["override_no_queue"].(bool)
+			skipExisting := params.SkipExisting
+			overrideNoQueue := params.OverrideNoQueue
 
 			// Skip tracks that already have lyrics if option is enabled.
 			// Skips instrumentals (has_lyrics=false) and tracks with existing lyrics content.
@@ -130,12 +132,8 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, progressUpd
 				continue
 			}
 
-			// Get the specified provider from job metadata
-			provider, ok := job.Metadata["provider"].(string)
-			if !ok || provider == "" {
-				job.Logger.Error("No provider specified in job metadata")
-				return nil, fmt.Errorf("no lyrics provider specified in job metadata")
-			}
+			// Provider is validated up front by the job params, not per track.
+			provider := params.Provider
 
 			// Try to fetch lyrics for this track using the specified provider
 			job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "provider", provider, "overrideNoQueue", overrideNoQueue, "color", "cyan")

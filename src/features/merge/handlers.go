@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/contre95/soulsolid/src/features/hosting/respond"
+	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/gofiber/fiber/v2"
 )
 

@@ -8,6 +8,11 @@ import (
 	"github.com/contre95/soulsolid/src/music"
 )
 
+// AcoustIDParams is the (empty) metadata contract for an AcoustID analysis job.
+// Declared locally rather than reusing a shared type so this feature satisfies
+// jobs.Task structurally and never has to import the jobs package.
+type AcoustIDParams struct{}
+
 // AcoustIDJobTask handles AcoustID analysis job execution
 type AcoustIDJobTask struct {
 	service *Service
@@ -20,13 +25,8 @@ func NewAcoustIDJobTask(service *Service) *AcoustIDJobTask {
 	}
 }
 
-// MetadataKeys returns the required metadata keys for AcoustID analysis jobs
-func (t *AcoustIDJobTask) MetadataKeys() []string {
-	return []string{}
-}
-
-// Execute performs the AcoustID analysis operation
-func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
+// Execute performs the AcoustID analysis operation. It takes no job parameters.
+func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, _ AcoustIDParams, progressUpdater func(int, string)) (map[string]any, error) {
 	// Get total track count for progress reporting
 	totalTracks, err := t.service.libraryRepo.GetTracksCount(ctx)
 	if err != nil {

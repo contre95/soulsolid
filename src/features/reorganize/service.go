@@ -15,15 +15,17 @@ type Service struct {
 	library     music.Library
 	config      *config.Manager
 	jobService  music.JobService
+	sanitizer   PathSanitizer
 }
 
 // NewService creates a new reorganize service.
-func NewService(lib music.Library, fileManager music.FileManager, cfg *config.Manager, jobService music.JobService) *Service {
+func NewService(lib music.Library, fileManager music.FileManager, cfg *config.Manager, jobService music.JobService, sanitizer PathSanitizer) *Service {
 	return &Service{
 		library:     lib,
 		fileManager: fileManager,
 		config:      cfg,
 		jobService:  jobService,
+		sanitizer:   sanitizer,
 	}
 }
 
@@ -31,8 +33,8 @@ func NewService(lib music.Library, fileManager music.FileManager, cfg *config.Ma
 // When fat32Safe is true the job will also strip FAT32-forbidden characters from every path segment.
 func (s *Service) StartReorganizeAnalysis(ctx context.Context, fat32Safe bool) (string, error) {
 	slog.Info("Starting file reorganization job", "fat32Safe", fat32Safe)
-	jobID, err := s.jobService.StartJob("analyze_reorganize", "Reorganize Library Files", map[string]any{
-		"fat32_safe": fat32Safe,
+	jobID, err := music.StartTypedJob(s.jobService, "analyze_reorganize", "Reorganize Library Files", ReorganizeParams{
+		Fat32Safe: fat32Safe,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to start reorganization job: %w", err)

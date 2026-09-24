@@ -38,6 +38,11 @@ type LibraryMetrics interface {
 	ClearStoredMetrics(ctx context.Context) error
 }
 
+// The types below are this feature's contract vocabulary. They live here, next
+// to the port that names them, so the adapter in src/infra implements a
+// contract this feature fully owns — the same arrangement as
+// importing.FileEvent and metadata.SearchParams.
+
 // MetadataCompletenessStats represents the completeness of metadata across tracks.
 type MetadataCompletenessStats struct {
 	Complete      int // Tracks with all required metadata

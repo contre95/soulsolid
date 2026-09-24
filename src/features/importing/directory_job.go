@@ -40,16 +40,14 @@ func NewDirectoryImportTask(service *Service) *DirectoryImportTask {
 	return &DirectoryImportTask{service: service}
 }
 
-// MetadataKeys returns the required metadata keys for a directory import job.
-func (e *DirectoryImportTask) MetadataKeys() []string {
-	return []string{"path"}
+// ImportParams is the metadata contract for a directory import job.
+type ImportParams struct {
+	Path string `json:"path" validate:"required"`
 }
 
 // Execute runs the directory import logic.
-func (e *DirectoryImportTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
-	path := job.Metadata["path"].(string)
-
-	stats, err := e.runDirectoryImport(ctx, path, progressUpdater, job.Logger, job)
+func (e *DirectoryImportTask) Execute(ctx context.Context, job *music.Job, params ImportParams, progressUpdater func(int, string)) (map[string]any, error) {
+	stats, err := e.runDirectoryImport(ctx, params.Path, progressUpdater, job.Logger, job)
 	if err != nil {
 		return nil, fmt.Errorf("failed to import directory: %w", err)
 	}

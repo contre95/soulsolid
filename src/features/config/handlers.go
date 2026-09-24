@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/hosting/respond"
+	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -37,7 +37,9 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	// Parse form data into a new config struct
 	// TODO: We might want to add some validations probably, not sure if here.
 	newConfig := &Config{
-		LibraryPath:  c.FormValue("libraryPath"),
+		// Not read from the form: tracks.path stores this root, so re-rooting
+		// at runtime would orphan the database. Config file + restart only.
+		LibraryPath:  currentConfig.LibraryPath,
 		DownloadPath: c.FormValue("downloadPath"),
 		Database:     currentConfig.Database, // Preserve database settings
 		Import: Import{
