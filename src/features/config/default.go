@@ -82,9 +82,9 @@ var defaultConfig = Config{
 		Log:     true,
 		LogPath: "./logs/jobs",
 		Webhooks: WebhookConfig{
-			Enabled:  false,
-			JobTypes: []string{},
-			Command:  "",
+			Enabled:    false,
+			JobTrigger: []string{},
+			Command:    "",
 		},
 	},
 }

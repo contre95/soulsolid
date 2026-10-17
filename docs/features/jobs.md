@@ -138,7 +138,7 @@ jobs:
   log_path: /app/logs/jobs  # directory for the dated log files
   webhooks:
     enabled: false          # fire a command on job completion
-    job_types: ["*"]        # which job types trigger the webhook ("*" = all)
+    job_trigger: ["*"]      # which job types trigger the webhook ("*" = all)
     command: 'curl -X POST ... -d "{{.Name}} {{.Status}}"'  # templated shell command
 ```
 

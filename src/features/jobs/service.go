@@ -421,7 +421,7 @@ func (s *Service) executeWebhook(job *music.Job) {
 
 	// Check if this job type should trigger webhooks
 	shouldNotify := false
-	for _, jobType := range s.config.Get().Jobs.Webhooks.JobTypes {
+	for _, jobType := range s.config.Get().Jobs.Webhooks.JobTrigger {
 		if jobType == job.Type || jobType == "*" {
 			shouldNotify = true
 			break

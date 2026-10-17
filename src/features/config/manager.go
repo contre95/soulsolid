@@ -150,12 +150,29 @@ func (m *Manager) loadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 
+	migrateDeprecated(&cfg)
+
 	validate := validator.New()
 	if err := validate.Struct(cfg); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
 	return &cfg, nil
+}
+
+// migrateDeprecated moves values set under old config keys to their new ones.
+// The old fields are cleared, so the next Save writes only the new keys.
+func migrateDeprecated(cfg *Config) {
+	webhooks := &cfg.Jobs.Webhooks
+	if len(webhooks.JobTypesDeprecated) > 0 {
+		if len(webhooks.JobTrigger) == 0 {
+			slog.Warn("jobs.webhooks.job_types is deprecated, rename it to jobs.webhooks.job_trigger")
+			webhooks.JobTrigger = webhooks.JobTypesDeprecated
+		} else {
+			slog.Warn("Both jobs.webhooks.job_types (deprecated) and jobs.webhooks.job_trigger are set; ignoring job_types")
+		}
+		webhooks.JobTypesDeprecated = nil
+	}
 }
 
 // saveDefaultConfig saves the default configuration to the specified file path

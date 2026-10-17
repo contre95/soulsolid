@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -71,5 +72,35 @@ telegram:
 	m := &Manager{}
 	if _, err := m.loadConfig(configPath); err == nil {
 		t.Fatal("expected error when the file referenced by !env_file does not exist")
+	}
+}
+
+func TestLoadConfig_WebhookJobTrigger(t *testing.T) {
+	for _, tc := range []struct {
+		name, webhooks string
+		want           []string
+	}{
+		{"new key", "job_trigger: [download_album]", []string{"download_album"}},
+		{"deprecated key still works", "job_types: [directory_import]", []string{"directory_import"}},
+		{"new key wins over deprecated", "job_trigger: [download_album]\n    job_types: [directory_import]", []string{"download_album"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			configYAML := "libraryPath: ./music\ndownloadPath: ./downloads\ndatabase:\n  path: ./library.db\njobs:\n  webhooks:\n    " + tc.webhooks + "\n"
+			configPath := filepath.Join(t.TempDir(), "config.yaml")
+			if err := os.WriteFile(configPath, []byte(configYAML), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			cfg, err := (&Manager{}).loadConfig(configPath)
+			if err != nil {
+				t.Fatalf("loadConfig returned error: %v", err)
+			}
+			webhooks := cfg.Jobs.Webhooks
+			if !slices.Equal(webhooks.JobTrigger, tc.want) {
+				t.Errorf("expected job_trigger %v, got %v", tc.want, webhooks.JobTrigger)
+			}
+			if webhooks.JobTypesDeprecated != nil {
+				t.Errorf("deprecated job_types should be cleared after migration, got %v", webhooks.JobTypesDeprecated)
+			}
+		})
 	}
 }
