@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.29.0](https://github.com/contre95/soulsolid/compare/v0.28.0...v0.29.0) (2026-10-17)
+
+
+### ✨ Features
+
+* **deprecation:** deprecate the Telegram bot ([#191](https://github.com/contre95/soulsolid/issues/191)) ([06d6c11](https://github.com/contre95/soulsolid/commit/06d6c116081d43b3a54334f062055d7c6f3e4da9))
+
 ## [0.28.0](https://github.com/contre95/soulsolid/compare/v0.27.2...v0.28.0) (2026-10-17)
 
 
