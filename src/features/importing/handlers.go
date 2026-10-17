@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/contre95/soulsolid/src/features/hosting/respond"
+	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
@@ -235,6 +235,13 @@ func (h *Handler) GetDirectoryForm(c *fiber.Ctx) error {
 	return respond.Partial(c, "importing/directory_form", fiber.Map{
 		"DefaultDownloadPath": defaultDownloadPath,
 		"Config":              h.service.config.Get(),
+	})
+}
+
+// GetImportBadges renders the import option badges shown on the directory form.
+func (h *Handler) GetImportBadges(c *fiber.Ctx) error {
+	return respond.Partial(c, "importing/import_badges", fiber.Map{
+		"Config": h.service.config.Get(),
 	})
 }
 

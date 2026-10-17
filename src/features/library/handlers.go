@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/hosting/respond"
+	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
@@ -527,9 +527,15 @@ func (h *Handler) RenderTrackOverviewPanel(c *fiber.Ctx) error {
 		lyricsPreview = strings.Join(lines, "\n")
 	}
 
+	duplicates, err := h.service.GetKeptDuplicates(c.Context(), trackID)
+	if err != nil {
+		slog.Error("Failed to get kept duplicates for overview", "error", err, "trackId", trackID)
+	}
+
 	return respond.Partial(c, "library/track_overview_panel", fiber.Map{
 		"Track":         track,
 		"Artists":       artistNames.String(),
 		"LyricsPreview": lyricsPreview,
+		"Duplicates":    duplicates,
 	})
 }

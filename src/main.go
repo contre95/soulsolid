@@ -1,24 +1,27 @@
 package main
 
 import (
+	"context"
 	"log"
 	"log/slog"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
-	"github.com/contre95/soulsolid/src/features/hosting"
 	"github.com/contre95/soulsolid/src/features/importing"
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
 	"github.com/contre95/soulsolid/src/features/logging"
 	"github.com/contre95/soulsolid/src/features/lyrics"
+	"github.com/contre95/soulsolid/src/features/merge"
 	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/metrics"
 	"github.com/contre95/soulsolid/src/features/playlists"
 	"github.com/contre95/soulsolid/src/features/reorganize"
 	"github.com/contre95/soulsolid/src/features/streaming"
+	"github.com/contre95/soulsolid/src/hosting"
 	"github.com/contre95/soulsolid/src/infra/database"
 	"github.com/contre95/soulsolid/src/infra/files"
 	"github.com/contre95/soulsolid/src/infra/fingerprint"
@@ -27,6 +30,33 @@ import (
 	"github.com/contre95/soulsolid/src/infra/tag"
 	"github.com/contre95/soulsolid/src/infra/watcher"
 )
+
+// warnOnOrphanedTracks warns when the database holds tracks outside the
+// configured library and download paths, which happens when libraryPath is
+// changed without moving the files. Such tracks will not stream and will not be
+// detected as duplicates on import.
+func warnOnOrphanedTracks(db *database.SqliteLibrary, cfg *config.Config) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	count, sample, err := db.TracksOutsideRoots(ctx, cfg.LibraryPath, cfg.DownloadPath)
+	if err != nil {
+		slog.Warn("Could not check track paths against the library path", "error", err)
+		return
+	}
+	if count == 0 {
+		return
+	}
+
+	slog.Warn("Some tracks are recorded outside the configured libraryPath, "+
+		"so they will not stream and will not be detected as duplicates on import. "+
+		"If libraryPath was changed, restore the previous value in config.yaml, "+
+		"or run a reorganize job to move the files under the new one.",
+		"tracksOutsideLibrary", count,
+		"examplePath", sample,
+		"configuredLibraryPath", cfg.LibraryPath,
+	)
+}
 
 func main() {
 	configPath := "/config/config.yaml"
@@ -53,6 +83,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create library: %v", err)
 	}
+	warnOnOrphanedTracks(db, cfgManager.Get())
+
 	libraryService := library.NewService(db, cfgManager, fileOrganizer)
 	playlistsService := playlists.NewService(db, db, cfgManager)
 	metricsService := metrics.NewService(db, cfgManager)
@@ -70,7 +102,9 @@ func main() {
 	}
 	importingService := importing.NewService(db, tagReader, fingerprintReader, fileOrganizer, cfgManager, jobService, importQueue, dirWatcher)
 
-	reorganizeService := reorganize.NewService(db, fileOrganizer, cfgManager, jobService)
+	reorganizeService := reorganize.NewService(db, fileOrganizer, cfgManager, jobService, files.NewPathSanitizer())
+
+	mergeService := merge.NewService(db, tagWriter, tagReader, fileOrganizer, jobService)
 
 	directoryImportTask := importing.NewDirectoryImportTask(importingService)
 	jobService.RegisterHandler("directory_import", jobs.NewBaseTaskHandler(directoryImportTask))
@@ -123,6 +157,9 @@ func main() {
 	reorganizeTask := reorganize.NewReorganizeJobTask(reorganizeService)
 	jobService.RegisterHandler("analyze_reorganize", jobs.NewBaseTaskHandler(reorganizeTask))
 
+	mergeTask := merge.NewMergeJobTask(mergeService)
+	jobService.RegisterHandler("analyze_merge", jobs.NewBaseTaskHandler(mergeTask))
+
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {
 		var err error
@@ -136,7 +173,7 @@ func main() {
 	}
 
 	streamingService := streaming.NewService(cfgManager)
-	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService, streamingService)
+	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService, streamingService, mergeService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped", "error", err)

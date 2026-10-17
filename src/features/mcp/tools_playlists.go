@@ -9,47 +9,47 @@ import (
 )
 
 func (s *Service) registerPlaylistTools(srv *server.MCPServer) {
-	srv.AddTool(mcpgo.NewTool("list_playlists",
+	s.addReadTool(srv, mcpgo.NewTool("list_playlists",
 		mcpgo.WithDescription("List all playlists with their track counts"),
 	), s.listPlaylists)
 
-	srv.AddTool(mcpgo.NewTool("get_playlist",
+	s.addReadTool(srv, mcpgo.NewTool("get_playlist",
 		mcpgo.WithDescription("Get a playlist and its tracks by UUID"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Playlist UUID")),
 	), s.getPlaylist)
 
-	srv.AddTool(mcpgo.NewTool("create_playlist",
+	s.addWriteTool(srv, mcpgo.NewTool("create_playlist",
 		mcpgo.WithDescription("Create a new empty playlist"),
 		mcpgo.WithString("name", mcpgo.Required(), mcpgo.Description("Playlist name")),
 		mcpgo.WithString("description", mcpgo.Description("Optional description")),
 	), s.createPlaylist)
 
-	srv.AddTool(mcpgo.NewTool("update_playlist",
+	s.addWriteTool(srv, mcpgo.NewTool("update_playlist",
 		mcpgo.WithDescription("Rename or update the description of a playlist"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Playlist UUID")),
 		mcpgo.WithString("name", mcpgo.Required(), mcpgo.Description("New playlist name")),
 		mcpgo.WithString("description", mcpgo.Description("New description")),
 	), s.updatePlaylist)
 
-	srv.AddTool(mcpgo.NewTool("delete_playlist",
+	s.addDestructiveTool(srv, mcpgo.NewTool("delete_playlist",
 		mcpgo.WithDescription("Permanently delete a playlist (does not delete the tracks themselves)"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Playlist UUID")),
 	), s.deletePlaylist)
 
-	srv.AddTool(mcpgo.NewTool("add_to_playlist",
+	s.addWriteTool(srv, mcpgo.NewTool("add_to_playlist",
 		mcpgo.WithDescription("Add a track, album, or artist to a playlist. Adding an album or artist adds all their tracks."),
 		mcpgo.WithString("playlist_id", mcpgo.Required(), mcpgo.Description("Playlist UUID")),
 		mcpgo.WithString("item_type", mcpgo.Required(), mcpgo.Description("One of: track, album, artist")),
 		mcpgo.WithString("item_id", mcpgo.Required(), mcpgo.Description("UUID of the track, album, or artist to add")),
 	), s.addToPlaylist)
 
-	srv.AddTool(mcpgo.NewTool("remove_from_playlist",
+	s.addDestructiveTool(srv, mcpgo.NewTool("remove_from_playlist",
 		mcpgo.WithDescription("Remove a specific track from a playlist"),
 		mcpgo.WithString("playlist_id", mcpgo.Required(), mcpgo.Description("Playlist UUID")),
 		mcpgo.WithString("track_id", mcpgo.Required(), mcpgo.Description("Track UUID to remove")),
 	), s.removeFromPlaylist)
 
-	srv.AddTool(mcpgo.NewTool("get_track_playlists",
+	s.addReadTool(srv, mcpgo.NewTool("get_track_playlists",
 		mcpgo.WithDescription("List all playlists that contain a given track"),
 		mcpgo.WithString("track_id", mcpgo.Required(), mcpgo.Description("Track UUID")),
 	), s.getTrackPlaylists)

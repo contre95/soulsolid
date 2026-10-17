@@ -6,7 +6,41 @@ import (
 
 	"github.com/contre95/soulsolid/src/music"
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 )
+
+// --- Registration helpers ---
+//
+// Every tool is registered through one of these so it carries MCP annotations
+// (clients use them to decide when to ask the user for confirmation) and so
+// read-only mode can drop everything that writes.
+
+// addReadTool registers a tool that never modifies the library, files or config.
+func (s *Service) addReadTool(srv *server.MCPServer, tool mcpgo.Tool, h server.ToolHandlerFunc) {
+	tool.Annotations.ReadOnlyHint = mcpgo.ToBoolPtr(true)
+	tool.Annotations.DestructiveHint = mcpgo.ToBoolPtr(false)
+	srv.AddTool(tool, h)
+}
+
+// addWriteTool registers a tool that modifies state in an additive or reversible way.
+func (s *Service) addWriteTool(srv *server.MCPServer, tool mcpgo.Tool, h server.ToolHandlerFunc) {
+	if s.readOnly {
+		return
+	}
+	tool.Annotations.ReadOnlyHint = mcpgo.ToBoolPtr(false)
+	tool.Annotations.DestructiveHint = mcpgo.ToBoolPtr(false)
+	srv.AddTool(tool, h)
+}
+
+// addDestructiveTool registers a tool that deletes or overwrites data irreversibly.
+func (s *Service) addDestructiveTool(srv *server.MCPServer, tool mcpgo.Tool, h server.ToolHandlerFunc) {
+	if s.readOnly {
+		return
+	}
+	tool.Annotations.ReadOnlyHint = mcpgo.ToBoolPtr(false)
+	tool.Annotations.DestructiveHint = mcpgo.ToBoolPtr(true)
+	srv.AddTool(tool, h)
+}
 
 // --- Result helpers ---
 

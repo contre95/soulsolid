@@ -11,7 +11,7 @@ import (
 )
 
 func (s *Service) registerMetadataTools(srv *server.MCPServer) {
-	srv.AddTool(mcpgo.NewTool("update_track_tags",
+	s.addDestructiveTool(srv, mcpgo.NewTool("update_track_tags",
 		mcpgo.WithDescription("Save tag metadata to a track's file and the library database. Only provided fields are updated; omit a field to leave it unchanged. Artists and albums are referenced by UUID (use search_library to find them)."),
 		mcpgo.WithString("track_id", mcpgo.Required(), mcpgo.Description("Track UUID")),
 		mcpgo.WithString("title", mcpgo.Description("Track title")),
@@ -27,30 +27,30 @@ func (s *Service) registerMetadataTools(srv *server.MCPServer) {
 		mcpgo.WithString("lyrics", mcpgo.Description("Embedded lyrics text")),
 	), s.updateTrackTags)
 
-	srv.AddTool(mcpgo.NewTool("search_metadata_provider",
+	s.addReadTool(srv, mcpgo.NewTool("search_metadata_provider",
 		mcpgo.WithDescription("Search an external metadata provider (e.g. musicbrainz, discogs, deezer) for tag data matching a track. Returns candidate results with their index; use get_provider_track to preview one."),
 		mcpgo.WithString("track_id", mcpgo.Required(), mcpgo.Description("Track UUID")),
 		mcpgo.WithString("provider", mcpgo.Required(), mcpgo.Description("Metadata provider name (e.g. 'musicbrainz')")),
 	), s.searchMetadataProvider)
 
-	srv.AddTool(mcpgo.NewTool("get_provider_track",
+	s.addReadTool(srv, mcpgo.NewTool("get_provider_track",
 		mcpgo.WithDescription("Preview the tag data a provider result would produce for a track, merged with the track's current data. Use after search_metadata_provider; nothing is saved — apply changes with update_track_tags."),
 		mcpgo.WithString("track_id", mcpgo.Required(), mcpgo.Description("Track UUID")),
 		mcpgo.WithString("provider", mcpgo.Required(), mcpgo.Description("Metadata provider name")),
 		mcpgo.WithNumber("index", mcpgo.Description("Index of the search result to preview (default 0)")),
 	), s.getProviderTrack)
 
-	srv.AddTool(mcpgo.NewTool("fingerprint_track",
+	s.addWriteTool(srv, mcpgo.NewTool("fingerprint_track",
 		mcpgo.WithDescription("Generate and store an acoustic fingerprint (Chromaprint) and AcoustID for a track"),
 		mcpgo.WithString("track_id", mcpgo.Required(), mcpgo.Description("Track UUID")),
 	), s.fingerprintTrack)
 
-	srv.AddTool(mcpgo.NewTool("get_fingerprint",
+	s.addReadTool(srv, mcpgo.NewTool("get_fingerprint",
 		mcpgo.WithDescription("Get the stored acoustic fingerprint string for a track"),
 		mcpgo.WithString("track_id", mcpgo.Required(), mcpgo.Description("Track UUID")),
 	), s.getFingerprint)
 
-	srv.AddTool(mcpgo.NewTool("run_acoustid_analysis",
+	s.addWriteTool(srv, mcpgo.NewTool("run_acoustid_analysis",
 		mcpgo.WithDescription("Start a background job that fingerprints all unidentified tracks and looks them up via AcoustID. Returns a job ID."),
 	), s.runAcoustidAnalysis)
 }

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -15,18 +17,58 @@ import (
 )
 
 func (s *Service) registerConfigTools(srv *server.MCPServer) {
-	srv.AddTool(mcpgo.NewTool("get_config",
-		mcpgo.WithDescription("Get the current SoulSolid configuration"),
+	s.addReadTool(srv, mcpgo.NewTool("get_config",
+		mcpgo.WithDescription("Get the current SoulSolid configuration. Secrets (tokens, provider secrets, downloader plugin config, webhook command) are redacted."),
 	), s.getConfig)
 
-	srv.AddTool(mcpgo.NewTool("update_settings",
-		mcpgo.WithDescription("Update one or more SoulSolid settings and persist them to config.yaml. Pass a JSON object of dot-path keys to string values, e.g. {\"import.duplicates\":\"skip\",\"logger.level\":\"debug\"}. Supported keys: libraryPath, downloadPath, import.move, import.always_queue, import.duplicates, import.allow_missing_metadata.{artist,album,title,year,genre}, import.paths.{default_path,compilations,album:soundtrack,album:single,album:ep,fat32_safe}, telegram.{enabled,token,allowedUsers,bot_handle}, metadata.providers.<name>.{enabled,secret}, lyrics.providers.<name>.{enabled,prefer_synced}, logger.{enabled,level,format,htmx_debug}, jobs.{log,log_path}. Boolean values as \"true\"/\"false\"."),
+	s.addDestructiveTool(srv, mcpgo.NewTool("update_settings",
+		mcpgo.WithDescription("Update one or more SoulSolid settings and persist them to config.yaml. Pass a JSON object of dot-path keys to string values, e.g. {\"import.duplicates\":\"skip\",\"logger.level\":\"debug\"}. Supported keys: import.move, import.always_queue, import.duplicates, import.allow_missing_metadata.{artist,album,title,year,genre}, import.paths.{default_path,compilations,album:soundtrack,album:single,album:ep,fat32_safe}, telegram.{enabled,bot_handle}, metadata.providers.<name>.enabled, lyrics.providers.<name>.{enabled,prefer_synced}, logger.{enabled,level,format,htmx_debug}, jobs.log. Boolean values as \"true\"/\"false\". Paths, secrets and access lists (libraryPath, downloadPath, jobs.log_path, telegram token/allowedUsers, provider secrets) can only be changed in the config file or the web UI."),
 		mcpgo.WithString("settings", mcpgo.Required(), mcpgo.Description("JSON object of setting key/value pairs to update")),
 	), s.updateSettings)
 }
 
 func (s *Service) getConfig(_ context.Context, _ mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
-	return jsonResult(s.config.Get()), nil
+	return jsonResult(redactConfig(s.config.Get())), nil
+}
+
+const redacted = "[redacted]"
+
+// redactConfig returns a copy of cfg with every secret masked. Tool output
+// lands in the agent's context (and often its provider's logs), so credentials
+// must never leave through it. Maps and slices are cloned before masking so the
+// live config is never touched.
+func redactConfig(cfg *config.Config) config.Config {
+	out := *cfg
+	if out.Telegram.Token != "" {
+		out.Telegram.Token = redacted
+	}
+	if out.MCP.Token != "" {
+		out.MCP.Token = redacted
+	}
+	if out.Jobs.Webhooks.Command != "" {
+		out.Jobs.Webhooks.Command = redacted
+	}
+	out.Metadata.Providers = maps.Clone(out.Metadata.Providers)
+	for name, p := range out.Metadata.Providers {
+		if p.Secret != nil && *p.Secret != "" {
+			masked := redacted
+			p.Secret = &masked
+			out.Metadata.Providers[name] = p
+		}
+	}
+	// Plugin config is free-form and typically holds credentials (ARLs, API keys).
+	out.Downloaders.Plugins = slices.Clone(out.Downloaders.Plugins)
+	for i, p := range out.Downloaders.Plugins {
+		if len(p.Config) == 0 {
+			continue
+		}
+		masked := make(map[string]any, len(p.Config))
+		for k := range p.Config {
+			masked[k] = redacted
+		}
+		out.Downloaders.Plugins[i].Config = masked
+	}
+	return out
 }
 
 func (s *Service) updateSettings(_ context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
@@ -72,56 +114,44 @@ func applySetting(cfg *config.Config, key, value string) error {
 
 	var boolTarget *bool
 	switch key {
-	case "libraryPath":
-		cfg.LibraryPath = value
-		return nil
-	case "downloadPath":
-		cfg.DownloadPath = value
-		return nil
 	case "import.duplicates":
 		if value != "replace" && value != "skip" && value != "queue" {
 			return fmt.Errorf("import.duplicates must be one of: replace, skip, queue")
 		}
 		cfg.Import.Duplicates = value
 		return nil
-	case "import.paths.default_path":
-		cfg.Import.PathOptions.DefaultPath = value
-		return nil
-	case "import.paths.compilations":
-		cfg.Import.PathOptions.Compilations = value
-		return nil
-	case "import.paths.album:soundtrack":
-		cfg.Import.PathOptions.AlbumSoundtrack = value
-		return nil
-	case "import.paths.album:single":
-		cfg.Import.PathOptions.AlbumSingle = value
-		return nil
-	case "import.paths.album:ep":
-		cfg.Import.PathOptions.AlbumEP = value
-		return nil
-	case "telegram.token":
-		cfg.Telegram.Token = value
+	case "import.paths.default_path", "import.paths.compilations", "import.paths.album:soundtrack", "import.paths.album:single", "import.paths.album:ep":
+		tmpl, err := validatePathTemplate(key, value)
+		if err != nil {
+			return err
+		}
+		switch key {
+		case "import.paths.default_path":
+			cfg.Import.PathOptions.DefaultPath = tmpl
+		case "import.paths.compilations":
+			cfg.Import.PathOptions.Compilations = tmpl
+		case "import.paths.album:soundtrack":
+			cfg.Import.PathOptions.AlbumSoundtrack = tmpl
+		case "import.paths.album:single":
+			cfg.Import.PathOptions.AlbumSingle = tmpl
+		case "import.paths.album:ep":
+			cfg.Import.PathOptions.AlbumEP = tmpl
+		}
 		return nil
 	case "telegram.bot_handle":
 		cfg.Telegram.BotHandle = value
 		return nil
-	case "telegram.allowedUsers":
-		var users []string
-		for u := range strings.SplitSeq(value, ",") {
-			if trimmed := strings.TrimSpace(u); trimmed != "" {
-				users = append(users, trimmed)
-			}
-		}
-		cfg.Telegram.AllowedUsers = users
-		return nil
 	case "logger.level":
+		if !slices.Contains([]string{"debug", "info", "warn", "error"}, value) {
+			return fmt.Errorf("logger.level must be one of: debug, info, warn, error")
+		}
 		cfg.Logger.Level = value
 		return nil
 	case "logger.format":
+		if !slices.Contains([]string{"text", "json", "logfmt"}, value) {
+			return fmt.Errorf("logger.format must be one of: text, json, logfmt")
+		}
 		cfg.Logger.Format = value
-		return nil
-	case "jobs.log_path":
-		cfg.Jobs.LogPath = value
 		return nil
 	case "import.move":
 		boolTarget = &cfg.Import.Move
@@ -158,9 +188,6 @@ func applySetting(cfg *config.Config, key, value string) error {
 					return err
 				}
 				provider.Enabled = b
-			case "secret":
-				secret := value
-				provider.Secret = &secret
 			default:
 				return fmt.Errorf("unknown metadata provider setting: %s", key)
 			}
@@ -198,6 +225,28 @@ func applySetting(cfg *config.Config, key, value string) error {
 	}
 	*boolTarget = b
 	return nil
+}
+
+// validatePathTemplate rejects templates that would render files outside the
+// library: empty ones (straight into the root, mirroring the UI's check — except
+// compilations, which the UI also allows empty), absolute paths, and ".." segments.
+func validatePathTemplate(key, value string) (string, error) {
+	tmpl := strings.TrimSpace(value)
+	if tmpl == "" {
+		if key == "import.paths.compilations" {
+			return "", nil
+		}
+		return "", fmt.Errorf("%s cannot be empty", key)
+	}
+	if filepath.IsAbs(tmpl) {
+		return "", fmt.Errorf("%s must be relative to the library path", key)
+	}
+	for seg := range strings.SplitSeq(filepath.ToSlash(tmpl), "/") {
+		if seg == ".." {
+			return "", fmt.Errorf("%s must not contain '..' segments", key)
+		}
+	}
+	return tmpl, nil
 }
 
 // providerKey splits "prefix<name>.<field>" into its name and field parts.

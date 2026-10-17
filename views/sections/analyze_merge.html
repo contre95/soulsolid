@@ -1,0 +1,144 @@
+<div id="contenido" class="animate__animated animate__fadeIn">
+    <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-2">Merge Metadata</h1>
+    <p class="text-slate-600 dark:text-slate-400 mb-4">
+        Find artists, albums and genres that are the same but spelled differently — case,
+        punctuation, accents or spacing. Pick the name to keep and merge the rest
+        into it. Changes are applied to the library and written back to the audio file tags.
+        Also find duplicate tracks — the same recording stored in more than one file (e.g. a FLAC
+        and an MP3), detected by <a hx-get="/analyze/metadata" hx-target="#contenido" hx-push-url="true" hx-swap="outerHTML"
+        class="font-medium text-[#2774EA] hover:underline cursor-pointer">AcoustID</a>. Delete selected
+        <span class="font-semibold text-red-500 dark:text-red-400">permanently deletes the checked files from disk</span>;
+        Keep leaves every file in place and records the group as intentional duplicates (database only).
+    </p>
+    <div class="flex items-start gap-2 mb-4 rounded-lg border border-purple-200 dark:border-purple-700 bg-purple-50/60 dark:bg-purple-900/20 px-4 py-3 text-sm text-purple-800 dark:text-purple-300">
+        <i class="fas fa-circle-info mt-0.5 shrink-0"></i>
+        <span><span class="font-semibold">File paths are not updated after merge.</span> Run <a hx-get="/analyze/files" hx-target="#contenido" hx-push-url="true" hx-swap="outerHTML" class="font-mono font-medium text-green-600 dark:text-green-400 hover:underline cursor-pointer">/analyze/files</a> afterwards to recompute paths based on the updated metadata.</span>
+    </div>
+
+    <div class="space-y-6 mb-4">
+    <div class="grid grid-cols-1 lg:flex gap-6">
+        <!-- Artists -->
+        <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-md backdrop-blur-sm bg-white/30 dark:bg-gray-900/30 lg:flex-1 lg:min-w-0 lg:overflow-hidden transition-[flex-grow] duration-300 ease-out lg:hover:grow-[3]">
+            <div class="flex items-center gap-4 mb-4">
+                <h2 class="text-xl font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-purple-500"></span> Artists
+                </h2>
+                <button hx-get="/merge/groups/artists" hx-target="#merge-artists" hx-swap="innerHTML"
+                        hx-indicator="#merge-artists-ind"
+                        class="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-purple-500 transition-colors"
+                        title="Scan for duplicate artists">
+                    <i class="fas fa-rotate-right"></i> Scan
+                    <i id="merge-artists-ind" class="htmx-indicator fas fa-spinner fa-spin text-purple-500"></i>
+                </button>
+            </div>
+            <div id="merge-artists" class="max-h-96 overflow-y-auto pr-1">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Click <span class="font-medium">Scan</span> to find duplicate artists.</p>
+            </div>
+        </div>
+
+        <!-- Albums -->
+        <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-md backdrop-blur-sm bg-white/30 dark:bg-gray-900/30 lg:flex-1 lg:min-w-0 lg:overflow-hidden transition-[flex-grow] duration-300 ease-out lg:hover:grow-[3]">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500"></span> Albums
+                </h2>
+                <button hx-get="/merge/groups/albums" hx-target="#merge-albums" hx-swap="innerHTML"
+                        hx-indicator="#merge-albums-ind"
+                        class="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-blue-500 transition-colors"
+                        title="Scan for duplicate albums">
+                    <i class="fas fa-rotate-right"></i> Scan
+                    <i id="merge-albums-ind" class="htmx-indicator fas fa-spinner fa-spin text-blue-500"></i>
+                </button>
+            </div>
+            <div id="merge-albums" class="max-h-96 overflow-y-auto pr-1">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Click <span class="font-medium">Scan</span> to find duplicate albums.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="grid grid-cols-1 lg:flex gap-6">
+        <!-- Genres -->
+        <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-md backdrop-blur-sm bg-white/30 dark:bg-gray-900/30 lg:flex-1 lg:min-w-0 lg:overflow-hidden transition-[flex-grow] duration-300 ease-out lg:hover:grow-[3]">
+            <div class="flex items-center gap-4 mb-4">
+                <h2 class="text-xl font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-green-500"></span> Genres
+                </h2>
+                <button hx-get="/merge/groups/genres" hx-target="#merge-genres" hx-swap="innerHTML"
+                        hx-indicator="#merge-genres-ind"
+                        class="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-green-500 transition-colors"
+                        title="Scan for duplicate genres">
+                    <i class="fas fa-rotate-right"></i> Scan
+                    <i id="merge-genres-ind" class="htmx-indicator fas fa-spinner fa-spin text-green-500"></i>
+                </button>
+            </div>
+            <div id="merge-genres" class="max-h-96 overflow-y-auto pr-1">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Click <span class="font-medium">Scan</span> to find duplicate genres.</p>
+            </div>
+        </div>
+
+        <!-- Tracks -->
+        <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-md backdrop-blur-sm bg-white/30 dark:bg-gray-900/30 lg:flex-1 lg:min-w-0 lg:overflow-hidden transition-[flex-grow] duration-300 ease-out lg:hover:grow-[3]">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500"></span> Tracks
+                    <button type="button" _="on click toggle .hidden on #merge-tracks-info"
+                            class="text-sm text-gray-400 hover:text-[#2774EA] transition-colors"
+                            title="How duplicate tracks are detected">
+                        <i class="fas fa-circle-info"></i>
+                    </button>
+                </h2>
+                <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 cursor-pointer"
+                           title="Also include groups you already marked as &quot;Keep&quot; — useful if you clicked it by accident">
+                        <input type="checkbox" id="merge-tracks-include-kept" name="includeKept" value="true"
+                               class="rounded border-gray-300 dark:border-gray-600 text-red-500 focus:ring-red-500 h-3 w-3">
+                        Include kept
+                    </label>
+                    <button hx-get="/merge/groups/tracks" hx-include="#merge-tracks-include-kept" hx-target="#merge-tracks" hx-swap="innerHTML"
+                            hx-indicator="#merge-tracks-ind"
+                            class="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-red-500 transition-colors"
+                            title="Scan for duplicate tracks (same AcoustID)">
+                        <i class="fas fa-rotate-right"></i> Scan
+                        <i id="merge-tracks-ind" class="htmx-indicator fas fa-spinner fa-spin text-red-500"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="merge-tracks-info" class="hidden mb-3 rounded-lg border border-purple-200 dark:border-purple-700 bg-purple-50/60 dark:bg-purple-900/20 px-3 py-2.5 text-xs text-purple-800 dark:text-purple-300 leading-relaxed">
+                On duplicate track finding, we use
+                <a hx-get="/analyze/metadata" hx-target="#contenido" hx-push-url="true" hx-swap="outerHTML"
+                   class="font-medium text-[#2774EA] hover:underline cursor-pointer">AcoustID</a>.
+                We don't do this on import, since that would make us dependent on a third-party service in
+                order to onboard a track — there we check
+                <a href="https://github.com/acoustid/chromaprint" target="_blank" rel="noopener noreferrer"
+                   class="font-medium text-[#2774EA] hover:underline">Chromaprint</a>
+                directly, which already gives us a very good idea if the song is the same. But slight
+                variations in the same recording (e.g., different file encodings, bitrates, minor edits,
+                noise, or compression artifacts) can produce slightly different Chromaprints — for that we
+                can merge based on
+                <a hx-get="/analyze/metadata" hx-target="#contenido" hx-push-url="true" hx-swap="outerHTML"
+                   class="font-medium text-[#2774EA] hover:underline cursor-pointer">AcoustID</a>,
+                the crowdsourced ID a song has.
+            </div>
+            <div id="merge-tracks" class="max-h-96 overflow-y-auto pr-1">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Click <span class="font-medium">Scan</span> to find duplicate tracks — files sharing the same
+                    <a hx-get="/analyze/metadata" hx-target="#contenido" hx-push-url="true" hx-swap="outerHTML"
+                       class="font-medium text-[#2774EA] hover:underline cursor-pointer">AcoustID</a>.
+                    <span class="font-medium text-red-500 dark:text-red-400">Delete selected removes the checked files from disk.</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-4">Merge Jobs</h2>
+    <div id="merge-job-list-container"
+         hx-get="/jobs/list?prefix=analyze_merge"
+         hx-trigger="load, refreshJobList from:body"
+         hx-swap="innerHTML">
+        <div class="text-center py-8">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Loading merge jobs...</p>
+        </div>
+    </div>
+</div>

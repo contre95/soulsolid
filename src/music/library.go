@@ -33,6 +33,7 @@ type Library interface {
 	GetTracksFilteredCount(ctx context.Context, filter *TrackFilter) (int, error)
 	FindTrackByMetadata(ctx context.Context, title, artistName, albumTitle string) (*Track, error)
 	FindTrackByPath(ctx context.Context, path string) (*Track, error)
+	GetKeptDuplicates(ctx context.Context, trackID string) ([]*Track, error)
 
 	// Album methods
 	AddAlbum(ctx context.Context, album *Album) error

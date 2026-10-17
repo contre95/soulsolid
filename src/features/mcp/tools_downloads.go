@@ -9,16 +9,16 @@ import (
 )
 
 func (s *Service) registerDownloadTools(srv *server.MCPServer) {
-	srv.AddTool(mcpgo.NewTool("get_download_capabilities",
+	s.addReadTool(srv, mcpgo.NewTool("get_download_capabilities",
 		mcpgo.WithDescription("Get the status and capabilities of all available downloader plugins"),
 	), s.getDownloadCapabilities)
 
-	srv.AddTool(mcpgo.NewTool("get_downloader_info",
+	s.addReadTool(srv, mcpgo.NewTool("get_downloader_info",
 		mcpgo.WithDescription("Get user account info for a downloader plugin. Omit the downloader to list all available downloaders and their statuses."),
 		mcpgo.WithString("downloader", mcpgo.Description("Downloader plugin name (e.g. 'deezer'). Omit to list all.")),
 	), s.getDownloaderInfo)
 
-	srv.AddTool(mcpgo.NewTool("search_downloads",
+	s.addReadTool(srv, mcpgo.NewTool("search_downloads",
 		mcpgo.WithDescription("Search an external source for tracks, albums, or artists to download. Returns external IDs needed for download_track / download_album / download_artist. Use type 'link' to resolve a direct URL."),
 		mcpgo.WithString("query", mcpgo.Required(), mcpgo.Description("Search terms, or a URL when type is 'link'")),
 		mcpgo.WithString("type", mcpgo.Required(), mcpgo.Description("One of: track, album, artist, link")),
@@ -26,31 +26,31 @@ func (s *Service) registerDownloadTools(srv *server.MCPServer) {
 		mcpgo.WithNumber("limit", mcpgo.Description("Max results (default 20)")),
 	), s.searchDownloads)
 
-	srv.AddTool(mcpgo.NewTool("download_track",
+	s.addWriteTool(srv, mcpgo.NewTool("download_track",
 		mcpgo.WithDescription("Download a single track by its external ID (from search_downloads). Returns a job ID to track progress with get_job."),
 		mcpgo.WithString("track_id", mcpgo.Required(), mcpgo.Description("External track ID (from search_downloads results)")),
 		mcpgo.WithString("downloader", mcpgo.Required(), mcpgo.Description("Downloader plugin name (e.g. 'deezer')")),
 	), s.downloadTrack)
 
-	srv.AddTool(mcpgo.NewTool("download_album",
+	s.addWriteTool(srv, mcpgo.NewTool("download_album",
 		mcpgo.WithDescription("Download a full album by its external ID (from search_downloads). Returns a job ID to track progress with get_job."),
 		mcpgo.WithString("album_id", mcpgo.Required(), mcpgo.Description("External album ID (from search_downloads results)")),
 		mcpgo.WithString("downloader", mcpgo.Required(), mcpgo.Description("Downloader plugin name (e.g. 'deezer')")),
 	), s.downloadAlbum)
 
-	srv.AddTool(mcpgo.NewTool("download_artist",
+	s.addWriteTool(srv, mcpgo.NewTool("download_artist",
 		mcpgo.WithDescription("Download all albums from an artist by their external ID (from search_downloads). Returns a job ID to track progress with get_job."),
 		mcpgo.WithString("artist_id", mcpgo.Required(), mcpgo.Description("External artist ID (from search_downloads results)")),
 		mcpgo.WithString("downloader", mcpgo.Required(), mcpgo.Description("Downloader plugin name (e.g. 'deezer')")),
 	), s.downloadArtist)
 
-	srv.AddTool(mcpgo.NewTool("download_tracks",
+	s.addWriteTool(srv, mcpgo.NewTool("download_tracks",
 		mcpgo.WithDescription("Download multiple tracks at once by their external IDs. Returns a job ID. Pass IDs as a comma-separated string."),
 		mcpgo.WithString("track_ids", mcpgo.Required(), mcpgo.Description("Comma-separated list of external track IDs")),
 		mcpgo.WithString("downloader", mcpgo.Required(), mcpgo.Description("Downloader plugin name (e.g. 'deezer')")),
 	), s.downloadTracks)
 
-	srv.AddTool(mcpgo.NewTool("download_playlist",
+	s.addWriteTool(srv, mcpgo.NewTool("download_playlist",
 		mcpgo.WithDescription("Download a set of tracks as a named playlist. Resolve an external playlist URL to track IDs first with search_downloads (type 'link'). Returns a job ID."),
 		mcpgo.WithString("track_ids", mcpgo.Required(), mcpgo.Description("Comma-separated list of external track IDs")),
 		mcpgo.WithString("playlist_name", mcpgo.Required(), mcpgo.Description("Name for the playlist")),

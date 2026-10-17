@@ -9,6 +9,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/jobs"
 	"github.com/contre95/soulsolid/src/features/library"
 	"github.com/contre95/soulsolid/src/features/lyrics"
+	"github.com/contre95/soulsolid/src/features/merge"
 	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/features/playlists"
 	"github.com/contre95/soulsolid/src/features/reorganize"
@@ -25,7 +26,11 @@ type Service struct {
 	playlists   *playlists.Service
 	importing   *importing.Service
 	reorganize  *reorganize.Service
+	merge       *merge.Service
 	config      *config.Manager
+
+	// readOnly skips registering any tool that is not annotated read-only.
+	readOnly bool
 }
 
 // NewService creates a new MCP service.
@@ -38,6 +43,7 @@ func NewService(
 	playlistsService *playlists.Service,
 	importingService *importing.Service,
 	reorganizeService *reorganize.Service,
+	mergeService *merge.Service,
 	configManager *config.Manager,
 ) *Service {
 	return &Service{
@@ -49,6 +55,7 @@ func NewService(
 		playlists:   playlistsService,
 		importing:   importingService,
 		reorganize:  reorganizeService,
+		merge:       mergeService,
 		config:      configManager,
 	}
 }

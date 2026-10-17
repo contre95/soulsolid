@@ -63,8 +63,8 @@ func NewService(lib music.Library, tagReader TagReader, fingerprintReader Finger
 // ImportDirectory starts a job to import all files from a directory recursively.
 func (s *Service) ImportDirectory(ctx context.Context, pathToImport string) (string, error) {
 	slog.Debug("ImportDirectory service called", "path", pathToImport)
-	jobID, err := s.jobService.StartJob("directory_import", "Directory Import", map[string]any{
-		"path": pathToImport,
+	jobID, err := music.StartTypedJob(s.jobService, "directory_import", "Directory Import", ImportParams{
+		Path: pathToImport,
 	})
 	if err != nil {
 		slog.Error("Service.ImportDirectory: failed to start job", "error", err)

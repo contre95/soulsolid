@@ -10,52 +10,52 @@ import (
 )
 
 func (s *Service) registerLibraryTools(srv *server.MCPServer) {
-	srv.AddTool(mcpgo.NewTool("search_library",
+	s.addReadTool(srv, mcpgo.NewTool("search_library",
 		mcpgo.WithDescription("Search the SoulSolid music library. Returns tracks, albums, and artists. Use the 'id' and 'type' from results with get_track / get_album / get_artist."),
 		mcpgo.WithString("query", mcpgo.Description("Search terms — matches title, artist name, album title. Omit to browse all tracks.")),
 		mcpgo.WithNumber("limit", mcpgo.Description("Max results per page (default 20)")),
 		mcpgo.WithNumber("page", mcpgo.Description("Page number, 1-indexed (default 1)")),
 	), s.searchLibrary)
 
-	srv.AddTool(mcpgo.NewTool("get_track",
+	s.addReadTool(srv, mcpgo.NewTool("get_track",
 		mcpgo.WithDescription("Get full metadata for a track by its UUID"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Track UUID")),
 	), s.getTrack)
 
-	srv.AddTool(mcpgo.NewTool("get_artist",
+	s.addReadTool(srv, mcpgo.NewTool("get_artist",
 		mcpgo.WithDescription("Get artist details by UUID"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Artist UUID")),
 	), s.getArtist)
 
-	srv.AddTool(mcpgo.NewTool("get_album",
+	s.addReadTool(srv, mcpgo.NewTool("get_album",
 		mcpgo.WithDescription("Get album details by UUID"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Album UUID")),
 	), s.getAlbum)
 
-	srv.AddTool(mcpgo.NewTool("library_stats",
+	s.addReadTool(srv, mcpgo.NewTool("library_stats",
 		mcpgo.WithDescription("Get library overview: track count, artist count, album count, total storage size in bytes"),
 	), s.libraryStats)
 
-	srv.AddTool(mcpgo.NewTool("get_library_tree",
+	s.addReadTool(srv, mcpgo.NewTool("get_library_tree",
 		mcpgo.WithDescription("Get the full file-system tree of the music library as a plain text string"),
 	), s.getLibraryTree)
 
-	srv.AddTool(mcpgo.NewTool("get_track_lyrics",
+	s.addReadTool(srv, mcpgo.NewTool("get_track_lyrics",
 		mcpgo.WithDescription("Get the lyrics currently embedded in a track's metadata"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Track UUID")),
 	), s.getTrackLyrics)
 
-	srv.AddTool(mcpgo.NewTool("delete_track",
+	s.addDestructiveTool(srv, mcpgo.NewTool("delete_track",
 		mcpgo.WithDescription("Permanently delete a track from the library and remove its file from disk"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Track UUID")),
 	), s.deleteTrack)
 
-	srv.AddTool(mcpgo.NewTool("delete_album",
+	s.addDestructiveTool(srv, mcpgo.NewTool("delete_album",
 		mcpgo.WithDescription("Permanently delete an album and all its tracks from the library"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Album UUID")),
 	), s.deleteAlbum)
 
-	srv.AddTool(mcpgo.NewTool("delete_artist",
+	s.addDestructiveTool(srv, mcpgo.NewTool("delete_artist",
 		mcpgo.WithDescription("Permanently delete an artist and all their tracks from the library"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Artist UUID")),
 	), s.deleteArtist)

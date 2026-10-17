@@ -8,42 +8,42 @@ import (
 )
 
 func (s *Service) registerImportingTools(srv *server.MCPServer) {
-	srv.AddTool(mcpgo.NewTool("import_path",
+	s.addWriteTool(srv, mcpgo.NewTool("import_path",
 		mcpgo.WithDescription("Trigger an import job for a directory on the server filesystem. Returns a job ID; use get_job to track progress."),
 		mcpgo.WithString("path", mcpgo.Required(), mcpgo.Description("Absolute directory path on the server to import")),
 	), s.importPath)
 
-	srv.AddTool(mcpgo.NewTool("list_import_queue",
+	s.addReadTool(srv, mcpgo.NewTool("list_import_queue",
 		mcpgo.WithDescription("List all items currently in the import queue (tracks awaiting review before being added to the library)"),
 	), s.listImportQueue)
 
-	srv.AddTool(mcpgo.NewTool("resolve_queue_item",
+	s.addDestructiveTool(srv, mcpgo.NewTool("resolve_queue_item",
 		mcpgo.WithDescription("Resolve an import queue item. Actions: 'import' (add to library), 'replace' (replace existing duplicate), 'delete' (remove the file), 'skip' (dismiss)."),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Queue item ID (from list_import_queue)")),
 		mcpgo.WithString("action", mcpgo.Required(), mcpgo.Description("One of: import, replace, delete, skip")),
 	), s.resolveQueueItem)
 
-	srv.AddTool(mcpgo.NewTool("resolve_import_group",
+	s.addDestructiveTool(srv, mcpgo.NewTool("resolve_import_group",
 		mcpgo.WithDescription("Apply an action to a whole group of import queue items at once (e.g. all tracks from the same album)."),
 		mcpgo.WithString("group_type", mcpgo.Required(), mcpgo.Description("Group type: 'album' or 'artist'")),
 		mcpgo.WithString("group_key", mcpgo.Required(), mcpgo.Description("Group key value (album title or artist name)")),
 		mcpgo.WithString("action", mcpgo.Required(), mcpgo.Description("One of: import, replace, delete, skip")),
 	), s.resolveImportGroup)
 
-	srv.AddTool(mcpgo.NewTool("clear_import_queue",
+	s.addDestructiveTool(srv, mcpgo.NewTool("clear_import_queue",
 		mcpgo.WithDescription("Remove all items from the import queue without importing them"),
 	), s.clearImportQueue)
 
-	srv.AddTool(mcpgo.NewTool("get_watcher_status",
+	s.addReadTool(srv, mcpgo.NewTool("get_watcher_status",
 		mcpgo.WithDescription("Get the current status of the filesystem watcher that auto-imports new music files"),
 	), s.getWatcherStatus)
 
-	srv.AddTool(mcpgo.NewTool("toggle_watcher",
+	s.addWriteTool(srv, mcpgo.NewTool("toggle_watcher",
 		mcpgo.WithDescription("Start or stop the filesystem watcher that auto-imports new music files"),
 		mcpgo.WithString("action", mcpgo.Required(), mcpgo.Description("One of: start, stop")),
 	), s.toggleWatcher)
 
-	srv.AddTool(mcpgo.NewTool("run_reorganize",
+	s.addDestructiveTool(srv, mcpgo.NewTool("run_reorganize",
 		mcpgo.WithDescription("Start a background job that reorganizes music files according to the configured naming template. Returns a job ID."),
 		mcpgo.WithBoolean("fat32_safe", mcpgo.Description("Sanitize paths for FAT32 filesystems (defaults to the configured import.paths.fat32_safe)")),
 	), s.runReorganize)

@@ -10,32 +10,32 @@ import (
 )
 
 func (s *Service) registerJobTools(srv *server.MCPServer) {
-	srv.AddTool(mcpgo.NewTool("list_jobs",
+	s.addReadTool(srv, mcpgo.NewTool("list_jobs",
 		mcpgo.WithDescription("List background jobs (downloads, imports, analysis). Optionally filter by status."),
 		mcpgo.WithString("status", mcpgo.Description("Filter by status: pending, running, completed, failed, cancelled")),
 	), s.listJobs)
 
-	srv.AddTool(mcpgo.NewTool("get_job",
+	s.addReadTool(srv, mcpgo.NewTool("get_job",
 		mcpgo.WithDescription("Get current status and progress of a background job by ID"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Job ID")),
 	), s.getJob)
 
-	srv.AddTool(mcpgo.NewTool("get_job_logs",
+	s.addReadTool(srv, mcpgo.NewTool("get_job_logs",
 		mcpgo.WithDescription("Get the plain-text log output for a background job"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Job ID")),
 	), s.getJobLogs)
 
-	srv.AddTool(mcpgo.NewTool("start_job",
-		mcpgo.WithDescription("Start a named background job type (e.g. 'calculate_metrics'). For downloads and analysis prefer the dedicated tools."),
-		mcpgo.WithString("type", mcpgo.Required(), mcpgo.Description("Job type name (e.g. 'calculate_metrics')")),
+	s.addWriteTool(srv, mcpgo.NewTool("start_job",
+		mcpgo.WithDescription("Start a parameterless background job. Only 'calculate_metrics' is supported; downloads, imports and analyses have dedicated tools."),
+		mcpgo.WithString("type", mcpgo.Required(), mcpgo.Description("Job type: calculate_metrics")),
 	), s.startJob)
 
-	srv.AddTool(mcpgo.NewTool("cancel_job",
+	s.addWriteTool(srv, mcpgo.NewTool("cancel_job",
 		mcpgo.WithDescription("Cancel a running or pending background job"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Job ID")),
 	), s.cancelJob)
 
-	srv.AddTool(mcpgo.NewTool("clear_finished_jobs",
+	s.addDestructiveTool(srv, mcpgo.NewTool("clear_finished_jobs",
 		mcpgo.WithDescription("Remove all completed, failed, and cancelled jobs from the job history"),
 	), s.clearFinishedJobs)
 }
@@ -78,6 +78,11 @@ func (s *Service) getJobLogs(_ context.Context, req mcpgo.CallToolRequest) (*mcp
 
 func (s *Service) startJob(_ context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 	jobType := strArg(req.Params.Arguments, "type")
+	// Other job types take parameters and have dedicated tools that validate
+	// them; starting them here would bypass that (and read-only annotations).
+	if jobType != "calculate_metrics" {
+		return errResult("unsupported job type: only 'calculate_metrics' can be started with start_job"), nil
+	}
 	jobID, err := s.jobs.StartJob(jobType, jobType, nil)
 	if err != nil {
 		return errResult(err.Error()), nil

@@ -1,20 +1,35 @@
 package mcp
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
+	"strings"
 
+	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/gofiber/fiber/v2"
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// maxRequestBody caps JSON-RPC request bodies; the app-wide limit is sized for
+// file uploads, which MCP never needs.
+const maxRequestBody = 1 << 20 // 1 MiB
+
 // RegisterRoutes mounts the MCP Streamable HTTP endpoint on the Fiber app at /mcp.
-func RegisterRoutes(app *fiber.App, s *Service) {
+func RegisterRoutes(app *fiber.App, s *Service, cfg config.MCP) {
 	version := os.Getenv("IMAGE_TAG")
 	if version == "" {
 		version = "dev"
 	}
+
+	if cfg.Token == "" {
+		slog.Warn("MCP endpoint has no token configured: anyone who can reach this server can control the library through /mcp. Set mcp.token.")
+	}
+	s.readOnly = cfg.ReadOnly
 
 	mcpServer := server.NewMCPServer("soulsolid", version)
 	s.registerLibraryTools(mcpServer)
@@ -25,6 +40,7 @@ func RegisterRoutes(app *fiber.App, s *Service) {
 	s.registerDownloadTools(mcpServer)
 	s.registerPlaylistTools(mcpServer)
 	s.registerConfigTools(mcpServer)
+	s.registerMergeTools(mcpServer)
 
 	// Stateless: every tool call is a plain request/response, no sessions or
 	// SSE streams. Fiber buffers responses (CanStream() == false), so mcp-go
@@ -35,10 +51,38 @@ func RegisterRoutes(app *fiber.App, s *Service) {
 		server.WithStateLess(true),
 	)
 
-	app.All("/mcp", func(c *fiber.Ctx) error {
+	app.All("/mcp", guard(cfg), func(c *fiber.Ctx) error {
 		handleMCP(c, httpServer)
 		return nil
 	})
+}
+
+// guard rejects requests that are too large, come from a disallowed browser
+// origin, or lack the configured bearer token.
+func guard(cfg config.MCP) fiber.Handler {
+	tokenHash := sha256.Sum256([]byte(cfg.Token))
+	return func(c *fiber.Ctx) error {
+		if len(c.Body()) > maxRequestBody {
+			return c.Status(fiber.StatusRequestEntityTooLarge).SendString("request body too large")
+		}
+		// MCP spec: servers must validate Origin to prevent DNS rebinding.
+		// Same-origin checks don't help there (the rebound Host matches the
+		// attacker's Origin), so only an explicit allowlist is accepted.
+		if origin := c.Get(fiber.HeaderOrigin); origin != "" && !slices.Contains(cfg.AllowedOrigins, origin) {
+			slog.Warn("MCP request rejected: origin not allowed", "origin", origin, "ip", c.IP())
+			return c.Status(fiber.StatusForbidden).SendString("origin not allowed")
+		}
+		if cfg.Token != "" {
+			given, ok := strings.CutPrefix(c.Get(fiber.HeaderAuthorization), "Bearer ")
+			givenHash := sha256.Sum256([]byte(given))
+			if !ok || subtle.ConstantTimeCompare(givenHash[:], tokenHash[:]) != 1 {
+				slog.Warn("MCP request rejected: invalid or missing token", "ip", c.IP())
+				c.Set(fiber.HeaderWWWAuthenticate, `Bearer realm="soulsolid-mcp"`)
+				return c.Status(fiber.StatusUnauthorized).SendString("unauthorized")
+			}
+		}
+		return c.Next()
+	}
 }
 
 // handleMCP bridges a Fiber request into mcp-go's transport-agnostic Handle

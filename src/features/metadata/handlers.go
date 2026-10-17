@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/contre95/soulsolid/src/features/hosting/respond"
+	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v2"
 )
@@ -114,12 +114,18 @@ func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
 		}
 	}
 
+	duplicates, err := h.service.libraryRepo.GetKeptDuplicates(c.Context(), trackID)
+	if err != nil {
+		slog.Error("Failed to get kept duplicates for tag editor", "error", err, "trackId", trackID)
+	}
+
 	return respond.Section(c, "tag", fiber.Map{
 		"Track":                 track,
 		"Artists":               artists,
 		"Albums":                albums,
 		"SelectedAlbumArtistID": selectedAlbumArtistID,
 		"SelectedArtistIDs":     selectedArtistIDs,
+		"Duplicates":            duplicates,
 	})
 }
 

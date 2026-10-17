@@ -8,42 +8,42 @@ import (
 )
 
 func (s *Service) registerLyricsTools(srv *server.MCPServer) {
-	srv.AddTool(mcpgo.NewTool("fetch_lyrics",
+	s.addReadTool(srv, mcpgo.NewTool("fetch_lyrics",
 		mcpgo.WithDescription("Fetch lyrics for a track from an external provider (e.g. lrclib). Returns the lyrics text without saving — use update_track_tags to embed them."),
 		mcpgo.WithString("track_id", mcpgo.Required(), mcpgo.Description("Track UUID")),
 		mcpgo.WithString("provider", mcpgo.Required(), mcpgo.Description("Lyrics provider name (e.g. 'lrclib')")),
 	), s.fetchLyrics)
 
-	srv.AddTool(mcpgo.NewTool("run_lyrics_analysis",
+	s.addDestructiveTool(srv, mcpgo.NewTool("run_lyrics_analysis",
 		mcpgo.WithDescription("Start a background job that fetches and embeds lyrics for tracks in the library. Returns a job ID."),
 		mcpgo.WithString("provider", mcpgo.Required(), mcpgo.Description("Lyrics provider name (e.g. 'lrclib')")),
 		mcpgo.WithBoolean("skip_existing", mcpgo.Description("Skip tracks that already have lyrics (default true)")),
 		mcpgo.WithBoolean("override_no_queue", mcpgo.Description("Write lyrics directly instead of queueing conflicts for review (default false)")),
 	), s.runLyricsAnalysis)
 
-	srv.AddTool(mcpgo.NewTool("list_lyrics_queue",
+	s.addReadTool(srv, mcpgo.NewTool("list_lyrics_queue",
 		mcpgo.WithDescription("List all tracks in the lyrics review queue (tracks where fetched lyrics need approval before saving)"),
 	), s.listLyricsQueue)
 
-	srv.AddTool(mcpgo.NewTool("get_new_lyrics",
+	s.addReadTool(srv, mcpgo.NewTool("get_new_lyrics",
 		mcpgo.WithDescription("Preview the fetched lyrics for a lyrics queue item before accepting or rejecting it"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Lyrics queue item ID (from list_lyrics_queue)")),
 	), s.getNewLyrics)
 
-	srv.AddTool(mcpgo.NewTool("resolve_lyrics_item",
+	s.addDestructiveTool(srv, mcpgo.NewTool("resolve_lyrics_item",
 		mcpgo.WithDescription("Resolve a lyrics queue item. Actions: 'accept' (embed the new lyrics), 'reject' (discard), 'skip'."),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Lyrics queue item ID")),
 		mcpgo.WithString("action", mcpgo.Required(), mcpgo.Description("One of: accept, reject, skip")),
 	), s.resolveLyricsItem)
 
-	srv.AddTool(mcpgo.NewTool("resolve_lyrics_group",
+	s.addDestructiveTool(srv, mcpgo.NewTool("resolve_lyrics_group",
 		mcpgo.WithDescription("Apply an action to a whole group of lyrics queue items at once (e.g. all tracks from the same album)."),
 		mcpgo.WithString("group_type", mcpgo.Required(), mcpgo.Description("Group type: 'album' or 'artist'")),
 		mcpgo.WithString("group_key", mcpgo.Required(), mcpgo.Description("Group key value (album title or artist name)")),
 		mcpgo.WithString("action", mcpgo.Required(), mcpgo.Description("One of: accept, reject, skip")),
 	), s.resolveLyricsGroup)
 
-	srv.AddTool(mcpgo.NewTool("clear_lyrics_queue",
+	s.addDestructiveTool(srv, mcpgo.NewTool("clear_lyrics_queue",
 		mcpgo.WithDescription("Discard all items from the lyrics review queue"),
 	), s.clearLyricsQueue)
 }

@@ -8,6 +8,11 @@ import (
 	"github.com/contre95/soulsolid/src/music"
 )
 
+// AcoustIDParams is the (empty) metadata contract for an AcoustID analysis job.
+// Declared locally rather than reusing a shared type so this feature satisfies
+// jobs.Task structurally and never has to import the jobs package.
+type AcoustIDParams struct{}
+
 // AcoustIDJobTask handles AcoustID analysis job execution
 type AcoustIDJobTask struct {
 	service *Service
@@ -20,13 +25,8 @@ func NewAcoustIDJobTask(service *Service) *AcoustIDJobTask {
 	}
 }
 
-// MetadataKeys returns the required metadata keys for AcoustID analysis jobs
-func (t *AcoustIDJobTask) MetadataKeys() []string {
-	return []string{}
-}
-
-// Execute performs the AcoustID analysis operation
-func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
+// Execute performs the AcoustID analysis operation. It takes no job parameters.
+func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, _ AcoustIDParams, progressUpdater func(int, string)) (map[string]any, error) {
 	// Get total track count for progress reporting
 	totalTracks, err := t.service.libraryRepo.GetTracksCount(ctx)
 	if err != nil {
@@ -41,6 +41,8 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, progressU
 			"acoustidsAdded":    0,
 			"fingerprintsAdded": 0,
 			"skipped":           0,
+			"errors":            0,
+			"msg":               "AcoustID analysis finished. No tracks found in library.",
 		}, nil
 	}
 
@@ -51,6 +53,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, progressU
 	updated := 0
 	fingerprintsAdded := 0
 	skipped := 0
+	errorCount := 0
 
 	// Process tracks in batches to avoid loading all into memory
 	batchSize := 100
@@ -95,6 +98,7 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, progressU
 			err := t.service.AddChromaprintAndAcoustID(ctx, track.ID)
 			if err != nil {
 				job.Logger.Warn("Failed to add fingerprint and AcoustID for track", "trackID", track.ID, "title", track.Title, "error", err, "color", "orange")
+				errorCount++
 				// Continue with other tracks - don't fail the entire job
 			} else {
 				// Check if AcoustID was actually added
@@ -121,7 +125,10 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, progressU
 		}
 	}
 
-	job.Logger.Info("AcoustID analysis completed", "totalTracks", totalTracks, "processed", processed, "acoustidsAdded", updated, "fingerprintsAdded", fingerprintsAdded, "skipped", skipped, "color", "green")
+	job.Logger.Info("AcoustID analysis completed", "totalTracks", totalTracks, "processed", processed, "acoustidsAdded", updated, "fingerprintsAdded", fingerprintsAdded, "skipped", skipped, "errors", errorCount, "color", "green")
+	finalMessage := fmt.Sprintf("AcoustID analysis finished. Processed %d tracks (%d AcoustIDs added, %d fingerprint only, %d skipped, %d errors).",
+		processed+skipped, updated, fingerprintsAdded, skipped, errorCount)
+	job.Logger.Info(finalMessage)
 	progressUpdater(100, fmt.Sprintf("Analysis completed - %d AcoustIDs added, %d fingerprints added, %d skipped", updated, fingerprintsAdded, skipped))
 
 	return map[string]any{
@@ -130,6 +137,8 @@ func (t *AcoustIDJobTask) Execute(ctx context.Context, job *music.Job, progressU
 		"acoustidsAdded":    updated,
 		"fingerprintsAdded": fingerprintsAdded,
 		"skipped":           skipped,
+		"errors":            errorCount,
+		"msg":               finalMessage,
 	}, nil
 }
 

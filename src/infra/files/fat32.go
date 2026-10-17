@@ -10,6 +10,18 @@ import (
 
 const maxFAT32Bytes = 255
 
+// PathSanitizer adapts the package-level FAT32 helpers to the port declared by
+// the reorganize feature. It is satisfied structurally, so this package does
+// not import the feature that consumes it.
+type PathSanitizer struct{}
+
+// NewPathSanitizer returns the FAT32 path-sanitizing adapter.
+func NewPathSanitizer() *PathSanitizer { return &PathSanitizer{} }
+
+func (PathSanitizer) SanitizeFAT32Path(path string) string { return SanitizeFAT32Path(path) }
+
+func (PathSanitizer) ResolvePathConflict(path string) string { return ResolvePathConflict(path) }
+
 var fat32Replacer = strings.NewReplacer(
 	":", "-", "*", "-", "?", "-", `"`, "-",
 	"<", "-", ">", "-", "|", "-", `\`, "-",

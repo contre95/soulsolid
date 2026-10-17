@@ -19,6 +19,15 @@ type Config struct {
 // MCP holds the configuration for the Model Context Protocol endpoint
 type MCP struct {
 	Enabled bool `yaml:"enabled"`
+	// Token, when set, must be sent as "Authorization: Bearer <token>" on every
+	// request. Supports !env_var / !env_file like any other secret.
+	Token string `yaml:"token"`
+	// AllowedOrigins lists browser origins allowed to call the endpoint.
+	// Requests carrying any other Origin header are rejected (DNS rebinding /
+	// cross-site protection); non-browser MCP clients send no Origin.
+	AllowedOrigins []string `yaml:"allowed_origins"`
+	// ReadOnly exposes only tools that do not modify the library, files or config.
+	ReadOnly bool `yaml:"read_only"`
 }
 type Jobs struct {
 	Log      bool          `yaml:"log"`

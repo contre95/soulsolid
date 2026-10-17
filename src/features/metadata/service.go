@@ -632,7 +632,7 @@ func (s *Service) GetAlbums(ctx context.Context) ([]*music.Album, error) {
 // StartAcoustIDAnalysis starts a job to analyze all tracks for AcoustID
 func (s *Service) StartAcoustIDAnalysis(ctx context.Context) (string, error) {
 	slog.Info("Starting AcoustID analysis job")
-	jobID, err := s.jobService.StartJob("analyze_acoustid", "Analyze AcoustID for Library", map[string]any{})
+	jobID, err := music.StartTypedJob(s.jobService, "analyze_acoustid", "Analyze AcoustID for Library", AcoustIDParams{})
 	if err != nil {
 		return "", fmt.Errorf("failed to start AcoustID analysis job: %w", err)
 	}
