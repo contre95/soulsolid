@@ -479,10 +479,11 @@ var webhookEnv = []struct{ field, env string }{
 // renderWebhookCommand renders the webhook template without ever putting job
 // values into the shell source. Values such as job names and messages can hold
 // user- or file-controlled text (playlist names, track titles), so splicing them
-// into a /bin/sh -c string would allow command injection. Instead each
-// placeholder renders as a "${SOULSOLID_JOB_*}" reference and the values travel
-// as environment variables, which the shell expands without re-parsing. The
-// documented form, -d "{{.Name}} {{.Status}}", keeps working unchanged.
+// into a /bin/sh -c string would allow command injection. Instead the values
+// travel as environment variables and each placeholder becomes a reference to
+// one, quoted for where it sits in the command (see quoteWebhookPlaceholders) so
+// it always expands to exactly one argument: no re-parsing, no word splitting,
+// no globbing.
 func renderWebhookCommand(tmplText string, v webhookValues) (string, []string, error) {
 	tmpl, err := template.New("webhook").Option("missingkey=error").Parse(tmplText)
 	if err != nil {
@@ -496,18 +497,102 @@ func renderWebhookCommand(tmplText string, v webhookValues) (string, []string, e
 		"Message":  v.Message,
 		"Duration": v.Duration,
 	}
-	refs := make(map[string]string, len(webhookEnv))
+	// Placeholders first render as NUL-delimited markers (NUL can't occur in a
+	// shell command), which quoteWebhookPlaceholders then resolves by context.
+	markers := make(map[string]string, len(webhookEnv))
 	env := make([]string, 0, len(webhookEnv))
 	for _, e := range webhookEnv {
-		refs[e.field] = "${" + e.env + "}"
+		markers[e.field] = "\x00" + e.env + "\x00"
 		env = append(env, e.env+"="+values[e.field])
 	}
 
-	var command strings.Builder
-	if err := tmpl.Execute(&command, refs); err != nil {
+	var rendered strings.Builder
+	if err := tmpl.Execute(&rendered, markers); err != nil {
 		return "", nil, fmt.Errorf("execute webhook template: %w", err)
 	}
-	return command.String(), env, nil
+	command, err := quoteWebhookPlaceholders(rendered.String())
+	if err != nil {
+		return "", nil, err
+	}
+	return command, env, nil
+}
+
+// quoteWebhookPlaceholders replaces each NUL-delimited placeholder marker with a
+// variable reference that expands to a single, literal argument wherever it
+// appears in the command:
+//
+//	unquoted        {{.Name}}    -> "${SOULSOLID_JOB_NAME}"
+//	double-quoted  "{{.Name}}"   -> "${SOULSOLID_JOB_NAME}"
+//	single-quoted  '{{.Name}}'   -> '"${SOULSOLID_JOB_NAME}"'
+//
+// The single-quoted form closes the quote, splices in the quoted reference and
+// reopens it, so templates like -d '{"text":"{{.Name}}"}' keep working. Contexts
+// where the quoting can't be tracked reliably (command substitution, backticks,
+// heredocs, $'...') are rejected rather than guessed at.
+func quoteWebhookPlaceholders(cmd string) (string, error) {
+	const (
+		unquoted = iota
+		single
+		double
+	)
+	var out strings.Builder
+	state := unquoted
+	opaque := "" // first construct seen whose inner quoting isn't tracked
+	for i := 0; i < len(cmd); i++ {
+		c := cmd[i]
+		if c == 0 {
+			end := strings.IndexByte(cmd[i+1:], 0)
+			ref := "${" + cmd[i+1:i+1+end] + "}"
+			i += end + 1
+			if opaque != "" {
+				return "", fmt.Errorf("webhook placeholders can't be used after %s; read the SOULSOLID_JOB_* environment variables there instead", opaque)
+			}
+			switch state {
+			case unquoted:
+				out.WriteString(`"` + ref + `"`)
+			case double:
+				out.WriteString(ref)
+			case single:
+				out.WriteString(`'"` + ref + `"'`)
+			}
+			continue
+		}
+		out.WriteByte(c)
+		switch state {
+		case single:
+			if c == '\'' {
+				state = unquoted
+			}
+			continue
+		case unquoted, double:
+			if c == '\\' && i+1 < len(cmd) && cmd[i+1] != 0 {
+				// Escaped character: copy it through without interpreting it.
+				i++
+				out.WriteByte(cmd[i])
+				continue
+			}
+			rest := cmd[i:]
+			switch {
+			case c == '`':
+				opaque = "a backtick"
+			case strings.HasPrefix(rest, "$("):
+				opaque = "a $( command substitution"
+			case state == unquoted && strings.HasPrefix(rest, "$'"):
+				opaque = "a $'...' string"
+			case state == unquoted && strings.HasPrefix(rest, "<<"):
+				opaque = "a heredoc"
+			}
+		}
+		switch {
+		case state == unquoted && c == '\'':
+			state = single
+		case state == unquoted && c == '"':
+			state = double
+		case state == double && c == '"':
+			state = unquoted
+		}
+	}
+	return out.String(), nil
 }
 
 // executeWebhookCommand runs the rendered webhook command with the job values in

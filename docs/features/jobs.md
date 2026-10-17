@@ -96,17 +96,42 @@ then runs it via `/bin/sh -c` in its own process group with a 30-second kill tim
 This is how job completions can be pushed to notification services.
 
 Job values never become part of the shell source. Job names and messages can contain
-text the user or a file's tags control, such as playlist names and track titles. Each
-placeholder therefore renders as a variable reference (`{{.Name}}` →
-`${SOULSOLID_JOB_NAME}`), and the real value is passed in the command's environment.
-The shell expands variables without re-parsing them, so a value like
-`"; rm -rf ~; "` stays plain text. The variables are `SOULSOLID_JOB_NAME`,
-`SOULSOLID_JOB_TYPE`, `SOULSOLID_JOB_STATUS`, `SOULSOLID_JOB_MESSAGE` and
-`SOULSOLID_JOB_DURATION`, and scripts can read them directly too.
+text the user or a file's tags control, such as playlist names and track titles. The
+values are passed to the command as environment variables (`SOULSOLID_JOB_NAME`,
+`SOULSOLID_JOB_TYPE`, `SOULSOLID_JOB_STATUS`, `SOULSOLID_JOB_MESSAGE`,
+`SOULSOLID_JOB_DURATION`), and each placeholder becomes a reference to one, quoted for
+where it sits in the command:
 
-Put placeholders inside **double quotes** (`"{{.Name}}"`) so values with spaces stay
-one argument. Inside single quotes (`'{{.Name}}'`) the shell doesn't expand variables,
-so the literal `${SOULSOLID_JOB_NAME}` would be sent instead of the value.
+| Template | Rendered as |
+|----------|-------------|
+| `{{.Name}}` (unquoted) | `"${SOULSOLID_JOB_NAME}"` |
+| `"{{.Name}}"` (inside double quotes) | `${SOULSOLID_JOB_NAME}` |
+| `'{{.Name}}'` (inside single quotes) | `'"${SOULSOLID_JOB_NAME}"'` |
+
+Either way a placeholder expands to exactly **one literal argument**. A value like
+`"; rm -rf ~; "` is never run, `*` is never expanded into file names, and a message
+like `x --data-binary @/etc/passwd` can't add options to `curl`. Scripts can also read
+the `SOULSOLID_JOB_*` variables directly.
+
+Placeholders inside `$(...)`, backticks, heredocs or `$'...'`, or anywhere after one of
+these in the command, are rejected and the webhook doesn't run, because their quoting
+can't be tracked reliably. Use the environment variables there instead.
+
+#### Building JSON payloads
+
+Placeholders insert values verbatim, so a `"` or `\` in a playlist name or track title
+will still break a hand-written JSON body such as
+`-d '{"text": "{{.Name}}"}'`. That can't run a command, but the receiving service may
+reject the request. To always send valid JSON, build the payload with a JSON
+serializer such as [`jq`](https://jqlang.org), which must be installed where Soulsolid
+runs, and pipe it to `curl`:
+
+```yaml
+command: >-
+  jq -n --arg name "{{.Name}}" --arg status "{{.Status}}"
+  '{text: "\($name) \($status)"}'
+  | curl -X POST -H 'Content-Type: application/json' -d @- https://example.com/hook
+```
 
 ## Endpoints
 
