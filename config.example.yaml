@@ -14,6 +14,7 @@
 
 libraryPath: ./music
 downloadPath: ./downloads
+# Deprecated: the Telegram bot will be removed in v0.30.0.
 telegram:
   enabled: false
   # token: !env_var TELEGRAM_BOT_TOKEN

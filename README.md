@@ -28,7 +28,7 @@ See the [deepwiki](https://deepwiki.com/contre95/soulsolid)
 - **Downloading**: Download tracks and albums. 
 - **Importing**: Import music from directories with automatic fingerprinting
 - **Metadata Tagging**: Auto-tag using MusicBrainz and Discogs APIs
-- **Telegram Integration**: Control via Telegram bot
+- **Telegram Integration** *(deprecated, will be removed in v0.30.0)*: Control via Telegram bot
 - **Web UI**: Mobile-friendly interface for all operations 
 - **Job Management**: Background processing for downloads, imports, and synced lyrics and more. 
 
