@@ -440,48 +440,82 @@ func (s *Service) executeWebhook(job *music.Job) {
 		}
 	}
 
-	data := struct {
-		Name     string
-		Type     string
-		Status   string
-		Message  string
-		Duration string
-	}{
+	command, env, err := renderWebhookCommand(s.config.Get().Jobs.Webhooks.Command, webhookValues{
 		Name:     job.Name,
 		Type:     job.Type,
 		Status:   string(job.Status),
 		Message:  message,
 		Duration: time.Since(job.CreatedAt).Round(time.Second).String(),
-	}
-
-	// Execute template
-	tmpl, err := template.New("webhook").Parse(s.config.Get().Jobs.Webhooks.Command)
+	})
 	if err != nil {
 		if job.Logger != nil {
-			job.Logger.Error("Failed to parse webhook template", "error", err)
-		}
-		return
-	}
-
-	var command strings.Builder
-	if err := tmpl.Execute(&command, data); err != nil {
-		if job.Logger != nil {
-			job.Logger.Error("Failed to execute webhook template", "error", err)
+			job.Logger.Error("Failed to render webhook template", "error", err)
 		}
 		return
 	}
 
 	// Execute command asynchronously
-	go func(cmd string) {
-		s.executeWebhookCommand(cmd, job)
-	}(command.String())
+	go s.executeWebhookCommand(command, env, job)
 }
 
-// executeWebhookCommand executes the webhook command safely
-func (s *Service) executeWebhookCommand(command string, job *music.Job) {
+// webhookValues are the job details a webhook command template can reference.
+type webhookValues struct {
+	Name     string
+	Type     string
+	Status   string
+	Message  string
+	Duration string
+}
+
+// webhookEnv maps each template field to the environment variable carrying it.
+var webhookEnv = []struct{ field, env string }{
+	{"Name", "SOULSOLID_JOB_NAME"},
+	{"Type", "SOULSOLID_JOB_TYPE"},
+	{"Status", "SOULSOLID_JOB_STATUS"},
+	{"Message", "SOULSOLID_JOB_MESSAGE"},
+	{"Duration", "SOULSOLID_JOB_DURATION"},
+}
+
+// renderWebhookCommand renders the webhook template without ever putting job
+// values into the shell source. Values such as job names and messages can hold
+// user- or file-controlled text (playlist names, track titles), so splicing them
+// into a /bin/sh -c string would allow command injection. Instead each
+// placeholder renders as a "${SOULSOLID_JOB_*}" reference and the values travel
+// as environment variables, which the shell expands without re-parsing. The
+// documented form, -d "{{.Name}} {{.Status}}", keeps working unchanged.
+func renderWebhookCommand(tmplText string, v webhookValues) (string, []string, error) {
+	tmpl, err := template.New("webhook").Option("missingkey=error").Parse(tmplText)
+	if err != nil {
+		return "", nil, fmt.Errorf("parse webhook template: %w", err)
+	}
+
+	values := map[string]string{
+		"Name":     v.Name,
+		"Type":     v.Type,
+		"Status":   v.Status,
+		"Message":  v.Message,
+		"Duration": v.Duration,
+	}
+	refs := make(map[string]string, len(webhookEnv))
+	env := make([]string, 0, len(webhookEnv))
+	for _, e := range webhookEnv {
+		refs[e.field] = "${" + e.env + "}"
+		env = append(env, e.env+"="+values[e.field])
+	}
+
+	var command strings.Builder
+	if err := tmpl.Execute(&command, refs); err != nil {
+		return "", nil, fmt.Errorf("execute webhook template: %w", err)
+	}
+	return command.String(), env, nil
+}
+
+// executeWebhookCommand runs the rendered webhook command with the job values in
+// its environment (see renderWebhookCommand).
+func (s *Service) executeWebhookCommand(command string, env []string, job *music.Job) {
 	// Use shell to properly handle quoted strings and complex commands
 	cmd := exec.Command("/bin/sh", "-c", command)
-	cmd.Env = os.Environ()
+	cmd.Env = append(os.Environ(), env...)
 	// Put the shell and all its children in a new process group so the timeout
 	// kill reaches the entire tree and no grandchildren are orphaned to PID 1.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

@@ -95,6 +95,19 @@ with `{{.Name}}`, `{{.Type}}`, `{{.Status}}`, `{{.Message}}`, and `{{.Duration}}
 then runs it via `/bin/sh -c` in its own process group with a 30-second kill timer.
 This is how job completions can be pushed to notification services.
 
+Job values never become part of the shell source. Job names and messages can contain
+text the user or a file's tags control, such as playlist names and track titles. Each
+placeholder therefore renders as a variable reference (`{{.Name}}` →
+`${SOULSOLID_JOB_NAME}`), and the real value is passed in the command's environment.
+The shell expands variables without re-parsing them, so a value like
+`"; rm -rf ~; "` stays plain text. The variables are `SOULSOLID_JOB_NAME`,
+`SOULSOLID_JOB_TYPE`, `SOULSOLID_JOB_STATUS`, `SOULSOLID_JOB_MESSAGE` and
+`SOULSOLID_JOB_DURATION`, and scripts can read them directly too.
+
+Put placeholders inside **double quotes** (`"{{.Name}}"`) so values with spaces stay
+one argument. Inside single quotes (`'{{.Name}}'`) the shell doesn't expand variables,
+so the literal `${SOULSOLID_JOB_NAME}` would be sent instead of the value.
+
 ## Endpoints
 
 Registered in `src/features/jobs/routes.go`. Several endpoints return JSON with
