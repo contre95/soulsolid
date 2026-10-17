@@ -120,7 +120,6 @@ Or start everything (asset build + server) in one command:
 
 ```bash
 devenv up
-```
 
 To activate the environment automatically when you `cd` into the project,
 install [direnv](https://direnv.net/), add `use devenv` to a `.envrc`, and run
