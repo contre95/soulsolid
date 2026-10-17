@@ -164,7 +164,7 @@ func (m *Manager) loadConfig(path string) (*Config, error) {
 func migrateDeprecated(cfg *Config) {
 	webhooks := &cfg.Jobs.Webhooks
 	if len(webhooks.JobTypesDeprecated) > 0 {
-		if len(webhooks.JobTrigger) == 0 {
+		if webhooks.JobTrigger == nil { // an explicit job_trigger: [] still wins
 			slog.Warn("jobs.webhooks.job_types is deprecated, rename it to jobs.webhooks.job_trigger")
 			webhooks.JobTrigger = webhooks.JobTypesDeprecated
 		} else {

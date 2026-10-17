@@ -83,6 +83,7 @@ func TestLoadConfig_WebhookJobTrigger(t *testing.T) {
 		{"new key", "job_trigger: [download_album]", []string{"download_album"}},
 		{"deprecated key still works", "job_types: [directory_import]", []string{"directory_import"}},
 		{"new key wins over deprecated", "job_trigger: [download_album]\n    job_types: [directory_import]", []string{"download_album"}},
+		{"empty new key wins over deprecated", "job_trigger: []\n    job_types: [directory_import]", []string{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			configYAML := "libraryPath: ./music\ndownloadPath: ./downloads\ndatabase:\n  path: ./library.db\njobs:\n  webhooks:\n    " + tc.webhooks + "\n"

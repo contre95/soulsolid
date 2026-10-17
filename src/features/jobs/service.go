@@ -510,6 +510,15 @@ func renderWebhookCommand(tmplText string, v webhookValues) (string, []string, e
 	return command, env, nil
 }
 
+func isWebhookEnv(name string) bool {
+	for _, e := range webhookEnv {
+		if e.env == name {
+			return true
+		}
+	}
+	return false
+}
+
 // quoteWebhookPlaceholders replaces each marker with an env var reference quoted
 // for its context, so it expands to one literal argument. Contexts it can't track
 // ($(...), backticks, heredocs, $'...') are rejected.
@@ -518,14 +527,19 @@ func quoteWebhookPlaceholders(cmd string) (string, error) {
 		unquoted = iota
 		single
 		double
+		comment
 	)
 	var out strings.Builder
 	state := unquoted
-	opaque := "" // first construct seen whose inner quoting isn't tracked
+	opaque := ""  // first construct seen whose inner quoting isn't tracked
+	escaped := -1 // index of the last backslash-escaped byte
 	for i := 0; i < len(cmd); i++ {
 		c := cmd[i]
 		if c == 0 {
 			end := strings.IndexByte(cmd[i+1:], 0)
+			if end < 0 || !isWebhookEnv(cmd[i+1:i+1+end]) {
+				return "", fmt.Errorf("malformed webhook placeholder: template functions must not modify job fields")
+			}
 			ref := "${" + cmd[i+1:i+1+end] + "}"
 			i += end + 1
 			if opaque != "" {
@@ -538,11 +552,18 @@ func quoteWebhookPlaceholders(cmd string) (string, error) {
 				out.WriteString(ref)
 			case single:
 				out.WriteString(`'"` + ref + `"'`)
+			case comment:
+				out.WriteString(ref) // ignored by the shell
 			}
 			continue
 		}
 		out.WriteByte(c)
 		switch state {
+		case comment:
+			if c == '\n' {
+				state = unquoted
+			}
+			continue
 		case single:
 			if c == '\'' {
 				state = unquoted
@@ -552,6 +573,7 @@ func quoteWebhookPlaceholders(cmd string) (string, error) {
 			if c == '\\' && i+1 < len(cmd) && cmd[i+1] != 0 {
 				i++
 				out.WriteByte(cmd[i])
+				escaped = i
 				continue
 			}
 			rest := cmd[i:]
@@ -567,6 +589,8 @@ func quoteWebhookPlaceholders(cmd string) (string, error) {
 			}
 		}
 		switch {
+		case state == unquoted && c == '#' && (i == 0 || escaped != i-1 && strings.IndexByte(" \t\n;&|()<>", cmd[i-1]) >= 0):
+			state = comment
 		case state == unquoted && c == '\'':
 			state = single
 		case state == unquoted && c == '"':
