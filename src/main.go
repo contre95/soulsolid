@@ -162,7 +162,6 @@ func main() {
 
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {
-		slog.Warn(hosting.TelegramDeprecationNotice)
 		var err error
 		telegramBot, err = hosting.NewTelegramBot(cfgManager, libraryService, jobService, importingService)
 		if err != nil {

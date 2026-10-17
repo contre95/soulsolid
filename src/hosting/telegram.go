@@ -20,10 +20,6 @@ type TelegramCommandHandler interface {
 	HandleCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQuery) bool // Handle feature-specific callbacks
 }
 
-// TelegramDeprecationNotice is shown in the logs and the bot while the
-// Telegram bot is deprecated.
-const TelegramDeprecationNotice = "The Telegram bot is deprecated and will be removed in v0.30.0; use the web UI instead."
-
 // TelegramBot handles Telegram bot operations
 type TelegramBot struct {
 	bot           *tgbotapi.BotAPI
@@ -264,7 +260,7 @@ func (t *TelegramBot) handleCallbackQuery(update tgbotapi.Update) {
 
 // handleHelp shows main menu with inline keyboard
 func (t *TelegramBot) handleHelp(chatID int64) {
-	text := "⚠️ _" + TelegramDeprecationNotice + "_\n\n" + `*🤖 Soulsolid Main Menu*
+	text := `*🤖 Soulsolid Main Menu*
 
 Choose an action below or use commands directly:`
 
