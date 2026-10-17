@@ -103,6 +103,9 @@ Webhook jobs appear in the jobs list like any other job:
 - A non-zero exit fails the job, with the exit status as its message. So does
   running past the **30-second timeout**. **Cancel** kills the command and anything
   it started.
+- Nothing the command starts outlives the job. Background processes (`curl ... &`) are
+  stopped when the shell exits. If one still held the output open, the job completes
+  with a warning in its log, and output written after the shell exited is dropped.
 - Webhook jobs **skip the queue**. They start immediately, even while another job
   runs, and never hold up queued jobs, so notifications aren't delayed.
 - Webhook jobs never trigger webhooks themselves, even with `job_trigger: ["*"]`.
@@ -142,10 +145,27 @@ where it sits in the command:
 | `"{{.Name}}"` (inside double quotes) | `${SOULSOLID_JOB_NAME}` |
 | `'{{.Name}}'` (inside single quotes) | `'"${SOULSOLID_JOB_NAME}"'` |
 
-Either way a placeholder expands to exactly **one literal argument**. A value like
-`"; rm -rf ~; "` is never run, `*` is never expanded into file names, and a message
-like `x --data-binary @/etc/passwd` can't add options to `curl`. Scripts can also read
-the `SOULSOLID_JOB_*` variables directly.
+Either way a placeholder expands to exactly **one literal argument** of the webhook's
+shell. A value like `"; rm -rf ~; "` isn't run by that shell, `*` isn't expanded into
+file names, and a message like `x --data-binary @/etc/passwd` can't add options to
+`curl`. Scripts can also read the `SOULSOLID_JOB_*` variables directly.
+
+This protects values only from the webhook's own shell. A command that hands a value
+to **another parser of shell code**, such as `sh -c`, `bash -c`, `ssh host '...'`,
+`su -c` or `eval`, runs it as code there: with `sh -c 'echo {{.Name}}'`, a track titled
+`x; rm -rf ~` runs `rm`. Pass the value as an argument instead, or let the inner shell
+read the variable itself:
+
+```yaml
+command: sh -c 'notify "$1"' _ {{.Name}}            # value as a positional argument
+command: sh -c 'notify "$SOULSOLID_JOB_NAME"'       # the inner shell reads the variable
+```
+
+Template logic uses the real values, so `{{if eq .Status "failed"}}...{{end}}`,
+`{{or .Message "no message"}}` and `{{len .Name}}` work as expected. Functions that
+would turn a job value into new text, such as `printf`, `urlquery`, `html`, `js` or
+`slice`, are rejected and the webhook doesn't run. Do that formatting in the command
+instead, for example with `jq` (see below).
 
 Placeholders inside `$(...)`, backticks, heredocs or `$'...'`, or anywhere after one of
 these in the command, are rejected and the webhook doesn't run, because their quoting
