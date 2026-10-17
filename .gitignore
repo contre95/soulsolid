@@ -54,7 +54,7 @@ devenv.local.nix
 
 # Soulsolid
 pocs
-music
+/music
 **/*.db
 **/*.db-journal
 downloads
