@@ -40,7 +40,7 @@ func (t *WebhookTask) Execute(ctx context.Context, job *music.Job, params Webhoo
 	defer cancel()
 
 	cmd := exec.CommandContext(runCtx, "/bin/sh", "-c", params.Command)
-	cmd.Env = append(os.Environ(), params.Env...)
+	cmd.Env = webhookEnviron(os.Environ(), params.Env)
 	// Put the shell and all its children in a new process group so cancel and
 	// timeout kill the entire tree and no grandchildren are orphaned to PID 1.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -70,6 +70,22 @@ func (t *WebhookTask) Execute(ctx context.Context, job *music.Job, params Webhoo
 }
 
 func (t *WebhookTask) Cleanup(job *music.Job) error { return nil }
+
+// webhookEnvPrefix marks the server environment variables a webhook may read.
+const webhookEnvPrefix = "SOULSOLID_WEBHOOK_"
+
+// webhookEnviron builds a webhook's environment: PATH and SOULSOLID_WEBHOOK_*
+// from the server, so other secrets the server holds never reach the command,
+// plus the job's SOULSOLID_JOB_* values.
+func webhookEnviron(environ, jobEnv []string) []string {
+	env := make([]string, 0, len(jobEnv)+1)
+	for _, kv := range environ {
+		if strings.HasPrefix(kv, "PATH=") || strings.HasPrefix(kv, webhookEnvPrefix) {
+			env = append(env, kv)
+		}
+	}
+	return append(env, jobEnv...)
+}
 
 // lineLogger logs each line written to it, up to webhookOutputLimit bytes.
 type lineLogger struct {

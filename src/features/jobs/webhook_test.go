@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -330,5 +331,39 @@ func TestWebhookJobsDontBlockQueue(t *testing.T) {
 	})
 	if job, _ := s.GetJob(a); job.Status != music.JobStatusCompleted {
 		t.Errorf("expected A completed, got %s", job.Status)
+	}
+}
+
+func TestWebhookEnviron(t *testing.T) {
+	got := webhookEnviron([]string{
+		"PATH=/bin",
+		"HOME=/root",
+		"TELEGRAM_TOKEN=secret",
+		"SOULSOLID_WEBHOOK_URL=https://hook",
+		"SOULSOLID_JOB_NAME=spoofed",
+		"XSOULSOLID_WEBHOOK_X=no",
+	}, []string{"SOULSOLID_JOB_NAME=real"})
+	want := []string{"PATH=/bin", "SOULSOLID_WEBHOOK_URL=https://hook", "SOULSOLID_JOB_NAME=real"}
+	if !slices.Equal(got, want) {
+		t.Errorf("expected %v, got %v", want, got)
+	}
+}
+
+func TestWebhookTaskEnvironment(t *testing.T) {
+	t.Setenv("SOULSOLID_WEBHOOK_TOKEN", "hook-token")
+	t.Setenv("TELEGRAM_TOKEN", "server-secret")
+	var logs bytes.Buffer
+	_, err := (&WebhookTask{timeout: 5 * time.Second}).Execute(context.Background(), testJob(&logs),
+		WebhookParams{Command: `echo "token=$SOULSOLID_WEBHOOK_TOKEN secret=$TELEGRAM_TOKEN"; command -v sh >/dev/null && echo path-ok`},
+		func(int, string) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := logs.String()
+	if !strings.Contains(out, "token=hook-token secret=") || strings.Contains(out, "server-secret") {
+		t.Errorf("expected only SOULSOLID_WEBHOOK_* to be visible, got:\n%s", out)
+	}
+	if !strings.Contains(out, "path-ok") {
+		t.Errorf("expected PATH to be passed through, got:\n%s", out)
 	}
 }

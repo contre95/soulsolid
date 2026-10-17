@@ -108,6 +108,27 @@ Webhook jobs appear in the jobs list like any other job:
 - Webhook jobs never trigger webhooks themselves, even with `job_trigger: ["*"]`.
 - The triggering job's log records `Webhook job started` with the webhook job's ID.
 
+#### Environment
+
+A webhook command doesn't inherit the server's environment, so secrets passed to
+Soulsolid (for example through `!env_var`) can't leak into it. It only sees:
+
+- `PATH`, so commands like `curl` can be found.
+- Server variables starting with **`SOULSOLID_WEBHOOK_`**, passed through unchanged.
+- The job's `SOULSOLID_JOB_*` values (see below). They can't be overridden from
+  the server environment.
+
+Use `SOULSOLID_WEBHOOK_*` variables for tokens and URLs. That way they never appear
+in `config.yaml`, in job metadata or in the logged command:
+
+```yaml
+command: curl -s -d "{{.Name}} {{.Status}}" "https://ntfy.sh/$SOULSOLID_WEBHOOK_NTFY_TOPIC"
+```
+
+Anything else the command needs, such as `HOME` or `SSL_CERT_FILE`, has to be passed
+under that prefix and exported in the command, e.g.
+`export SSL_CERT_FILE="$SOULSOLID_WEBHOOK_SSL_CERT_FILE"; curl ...`.
+
 Job values never become part of the shell source. Job names and messages can contain
 text the user or a file's tags control, such as playlist names and track titles. The
 values are passed to the command as environment variables (`SOULSOLID_JOB_NAME`,
