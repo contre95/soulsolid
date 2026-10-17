@@ -160,8 +160,7 @@ func (m *Manager) loadConfig(path string) (*Config, error) {
 	return &cfg, nil
 }
 
-// migrateDeprecated moves values set under old config keys to their new ones.
-// The old fields are cleared, so the next Save writes only the new keys.
+// migrateDeprecated moves values from old config keys to their new ones.
 func migrateDeprecated(cfg *Config) {
 	webhooks := &cfg.Jobs.Webhooks
 	if len(webhooks.JobTypesDeprecated) > 0 {

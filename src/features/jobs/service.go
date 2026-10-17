@@ -476,14 +476,8 @@ var webhookEnv = []struct{ field, env string }{
 	{"Duration", "SOULSOLID_JOB_DURATION"},
 }
 
-// renderWebhookCommand renders the webhook template without ever putting job
-// values into the shell source. Values such as job names and messages can hold
-// user- or file-controlled text (playlist names, track titles), so splicing them
-// into a /bin/sh -c string would allow command injection. Instead the values
-// travel as environment variables and each placeholder becomes a reference to
-// one, quoted for where it sits in the command (see quoteWebhookPlaceholders) so
-// it always expands to exactly one argument: no re-parsing, no word splitting,
-// no globbing.
+// renderWebhookCommand renders the template with job values passed as env vars,
+// never spliced into the shell source, to prevent command injection.
 func renderWebhookCommand(tmplText string, v webhookValues) (string, []string, error) {
 	tmpl, err := template.New("webhook").Option("missingkey=error").Parse(tmplText)
 	if err != nil {
@@ -497,8 +491,7 @@ func renderWebhookCommand(tmplText string, v webhookValues) (string, []string, e
 		"Message":  v.Message,
 		"Duration": v.Duration,
 	}
-	// Placeholders first render as NUL-delimited markers (NUL can't occur in a
-	// shell command), which quoteWebhookPlaceholders then resolves by context.
+	// NUL-delimited markers, resolved by quoteWebhookPlaceholders.
 	markers := make(map[string]string, len(webhookEnv))
 	env := make([]string, 0, len(webhookEnv))
 	for _, e := range webhookEnv {
@@ -517,18 +510,9 @@ func renderWebhookCommand(tmplText string, v webhookValues) (string, []string, e
 	return command, env, nil
 }
 
-// quoteWebhookPlaceholders replaces each NUL-delimited placeholder marker with a
-// variable reference that expands to a single, literal argument wherever it
-// appears in the command:
-//
-//	unquoted        {{.Name}}    -> "${SOULSOLID_JOB_NAME}"
-//	double-quoted  "{{.Name}}"   -> "${SOULSOLID_JOB_NAME}"
-//	single-quoted  '{{.Name}}'   -> '"${SOULSOLID_JOB_NAME}"'
-//
-// The single-quoted form closes the quote, splices in the quoted reference and
-// reopens it, so templates like -d '{"text":"{{.Name}}"}' keep working. Contexts
-// where the quoting can't be tracked reliably (command substitution, backticks,
-// heredocs, $'...') are rejected rather than guessed at.
+// quoteWebhookPlaceholders replaces each marker with an env var reference quoted
+// for its context, so it expands to one literal argument. Contexts it can't track
+// ($(...), backticks, heredocs, $'...') are rejected.
 func quoteWebhookPlaceholders(cmd string) (string, error) {
 	const (
 		unquoted = iota
@@ -566,7 +550,6 @@ func quoteWebhookPlaceholders(cmd string) (string, error) {
 			continue
 		case unquoted, double:
 			if c == '\\' && i+1 < len(cmd) && cmd[i+1] != 0 {
-				// Escaped character: copy it through without interpreting it.
 				i++
 				out.WriteByte(cmd[i])
 				continue
@@ -595,8 +578,7 @@ func quoteWebhookPlaceholders(cmd string) (string, error) {
 	return out.String(), nil
 }
 
-// executeWebhookCommand runs the rendered webhook command with the job values in
-// its environment (see renderWebhookCommand).
+// executeWebhookCommand runs the rendered webhook command with the job values in its env.
 func (s *Service) executeWebhookCommand(command string, env []string, job *music.Job) {
 	// Use shell to properly handle quoted strings and complex commands
 	cmd := exec.Command("/bin/sh", "-c", command)

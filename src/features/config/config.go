@@ -24,8 +24,7 @@ type WebhookConfig struct {
 	Enabled bool `yaml:"enabled"`
 	// JobTrigger lists the job types that fire the webhook ("*" = all).
 	JobTrigger []string `yaml:"job_trigger"`
-	// JobTypesDeprecated is the old name of JobTrigger, still read so existing
-	// config files keep working; loadConfig migrates it into JobTrigger.
+	// JobTypesDeprecated is the old job_types key, migrated into JobTrigger on load.
 	JobTypesDeprecated []string `yaml:"job_types,omitempty"`
 	Command            string   `yaml:"command"`
 }
