@@ -238,6 +238,13 @@ func (h *Handler) GetDirectoryForm(c *fiber.Ctx) error {
 	})
 }
 
+// GetImportBadges renders the import option badges shown on the directory form.
+func (h *Handler) GetImportBadges(c *fiber.Ctx) error {
+	return respond.Partial(c, "importing/import_badges", fiber.Map{
+		"Config": h.service.config.Get(),
+	})
+}
+
 // RenderQueueItems renders the queue content for HTMX
 func (h *Handler) RenderQueueItems(c *fiber.Ctx) error {
 	slog.Debug("RenderImportQueue handler called")

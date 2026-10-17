@@ -122,7 +122,57 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 		},
 	}
 
-	// Update the configuration
+	return h.apply(c, newConfig, "Configuration updated successfully!")
+}
+
+// UpdateImportOptions saves the import options edited from the Import Directory card.
+// Only these fields change; the rest of the config is kept as is.
+func (h *Handler) UpdateImportOptions(c *fiber.Ctx) error {
+	duplicates := c.FormValue("import.duplicates")
+	switch duplicates {
+	case "replace", "skip", "queue":
+	default:
+		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid duplicate handling: "+duplicates)
+	}
+
+	newConfig := *h.configManager.Get()
+	newConfig.Import.Move = c.FormValue("import.move") == "true"
+	newConfig.Import.AlwaysQueue = c.FormValue("import.always_queue") == "true"
+	newConfig.Import.Duplicates = duplicates
+
+	// Lets the card's badges re-render with the saved values.
+	c.Set("HX-Trigger", "importOptionsChanged")
+	return h.apply(c, &newConfig, "Import options saved")
+}
+
+// UpdatePathTemplates saves the path templates edited from the Path Templates card.
+func (h *Handler) UpdatePathTemplates(c *fiber.Ctx) error {
+	paths := h.configManager.Get().Import.PathOptions
+	paths.DefaultPath = strings.TrimSpace(c.FormValue("import.paths.default_path"))
+	paths.Compilations = strings.TrimSpace(c.FormValue("import.paths.compilations"))
+	paths.AlbumSoundtrack = strings.TrimSpace(c.FormValue("import.paths.album:soundtrack"))
+	paths.AlbumSingle = strings.TrimSpace(c.FormValue("import.paths.album:single"))
+	paths.AlbumEP = strings.TrimSpace(c.FormValue("import.paths.album:ep"))
+
+	// An empty template would render tracks straight into the library root.
+	for _, t := range []struct{ name, tmpl string }{
+		{"Default", paths.DefaultPath},
+		{"Soundtrack", paths.AlbumSoundtrack},
+		{"Single", paths.AlbumSingle},
+		{"EP", paths.AlbumEP},
+	} {
+		if t.tmpl == "" {
+			return respond.ToastErr(c, fiber.StatusBadRequest, t.name+" path template cannot be empty")
+		}
+	}
+
+	newConfig := *h.configManager.Get()
+	newConfig.Import.PathOptions = paths
+	return h.apply(c, &newConfig, "Path templates saved")
+}
+
+// apply swaps in newConfig, persists it, and responds with a toast.
+func (h *Handler) apply(c *fiber.Ctx, newConfig *Config, msg string) error {
 	h.configManager.Update(newConfig)
 	slog.Info("Configuration updated in memory")
 	if err := h.configManager.Save(); err != nil {
@@ -130,7 +180,7 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 	} else {
 		slog.Info("Configuration saved to file successfully")
 	}
-	return respond.ToastOk(c, "Configuration updated successfully!")
+	return respond.ToastOk(c, msg)
 }
 
 func parseStringSlice(s string) []string {

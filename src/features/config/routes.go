@@ -11,6 +11,8 @@ func RegisterRoutes(app *fiber.App, configManager *Manager) {
 	app.Get("/settings", handler.RenderSettingsSection)
 	app.Get("/config/form", handler.GetConfigForm)
 	app.Put("/settings", handler.UpdateSettings)
+	app.Put("/config/import", handler.UpdateImportOptions)
+	app.Put("/config/paths", handler.UpdatePathTemplates)
 	app.Get("/config", handler.GetConfig)
 	app.Get("/config/database/download", handler.DownloadDatabase)
 }

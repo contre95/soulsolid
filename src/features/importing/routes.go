@@ -12,6 +12,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 
 	importGroup := app.Group("/import")
 	importGroup.Get("/directory/form", handler.GetDirectoryForm)
+	importGroup.Get("/directory/badges", handler.GetImportBadges)
 	importGroup.Get("/queue/items", handler.RenderQueueItems)
 	importGroup.Get("/queue/items/grouped", handler.RenderGroupedQueueItems)
 	importGroup.Get("/queue/header", handler.GetQueueHeader)
