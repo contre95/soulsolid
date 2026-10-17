@@ -8,7 +8,7 @@ jobs:
   log_path: ./logs/jobs
   webhooks:
     enabled: true
-    job_types:
+    job_trigger:
       - directory_import
       - download_album
     command: | # ntfy
@@ -19,7 +19,7 @@ jobs:
 - **log_path**: The directory where job logs are stored.
 - **webhooks**: Configuration for sending notifications about job status.
   - **enabled**: Enable or disable webhooks.
-  - **job_types**: List of job types to send notifications for.
+  - **job_trigger**: List of job types to send notifications for (`"*"` = all). Formerly `job_types`, which is still read but deprecated.
   - **command**: The command to execute when a job status changes. This can be used to send notifications to various services.
     The following rendering names are allowed: Name, Type, Status, Message, Duration.
 

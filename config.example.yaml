@@ -87,7 +87,7 @@ jobs:
   log_path: ./logs/jobs
   webhooks:
     enabled: true
-    job_types:
+    job_trigger:
       - directory_import
       - download_album
     command: "echo hi"

@@ -92,8 +92,100 @@ polling), or a full-screen HTML page.
 When `jobs.webhooks.enabled` is set and the finished job's type matches the
 configured list (or `*`), `executeWebhook` renders the configured command template
 with `{{.Name}}`, `{{.Type}}`, `{{.Status}}`, `{{.Message}}`, and `{{.Duration}}`,
-then runs it via `/bin/sh -c` in its own process group with a 30-second kill timer.
-This is how job completions can be pushed to notification services.
+and runs it as a **`webhook` job** named `Webhook: <job name>`. This is how job
+completions can be pushed to notification services.
+
+Webhook jobs appear in the jobs list like any other job:
+
+- The command runs via `/bin/sh -c` in its own process group. Its **output** goes
+  into the job's log as it runs: stdout as `INFO` lines and stderr as `WARN` lines,
+  up to 64 KiB per stream. Output is only kept when `jobs.log` is enabled.
+- A non-zero exit fails the job, with the exit status as its message. So does
+  running past the **30-second timeout**. **Cancel** kills the command and anything
+  it started.
+- Nothing the command starts outlives the job. Background processes (`curl ... &`) are
+  stopped when the shell exits. If one still held the output open, the job completes
+  with a warning in its log, and output written after the shell exited is dropped.
+- Webhook jobs **skip the queue**. They start immediately, even while another job
+  runs, and never hold up queued jobs, so notifications aren't delayed.
+- Webhook jobs never trigger webhooks themselves, even with `job_trigger: ["*"]`.
+- The triggering job's log records `Webhook job started` with the webhook job's ID.
+
+#### Environment
+
+A webhook command doesn't inherit the server's environment, so secrets passed to
+Soulsolid (for example through `!env_var`) can't leak into it. It only sees:
+
+- `PATH`, so commands like `curl` can be found.
+- Server variables starting with **`SOULSOLID_WEBHOOK_`**, passed through unchanged.
+- The job's `SOULSOLID_JOB_*` values (see below). They can't be overridden from
+  the server environment.
+
+Use `SOULSOLID_WEBHOOK_*` variables for tokens and URLs. That way they never appear
+in `config.yaml`, in job metadata or in the logged command:
+
+```yaml
+command: curl -s -d "{{.Name}} {{.Status}}" "https://ntfy.sh/$SOULSOLID_WEBHOOK_NTFY_TOPIC"
+```
+
+Anything else the command needs, such as `HOME` or `SSL_CERT_FILE`, has to be passed
+under that prefix and exported in the command, e.g.
+`export SSL_CERT_FILE="$SOULSOLID_WEBHOOK_SSL_CERT_FILE"; curl ...`.
+
+Job values never become part of the shell source. Job names and messages can contain
+text the user or a file's tags control, such as playlist names and track titles. The
+values are passed to the command as environment variables (`SOULSOLID_JOB_NAME`,
+`SOULSOLID_JOB_TYPE`, `SOULSOLID_JOB_STATUS`, `SOULSOLID_JOB_MESSAGE`,
+`SOULSOLID_JOB_DURATION`), and each placeholder becomes a reference to one, quoted for
+where it sits in the command:
+
+| Template | Rendered as |
+|----------|-------------|
+| `{{.Name}}` (unquoted) | `"${SOULSOLID_JOB_NAME}"` |
+| `"{{.Name}}"` (inside double quotes) | `${SOULSOLID_JOB_NAME}` |
+| `'{{.Name}}'` (inside single quotes) | `'"${SOULSOLID_JOB_NAME}"'` |
+
+Either way a placeholder expands to exactly **one literal argument** of the webhook's
+shell. A value like `"; rm -rf ~; "` isn't run by that shell, `*` isn't expanded into
+file names, and a message like `x --data-binary @/etc/passwd` can't add options to
+`curl`. Scripts can also read the `SOULSOLID_JOB_*` variables directly.
+
+This protects values only from the webhook's own shell. A command that hands a value
+to **another parser of shell code**, such as `sh -c`, `bash -c`, `ssh host '...'`,
+`su -c` or `eval`, runs it as code there: with `sh -c 'echo {{.Name}}'`, a track titled
+`x; rm -rf ~` runs `rm`. Pass the value as an argument instead, or let the inner shell
+read the variable itself:
+
+```yaml
+command: sh -c 'notify "$1"' _ {{.Name}}            # value as a positional argument
+command: sh -c 'notify "$SOULSOLID_JOB_NAME"'       # the inner shell reads the variable
+```
+
+Template logic uses the real values, so `{{if eq .Status "failed"}}...{{end}}`,
+`{{or .Message "no message"}}` and `{{len .Name}}` work as expected. Functions that
+would turn a job value into new text, such as `printf`, `urlquery`, `html`, `js` or
+`slice`, are rejected and the webhook doesn't run. Do that formatting in the command
+instead, for example with `jq` (see below).
+
+Placeholders inside `$(...)`, backticks, heredocs or `$'...'`, or anywhere after one of
+these in the command, are rejected and the webhook doesn't run, because their quoting
+can't be tracked reliably. Use the environment variables there instead.
+
+#### Building JSON payloads
+
+Placeholders insert values verbatim, so a `"` or `\` in a playlist name or track title
+will still break a hand-written JSON body such as
+`-d '{"text": "{{.Name}}"}'`. That can't run a command, but the receiving service may
+reject the request. To always send valid JSON, build the payload with a JSON
+serializer such as [`jq`](https://jqlang.org), which must be installed where Soulsolid
+runs, and pipe it to `curl`:
+
+```yaml
+command: >-
+  jq -n --arg name "{{.Name}}" --arg status "{{.Status}}"
+  '{text: "\($name) \($status)"}'
+  | curl -X POST -H 'Content-Type: application/json' -d @- https://example.com/hook
+```
 
 ## Endpoints
 
@@ -125,7 +217,7 @@ jobs:
   log_path: /app/logs/jobs  # directory for the dated log files
   webhooks:
     enabled: false          # fire a command on job completion
-    job_types: ["*"]        # which job types trigger the webhook ("*" = all)
+    job_trigger: ["*"]      # which job types trigger the webhook ("*" = all)
     command: 'curl -X POST ... -d "{{.Name}} {{.Status}}"'  # templated shell command
 ```
 

@@ -1,127 +1,57 @@
-name: Tag, Release, and Build
+name: Release
 on:
-  pull_request:
+  push:
     branches:
       - main
-    types: [closed]
-  workflow_dispatch:
-    inputs:
-      version_type:
-        description: 'Version bump type'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-      custom_version:
-        description: 'Custom version (optional, overrides version_type)'
-        required: false
-        type: string
-      update_latest:
-        description: 'Update the latest tag'
-        required: false
-        default: false
-        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: write
-  actions: write
+  pull-requests: write
 
 jobs:
-  tag-and-release:
-    if: (github.event.pull_request.merged == true && (startsWith(github.event.pull_request.head.ref, 'fix/') || startsWith(github.event.pull_request.head.ref, 'feat/') || startsWith(github.event.pull_request.head.ref, 'release/'))) || github.event_name == 'workflow_dispatch'
+  release-please:
     runs-on: ubuntu-latest
     outputs:
-      tag_name: ${{ steps.set_tag.outputs.tag_name }}
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Run release-please
+        id: rp
+        uses: googleapis/release-please-action@v4
         with:
-          fetch-depth: 0
-      - name: Get the latest tag
-        id: get_tag
-        run: |
-          git fetch --tags
-          latest_tag=$(git describe --tags --match "v*.*.*" --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "Latest tag: $latest_tag"
-          echo "tag=$latest_tag" >> $GITHUB_ENV
-      - name: Determine new version
-        id: determine_version
-        run: |
-          version=${tag#v}
-          IFS='.' read -r major minor patch <<< "$version"
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            if [[ -n "${{ github.event.inputs.custom_version }}" ]]; then
-              new_version="${{ github.event.inputs.custom_version }}"
-              if [[ ! $new_version =~ ^v ]]; then
-                new_version="v$new_version"
-              fi
-            else
-              case "${{ github.event.inputs.version_type }}" in
-                patch)
-                  patch=$((patch + 1))
-                  ;;
-                minor)
-                  minor=$((minor + 1))
-                  patch=0
-                  ;;
-                major)
-                  major=$((major + 1))
-                  minor=0
-                  patch=0
-                  ;;
-              esac
-              new_version="v${major}.${minor}.${patch}"
-            fi
-          else
-            if [[ "${{ github.event.pull_request.head.ref }}" == fix/* ]]; then
-              patch=$((patch + 1))
-            elif [[ "${{ github.event.pull_request.head.ref }}" == feat/* ]]; then
-              minor=$((minor + 1))
-              patch=0
-            elif [[ "${{ github.event.pull_request.head.ref }}" == release/* ]]; then
-              major=$((major + 1))
-              minor=0
-              patch=0
-            fi
-            new_version="v${major}.${minor}.${patch}"
-          fi
-
-          echo "New version: $new_version"
-          echo "new_version=$new_version" >> $GITHUB_ENV
-      - name: Create Git tag
-        run: |
-          git tag ${{ env.new_version }}
-          git push origin ${{ env.new_version }}
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+      # Replace the header (everything above the first `---`) with the logo and
+      # version. Release-please only parses the notes below `---`, so this is safe.
+      - name: Brand release PR description
+        if: steps.rp.outputs.pr
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.new_version }}
-          name: Release ${{ env.new_version }}
-          draft: false
-          prerelease: false
-      - name: Output tag name
-        id: set_tag
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.rp.outputs.pr }}
         run: |
-          echo "tag_name=${{ env.new_version }}" >> $GITHUB_OUTPUT
+          number=$(jq -r .number <<<"$PR")
+          version=$(jq -r .title <<<"$PR" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+[^ ]*$')
+          # GitHub strips inline styles, so the gray version uses math (\color).
+          export HEADER="# <img src=\"https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/public/img/galaxy.png\" width=\"48\" alt=\"soulsolid\"> Soulsolid \$\\color{gray}\\textsf{v${version}}\$"
+          HEADER+=$'\n\n'"🐳 Once released, pull the image from [Docker Hub](https://hub.docker.com/r/contre95/soulsolid/tags):"
+          HEADER+=$'\n\n```sh\npodman pull docker.io/contre95/soulsolid:'"v${version}"$'\n```'
+          gh pr view "$number" -R "$GITHUB_REPOSITORY" --json body -q .body \
+            | awk 'NR==1 {print ENVIRON["HEADER"]} /^---$/ {f=1} f' \
+            | gh pr edit "$number" -R "$GITHUB_REPOSITORY" --body-file -
+
   build-and-push:
-    needs: tag-and-release
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code at tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.tag-and-release.outputs.tag_name }}
-          fetch-depth: 0
+          ref: ${{ needs.release-please.outputs.tag_name }}
       - name: Set up Podman
         run: |
           sudo apt-get update
@@ -130,19 +60,13 @@ jobs:
         run: |
           podman login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} docker.io
       - name: Build and push Container image
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          version=${{ needs.tag-and-release.outputs.tag_name }}
+          version=${{ needs.release-please.outputs.tag_name }}
           podman image build --build-arg IMAGE_TAG=$version -t contre95/soulsolid:$version .
           podman push contre95/soulsolid:$version
 
-          # Tag and push the :beta tag
-          podman image build --no-cache --build-arg IMAGE_TAG=beta-$version -t contre95/soulsolid:beta .
+          podman tag contre95/soulsolid:$version contre95/soulsolid:beta
           podman push contre95/soulsolid:beta
 
-          if [[ "${{ github.event.pull_request.head.ref }}" == release/* ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.update_latest }}" == "true" ]]; then
-            # Tag and push the :latest tag
-            podman tag contre95/soulsolid:$version contre95/soulsolid:latest
-            podman push contre95/soulsolid:latest
-          fi
+          podman tag contre95/soulsolid:$version contre95/soulsolid:latest
+          podman push contre95/soulsolid:latest

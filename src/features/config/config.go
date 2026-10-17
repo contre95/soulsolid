@@ -33,9 +33,12 @@ type Jobs struct {
 }
 
 type WebhookConfig struct {
-	Enabled  bool     `yaml:"enabled"`
-	JobTypes []string `yaml:"job_types"`
-	Command  string   `yaml:"command"`
+	Enabled bool `yaml:"enabled"`
+	// JobTrigger lists the job types that fire the webhook ("*" = all).
+	JobTrigger []string `yaml:"job_trigger"`
+	// JobTypesDeprecated is the old job_types key, migrated into JobTrigger on load.
+	JobTypesDeprecated []string `yaml:"job_types,omitempty"`
+	Command            string   `yaml:"command"`
 }
 
 type Import struct {
