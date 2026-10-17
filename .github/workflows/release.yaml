@@ -25,8 +25,26 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # Replace the header (everything above the first `---`) with the logo and
-      # version. Release-please only parses the notes below `---`, so this is safe.
+      # Release-please builds the GitHub release notes from the CHANGELOG entry,
+      # not from the PR description, so the header is added to both: the release
+      # PR (above the first `---`, which release-please ignores) and the release.
+      - name: Build release header
+        if: steps.rp.outputs.pr || steps.rp.outputs.release_created
+        env:
+          PR: ${{ steps.rp.outputs.pr }}
+          TAG: ${{ steps.rp.outputs.tag_name }}
+        run: |
+          version=${TAG:-v$(jq -r .title <<<"$PR" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+[^ ]*$')}
+          cat > "$RUNNER_TEMP/header.md" <<EOF
+          # <img src="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/public/img/galaxy.png" width="48" alt="soulsolid"> Soulsolid
+
+          🐳 Pull the image from [Docker Hub](https://hub.docker.com/r/contre95/soulsolid/tags):
+
+          \`\`\`sh
+          podman pull docker.io/contre95/soulsolid:${version}
+          \`\`\`
+          EOF
+
       - name: Brand release PR description
         if: steps.rp.outputs.pr
         env:
@@ -34,14 +52,18 @@ jobs:
           PR: ${{ steps.rp.outputs.pr }}
         run: |
           number=$(jq -r .number <<<"$PR")
-          version=$(jq -r .title <<<"$PR" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+[^ ]*$')
-          # GitHub strips inline styles, so the gray version uses math (\color).
-          export HEADER="# <img src=\"https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/public/img/galaxy.png\" width=\"48\" alt=\"soulsolid\"> Soulsolid \$\\color{gray}\\textsf{v${version}}\$"
-          HEADER+=$'\n\n'"🐳 Once released, pull the image from [Docker Hub](https://hub.docker.com/r/contre95/soulsolid/tags):"
-          HEADER+=$'\n\n```sh\npodman pull docker.io/contre95/soulsolid:'"v${version}"$'\n```'
           gh pr view "$number" -R "$GITHUB_REPOSITORY" --json body -q .body \
-            | awk 'NR==1 {print ENVIRON["HEADER"]} /^---$/ {f=1} f' \
+            | awk -v h="$RUNNER_TEMP/header.md" 'NR==1 {while ((getline l < h) > 0) print l} /^---$/ {f=1} f' \
             | gh pr edit "$number" -R "$GITHUB_REPOSITORY" --body-file -
+
+      - name: Brand release notes
+        if: steps.rp.outputs.release_created
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.rp.outputs.tag_name }}
+        run: |
+          { cat "$RUNNER_TEMP/header.md"; echo; gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json body -q .body; } \
+            | gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --notes-file -
 
   build-and-push:
     needs: release-please
