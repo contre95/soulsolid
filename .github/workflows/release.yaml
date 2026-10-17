@@ -92,3 +92,28 @@ jobs:
 
           podman tag contre95/soulsolid:$version contre95/soulsolid:latest
           podman push contre95/soulsolid:latest
+
+  # Discord doesn't render HTML, so the same template is rebuilt as an embed:
+  # logo as the author icon, headings turned into bold lines.
+  announce-discord:
+    needs: [release-please, build-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post release to Discord
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then echo "DISCORD_WEBHOOK not set, skipping"; exit 0; fi
+          release=$(gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json body,url)
+          changelog=$(jq -r .body <<<"$release" | awk '/^## \[/ {f=1} f' | sed -E 's/^#+ (.*)/**\1**/')
+          description=$(printf '🐳 Pull the image from [Docker Hub](https://hub.docker.com/r/contre95/soulsolid/tags):\n```sh\npodman pull docker.io/contre95/soulsolid:%s\n```\n%s' "$TAG" "$changelog")
+          jq -n \
+            --arg url "$(jq -r .url <<<"$release")" \
+            --arg logo "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/public/img/galaxy.png" \
+            --arg description "${description:0:4000}" \
+            '{username: "Soulsolid", avatar_url: $logo, embeds: [{
+              author: {name: "Soulsolid", icon_url: $logo, url: $url},
+              url: $url, description: $description, color: 7506394}]}' \
+            | curl -fsS -H 'Content-Type: application/json' -d @- "$WEBHOOK"
