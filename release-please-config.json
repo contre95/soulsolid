@@ -7,13 +7,14 @@
       "package-name": "soulsolid",
       "include-component-in-tag": false,
       "bump-minor-pre-major": true,
+      "pull-request-footer": " ",
       "changelog-sections": [
-        { "type": "feat", "section": "Features" },
-        { "type": "fix", "section": "Bug Fixes" },
-        { "type": "perf", "section": "Performance" },
-        { "type": "refactor", "section": "Refactoring", "hidden": true },
-        { "type": "docs", "section": "Documentation", "hidden": true },
-        { "type": "chore", "section": "Miscellaneous", "hidden": true }
+        { "type": "feat", "section": "✨ Features" },
+        { "type": "fix", "section": "🐛 Bug Fixes" },
+        { "type": "perf", "section": "⚡ Performance" },
+        { "type": "refactor", "section": "♻️ Refactoring", "hidden": true },
+        { "type": "docs", "section": "📝 Documentation", "hidden": true },
+        { "type": "chore", "section": "🔧 Miscellaneous", "hidden": true }
       ]
     }
   }

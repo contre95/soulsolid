@@ -25,6 +25,24 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+      # Replace the header (everything above the first `---`) with the logo and
+      # version. Release-please only parses the notes below `---`, so this is safe.
+      - name: Brand release PR description
+        if: steps.rp.outputs.pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.rp.outputs.pr }}
+        run: |
+          number=$(jq -r .number <<<"$PR")
+          version=$(jq -r .title <<<"$PR" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+[^ ]*$')
+          # GitHub strips inline styles, so the gray version uses math (\color).
+          export HEADER="# <img src=\"https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/public/img/galaxy.png\" width=\"48\" alt=\"soulsolid\"> Soulsolid \$\\color{gray}\\textsf{v${version}}\$"
+          HEADER+=$'\n\n'"🐳 Once released, pull the image from [Docker Hub](https://hub.docker.com/r/contre95/soulsolid/tags):"
+          HEADER+=$'\n\n```sh\npodman pull docker.io/contre95/soulsolid:'"v${version}"$'\n```'
+          gh pr view "$number" -R "$GITHUB_REPOSITORY" --json body -q .body \
+            | awk 'NR==1 {print ENVIRON["HEADER"]} /^---$/ {f=1} f' \
+            | gh pr edit "$number" -R "$GITHUB_REPOSITORY" --body-file -
+
   build-and-push:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
