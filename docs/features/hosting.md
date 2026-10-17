@@ -24,7 +24,7 @@ handler return either an HTMX HTML fragment or JSON from the same code path.
 - Serves **static files** (`/public`, `/node_modules`) and a `/health` check.
 - **Registers every feature's routes** in a deliberate order.
 - Provides the **`respond`** package used by all handlers for HTMX/JSON negotiation.
-- Hosts the optional **Telegram bot** wiring (`telegram.go`). Deprecated, removed in v0.30.0.
+- Hosts the optional **Telegram bot** wiring (`telegram.go`).
 
 ## How it works
 

@@ -165,8 +165,6 @@ until the metadata is fixed.
 
 ### Telegram Integration
 
-> **Deprecated:** the Telegram bot will be removed in v0.30.0. Use the web UI instead.
-
 You can interact with the import queue directly from Telegram using the following commands:
 
 - `/queue` - Show the current queue and process items one by one
