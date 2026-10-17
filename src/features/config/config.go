@@ -13,6 +13,18 @@ type Config struct {
 	Metadata     Metadata    `yaml:"metadata"`
 	Lyrics       Lyrics      `yaml:"lyrics"`
 	Jobs         Jobs        `yaml:"jobs"`
+	MCP          MCP         `yaml:"mcp"`
+}
+
+// MCP holds the configuration for the Model Context Protocol endpoint
+type MCP struct {
+	Enabled bool `yaml:"enabled"`
+	// AllowedOrigins lists browser origins allowed to call the endpoint.
+	// Requests carrying any other Origin header are rejected (DNS rebinding /
+	// cross-site protection); non-browser MCP clients send no Origin.
+	AllowedOrigins []string `yaml:"allowed_origins"`
+	// ReadOnly exposes only tools that do not modify the library, files or config.
+	ReadOnly bool `yaml:"read_only"`
 }
 type Jobs struct {
 	Log      bool          `yaml:"log"`
