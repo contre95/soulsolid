@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.1](https://github.com/contre95/soulsolid/compare/v0.28.0...v0.28.1) (2026-10-17)
+
+
+### 🐛 Bug Fixes
+
+* **depreacte:** Telegram deprecation warning ([#197](https://github.com/contre95/soulsolid/issues/197)) ([9726865](https://github.com/contre95/soulsolid/commit/9726865e4e65e43ad278facec914f2743f74db60))
+
 ## [0.28.0](https://github.com/contre95/soulsolid/compare/v0.27.2...v0.28.0) (2026-10-17)
 
 
