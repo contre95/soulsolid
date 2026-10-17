@@ -92,8 +92,21 @@ polling), or a full-screen HTML page.
 When `jobs.webhooks.enabled` is set and the finished job's type matches the
 configured list (or `*`), `executeWebhook` renders the configured command template
 with `{{.Name}}`, `{{.Type}}`, `{{.Status}}`, `{{.Message}}`, and `{{.Duration}}`,
-then runs it via `/bin/sh -c` in its own process group with a 30-second kill timer.
-This is how job completions can be pushed to notification services.
+and runs it as a **`webhook` job** named `Webhook: <job name>`. This is how job
+completions can be pushed to notification services.
+
+Webhook jobs appear in the jobs list like any other job:
+
+- The command runs via `/bin/sh -c` in its own process group. Its **output** goes
+  into the job's log as it runs: stdout as `INFO` lines and stderr as `WARN` lines,
+  up to 64 KiB per stream. Output is only kept when `jobs.log` is enabled.
+- A non-zero exit fails the job, with the exit status as its message. So does
+  running past the **30-second timeout**. **Cancel** kills the command and anything
+  it started.
+- Webhook jobs **skip the queue**. They start immediately, even while another job
+  runs, and never hold up queued jobs, so notifications aren't delayed.
+- Webhook jobs never trigger webhooks themselves, even with `job_trigger: ["*"]`.
+- The triggering job's log records `Webhook job started` with the webhook job's ID.
 
 Job values never become part of the shell source. Job names and messages can contain
 text the user or a file's tags control, such as playlist names and track titles. The

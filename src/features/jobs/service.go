@@ -9,12 +9,9 @@ import (
 	"log/slog"
 	"maps"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
-	"text/template"
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
@@ -156,11 +153,13 @@ type Service struct {
 }
 
 func NewService(cfg *config.Manager) *Service {
-	return &Service{
+	s := &Service{
 		jobs:     make(map[string]*music.Job),
 		handlers: make(map[string]TaskHandler),
 		config:   cfg,
 	}
+	s.handlers[webhookJobType] = NewBaseTaskHandler[WebhookParams](&WebhookTask{timeout: webhookTimeout})
+	return s
 }
 
 func (s *Service) RegisterHandler(jobType string, handler TaskHandler) {
@@ -170,6 +169,12 @@ func (s *Service) RegisterHandler(jobType string, handler TaskHandler) {
 }
 
 func (s *Service) StartJob(jobType string, name string, metadata map[string]any) (string, error) {
+	return s.startJob(jobType, name, metadata, false)
+}
+
+// startJob queues the job, or runs it right away when nothing is running or
+// immediate is set (webhook jobs, which must not wait behind the queue).
+func (s *Service) startJob(jobType string, name string, metadata map[string]any, immediate bool) (string, error) {
 	// Create a copy of jobType to prevent potential memory sharing issues
 	jobTypeCopy := strings.Clone(jobType)
 	job := &music.Job{
@@ -205,7 +210,7 @@ func (s *Service) StartJob(jobType string, name string, metadata map[string]any)
 	s.jobs[job.ID] = job
 
 	// Check if we can start this job immediately
-	if !s.isAnyJobRunning() {
+	if immediate || !s.isAnyJobRunning() {
 		job.Status = music.JobStatusRunning
 		s.mu.Unlock()
 		go s.executeJob(job)
@@ -370,9 +375,11 @@ func (s *Service) ClearFinishedJobs() error {
 	return nil
 }
 
+// isAnyJobRunning reports whether a queued job is running. Webhook jobs run
+// beside the queue, so they don't count.
 func (s *Service) isAnyJobRunning() bool {
 	for _, job := range s.jobs {
-		if job.Status == music.JobStatusRunning {
+		if job.Status == music.JobStatusRunning && job.Type != webhookJobType {
 			return true
 		}
 	}
@@ -382,6 +389,10 @@ func (s *Service) isAnyJobRunning() bool {
 func (s *Service) startNextPendingJob() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// A job started directly by StartJob may already be running.
+	if s.isAnyJobRunning() {
+		return
+	}
 	// Find the oldest pending job
 	var nextJob *music.Job
 	for _, job := range s.jobs {
@@ -415,7 +426,8 @@ func (s *Service) CleanupOldJobs(maxAge time.Duration) {
 
 // executeWebhook executes the configured webhook command for job completion
 func (s *Service) executeWebhook(job *music.Job) {
-	if !s.config.Get().Jobs.Webhooks.Enabled {
+	// Webhook jobs never trigger webhooks, or job_trigger "*" would loop forever.
+	if !s.config.Get().Jobs.Webhooks.Enabled || job.Type == webhookJobType {
 		return
 	}
 
@@ -454,177 +466,14 @@ func (s *Service) executeWebhook(job *music.Job) {
 		return
 	}
 
-	// Execute command asynchronously
-	go s.executeWebhookCommand(command, env, job)
-}
-
-// webhookValues are the job details a webhook command template can reference.
-type webhookValues struct {
-	Name     string
-	Type     string
-	Status   string
-	Message  string
-	Duration string
-}
-
-// webhookEnv maps each template field to the environment variable carrying it.
-var webhookEnv = []struct{ field, env string }{
-	{"Name", "SOULSOLID_JOB_NAME"},
-	{"Type", "SOULSOLID_JOB_TYPE"},
-	{"Status", "SOULSOLID_JOB_STATUS"},
-	{"Message", "SOULSOLID_JOB_MESSAGE"},
-	{"Duration", "SOULSOLID_JOB_DURATION"},
-}
-
-// renderWebhookCommand renders the template with job values passed as env vars,
-// never spliced into the shell source, to prevent command injection.
-func renderWebhookCommand(tmplText string, v webhookValues) (string, []string, error) {
-	tmpl, err := template.New("webhook").Option("missingkey=error").Parse(tmplText)
+	webhookID, err := s.startJob(webhookJobType, "Webhook: "+job.Name, map[string]any{"command": command, "env": env}, true)
 	if err != nil {
-		return "", nil, fmt.Errorf("parse webhook template: %w", err)
-	}
-
-	values := map[string]string{
-		"Name":     v.Name,
-		"Type":     v.Type,
-		"Status":   v.Status,
-		"Message":  v.Message,
-		"Duration": v.Duration,
-	}
-	// NUL-delimited markers, resolved by quoteWebhookPlaceholders.
-	markers := make(map[string]string, len(webhookEnv))
-	env := make([]string, 0, len(webhookEnv))
-	for _, e := range webhookEnv {
-		markers[e.field] = "\x00" + e.env + "\x00"
-		env = append(env, e.env+"="+values[e.field])
-	}
-
-	var rendered strings.Builder
-	if err := tmpl.Execute(&rendered, markers); err != nil {
-		return "", nil, fmt.Errorf("execute webhook template: %w", err)
-	}
-	command, err := quoteWebhookPlaceholders(rendered.String())
-	if err != nil {
-		return "", nil, err
-	}
-	return command, env, nil
-}
-
-func isWebhookEnv(name string) bool {
-	for _, e := range webhookEnv {
-		if e.env == name {
-			return true
-		}
-	}
-	return false
-}
-
-// quoteWebhookPlaceholders replaces each marker with an env var reference quoted
-// for its context, so it expands to one literal argument. Contexts it can't track
-// ($(...), backticks, heredocs, $'...') are rejected.
-func quoteWebhookPlaceholders(cmd string) (string, error) {
-	const (
-		unquoted = iota
-		single
-		double
-		comment
-	)
-	var out strings.Builder
-	state := unquoted
-	opaque := ""  // first construct seen whose inner quoting isn't tracked
-	escaped := -1 // index of the last backslash-escaped byte
-	for i := 0; i < len(cmd); i++ {
-		c := cmd[i]
-		if c == 0 {
-			end := strings.IndexByte(cmd[i+1:], 0)
-			if end < 0 || !isWebhookEnv(cmd[i+1:i+1+end]) {
-				return "", fmt.Errorf("malformed webhook placeholder: template functions must not modify job fields")
-			}
-			ref := "${" + cmd[i+1:i+1+end] + "}"
-			i += end + 1
-			if opaque != "" {
-				return "", fmt.Errorf("webhook placeholders can't be used after %s; read the SOULSOLID_JOB_* environment variables there instead", opaque)
-			}
-			switch state {
-			case unquoted:
-				out.WriteString(`"` + ref + `"`)
-			case double:
-				out.WriteString(ref)
-			case single:
-				out.WriteString(`'"` + ref + `"'`)
-			case comment:
-				out.WriteString(ref) // ignored by the shell
-			}
-			continue
-		}
-		out.WriteByte(c)
-		switch state {
-		case comment:
-			if c == '\n' {
-				state = unquoted
-			}
-			continue
-		case single:
-			if c == '\'' {
-				state = unquoted
-			}
-			continue
-		case unquoted, double:
-			if c == '\\' && i+1 < len(cmd) && cmd[i+1] != 0 {
-				i++
-				out.WriteByte(cmd[i])
-				escaped = i
-				continue
-			}
-			rest := cmd[i:]
-			switch {
-			case c == '`':
-				opaque = "a backtick"
-			case strings.HasPrefix(rest, "$("):
-				opaque = "a $( command substitution"
-			case state == unquoted && strings.HasPrefix(rest, "$'"):
-				opaque = "a $'...' string"
-			case state == unquoted && strings.HasPrefix(rest, "<<"):
-				opaque = "a heredoc"
-			}
-		}
-		switch {
-		case state == unquoted && c == '#' && (i == 0 || escaped != i-1 && strings.IndexByte(" \t\n;&|()<>", cmd[i-1]) >= 0):
-			state = comment
-		case state == unquoted && c == '\'':
-			state = single
-		case state == unquoted && c == '"':
-			state = double
-		case state == double && c == '"':
-			state = unquoted
-		}
-	}
-	return out.String(), nil
-}
-
-// executeWebhookCommand runs the rendered webhook command with the job values in its env.
-func (s *Service) executeWebhookCommand(command string, env []string, job *music.Job) {
-	// Use shell to properly handle quoted strings and complex commands
-	cmd := exec.Command("/bin/sh", "-c", command)
-	cmd.Env = append(os.Environ(), env...)
-	// Put the shell and all its children in a new process group so the timeout
-	// kill reaches the entire tree and no grandchildren are orphaned to PID 1.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-	timer := time.AfterFunc(30*time.Second, func() {
-		if cmd.Process != nil {
-			syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-		}
-	})
-	defer timer.Stop()
-
-	if err := cmd.Run(); err != nil {
 		if job.Logger != nil {
-			job.Logger.Error("Webhook execution failed", "command", command, "error", err)
+			job.Logger.Error("Failed to start webhook job", "error", err)
 		}
-	} else {
-		if job.Logger != nil {
-			job.Logger.Info("Webhook executed successfully", "command", command)
-		}
+		return
+	}
+	if job.Logger != nil {
+		job.Logger.Info("Webhook job started", "webhookJobID", webhookID)
 	}
 }
