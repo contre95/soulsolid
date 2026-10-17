@@ -114,7 +114,7 @@ The top-level `Config` struct (`config.go`) maps directly to `config.yaml`:
 | `downloaders` | Plugin list + embedded-artwork settings |
 | `logger` | `enabled`, `level`, `format`, `htmx_debug` |
 | `jobs` | Per-job logging + webhooks |
-| `telegram` | Bot `enabled`, `token`, `allowedUsers`, `bot_handle` |
+| `telegram` | **Deprecated, removed in v0.30.0.** Bot `enabled`, `token`, `allowedUsers`, `bot_handle` |
 
 See [importing](./importing.md) and [paths](../paths.md) for the `import` block,
 [plugins](../plugins.md) for `downloaders`, and [jobs](./jobs.md) for the `jobs` block.
