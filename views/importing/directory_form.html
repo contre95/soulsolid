@@ -6,31 +6,44 @@
       </h2>
     </div>
 
-    <!-- All Badges Below Title -->
-     <div class="flex flex-row gap-2 mb-4">
-      <!-- Move/Copy Badge -->
-      <span class="group inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 {{if .Config.Import.Move}}bg-red-500/10 backdrop-blur-md border border-red-400/30 text-red-600 dark:text-red-300 shadow-lg shadow-red-500/10 hover:shadow-red-500/20{{else}}bg-blue-500/10 backdrop-blur-md border border-blue-400/30 text-blue-600 dark:text-blue-300 shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20{{end}}">
-        <span class="flex items-center">
-          <span class="font-semibold">{{if .Config.Import.Move}}MOVE{{else}}COPY{{end}}</span>
-        </span>
-      </span>
+    <!-- Import option badges; re-fetched after the options below are saved -->
+    <div class="flex flex-row flex-wrap items-center gap-2 mb-4">
+      <div id="import-badges" class="flex flex-row flex-wrap gap-2"
+           hx-get="/import/directory/badges" hx-trigger="importOptionsChanged from:body" hx-swap="innerHTML">
+{{template "importing/import_badges" .}}
+      </div>
+      <button type="button" _="on click toggle .hidden on #import-options"
+              class="ml-auto text-sm text-gray-400 hover:text-[#2774EA] transition-colors"
+              title="Edit import options" aria-label="Edit import options" aria-controls="import-options">
+        <i class="fas fa-gear"></i>
+      </button>
+    </div>
 
-      <!-- Always Queue Badge -->
-      {{if .Config.Import.AlwaysQueue}}
-      <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 bg-yellow-500/10 backdrop-blur-md border border-yellow-400/30 text-yellow-600 dark:text-yellow-300 shadow-lg shadow-yellow-500/10 hover:shadow-yellow-500/20">
-        <span class="flex items-center">
-          <span class="font-semibold">ALWAYS QUEUE</span>
-        </span>
-      </span>
-      {{end}}
+    <!-- Import options (saved to config.yaml, same as Settings) -->
+    <form id="import-options" hx-put="/config/import" hx-target="#toast-container" hx-swap="innerHTML" hx-trigger="change" hx-on:htmx:response-error="showErrToast(new DOMParser().parseFromString(event.detail.xhr.responseText, 'text/html').querySelector('p')?.textContent?.trim() || 'Failed to save')"
+          class="hidden mb-6 p-3 space-y-3 rounded-lg bg-gray-50/50 dark:bg-gray-700/30 border border-gray-200/50 dark:border-gray-700/50">
+      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+        <input type="checkbox" name="import.move" value="true" {{if .Config.Import.Move}}checked{{end}}
+               class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-500 focus:ring-blue-500">
+        Move files instead of copying
+      </label>
+      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+        <input type="checkbox" name="import.always_queue" value="true" {{if .Config.Import.AlwaysQueue}}checked{{end}}
+               class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-500 focus:ring-blue-500">
+        Always queue tracks for review
+      </label>
+      <div>
+        <label for="import-options-duplicates" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Duplicate handling</label>
+        <select id="import-options-duplicates" name="import.duplicates"
+                class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5">
+          <option value="replace" {{if eq .Config.Import.Duplicates "replace"}}selected{{end}}>DUP. REPLACE - Overwrite existing files</option>
+          <option value="skip" {{if eq .Config.Import.Duplicates "skip"}}selected{{end}}>DUP. SKIP - Keep both files</option>
+          <option value="queue" {{if eq .Config.Import.Duplicates "queue"}}selected{{end}}>DUP. QUEUE - Add to review queue</option>
+        </select>
+      </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400">Changes save automatically.</p>
+    </form>
 
-      <!-- Duplicates Badge -->
-      <span class="group inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium tracking-wider transition-all duration-300 ease-out-expo hover:-translate-y-0.5 {{if eq .Config.Import.Duplicates "skip"}}bg-sky-400/10 backdrop-blur-md border border-sky-300/30 text-sky-600 dark:text-sky-300 shadow-lg shadow-sky-400/10 hover:shadow-sky-400/20{{else if eq .Config.Import.Duplicates "replace"}}bg-orange-500/10 backdrop-blur-md border border-orange-400/30 text-orange-600 dark:text-orange-300 shadow-lg shadow-orange-500/10 hover:shadow-orange-500/20{{else if eq .Config.Import.Duplicates "queue"}}bg-violet-500/10 backdrop-blur-md border border-violet-400/30 text-violet-600 dark:text-violet-300 shadow-lg shadow-violet-500/10 hover:shadow-violet-500/20{{else}}bg-green-500/10 backdrop-blur-md border border-green-400/30 text-green-600 dark:text-green-300 shadow-lg shadow-green-500/10 hover:shadow-green-500/20{{end}}">
-        <span class="flex items-center">
-          <span class="uppercase tracking-tight font-normal opacity-90 group-hover:opacity-100 transition-opacity">DUP. {{.Config.Import.Duplicates}}</span>
-        </span>
-      </span>
-     </div>
     <p class="text-sm text-gray-600 dark:text-gray-300 mb-6">
       Import music files from a directory on your system.
       Any <span class="text-xs text-red-600 dark:text-red-300 mt-2">errors </span> during import will be queued for review.
