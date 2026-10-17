@@ -9,12 +9,9 @@ import (
 	"log/slog"
 	"maps"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
-	"text/template"
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
@@ -156,11 +153,13 @@ type Service struct {
 }
 
 func NewService(cfg *config.Manager) *Service {
-	return &Service{
+	s := &Service{
 		jobs:     make(map[string]*music.Job),
 		handlers: make(map[string]TaskHandler),
 		config:   cfg,
 	}
+	s.handlers[webhookJobType] = NewBaseTaskHandler[WebhookParams](&WebhookTask{timeout: webhookTimeout})
+	return s
 }
 
 func (s *Service) RegisterHandler(jobType string, handler TaskHandler) {
@@ -170,6 +169,12 @@ func (s *Service) RegisterHandler(jobType string, handler TaskHandler) {
 }
 
 func (s *Service) StartJob(jobType string, name string, metadata map[string]any) (string, error) {
+	return s.startJob(jobType, name, metadata, false)
+}
+
+// startJob queues the job, or runs it right away when nothing is running or
+// immediate is set (webhook jobs, which must not wait behind the queue).
+func (s *Service) startJob(jobType string, name string, metadata map[string]any, immediate bool) (string, error) {
 	// Create a copy of jobType to prevent potential memory sharing issues
 	jobTypeCopy := strings.Clone(jobType)
 	job := &music.Job{
@@ -205,7 +210,7 @@ func (s *Service) StartJob(jobType string, name string, metadata map[string]any)
 	s.jobs[job.ID] = job
 
 	// Check if we can start this job immediately
-	if !s.isAnyJobRunning() {
+	if immediate || !s.isAnyJobRunning() {
 		job.Status = music.JobStatusRunning
 		s.mu.Unlock()
 		go s.executeJob(job)
@@ -370,9 +375,11 @@ func (s *Service) ClearFinishedJobs() error {
 	return nil
 }
 
+// isAnyJobRunning reports whether a queued job is running. Webhook jobs run
+// beside the queue, so they don't count.
 func (s *Service) isAnyJobRunning() bool {
 	for _, job := range s.jobs {
-		if job.Status == music.JobStatusRunning {
+		if job.Status == music.JobStatusRunning && job.Type != webhookJobType {
 			return true
 		}
 	}
@@ -382,6 +389,10 @@ func (s *Service) isAnyJobRunning() bool {
 func (s *Service) startNextPendingJob() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// A job started directly by StartJob may already be running.
+	if s.isAnyJobRunning() {
+		return
+	}
 	// Find the oldest pending job
 	var nextJob *music.Job
 	for _, job := range s.jobs {
@@ -415,13 +426,14 @@ func (s *Service) CleanupOldJobs(maxAge time.Duration) {
 
 // executeWebhook executes the configured webhook command for job completion
 func (s *Service) executeWebhook(job *music.Job) {
-	if !s.config.Get().Jobs.Webhooks.Enabled {
+	// Webhook jobs never trigger webhooks, or job_trigger "*" would loop forever.
+	if !s.config.Get().Jobs.Webhooks.Enabled || job.Type == webhookJobType {
 		return
 	}
 
 	// Check if this job type should trigger webhooks
 	shouldNotify := false
-	for _, jobType := range s.config.Get().Jobs.Webhooks.JobTypes {
+	for _, jobType := range s.config.Get().Jobs.Webhooks.JobTrigger {
 		if jobType == job.Type || jobType == "*" {
 			shouldNotify = true
 			break
@@ -440,66 +452,28 @@ func (s *Service) executeWebhook(job *music.Job) {
 		}
 	}
 
-	data := struct {
-		Name     string
-		Type     string
-		Status   string
-		Message  string
-		Duration string
-	}{
+	command, env, err := renderWebhookCommand(s.config.Get().Jobs.Webhooks.Command, webhookValues{
 		Name:     job.Name,
 		Type:     job.Type,
 		Status:   string(job.Status),
 		Message:  message,
 		Duration: time.Since(job.CreatedAt).Round(time.Second).String(),
-	}
-
-	// Execute template
-	tmpl, err := template.New("webhook").Parse(s.config.Get().Jobs.Webhooks.Command)
+	})
 	if err != nil {
 		if job.Logger != nil {
-			job.Logger.Error("Failed to parse webhook template", "error", err)
+			job.Logger.Error("Failed to render webhook template", "error", err)
 		}
 		return
 	}
 
-	var command strings.Builder
-	if err := tmpl.Execute(&command, data); err != nil {
+	webhookID, err := s.startJob(webhookJobType, "Webhook: "+job.Name, map[string]any{"command": command, "env": env}, true)
+	if err != nil {
 		if job.Logger != nil {
-			job.Logger.Error("Failed to execute webhook template", "error", err)
+			job.Logger.Error("Failed to start webhook job", "error", err)
 		}
 		return
 	}
-
-	// Execute command asynchronously
-	go func(cmd string) {
-		s.executeWebhookCommand(cmd, job)
-	}(command.String())
-}
-
-// executeWebhookCommand executes the webhook command safely
-func (s *Service) executeWebhookCommand(command string, job *music.Job) {
-	// Use shell to properly handle quoted strings and complex commands
-	cmd := exec.Command("/bin/sh", "-c", command)
-	cmd.Env = os.Environ()
-	// Put the shell and all its children in a new process group so the timeout
-	// kill reaches the entire tree and no grandchildren are orphaned to PID 1.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-	timer := time.AfterFunc(30*time.Second, func() {
-		if cmd.Process != nil {
-			syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-		}
-	})
-	defer timer.Stop()
-
-	if err := cmd.Run(); err != nil {
-		if job.Logger != nil {
-			job.Logger.Error("Webhook execution failed", "command", command, "error", err)
-		}
-	} else {
-		if job.Logger != nil {
-			job.Logger.Info("Webhook executed successfully", "command", command)
-		}
+	if job.Logger != nil {
+		job.Logger.Info("Webhook job started", "webhookJobID", webhookID)
 	}
 }
