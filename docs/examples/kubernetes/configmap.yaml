@@ -67,7 +67,7 @@ data:
       log_path: ./logs/jobs
       webhooks:
         enabled: true
-        job_types:
+        job_trigger:
           - directory_import
         # command: curl -X POST 'http://<emby-ip>:<emby-port>/Emby/Library/Refresh?api_key=<emby-token>'
 
