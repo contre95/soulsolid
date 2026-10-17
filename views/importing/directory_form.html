@@ -6,43 +6,11 @@
       </h2>
     </div>
 
-    <!-- Import option badges; re-fetched after the options below are saved -->
-    <div class="flex flex-row flex-wrap items-center gap-2 mb-4">
-      <div id="import-badges" class="flex flex-row flex-wrap gap-2"
-           hx-get="/import/directory/badges" hx-trigger="importOptionsChanged from:body" hx-swap="innerHTML">
+    <!-- Import option badges; click one to change it. Re-fetched after the options are saved -->
+    <div id="import-badges" class="flex flex-row flex-wrap items-center gap-2 mb-6"
+         hx-get="/import/directory/badges" hx-trigger="importOptionsChanged from:body" hx-swap="innerHTML">
 {{template "importing/import_badges" .}}
-      </div>
-      <button type="button" _="on click toggle .hidden on #import-options"
-              class="ml-auto text-sm text-gray-400 hover:text-[#2774EA] transition-colors"
-              title="Edit import options" aria-label="Edit import options" aria-controls="import-options">
-        <i class="fas fa-gear"></i>
-      </button>
     </div>
-
-    <!-- Import options (saved to config.yaml, same as Settings) -->
-    <form id="import-options" hx-put="/config/import" hx-target="#toast-container" hx-swap="innerHTML" hx-trigger="change" hx-on:htmx:response-error="showErrToast(new DOMParser().parseFromString(event.detail.xhr.responseText, 'text/html').querySelector('p')?.textContent?.trim() || 'Failed to save')"
-          class="hidden mb-6 p-3 space-y-3 rounded-lg bg-gray-50/50 dark:bg-gray-700/30 border border-gray-200/50 dark:border-gray-700/50">
-      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-        <input type="checkbox" name="import.move" value="true" {{if .Config.Import.Move}}checked{{end}}
-               class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-500 focus:ring-blue-500">
-        Move files instead of copying
-      </label>
-      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-        <input type="checkbox" name="import.always_queue" value="true" {{if .Config.Import.AlwaysQueue}}checked{{end}}
-               class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-500 focus:ring-blue-500">
-        Always queue tracks for review
-      </label>
-      <div>
-        <label for="import-options-duplicates" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Duplicate handling</label>
-        <select id="import-options-duplicates" name="import.duplicates"
-                class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5">
-          <option value="replace" {{if eq .Config.Import.Duplicates "replace"}}selected{{end}}>DUP. REPLACE - Overwrite existing files</option>
-          <option value="skip" {{if eq .Config.Import.Duplicates "skip"}}selected{{end}}>DUP. SKIP - Keep both files</option>
-          <option value="queue" {{if eq .Config.Import.Duplicates "queue"}}selected{{end}}>DUP. QUEUE - Add to review queue</option>
-        </select>
-      </div>
-      <p class="text-xs text-gray-500 dark:text-gray-400">Changes save automatically.</p>
-    </form>
 
     <p class="text-sm text-gray-600 dark:text-gray-300 mb-6">
       Import music files from a directory on your system.
