@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -172,11 +173,6 @@ func createTables(db *sql.DB) error {
 			metric_value INTEGER,
 			updated_at TEXT,
 			UNIQUE(metric_type, metric_key)
-		);
-
-		CREATE TABLE IF NOT EXISTS library_config (
-			key TEXT PRIMARY KEY,
-			value TEXT NOT NULL
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_track_artists_track ON track_artists(track_id);
@@ -2759,29 +2755,55 @@ func (d *SqliteLibrary) FindTrackByPath(ctx context.Context, path string) (*musi
 	return track, nil
 }
 
-// libraryRootKey is the library_config key holding the library path this
-// database was initialized against.
-const libraryRootKey = "library_path"
-
-// LibraryRoot returns the library path recorded when this database was first
-// initialized, or "" if no previous run recorded one.
-func (d *SqliteLibrary) LibraryRoot(ctx context.Context) (string, error) {
-	var root string
-	err := d.db.QueryRowContext(ctx,
-		`SELECT value FROM library_config WHERE key = ?`, libraryRootKey).Scan(&root)
-	if err == sql.ErrNoRows {
-		return "", nil
+// TracksOutsideRoots counts tracks whose stored path is not under any of roots,
+// returning one such path as an example. Paths are compared in absolute form,
+// so a relative root like "./music" matches tracks stored as "music/...".
+func (d *SqliteLibrary) TracksOutsideRoots(ctx context.Context, roots ...string) (int, string, error) {
+	absRoots := make([]string, 0, len(roots))
+	for _, r := range roots {
+		if r == "" {
+			continue
+		}
+		abs, err := filepath.Abs(r)
+		if err != nil {
+			return 0, "", fmt.Errorf("failed to resolve root %s: %w", r, err)
+		}
+		absRoots = append(absRoots, abs)
 	}
-	return root, err
+
+	rows, err := d.db.QueryContext(ctx, `SELECT path FROM tracks`)
+	if err != nil {
+		return 0, "", fmt.Errorf("failed to query track paths: %w", err)
+	}
+	defer rows.Close()
+
+	count, sample := 0, ""
+	for rows.Next() {
+		var path string
+		if err := rows.Scan(&path); err != nil {
+			return 0, "", fmt.Errorf("failed to scan track path: %w", err)
+		}
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			abs = path
+		}
+		if !underAnyRoot(abs, absRoots) {
+			if count == 0 {
+				sample = path
+			}
+			count++
+		}
+	}
+	return count, sample, rows.Err()
 }
 
-// RecordLibraryRoot stores root as the library path this database belongs to.
-// An already recorded value is kept, so the original root survives later runs
-// that point somewhere else.
-func (d *SqliteLibrary) RecordLibraryRoot(ctx context.Context, root string) error {
-	_, err := d.db.ExecContext(ctx,
-		`INSERT OR IGNORE INTO library_config (key, value) VALUES (?, ?)`, libraryRootKey, root)
-	return err
+func underAnyRoot(path string, roots []string) bool {
+	for _, r := range roots {
+		if path == r || strings.HasPrefix(path, r+string(filepath.Separator)) {
+			return true
+		}
+	}
+	return false
 }
 
 // Ensure SqliteLibrary implements PlaylistRepository

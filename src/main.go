@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"time"
 
 	"github.com/contre95/soulsolid/src/features/config"
@@ -32,41 +31,35 @@ import (
 	"github.com/contre95/soulsolid/src/infra/watcher"
 )
 
-// warnOnLibraryRootMismatch warns when the database was initialized against a
-// different library path than the one currently configured. On a database that
-// has not recorded one yet, the current path becomes the recorded baseline.
-func warnOnLibraryRootMismatch(db *database.SqliteLibrary, libraryPath string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// warnOnOrphanedTracks warns when the database holds tracks outside the
+// configured library and download paths, which happens when libraryPath is
+// changed without moving the files. Such tracks will not stream and will not be
+// detected as duplicates on import.
+func warnOnOrphanedTracks(db *database.SqliteLibrary, cfg *config.Config) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	recorded, err := db.LibraryRoot(ctx)
+	count, sample, err := db.TracksOutsideRoots(ctx, cfg.LibraryPath, cfg.DownloadPath)
 	if err != nil {
-		slog.Warn("Could not read the library path recorded in the database", "error", err)
+		slog.Warn("Could not check track paths against the library path", "error", err)
+		return
+	}
+	if count == 0 {
 		return
 	}
 
-	if recorded == "" {
-		if err := db.RecordLibraryRoot(ctx, libraryPath); err != nil {
-			slog.Warn("Could not record the library path in the database", "error", err)
-		}
-		return
-	}
-
-	if filepath.Clean(recorded) == filepath.Clean(libraryPath) {
-		return
-	}
-
-	slog.Warn("Library path changed since this database was initialized. "+
-		"Tracks are recorded under the previous path, so they will not stream and will not be "+
-		"detected as duplicates on import. Restore the previous libraryPath in config.yaml, "+
+	slog.Warn("Some tracks are recorded outside the configured libraryPath, "+
+		"so they will not stream and will not be detected as duplicates on import. "+
+		"If libraryPath was changed, restore the previous value in config.yaml, "+
 		"or run a reorganize job to move the files under the new one.",
-		"recordedLibraryPath", recorded,
-		"configuredLibraryPath", libraryPath,
+		"tracksOutsideLibrary", count,
+		"examplePath", sample,
+		"configuredLibraryPath", cfg.LibraryPath,
 	)
 }
 
 func main() {
-	configPath := "./config.yaml"
+	configPath := "/config/config.yaml"
 	if envPath := os.Getenv("SOULSOLID_CONFIG_PATH"); envPath != "" {
 		configPath = envPath
 	}
@@ -90,7 +83,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create library: %v", err)
 	}
-	warnOnLibraryRootMismatch(db, cfgManager.Get().LibraryPath)
+	warnOnOrphanedTracks(db, cfgManager.Get())
 
 	libraryService := library.NewService(db, cfgManager, fileOrganizer)
 	playlistsService := playlists.NewService(db, db, cfgManager)

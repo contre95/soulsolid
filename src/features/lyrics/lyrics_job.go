@@ -20,9 +20,11 @@ func NewLyricsJobTask(service *Service) *LyricsJobTask {
 	}
 }
 
-// LyricsParams is the metadata contract for a lyrics analysis job.
+// LyricsParams is the metadata contract for a lyrics analysis job. Provider is
+// optional here: it is only needed once a track actually has to be fetched, so a
+// job where every track is skipped still completes without one.
 type LyricsParams struct {
-	Provider        string `json:"provider" validate:"required"`
+	Provider        string `json:"provider"`
 	SkipExisting    bool   `json:"skip_existing"`
 	OverrideNoQueue bool   `json:"override_no_queue"`
 }
@@ -132,8 +134,11 @@ func (t *LyricsJobTask) Execute(ctx context.Context, job *music.Job, params Lyri
 				continue
 			}
 
-			// Provider is validated up front by the job params, not per track.
 			provider := params.Provider
+			if provider == "" {
+				job.Logger.Error("No provider specified in job metadata")
+				return nil, fmt.Errorf("no lyrics provider specified in job metadata")
+			}
 
 			// Try to fetch lyrics for this track using the specified provider
 			job.Logger.Info("Fetching lyrics for track", "trackID", track.ID, "title", track.Title, "artist", track.Artists, "album", track.Album, "provider", provider, "overrideNoQueue", overrideNoQueue, "color", "cyan")

@@ -82,12 +82,9 @@ func decodeParams[P any](metadata map[string]any) (P, error) {
 		}
 	}
 
+	// P must be a struct: anything else (a pointer, a map) would make the
+	// validator skip every tag, and the task would run with unchecked params.
 	if err := paramsValidator.Struct(params); err != nil {
-		var invalid *validator.InvalidValidationError
-		// Non-struct P (e.g. a type alias) can't be validated; that's not a job error.
-		if errors.As(err, &invalid) {
-			return params, nil
-		}
 		return params, fmt.Errorf("invalid job metadata: %w", err)
 	}
 

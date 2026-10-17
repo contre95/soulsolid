@@ -185,12 +185,20 @@ func (m *Manager) Update(config *Config) {
 	defer m.mu.Unlock()
 
 	oldConfig := m.config
+
+	// LibraryPath is immutable at runtime: tracks.path stores this root, so
+	// re-rooting live would orphan the database. Change it in the config file
+	// and restart instead.
+	if oldConfig != nil && config.LibraryPath != oldConfig.LibraryPath {
+		slog.Warn("Ignoring runtime libraryPath change; edit the config file and restart",
+			"current", oldConfig.LibraryPath, "requested", config.LibraryPath)
+		config.LibraryPath = oldConfig.LibraryPath
+	}
 	m.config = config
 
 	// Log configuration changes
 	if oldConfig != nil {
 		slog.Debug("Configuration updated",
-			"library_path_changed", oldConfig.LibraryPath != config.LibraryPath,
 			"import_move_changed", oldConfig.Import.Move != config.Import.Move,
 			"import_always_queue_changed", oldConfig.Import.AlwaysQueue != config.Import.AlwaysQueue,
 			"telegram_enabled_changed", oldConfig.Telegram.Enabled != config.Telegram.Enabled,
