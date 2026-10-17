@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/contre95/soulsolid/src/music"
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
@@ -37,7 +38,7 @@ func (s *Service) registerLibraryTools(srv *server.MCPServer) {
 	), s.libraryStats)
 
 	s.addReadTool(srv, mcpgo.NewTool("get_library_tree",
-		mcpgo.WithDescription("Get the full file-system tree of the music library as a plain text string"),
+		mcpgo.WithDescription("Get the file-system tree of the music library as plain text. Large libraries are truncated; prefer search_library to find specific items."),
 	), s.getLibraryTree)
 
 	s.addReadTool(srv, mcpgo.NewTool("get_track_lyrics",
@@ -61,99 +62,32 @@ func (s *Service) registerLibraryTools(srv *server.MCPServer) {
 	), s.deleteArtist)
 }
 
-// searchLibrary mirrors the UI's unified search (library.Handler.GetUnifiedSearch):
-// albums → artists → tracks, with artist/album matches capped and tracks paginated.
+// searchLibrary runs the same unified search as the UI: albums, then artists,
+// then paginated tracks.
 func (s *Service) searchLibrary(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 	args := req.Params.Arguments
-	query := strArg(args, "query")
-	limit := intArg(args, "limit", 20)
+	limit := limitArg(args, "limit", 20)
 	page := max(intArg(args, "page", 1), 1)
-	if limit < 1 {
-		limit = 20
+
+	searchPage, err := s.library.UnifiedSearch(ctx, music.TrackFilter{TextSearch: strings.TrimSpace(strArg(args, "query"))}, limit, (page-1)*limit)
+	if err != nil {
+		return errResult(err.Error()), nil
 	}
-	offset := (page - 1) * limit
 
-	var results []map[string]any
-	var totalCount int
-
-	if query == "" {
-		// Browse-all: paginated tracks only.
-		tracksCount, err := s.library.GetTracksCount(ctx)
-		if err != nil {
-			return errResult("failed to count tracks: " + err.Error()), nil
-		}
-		totalCount = tracksCount
-		if offset < tracksCount {
-			trackLimit := min(offset+limit, tracksCount) - offset
-			if trackLimit > 0 {
-				tracks, err := s.library.GetTracksPaginated(ctx, trackLimit, offset)
-				if err != nil {
-					return errResult("failed to load tracks: " + err.Error()), nil
-				}
-				for _, t := range tracks {
-					results = append(results, trackSummary(t))
-				}
-			}
-		}
-	} else {
-		trackFilter := &music.TrackFilter{TextSearch: query}
-		trackCount, err := s.library.GetTracksFilteredCount(ctx, trackFilter)
-		if err != nil {
-			return errResult("failed to count tracks: " + err.Error()), nil
-		}
-
-		albums, err := s.library.SearchAlbums(ctx, query, 20, 0)
-		if err != nil {
-			albums = nil
-		}
-		artists, err := s.library.GetArtistsFilteredPaginated(ctx, 20, 0, query)
-		if err != nil {
-			artists = nil
-		}
-
-		albumsCount := len(albums)
-		artistsCount := len(artists)
-		totalCount = albumsCount + artistsCount + trackCount
-
-		start := offset
-		end := min(offset+limit, totalCount)
-
-		// Albums: [0, albumsCount)
-		if start < albumsCount {
-			albumEnd := min(end, albumsCount)
-			for i := start; i < albumEnd; i++ {
-				results = append(results, albumSummary(albums[i]))
-			}
-		}
-
-		// Artists: [albumsCount, albumsCount+artistsCount)
-		if end > albumsCount {
-			artistStart := max(0, start-albumsCount)
-			artistEnd := min(end-albumsCount, artistsCount)
-			for i := artistStart; i < artistEnd; i++ {
-				results = append(results, artistSummary(artists[i]))
-			}
-		}
-
-		// Tracks: [albumsCount+artistsCount, totalCount)
-		trackOffset := albumsCount + artistsCount
-		if end > trackOffset {
-			trackStart := max(0, start-trackOffset)
-			trackLimit := (end - trackOffset) - trackStart
-			if trackLimit > 0 {
-				tracks, err := s.library.GetTracksFilteredPaginated(ctx, trackLimit, trackStart, trackFilter)
-				if err == nil {
-					for _, t := range tracks {
-						results = append(results, trackSummary(t))
-					}
-				}
-			}
-		}
+	results := make([]map[string]any, 0, len(searchPage.Albums)+len(searchPage.Artists)+len(searchPage.Tracks))
+	for _, a := range searchPage.Albums {
+		results = append(results, albumSummary(a))
+	}
+	for _, a := range searchPage.Artists {
+		results = append(results, artistSummary(a))
+	}
+	for _, t := range searchPage.Tracks {
+		results = append(results, trackSummary(t))
 	}
 
 	return jsonResult(map[string]any{
 		"results":     results,
-		"total_count": totalCount,
+		"total_count": searchPage.Total,
 		"page":        page,
 		"limit":       limit,
 	}), nil
@@ -222,7 +156,7 @@ func (s *Service) getLibraryTree(_ context.Context, _ mcpgo.CallToolRequest) (*m
 	if err != nil {
 		return errResult(err.Error()), nil
 	}
-	return textResult(tree), nil
+	return textResult(truncateText(tree)), nil
 }
 
 func (s *Service) getTrackLyrics(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {

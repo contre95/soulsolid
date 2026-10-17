@@ -2,6 +2,9 @@ package mcp
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
+	"strings"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -9,8 +12,8 @@ import (
 
 func (s *Service) registerImportingTools(srv *server.MCPServer) {
 	s.addWriteTool(srv, mcpgo.NewTool("import_path",
-		mcpgo.WithDescription("Trigger an import job for a directory on the server filesystem. Returns a job ID; use get_job to track progress."),
-		mcpgo.WithString("path", mcpgo.Required(), mcpgo.Description("Absolute directory path on the server to import")),
+		mcpgo.WithDescription("Trigger an import job for a directory inside the configured download path. Returns a job ID; use get_job to track progress."),
+		mcpgo.WithString("path", mcpgo.Description("Directory to import: relative to the download path, or an absolute path inside it. Omit to import the whole download path.")),
 	), s.importPath)
 
 	s.addReadTool(srv, mcpgo.NewTool("list_import_queue",
@@ -50,11 +53,41 @@ func (s *Service) registerImportingTools(srv *server.MCPServer) {
 }
 
 func (s *Service) importPath(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
-	jobID, err := s.importing.ImportDirectory(ctx, strArg(req.Params.Arguments, "path"))
+	path, err := resolveImportPath(s.config.Get().DownloadPath, strArg(req.Params.Arguments, "path"))
+	if err != nil {
+		return errResult(err.Error()), nil
+	}
+	jobID, err := s.importing.ImportDirectory(ctx, path)
 	if err != nil {
 		return errResult(err.Error()), nil
 	}
 	return jsonResult(map[string]string{"job_id": jobID}), nil
+}
+
+// resolveImportPath confines path to downloadPath. Imports may move files
+// (import.move), so an agent must never be able to pull files in from elsewhere
+// on the server. Symlinks are resolved so one inside the download path cannot
+// point outside it.
+func resolveImportPath(downloadPath, path string) (string, error) {
+	root, err := filepath.EvalSymlinks(downloadPath)
+	if err != nil {
+		return "", fmt.Errorf("cannot resolve download path: %w", err)
+	}
+	if path == "" {
+		return root, nil
+	}
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(downloadPath, path)
+	}
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", fmt.Errorf("cannot resolve path: %w", err)
+	}
+	rel, err := filepath.Rel(root, resolved)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("path must be inside the download path (%s)", downloadPath)
+	}
+	return resolved, nil
 }
 
 func (s *Service) listImportQueue(_ context.Context, _ mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {

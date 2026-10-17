@@ -12,7 +12,7 @@ import (
 
 func (s *Service) registerMetadataTools(srv *server.MCPServer) {
 	s.addDestructiveTool(srv, mcpgo.NewTool("update_track_tags",
-		mcpgo.WithDescription("Save tag metadata to a track's file and the library database. Only provided fields are updated; omit a field to leave it unchanged. Artists and albums are referenced by UUID (use search_library to find them)."),
+		mcpgo.WithDescription("Save tag metadata to a track's file and the library database. Only provided fields are updated; omit a field to leave it unchanged. Pass an empty string to clear year, genre, track_number, disc_number, composer, isrc or lyrics. Artists and albums are referenced by UUID (use search_library to find them)."),
 		mcpgo.WithString("track_id", mcpgo.Required(), mcpgo.Description("Track UUID")),
 		mcpgo.WithString("title", mcpgo.Description("Track title")),
 		mcpgo.WithString("artist_ids", mcpgo.Description("Comma-separated artist UUIDs to set as the track's artists")),
@@ -96,6 +96,28 @@ func formDataFromTrack(t *music.Track) map[string]string {
 	return f
 }
 
+// tagFormData overlays the update_track_tags arguments on the track's current
+// values. Title and the artist/album references cannot be emptied (the service
+// treats an empty reference as "unchanged"); the other fields can be cleared
+// by passing an empty string.
+func tagFormData(t *music.Track, args any) map[string]string {
+	formData := formDataFromTrack(t)
+	for _, key := range []string{"title", "artist_ids", "album_id", "album_artist_id"} {
+		if v := strArg(args, key); v != "" {
+			formData[key] = v
+		}
+	}
+	for _, key := range []string{"year", "genre", "track_number", "disc_number", "composer", "isrc", "lyrics"} {
+		if v, ok := lookupStrArg(args, key); ok {
+			formData[key] = v
+		}
+	}
+	if _, ok := lookupStrArg(args, "lyrics"); ok {
+		formData["has_lyrics"] = "true"
+	}
+	return formData
+}
+
 func (s *Service) updateTrackTags(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 	args := req.Params.Arguments
 	trackID := strArg(args, "track_id")
@@ -108,17 +130,7 @@ func (s *Service) updateTrackTags(ctx context.Context, req mcpgo.CallToolRequest
 		return errResult("track not found"), nil
 	}
 
-	formData := formDataFromTrack(track)
-	for _, key := range []string{"title", "artist_ids", "album_id", "album_artist_id", "year", "genre", "track_number", "disc_number", "composer", "isrc", "lyrics"} {
-		if v := strArg(args, key); v != "" {
-			formData[key] = v
-		}
-	}
-	if strArg(args, "lyrics") != "" {
-		formData["has_lyrics"] = "true"
-	}
-
-	if err := s.metadata.UpdateTrackTags(ctx, trackID, formData); err != nil {
+	if err := s.metadata.UpdateTrackTags(ctx, trackID, tagFormData(track, args)); err != nil {
 		return errResult(err.Error()), nil
 	}
 	return textResult("tags updated successfully"), nil

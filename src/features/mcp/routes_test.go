@@ -140,27 +140,6 @@ func TestMCPReadOnlyMode(t *testing.T) {
 	}
 }
 
-func TestMCPToken(t *testing.T) {
-	app := newTestApp(config.MCP{Token: "s3cret"})
-	for _, tc := range []struct {
-		name, auth string
-		want       int
-	}{
-		{"missing", "", http.StatusUnauthorized},
-		{"wrong", "Bearer nope", http.StatusUnauthorized},
-		{"no scheme", "s3cret", http.StatusUnauthorized},
-		{"valid", "Bearer s3cret", http.StatusOK},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			resp := doMCP(t, app, toolsListBody, map[string]string{"Authorization": tc.auth})
-			resp.Body.Close()
-			if resp.StatusCode != tc.want {
-				t.Errorf("expected %d, got %d", tc.want, resp.StatusCode)
-			}
-		})
-	}
-}
-
 func TestMCPOrigin(t *testing.T) {
 	app := newTestApp(config.MCP{AllowedOrigins: []string{"https://agent.example"}})
 	for _, tc := range []struct {

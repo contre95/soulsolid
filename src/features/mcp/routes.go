@@ -1,22 +1,20 @@
 package mcp
 
 import (
-	"crypto/sha256"
-	"crypto/subtle"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
 	"slices"
-	"strings"
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/gofiber/fiber/v2"
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// maxRequestBody caps JSON-RPC request bodies; the app-wide limit is sized for
-// file uploads, which MCP never needs.
+// maxRequestBody caps JSON-RPC request bodies handed to mcp-go. Fiber has
+// already buffered the body under the app-wide limit (sized for file uploads),
+// so this bounds JSON parsing work, not memory.
 const maxRequestBody = 1 << 20 // 1 MiB
 
 // RegisterRoutes mounts the MCP Streamable HTTP endpoint on the Fiber app at /mcp.
@@ -26,9 +24,6 @@ func RegisterRoutes(app *fiber.App, s *Service, cfg config.MCP) {
 		version = "dev"
 	}
 
-	if cfg.Token == "" {
-		slog.Warn("MCP endpoint has no token configured: anyone who can reach this server can control the library through /mcp. Set mcp.token.")
-	}
 	s.readOnly = cfg.ReadOnly
 
 	mcpServer := server.NewMCPServer("soulsolid", version)
@@ -57,10 +52,10 @@ func RegisterRoutes(app *fiber.App, s *Service, cfg config.MCP) {
 	})
 }
 
-// guard rejects requests that are too large, come from a disallowed browser
-// origin, or lack the configured bearer token.
+// guard rejects requests that are too large or come from a disallowed browser
+// origin. The endpoint has no authentication: anyone who can reach the port
+// can use it, so expose it only on a trusted network.
 func guard(cfg config.MCP) fiber.Handler {
-	tokenHash := sha256.Sum256([]byte(cfg.Token))
 	return func(c *fiber.Ctx) error {
 		if len(c.Body()) > maxRequestBody {
 			return c.Status(fiber.StatusRequestEntityTooLarge).SendString("request body too large")
@@ -71,15 +66,6 @@ func guard(cfg config.MCP) fiber.Handler {
 		if origin := c.Get(fiber.HeaderOrigin); origin != "" && !slices.Contains(cfg.AllowedOrigins, origin) {
 			slog.Warn("MCP request rejected: origin not allowed", "origin", origin, "ip", c.IP())
 			return c.Status(fiber.StatusForbidden).SendString("origin not allowed")
-		}
-		if cfg.Token != "" {
-			given, ok := strings.CutPrefix(c.Get(fiber.HeaderAuthorization), "Bearer ")
-			givenHash := sha256.Sum256([]byte(given))
-			if !ok || subtle.ConstantTimeCompare(givenHash[:], tokenHash[:]) != 1 {
-				slog.Warn("MCP request rejected: invalid or missing token", "ip", c.IP())
-				c.Set(fiber.HeaderWWWAuthenticate, `Bearer realm="soulsolid-mcp"`)
-				return c.Status(fiber.StatusUnauthorized).SendString("unauthorized")
-			}
 		}
 		return c.Next()
 	}

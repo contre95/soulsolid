@@ -21,8 +21,9 @@ func (s *Service) registerJobTools(srv *server.MCPServer) {
 	), s.getJob)
 
 	s.addReadTool(srv, mcpgo.NewTool("get_job_logs",
-		mcpgo.WithDescription("Get the plain-text log output for a background job"),
+		mcpgo.WithDescription("Get the plain-text log output for a background job (the last lines only)"),
 		mcpgo.WithString("id", mcpgo.Required(), mcpgo.Description("Job ID")),
+		mcpgo.WithNumber("tail", mcpgo.Description("Number of trailing log lines to return (default 200, max 2000)")),
 	), s.getJobLogs)
 
 	s.addWriteTool(srv, mcpgo.NewTool("start_job",
@@ -73,7 +74,8 @@ func (s *Service) getJobLogs(_ context.Context, req mcpgo.CallToolRequest) (*mcp
 	if err != nil {
 		return errResult("failed to read log file: " + err.Error()), nil
 	}
-	return textResult(string(logContent)), nil
+	tail := min(max(intArg(req.Params.Arguments, "tail", 200), 1), 2000)
+	return textResult(truncateText(tailLines(string(logContent), tail))), nil
 }
 
 func (s *Service) startJob(_ context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {

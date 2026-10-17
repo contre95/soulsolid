@@ -12,7 +12,6 @@ func TestRedactConfig(t *testing.T) {
 	secret := "provider-secret"
 	cfg := &config.Config{
 		Telegram: config.Telegram{Token: "telegram-token"},
-		MCP:      config.MCP{Token: "mcp-token"},
 		Jobs:     config.Jobs{Webhooks: config.WebhookConfig{Command: "curl https://hook/?key=webhook-key"}},
 		Metadata: config.Metadata{Providers: map[string]config.Provider{"acoustid": {Enabled: true, Secret: &secret}}},
 		Downloaders: config.Downloaders{Plugins: []config.PluginConfig{
@@ -24,7 +23,7 @@ func TestRedactConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, leaked := range []string{"telegram-token", "mcp-token", "webhook-key", "provider-secret", "plugin-arl"} {
+	for _, leaked := range []string{"telegram-token", "webhook-key", "provider-secret", "plugin-arl"} {
 		if strings.Contains(string(raw), leaked) {
 			t.Errorf("redacted config still contains %q: %s", leaked, raw)
 		}
@@ -62,5 +61,23 @@ func TestApplySettingPathTemplates(t *testing.T) {
 		if (err == nil) != tc.ok {
 			t.Errorf("applySetting(%q, %q): ok=%v, err=%v", tc.key, tc.value, tc.ok, err)
 		}
+	}
+}
+
+func TestApplySettingRejectsUnknownProviders(t *testing.T) {
+	cfg := &config.Config{
+		Metadata: config.Metadata{Providers: map[string]config.Provider{"deezer": {}}},
+		Lyrics:   config.Lyrics{Providers: map[string]config.LyricsProvider{"lrclib": {}}},
+	}
+	for _, key := range []string{"metadata.providers.typo.enabled", "lyrics.providers.typo.enabled"} {
+		if err := applySetting(cfg, key, "true"); err == nil {
+			t.Errorf("expected %q to be rejected", key)
+		}
+	}
+	if len(cfg.Metadata.Providers) != 1 || len(cfg.Lyrics.Providers) != 1 {
+		t.Error("unknown providers must not be added to the config")
+	}
+	if err := applySetting(cfg, "metadata.providers.deezer.enabled", "true"); err != nil || !cfg.Metadata.Providers["deezer"].Enabled {
+		t.Errorf("expected known provider to be updated, err=%v", err)
 	}
 }

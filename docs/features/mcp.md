@@ -17,7 +17,6 @@ the same services the web UI handlers use.
 ```yaml
 mcp:
   enabled: true
-  token: !env_var MCP_TOKEN   # clients send "Authorization: Bearer <token>"
   allowed_origins: []         # browser origins allowed to call /mcp
   read_only: false            # expose only tools that don't modify anything
 ```
@@ -44,23 +43,26 @@ ask for confirmation before deleting files, rewriting tags or changing settings.
 
 ## Security
 
-The MCP endpoint can delete tracks and files, rewrite tags and change settings, so treat
-access to it like admin access to the library.
+The MCP endpoint has **no authentication**: anyone who can reach the port can use
+every tool, including deleting tracks and files, rewriting tags and changing settings.
+Only enable it on a trusted network, or put it behind a reverse proxy that
+authenticates requests.
 
-- **Set `mcp.token`.** Without it, anyone who can reach the port can use every tool.
-  A warning is logged at startup when no token is configured. The token is compared in
-  constant time.
 - **Origin check.** Requests carrying an `Origin` header are rejected unless it is
   listed in `allowed_origins`. This blocks malicious web pages, including DNS-rebinding
   attacks against a server on `localhost` or the LAN. Desktop and CLI MCP clients send
   no `Origin` and are unaffected.
 - **`read_only: true`** registers only read tools. Use it for agents that should
   browse and search but never modify anything.
-- **No secrets in tool output.** `get_config` masks the Telegram token, the MCP token,
+- **No secrets in tool output.** `get_config` masks the Telegram token,
   provider secrets, downloader plugin config and the webhook command.
 - **Restricted settings.** `update_settings` cannot change `libraryPath`,
   `downloadPath`, `jobs.log_path`, the Telegram token or allowed users, or provider
   secrets. Path templates must be relative and cannot contain `..`.
+- **Imports are confined to `downloadPath`.** `import_path` only accepts directories
+  inside the download path (symlinks are resolved), since imports may move files.
+- **Bounded output.** `get_job_logs` returns the last lines of a log, `get_library_tree`
+  is truncated at 64 KiB, and search tools return at most 100 results per call.
 - **Prompt injection.** Track metadata, lyrics and search results come from files and
   third-party services, and agents read them as input. Use a client that asks before
   running destructive tools, or run with `read_only: true`.

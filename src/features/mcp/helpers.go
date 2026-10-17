@@ -2,6 +2,8 @@ package mcp
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/contre95/soulsolid/src/music"
@@ -60,15 +62,69 @@ func errResult(msg string) *mcpgo.CallToolResult {
 	return mcpgo.NewToolResultError(msg)
 }
 
+// maxTextResult caps free-form text results (file trees, logs) so a single
+// call cannot flood the agent's context window.
+const maxTextResult = 64 << 10 // 64 KiB
+
+// maxListLimit caps the page size agents can request from list/search tools.
+const maxListLimit = 100
+
+// truncateText keeps the first maxTextResult bytes of s, cut at a line break,
+// and notes how much was dropped.
+func truncateText(s string) string {
+	if len(s) <= maxTextResult {
+		return s
+	}
+	cut := strings.LastIndexByte(s[:maxTextResult], '\n') + 1
+	if cut == 0 {
+		cut = maxTextResult
+	}
+	return s[:cut] + fmt.Sprintf("\n[truncated: %d of %d bytes shown]", cut, len(s))
+}
+
+// tailLines returns the last n lines of s.
+func tailLines(s string, n int) string {
+	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")
+	if len(lines) <= n {
+		return s
+	}
+	return fmt.Sprintf("[showing last %d of %d lines]\n", n, len(lines)) + strings.Join(lines[len(lines)-n:], "\n")
+}
+
+// limitArg reads a page-size argument, defaulting to def and clamped to [1, maxListLimit].
+func limitArg(args any, key string, def int) int {
+	limit := intArg(args, key, def)
+	if limit < 1 {
+		return def
+	}
+	return min(limit, maxListLimit)
+}
+
 // --- Argument helpers ---
 
 func strArg(args any, key string) string {
+	v, _ := lookupStrArg(args, key)
+	return v
+}
+
+// lookupStrArg returns the argument as a string and whether it was provided.
+// Models often send numbers or booleans for string parameters (e.g. "year":
+// 2004), so those are formatted instead of silently dropped.
+func lookupStrArg(args any, key string) (string, bool) {
 	m, ok := args.(map[string]any)
 	if !ok {
-		return ""
+		return "", false
 	}
-	v, _ := m[key].(string)
-	return v
+	switch v := m[key].(type) {
+	case string:
+		return v, true
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64), true
+	case bool:
+		return strconv.FormatBool(v), true
+	default:
+		return "", false
+	}
 }
 
 func intArg(args any, key string, def int) int {

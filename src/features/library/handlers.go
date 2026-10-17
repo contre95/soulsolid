@@ -317,107 +317,31 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 	addedAfter := strings.TrimSpace(c.Query("added_after", ""))
 	addedBefore := strings.TrimSpace(c.Query("added_before", ""))
 
-	var results []SearchResult
-	var totalCount int
-
-	offset := (page - 1) * limit
-
-	hasActiveFilters := genre != "" || hasAcoustID != nil || lyricsFilter != "" || lyricsText != "" || addedAfter != "" || addedBefore != ""
-
-	if query == "" && !hasActiveFilters {
-		// Browse-all: paginated tracks only.
-		tracksCount, err := h.service.GetTracksCount(c.Context())
-		if err != nil {
-			slog.Error("Error getting tracks count", "error", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks count")
-		}
-		totalCount = tracksCount
-
-		if offset < tracksCount {
-			trackLimit := min(offset+limit, tracksCount) - offset
-			if trackLimit > 0 {
-				tracks, err := h.service.GetTracksPaginated(c.Context(), trackLimit, offset)
-				if err != nil {
-					slog.Error("Error loading tracks", "error", err)
-					return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
-				}
-				for _, track := range tracks {
-					results = append(results, trackToSearchResult(track))
-				}
-			}
-		}
-	} else {
-		// Search/filter: albums → artists → tracks order.
-		// Artist/album matches only apply to a text query and are capped (not paginated).
-		trackFilter := &music.TrackFilter{
-			TextSearch:   query,
-			Genre:        genre,
-			HasAcoustID:  hasAcoustID,
-			LyricsFilter: lyricsFilter,
-			LyricsText:   lyricsText,
-			AddedAfter:   addedAfter,
-			AddedBefore:  addedBefore,
-		}
-		trackCount, err := h.service.GetTracksFilteredCount(c.Context(), trackFilter)
-		if err != nil {
-			slog.Error("Error counting tracks", "error", err)
-		}
-
-		var albums []*music.Album
-		var artists []*music.Artist
-		if query != "" {
-			albums, err = h.service.SearchAlbums(c.Context(), query, 20, 0)
-			if err != nil {
-				slog.Error("Error searching albums", "error", err)
-				albums = nil
-			}
-			artists, err = h.service.GetArtistsFilteredPaginated(c.Context(), 20, 0, query)
-			if err != nil {
-				slog.Error("Error searching artists", "error", err)
-				artists = nil
-			}
-		}
-		albumsCount := len(albums)
-		artistsCount := len(artists)
-		totalCount = albumsCount + artistsCount + trackCount
-
-		start := offset
-		end := min(offset+limit, totalCount)
-
-		// Albums: [0, albumsCount)
-		if start < albumsCount {
-			albumEnd := min(end, albumsCount)
-			for i := start; i < albumEnd; i++ {
-				results = append(results, albumToSearchResult(albums[i]))
-			}
-		}
-
-		// Artists: [albumsCount, albumsCount+artistsCount)
-		if end > albumsCount {
-			artistStart := max(0, start-albumsCount)
-			artistEnd := min(end-albumsCount, artistsCount)
-			for i := artistStart; i < artistEnd; i++ {
-				results = append(results, artistToSearchResult(artists[i]))
-			}
-		}
-
-		// Tracks: [albumsCount+artistsCount, totalCount)
-		trackOffset := albumsCount + artistsCount
-		if end > trackOffset {
-			trackStart := max(0, start-trackOffset)
-			trackLimit := (end - trackOffset) - trackStart
-			if trackLimit > 0 {
-				tracks, err := h.service.GetTracksFilteredPaginated(c.Context(), trackLimit, trackStart, trackFilter)
-				if err != nil {
-					slog.Error("Error searching tracks", "error", err)
-				} else {
-					for _, track := range tracks {
-						results = append(results, trackToSearchResult(track))
-					}
-				}
-			}
-		}
+	searchPage, err := h.service.UnifiedSearch(c.Context(), music.TrackFilter{
+		TextSearch:   query,
+		Genre:        genre,
+		HasAcoustID:  hasAcoustID,
+		LyricsFilter: lyricsFilter,
+		LyricsText:   lyricsText,
+		AddedAfter:   addedAfter,
+		AddedBefore:  addedBefore,
+	}, limit, (page-1)*limit)
+	if err != nil {
+		slog.Error("Error loading tracks", "error", err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Error loading tracks")
 	}
+
+	results := make([]SearchResult, 0, len(searchPage.Albums)+len(searchPage.Artists)+len(searchPage.Tracks))
+	for _, album := range searchPage.Albums {
+		results = append(results, albumToSearchResult(album))
+	}
+	for _, artist := range searchPage.Artists {
+		results = append(results, artistToSearchResult(artist))
+	}
+	for _, track := range searchPage.Tracks {
+		results = append(results, trackToSearchResult(track))
+	}
+	totalCount := searchPage.Total
 
 	pagination := NewPagination(page, limit, totalCount)
 

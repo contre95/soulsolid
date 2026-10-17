@@ -23,7 +23,7 @@ func (s *Service) registerDownloadTools(srv *server.MCPServer) {
 		mcpgo.WithString("query", mcpgo.Required(), mcpgo.Description("Search terms, or a URL when type is 'link'")),
 		mcpgo.WithString("type", mcpgo.Required(), mcpgo.Description("One of: track, album, artist, link")),
 		mcpgo.WithString("downloader", mcpgo.Required(), mcpgo.Description("Downloader plugin name (e.g. 'deezer')")),
-		mcpgo.WithNumber("limit", mcpgo.Description("Max results (default 20)")),
+		mcpgo.WithNumber("limit", mcpgo.Description("Max results (default 20, max 100)")),
 	), s.searchDownloads)
 
 	s.addWriteTool(srv, mcpgo.NewTool("download_track",
@@ -90,7 +90,7 @@ func (s *Service) searchDownloads(_ context.Context, req mcpgo.CallToolRequest) 
 	args := req.Params.Arguments
 	query := strArg(args, "query")
 	downloader := strArg(args, "downloader")
-	limit := intArg(args, "limit", 20)
+	limit := limitArg(args, "limit", 20)
 
 	switch strArg(args, "type") {
 	case "track":

@@ -42,9 +42,6 @@ func redactConfig(cfg *config.Config) config.Config {
 	if out.Telegram.Token != "" {
 		out.Telegram.Token = redacted
 	}
-	if out.MCP.Token != "" {
-		out.MCP.Token = redacted
-	}
 	if out.Jobs.Webhooks.Command != "" {
 		out.Jobs.Webhooks.Command = redacted
 	}
@@ -180,7 +177,10 @@ func applySetting(cfg *config.Config, key, value string) error {
 	default:
 		// metadata.providers.<name>.enabled|secret
 		if name, field, ok := providerKey(key, "metadata.providers."); ok {
-			provider := cfg.Metadata.Providers[name]
+			provider, exists := cfg.Metadata.Providers[name]
+			if !exists {
+				return fmt.Errorf("unknown metadata provider: %s", name)
+			}
 			switch field {
 			case "enabled":
 				b, err := parseBool()
@@ -196,7 +196,10 @@ func applySetting(cfg *config.Config, key, value string) error {
 		}
 		// lyrics.providers.<name>.enabled|prefer_synced
 		if name, field, ok := providerKey(key, "lyrics.providers."); ok {
-			provider := cfg.Lyrics.Providers[name]
+			provider, exists := cfg.Lyrics.Providers[name]
+			if !exists {
+				return fmt.Errorf("unknown lyrics provider: %s", name)
+			}
 			switch field {
 			case "enabled":
 				b, err := parseBool()

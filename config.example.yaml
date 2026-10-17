@@ -41,8 +41,7 @@ server:
   show_routes: false
   port: 3535
 mcp:
-  enabled: false # Exposes an MCP endpoint (Streamable HTTP) at POST /mcp for AI agents
-  token: "" # Strongly recommended. Clients must send "Authorization: Bearer <token>". e.g. !env_var MCP_TOKEN
+  enabled: false # Exposes an unauthenticated MCP endpoint (Streamable HTTP) at POST /mcp for AI agents
   allowed_origins: [] # Browser origins allowed to call /mcp. Requests with any other Origin header are rejected
   read_only: false # When true, only tools that don't modify the library, files or config are exposed
 database:

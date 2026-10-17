@@ -156,7 +156,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	if cfg.Get().MCP.Enabled {
 		mcpService := mcp.NewService(libraryService, tagService, lyricsService, jobService, downloadingService, playlistsService, importingService, reorganizeService, mergeService, cfg)
 		mcp.RegisterRoutes(app, mcpService, cfg.Get().MCP)
-		slog.Info("MCP endpoint enabled", "path", "/mcp", "auth", cfg.Get().MCP.Token != "", "readOnly", cfg.Get().MCP.ReadOnly)
+		slog.Info("MCP endpoint enabled", "path", "/mcp", "readOnly", cfg.Get().MCP.ReadOnly)
 	}
 
 	return &Server{app: app, port: cfg.Get().Server.Port}
