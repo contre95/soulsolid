@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.2](https://github.com/contre95/soulsolid/compare/v0.28.1...v0.28.2) (2026-10-17)
+
+
+### 🐛 Bug Fixes
+
+* release bump test ([#199](https://github.com/contre95/soulsolid/issues/199)) ([35d2dac](https://github.com/contre95/soulsolid/commit/35d2dac89f5f8c0205d7856b60e422f01c021910))
+
 ## [0.28.1](https://github.com/contre95/soulsolid/compare/v0.28.0...v0.28.1) (2026-10-17)
 
 
