@@ -11,6 +11,7 @@ import (
 	"sync"
 	"syscall"
 	"text/template"
+	"text/template/parse"
 	"time"
 
 	"github.com/contre95/soulsolid/src/music"
@@ -55,6 +56,10 @@ func (t *WebhookTask) Execute(ctx context.Context, job *music.Job, params Webhoo
 	job.Logger.Info("Running webhook", "command", params.Command)
 	progressUpdater(10, "Running webhook command")
 	err := cmd.Run()
+	if cmd.Process != nil {
+		// Nothing the command started may outlive the job and its timeout.
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
 	stdout.flush()
 	stderr.flush()
 
@@ -63,6 +68,9 @@ func (t *WebhookTask) Execute(ctx context.Context, job *music.Job, params Webhoo
 		return nil, ctx.Err()
 	case errors.Is(runCtx.Err(), context.DeadlineExceeded):
 		return nil, fmt.Errorf("webhook command timed out after %s", t.timeout)
+	case errors.Is(err, exec.ErrWaitDelay):
+		// The shell exited 0, but a background process held its output open.
+		job.Logger.Warn("Webhook command exited, but a background process kept its output open; it was stopped")
 	case err != nil:
 		return nil, fmt.Errorf("webhook command failed: %w", err)
 	}
@@ -163,6 +171,14 @@ func renderWebhookCommand(tmplText string, v webhookValues) (string, []string, e
 		return "", nil, fmt.Errorf("parse webhook template: %w", err)
 	}
 
+	for _, t := range tmpl.Templates() {
+		if t.Tree != nil {
+			if err := checkWebhookNode(t.Tree.Root); err != nil {
+				return "", nil, err
+			}
+		}
+	}
+
 	values := map[string]string{
 		"Name":     v.Name,
 		"Type":     v.Type,
@@ -170,16 +186,21 @@ func renderWebhookCommand(tmplText string, v webhookValues) (string, []string, e
 		"Message":  v.Message,
 		"Duration": v.Duration,
 	}
-	// NUL-delimited markers, resolved by quoteWebhookPlaceholders.
-	markers := make(map[string]string, len(webhookEnv))
 	env := make([]string, 0, len(webhookEnv))
 	for _, e := range webhookEnv {
-		markers[e.field] = "\x00" + e.env + "\x00"
 		env = append(env, e.env+"="+values[e.field])
 	}
+	// Conditions see the real values; printed fields render as markers.
+	data := struct {
+		Name     jobName
+		Type     jobType
+		Status   jobStatus
+		Message  jobMessage
+		Duration jobDuration
+	}{jobName(v.Name), jobType(v.Type), jobStatus(v.Status), jobMessage(v.Message), jobDuration(v.Duration)}
 
 	var rendered strings.Builder
-	if err := tmpl.Execute(&rendered, markers); err != nil {
+	if err := tmpl.Execute(&rendered, data); err != nil {
 		return "", nil, fmt.Errorf("execute webhook template: %w", err)
 	}
 	command, err := quoteWebhookPlaceholders(rendered.String())
@@ -187,6 +208,107 @@ func renderWebhookCommand(tmplText string, v webhookValues) (string, []string, e
 		return "", nil, err
 	}
 	return command, env, nil
+}
+
+// Each field prints as a NUL-delimited marker, resolved by quoteWebhookPlaceholders,
+// while comparisons such as eq use the underlying value.
+type (
+	jobName     string
+	jobType     string
+	jobStatus   string
+	jobMessage  string
+	jobDuration string
+)
+
+func webhookMarker(env string) string { return "\x00" + env + "\x00" }
+
+func (jobName) String() string     { return webhookMarker("SOULSOLID_JOB_NAME") }
+func (jobType) String() string     { return webhookMarker("SOULSOLID_JOB_TYPE") }
+func (jobStatus) String() string   { return webhookMarker("SOULSOLID_JOB_STATUS") }
+func (jobMessage) String() string  { return webhookMarker("SOULSOLID_JOB_MESSAGE") }
+func (jobDuration) String() string { return webhookMarker("SOULSOLID_JOB_DURATION") }
+
+// webhookSafeFuncs never turn a job field into new text: they compare, count, or
+// return their arguments unchanged.
+var webhookSafeFuncs = map[string]bool{
+	"eq": true, "ne": true, "lt": true, "le": true, "gt": true, "ge": true,
+	"and": true, "or": true, "not": true, "len": true,
+}
+
+// checkWebhookNode rejects templates that pass job fields to functions which would
+// transform them (printf, urlquery, ...): those only see the marker, so the result
+// would silently be wrong.
+func checkWebhookNode(node parse.Node) error {
+	switch n := node.(type) {
+	case *parse.ListNode:
+		if n == nil {
+			return nil
+		}
+		for _, c := range n.Nodes {
+			if err := checkWebhookNode(c); err != nil {
+				return err
+			}
+		}
+	case *parse.ActionNode:
+		_, err := checkWebhookPipe(n.Pipe)
+		return err
+	case *parse.IfNode:
+		return checkWebhookBranch(&n.BranchNode)
+	case *parse.RangeNode:
+		return checkWebhookBranch(&n.BranchNode)
+	case *parse.WithNode:
+		return checkWebhookBranch(&n.BranchNode)
+	case *parse.TemplateNode:
+		if n.Pipe != nil {
+			_, err := checkWebhookPipe(n.Pipe)
+			return err
+		}
+	}
+	return nil
+}
+
+func checkWebhookBranch(b *parse.BranchNode) error {
+	if _, err := checkWebhookPipe(b.Pipe); err != nil {
+		return err
+	}
+	if err := checkWebhookNode(b.List); err != nil {
+		return err
+	}
+	return checkWebhookNode(b.ElseList)
+}
+
+// checkWebhookPipe reports whether the pipeline's result may carry job data.
+func checkWebhookPipe(pipe *parse.PipeNode) (bool, error) {
+	data := false
+	for i, cmd := range pipe.Cmds {
+		fn, args := "", cmd.Args
+		if id, ok := args[0].(*parse.IdentifierNode); ok {
+			fn, args = id.Ident, args[1:]
+		}
+		argData := i > 0 && data // a pipe passes the previous result as the last argument
+		for _, arg := range args {
+			d, err := webhookArgData(arg)
+			if err != nil {
+				return false, err
+			}
+			argData = argData || d
+		}
+		if fn != "" && !webhookSafeFuncs[fn] && argData {
+			return false, fmt.Errorf("webhook templates can't pass job fields to %q; use the SOULSOLID_JOB_* environment variables in the command instead", fn)
+		}
+		data = argData
+	}
+	return data, nil
+}
+
+func webhookArgData(arg parse.Node) (bool, error) {
+	switch a := arg.(type) {
+	case *parse.FieldNode, *parse.VariableNode, *parse.DotNode, *parse.ChainNode:
+		return true, nil
+	case *parse.PipeNode:
+		return checkWebhookPipe(a)
+	}
+	return false, nil
 }
 
 func isWebhookEnv(name string) bool {
