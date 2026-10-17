@@ -24,7 +24,6 @@ handler return either an HTMX HTML fragment or JSON from the same code path.
 - Serves **static files** (`/public`, `/node_modules`) and a `/health` check.
 - **Registers every feature's routes** in a deliberate order.
 - Provides the **`respond`** package used by all handlers for HTMX/JSON negotiation.
-- Hosts the optional **Telegram bot** wiring (`telegram.go`). Deprecated, removed in v0.30.0.
 
 ## How it works
 
@@ -32,7 +31,6 @@ handler return either an HTMX HTML fragment or JSON from the same code path.
 server.go            → builds the Fiber app, template engine, registers routes
 middleware.go        → HTMX / request-logging middleware
 respond/respond.go   → content-negotiation helpers (Section, Partial, Toast*, …)
-telegram.go          → Telegram bot wiring
 ```
 
 ### Server construction
@@ -46,8 +44,8 @@ the single composition point where the dependency graph comes together. It:
    `isDebug`).
 2. Builds the Fiber app with a custom error handler, a large body limit (for uploads),
    `PassLocalsToViews`, and `Immutable` buffers.
-3. Installs middleware and a locals injector that exposes `Version`, `Downloaders`,
-   and `Telegram` to every template.
+3. Installs middleware and a locals injector that exposes `Version` and
+   `Downloaders` to every template.
 4. Serves `./public` and `./node_modules` statically and adds `/health`.
 5. Calls each feature's `RegisterRoutes`.
 

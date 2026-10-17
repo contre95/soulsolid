@@ -172,6 +172,10 @@ func migrateDeprecated(cfg *Config) {
 		}
 		webhooks.JobTypesDeprecated = nil
 	}
+	if cfg.TelegramRemoved != nil {
+		slog.Warn("The Telegram bot was removed in v0.30.0; the telegram config block is ignored and can be deleted")
+		cfg.TelegramRemoved = nil
+	}
 }
 
 // saveDefaultConfig saves the default configuration to the specified file path
@@ -251,7 +255,6 @@ func (m *Manager) Update(config *Config) {
 		slog.Debug("Configuration updated",
 			"import_move_changed", oldConfig.Import.Move != config.Import.Move,
 			"import_always_queue_changed", oldConfig.Import.AlwaysQueue != config.Import.AlwaysQueue,
-			"telegram_enabled_changed", oldConfig.Telegram.Enabled != config.Telegram.Enabled,
 			"logger_enabled_changed", oldConfig.Logger.Enabled != config.Logger.Enabled,
 		)
 	}

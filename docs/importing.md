@@ -163,23 +163,6 @@ incomplete track can never enter or overwrite the library. This is enforced both
 on the server. For example, a `duplicate` + `missing_metadata` item offers only skip/delete
 until the metadata is fixed.
 
-### Telegram Integration
-
-> **Deprecated:** the Telegram bot will be removed in v0.30.0. Use the web UI instead.
-
-You can interact with the import queue directly from Telegram using the following commands:
-
-- `/queue` - Show the current queue and process items one by one
-- `/queue_clear` - Clear the entire import queue
-
-When using `/queue`, you'll receive queue items with inline buttons to:
-- **Import** or **Cancel** for manual review items
-- **Replace** or **Skip** for duplicate items
-- **Next** to proceed to the next item
-- **Cancel Session** to end the current queue session
-
-This allows you to manage imports remotely without needing to access the web interface.
-
 ### Queue Behavior with Move Option
 
 When the `move: true` option is enabled in the import configuration, tracks in the queue are automatically removed from the queue after being imported. This prevents errors that could occur when trying to import a track whose original file no longer exists at the source location after it has been moved to the library structure.

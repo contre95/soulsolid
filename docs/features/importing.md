@@ -170,11 +170,6 @@ download_path: /app/downloads   # watched + pruned location
 
 Only `.mp3` and `.flac` files are processed (`supportedExtensions`).
 
-## Telegram
-
-The importing service is injected into the Telegram bot, which can trigger imports from
-chat. See [hosting](./hosting.md).
-
 ## Related
 
 - [Importing configuration & path templates](../importing.md), [paths](../paths.md)

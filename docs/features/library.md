@@ -151,12 +151,6 @@ database:
   path: /data/library.db       # SQLite store backing all queries
 ```
 
-## Telegram
-
-The library service is also injected into the Telegram bot (`hosting.NewTelegramBot`),
-which exposes a subset of browse/search operations over chat. See
-[hosting](./hosting.md) for the bot wiring.
-
 ## Related
 
 - [Importing](./importing.md) and [Downloading](./downloading.md) populate the library.

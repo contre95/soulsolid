@@ -28,7 +28,6 @@ See the [deepwiki](https://deepwiki.com/contre95/soulsolid)
 - **Downloading**: Download tracks and albums. 
 - **Importing**: Import music from directories with automatic fingerprinting
 - **Metadata Tagging**: Auto-tag using MusicBrainz and Discogs APIs
-- **Telegram Integration** *(deprecated, will be removed in v0.30.0)*: Control via Telegram bot
 - **Web UI**: Mobile-friendly interface for all operations 
 - **Job Management**: Background processing for downloads, imports, and synced lyrics and more. 
 
@@ -47,8 +46,6 @@ The application can run without copying `config.yaml` into the container. If no 
 Soulsolid supports environment variables in configuration files using the `!env_var` tag:
 
 ```yaml
-telegram:
-  token: !env_var TELEGRAM_BOT_TOKEN
 metadata:
   providers:
     discogs:

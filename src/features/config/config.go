@@ -4,7 +4,6 @@ package config
 type Config struct {
 	LibraryPath  string      `yaml:"libraryPath" validate:"required"`
 	DownloadPath string      `yaml:"downloadPath" validate:"required"`
-	Telegram     Telegram    `yaml:"telegram"`
 	Logger       Logger      `yaml:"logger"`
 	Downloaders  Downloaders `yaml:"downloaders"`
 	Server       Server      `yaml:"server"`
@@ -13,6 +12,10 @@ type Config struct {
 	Metadata     Metadata    `yaml:"metadata"`
 	Lyrics       Lyrics      `yaml:"lyrics"`
 	Jobs         Jobs        `yaml:"jobs"`
+
+	// TelegramRemoved is the telegram block from before the bot was removed,
+	// read only to warn about it on load.
+	TelegramRemoved map[string]any `yaml:"telegram,omitempty"`
 }
 type Jobs struct {
 	Log      bool          `yaml:"log"`
@@ -75,13 +78,6 @@ type Logger struct {
 	Level     string `yaml:"level"`
 	Format    string `yaml:"format"`
 	HTMXDebug bool   `yaml:"htmx_debug"`
-}
-
-type Telegram struct {
-	Enabled      bool     `yaml:"enabled"`
-	Token        string   `yaml:"token"`
-	AllowedUsers []string `yaml:"allowedUsers"`
-	BotHandle    string   `yaml:"bot_handle"`
 }
 
 // Downloaders holds the configuration for the various downloaders.

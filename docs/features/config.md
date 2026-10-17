@@ -12,7 +12,7 @@ startup (resolving environment-variable references), validates it, exposes a
 thread-safe `Manager` that every other feature reads from, renders the Settings page,
 and persists edits made through the UI back to disk. It is effectively the central
 nervous system for runtime configuration: paths, import behaviour, providers,
-logging, jobs, and the Telegram bot all read their settings here.
+logging, and jobs all read their settings here.
 
 ## What it does
 
@@ -33,7 +33,6 @@ handlers.go  → HTTP layer: render settings, apply form edits, expose config
 manager.go   → the thread-safe Manager: load, validate, save, env-var expansion
 config.go    → the Config struct hierarchy (the YAML schema)
 default.go   → the built-in default configuration
-telegram.go  → Telegram-related config helpers
 ```
 
 ### The `Manager`
@@ -58,8 +57,6 @@ telegram.go  → Telegram-related config helpers
 tokens) out of the committed config:
 
 ```yaml
-telegram:
-  token: !env_var TELEGRAM_TOKEN
 metadata:
   providers:
     discogs:
@@ -74,8 +71,6 @@ it with a `_FILE`-suffixed variable, so the secret value never has to touch the
 process environment or shell history:
 
 ```yaml
-telegram:
-  token: !env_file TELEGRAM_TOKEN_FILE   # TELEGRAM_TOKEN_FILE=/run/secrets/telegram_token
 metadata:
   providers:
     acoustid:
@@ -114,7 +109,6 @@ The top-level `Config` struct (`config.go`) maps directly to `config.yaml`:
 | `downloaders` | Plugin list + embedded-artwork settings |
 | `logger` | `enabled`, `level`, `format`, `htmx_debug` |
 | `jobs` | Per-job logging + webhooks |
-| `telegram` | **Deprecated, removed in v0.30.0.** Bot `enabled`, `token`, `allowedUsers`, `bot_handle` |
 
 See [importing](./importing.md) and [paths](../paths.md) for the `import` block,
 [plugins](../plugins.md) for `downloaders`, and [jobs](./jobs.md) for the `jobs` block.
