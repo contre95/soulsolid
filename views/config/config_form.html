@@ -21,18 +21,36 @@
           </div>
        </div>
 
-        <!-- Library Section -->
-        <div class="p-4 rounded-lg shadow-lg backdrop-blur-sm bg-white/30 hover:bg-white/60 dark:bg-gray-900/30 dark:hover:bg-gray-900/60 transition-colors border border-gray-200/50 dark:border-gray-800/70">
+        <!-- Library Section (z-30: keeps the libraryPath tooltip above the neighbouring cards) -->
+        <div class="relative z-30 p-4 rounded-lg shadow-lg backdrop-blur-sm bg-white/30 hover:bg-white/60 dark:bg-gray-900/30 dark:hover:bg-gray-900/60 transition-colors border border-gray-200/50 dark:border-gray-800/70">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
             <i class="fas fa-music text-purple-500 text-lg"></i>
             Library
           </h2>
          <div class="space-y-3">
            <div>
-             <label for="libraryPath" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Library Path</label>
-             <input type="text" id="libraryPath" name="libraryPath" value="{{.Config.LibraryPath}}"
-                    class="bg-white/50 dark:bg-gray-700 border border-gray-300/50 dark:border-gray-600/50 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 block w-full px-3 py-1.5 dark:placeholder-gray-400 backdrop-blur-sm"
+             <label for="libraryPath" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+               Library Path
+               <i class="fas fa-lock ml-1 text-xs text-gray-400" title="Read-only"></i>
+             </label>
+             <input type="text" id="libraryPath" value="{{.Config.LibraryPath}}" readonly disabled
+                    class="bg-gray-100/70 dark:bg-gray-800/70 border border-gray-300/50 dark:border-gray-600/50 text-gray-500 dark:text-gray-400 text-sm rounded-lg block w-full px-3 py-1.5 cursor-not-allowed backdrop-blur-sm"
                     placeholder="/path/to/music/library">
+             <div class="mt-1 flex items-center gap-1.5 text-sm text-yellow-600 dark:text-yellow-300 italic py-2 px-3 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg">
+               The library path is fixed while Soulsolid is running.
+               <span class="relative group inline-flex not-italic">
+                 <button type="button" class="text-yellow-500 hover:text-yellow-700 focus:text-yellow-700 dark:hover:text-yellow-100 dark:focus:text-yellow-100 focus:outline-none transition-colors"
+                         aria-label="Why the library path is fixed" aria-describedby="libraryPath-info">
+                   <i class="fas fa-circle-info"></i>
+                 </button>
+                 <span id="libraryPath-info" role="tooltip"
+                       class="hidden group-hover:block group-focus-within:block absolute right-0 top-full mt-2 z-50 w-72 max-w-[80vw] p-3 rounded-lg shadow-lg text-xs leading-relaxed text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                   Every track in the database is recorded under this root, so changing it would leave the
+                   existing library unreachable. To move your library, edit <code>libraryPath</code> in
+                   <code>config.yaml</code>, move the files yourself, and restart.
+                 </span>
+               </span>
+             </div>
            </div>
            <div>
              <label for="downloadPath" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Download Path</label>

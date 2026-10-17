@@ -47,56 +47,54 @@ func NewDownloadJobTask(service *Service) *DownloadJobTask {
 	}
 }
 
-// MetadataKeys returns the required metadata keys for download jobs
-func (e *DownloadJobTask) MetadataKeys() []string {
-	return []string{"type"}
+// DownloadParams is the metadata contract shared by every download_* job type.
+// Which of the ID fields is required depends on Type, so those are validated by
+// the per-type execute functions rather than by a struct tag.
+type DownloadParams struct {
+	Type         string   `json:"type" validate:"required,oneof=track album artist tracks playlist"`
+	Downloader   string   `json:"downloader" validate:"required"`
+	TrackID      string   `json:"trackID,omitempty"`
+	AlbumID      string   `json:"albumID,omitempty"`
+	ArtistID     string   `json:"artistID,omitempty"`
+	TrackIDs     []string `json:"trackIDs,omitempty"`
+	PlaylistName string   `json:"playlistName,omitempty"`
 }
 
 // Execute performs the download operation
-func (e *DownloadJobTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
-	jobType, ok := job.Metadata["type"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid job type")
+func (e *DownloadJobTask) Execute(ctx context.Context, job *music.Job, params DownloadParams, progressUpdater func(int, string)) (map[string]any, error) {
+	downloader, exists := e.service.pluginManager.GetDownloader(params.Downloader)
+	if !exists {
+		return nil, fmt.Errorf("downloader %s not found", params.Downloader)
 	}
 	downloadPath := e.service.configManager.Get().DownloadPath
 	// Create download directory if it doesn't exist
 	if err := os.MkdirAll(downloadPath, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create download directory: %w", err)
 	}
-	switch jobType {
+	switch params.Type {
 	case "track":
-		return e.executeTrackDownload(ctx, job, progressUpdater, downloadPath)
+		return e.executeTrackDownload(ctx, job, params, downloader, progressUpdater, downloadPath)
 	case "album":
-		return e.executeAlbumDownload(ctx, job, progressUpdater, downloadPath)
+		return e.executeAlbumDownload(ctx, job, params, downloader, progressUpdater, downloadPath)
 	case "artist":
-		return e.executeArtistDownload(ctx, job, progressUpdater, downloadPath)
+		return e.executeArtistDownload(ctx, job, params, downloader, progressUpdater, downloadPath)
 	case "tracks":
-		return e.executeTracksDownload(ctx, job, progressUpdater, downloadPath)
+		return e.executeTracksDownload(ctx, job, params, downloader, progressUpdater, downloadPath)
 	case "playlist":
-		return e.executePlaylistDownload(ctx, job, progressUpdater, downloadPath)
+		return e.executePlaylistDownload(ctx, job, params, downloader, progressUpdater, downloadPath)
 	default:
-		return nil, fmt.Errorf("unsupported download type: %s", jobType)
+		return nil, fmt.Errorf("unsupported download type: %s", params.Type)
 	}
 }
 
 // executeTrackDownload handles track download jobs
-func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *music.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
-	trackID, ok := job.Metadata["trackID"].(string)
-	if !ok {
+func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *music.Job, params DownloadParams, downloader Downloader, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
+	trackID := params.TrackID
+	if trackID == "" {
 		return nil, fmt.Errorf("trackID not found in job metadata")
 	}
 
-	downloaderName, ok := job.Metadata["downloader"].(string)
-	if !ok {
-		return nil, fmt.Errorf("downloader not found in job metadata")
-	}
-
-	downloader, exists := e.service.pluginManager.GetDownloader(downloaderName)
-	if !exists {
-		return nil, fmt.Errorf("downloader %s not found", downloaderName)
-	}
-
-	slog.Debug("Starting track download job", "trackID", trackID, "downloader", downloaderName, "jobID", job.ID)
+	slog.Debug("Starting track download job", "trackID", trackID, "downloader", params.Downloader, "jobID", job.ID)
 	progressUpdater(10, fmt.Sprintf("Starting %s track download...", trackID))
 
 	// Check for cancellation
@@ -156,23 +154,13 @@ func (e *DownloadJobTask) executeTrackDownload(ctx context.Context, job *music.J
 }
 
 // executeAlbumDownload handles album download jobs
-func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *music.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
-	albumID, ok := job.Metadata["albumID"].(string)
-	if !ok {
+func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *music.Job, params DownloadParams, downloader Downloader, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
+	albumID := params.AlbumID
+	if albumID == "" {
 		return nil, fmt.Errorf("albumID not found in job metadata")
 	}
 
-	downloaderName, ok := job.Metadata["downloader"].(string)
-	if !ok {
-		return nil, fmt.Errorf("downloader not found in job metadata")
-	}
-
-	downloader, exists := e.service.pluginManager.GetDownloader(downloaderName)
-	if !exists {
-		return nil, fmt.Errorf("downloader %s not found", downloaderName)
-	}
-
-	slog.Debug("Starting album download job", "albumID", albumID, "downloader", downloaderName, "jobID", job.ID)
+	slog.Debug("Starting album download job", "albumID", albumID, "downloader", params.Downloader, "jobID", job.ID)
 	progressUpdater(5, "Starting album download...")
 	// Check for cancellation
 	select {
@@ -265,23 +253,13 @@ func (e *DownloadJobTask) executeAlbumDownload(ctx context.Context, job *music.J
 }
 
 // executeArtistDownload handles artist download jobs
-func (e *DownloadJobTask) executeArtistDownload(ctx context.Context, job *music.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
-	artistID, ok := job.Metadata["artistID"].(string)
-	if !ok {
+func (e *DownloadJobTask) executeArtistDownload(ctx context.Context, job *music.Job, params DownloadParams, downloader Downloader, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
+	artistID := params.ArtistID
+	if artistID == "" {
 		return nil, fmt.Errorf("artistID not found in job metadata")
 	}
 
-	downloaderName, ok := job.Metadata["downloader"].(string)
-	if !ok {
-		return nil, fmt.Errorf("downloader not found in job metadata")
-	}
-
-	downloader, exists := e.service.pluginManager.GetDownloader(downloaderName)
-	if !exists {
-		return nil, fmt.Errorf("downloader %s not found", downloaderName)
-	}
-
-	slog.Debug("Starting artist download job", "artistID", artistID, "downloader", downloaderName, "jobID", job.ID)
+	slog.Debug("Starting artist download job", "artistID", artistID, "downloader", params.Downloader, "jobID", job.ID)
 	progressUpdater(5, "Starting artist download...")
 
 	// Check for cancellation
@@ -384,44 +362,13 @@ func (e *DownloadJobTask) executeArtistDownload(ctx context.Context, job *music.
 }
 
 // executeTracksDownload handles multiple track download jobs
-func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *music.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
-	var trackIDs []string
-
-	// Try to get trackIDs as []string first
-	if ids, ok := job.Metadata["trackIDs"].([]string); ok {
-		trackIDs = ids
-	} else if idsInterface, ok := job.Metadata["trackIDs"].([]interface{}); ok {
-		// Handle as []interface{}
-		for _, id := range idsInterface {
-			if idStr, ok := id.(string); ok {
-				trackIDs = append(trackIDs, idStr)
-			}
-		}
-	} else if trackIDsStr, ok := job.Metadata["trackIDs"].(string); ok {
-		// Fallback: if stored as comma-separated string
-		trackIDs = strings.Split(trackIDsStr, ",")
-		for i, id := range trackIDs {
-			trackIDs[i] = strings.TrimSpace(id)
-		}
-	} else {
-		return nil, fmt.Errorf("trackIDs not found in job metadata")
-	}
-
+func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *music.Job, params DownloadParams, downloader Downloader, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
+	trackIDs := params.TrackIDs
 	if len(trackIDs) == 0 {
 		return nil, fmt.Errorf("no track IDs provided")
 	}
 
-	downloaderName, ok := job.Metadata["downloader"].(string)
-	if !ok {
-		return nil, fmt.Errorf("downloader not found in job metadata")
-	}
-
-	downloader, exists := e.service.pluginManager.GetDownloader(downloaderName)
-	if !exists {
-		return nil, fmt.Errorf("downloader %s not found", downloaderName)
-	}
-
-	slog.Debug("Starting tracks download job", "trackIDs", trackIDs, "downloader", downloaderName, "jobID", job.ID)
+	slog.Debug("Starting tracks download job", "trackIDs", trackIDs, "downloader", params.Downloader, "jobID", job.ID)
 	progressUpdater(5, fmt.Sprintf("Starting download of %d tracks...", len(trackIDs)))
 
 	totalTracks := len(trackIDs)
@@ -439,7 +386,7 @@ func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *music.
 		progress := 5 + (i * 90 / totalTracks)
 		progressUpdater(progress, fmt.Sprintf("Downloading track %d/%d: %s...", i+1, totalTracks, trackID))
 
-		slog.Debug("Downloading track", "trackID", trackID, "downloader", downloaderName, "jobID", job.ID)
+		slog.Debug("Downloading track", "trackID", trackID, "downloader", params.Downloader, "jobID", job.ID)
 
 		// Download the track
 		track, err := downloader.DownloadTrack(trackID, downloadPath, func(downloaded, total int64) {
@@ -487,28 +434,13 @@ func (e *DownloadJobTask) executeTracksDownload(ctx context.Context, job *music.
 }
 
 // executePlaylistDownload handles playlist download jobs
-func (e *DownloadJobTask) executePlaylistDownload(ctx context.Context, job *music.Job, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
-	playlistName, ok := job.Metadata["playlistName"].(string)
-	if !ok {
+func (e *DownloadJobTask) executePlaylistDownload(ctx context.Context, job *music.Job, params DownloadParams, downloader Downloader, progressUpdater func(int, string), downloadPath string) (map[string]any, error) {
+	playlistName := params.PlaylistName
+	if playlistName == "" {
 		return nil, fmt.Errorf("playlistName not found in job metadata")
 	}
 
-	downloaderName, ok := job.Metadata["downloader"].(string)
-	if !ok {
-		return nil, fmt.Errorf("downloader not found in job metadata")
-	}
-
-	downloader, exists := e.service.pluginManager.GetDownloader(downloaderName)
-	if !exists {
-		return nil, fmt.Errorf("downloader %s not found", downloaderName)
-	}
-
-	// Get trackIDs from metadata (stored as []string by the service)
-	trackIDs, ok := job.Metadata["trackIDs"].([]string)
-	if !ok {
-		return nil, fmt.Errorf("trackIDs not found in job metadata (expected []string, got %T)", job.Metadata["trackIDs"])
-	}
-
+	trackIDs := params.TrackIDs
 	if len(trackIDs) == 0 {
 		return nil, fmt.Errorf("no track IDs provided")
 	}
@@ -538,7 +470,7 @@ func (e *DownloadJobTask) executePlaylistDownload(ctx context.Context, job *musi
 		progress := 5 + (i * 90 / totalTracks)
 		progressUpdater(progress, fmt.Sprintf("Downloading track %d/%d from playlist '%s'...", i+1, totalTracks, playlistName))
 
-		slog.Debug("Downloading playlist track", "trackID", trackID, "playlist", playlistName, "downloader", downloaderName, "jobID", job.ID)
+		slog.Debug("Downloading playlist track", "trackID", trackID, "playlist", playlistName, "downloader", params.Downloader, "jobID", job.ID)
 
 		// Download the track directly to the playlist folder (flat structure)
 		track, err := downloader.DownloadTrack(trackID, playlistDownloadPath, func(downloaded, total int64) {

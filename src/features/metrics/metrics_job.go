@@ -8,6 +8,11 @@ import (
 	"github.com/contre95/soulsolid/src/music"
 )
 
+// MetricsParams is the (empty) metadata contract for a metrics job. Declared
+// locally rather than reusing a shared type so this feature satisfies
+// jobs.Task structurally and never has to import the jobs package.
+type MetricsParams struct{}
+
 // MetricsCalculationTask implements jobs.Task for calculating library metrics.
 type MetricsCalculationTask struct {
 	metrics LibraryMetrics
@@ -20,13 +25,8 @@ func NewMetricsCalculationTask(metrics LibraryMetrics) *MetricsCalculationTask {
 	}
 }
 
-// MetadataKeys returns the required metadata keys (none needed).
-func (t *MetricsCalculationTask) MetadataKeys() []string {
-	return []string{}
-}
-
-// Execute runs the metrics calculation logic.
-func (t *MetricsCalculationTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
+// Execute runs the metrics calculation logic. It takes no job parameters.
+func (t *MetricsCalculationTask) Execute(ctx context.Context, job *music.Job, _ MetricsParams, progressUpdater func(int, string)) (map[string]any, error) {
 	slog.Info("Starting metrics calculation")
 
 	// Clear existing metrics

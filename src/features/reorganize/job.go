@@ -20,17 +20,13 @@ func NewReorganizeJobTask(service *Service) *ReorganizeJobTask {
 	}
 }
 
-func (t *ReorganizeJobTask) MetadataKeys() []string {
-	return []string{}
+// ReorganizeParams is the metadata contract for a reorganize job.
+type ReorganizeParams struct {
+	Fat32Safe bool `json:"fat32_safe"`
 }
 
-func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progressUpdater func(int, string)) (map[string]any, error) {
-	fat32Safe := false
-	if v, ok := job.Metadata["fat32_safe"]; ok {
-		if b, ok := v.(bool); ok {
-			fat32Safe = b
-		}
-	}
+func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, params ReorganizeParams, progressUpdater func(int, string)) (map[string]any, error) {
+	fat32Safe := params.Fat32Safe
 
 	totalTracks, err := t.service.library.GetTracksCount(ctx)
 	if err != nil {
@@ -99,9 +95,9 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, progres
 			desiredPath = filepath.Clean(desiredPath)
 
 			if fat32Safe {
-				desiredPath = sanitizeFAT32Path(desiredPath)
+				desiredPath = t.service.sanitizer.SanitizeFAT32Path(desiredPath)
 				if currentPath != desiredPath {
-					desiredPath = resolvePathConflict(desiredPath)
+					desiredPath = t.service.sanitizer.ResolvePathConflict(desiredPath)
 				}
 			}
 

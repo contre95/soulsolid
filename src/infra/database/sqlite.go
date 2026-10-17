@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -2752,6 +2753,57 @@ func (d *SqliteLibrary) FindTrackByPath(ctx context.Context, path string) (*musi
 	}
 
 	return track, nil
+}
+
+// TracksOutsideRoots counts tracks whose stored path is not under any of roots,
+// returning one such path as an example. Paths are compared in absolute form,
+// so a relative root like "./music" matches tracks stored as "music/...".
+func (d *SqliteLibrary) TracksOutsideRoots(ctx context.Context, roots ...string) (int, string, error) {
+	absRoots := make([]string, 0, len(roots))
+	for _, r := range roots {
+		if r == "" {
+			continue
+		}
+		abs, err := filepath.Abs(r)
+		if err != nil {
+			return 0, "", fmt.Errorf("failed to resolve root %s: %w", r, err)
+		}
+		absRoots = append(absRoots, abs)
+	}
+
+	rows, err := d.db.QueryContext(ctx, `SELECT path FROM tracks`)
+	if err != nil {
+		return 0, "", fmt.Errorf("failed to query track paths: %w", err)
+	}
+	defer rows.Close()
+
+	count, sample := 0, ""
+	for rows.Next() {
+		var path string
+		if err := rows.Scan(&path); err != nil {
+			return 0, "", fmt.Errorf("failed to scan track path: %w", err)
+		}
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			abs = path
+		}
+		if !underAnyRoot(abs, absRoots) {
+			if count == 0 {
+				sample = path
+			}
+			count++
+		}
+	}
+	return count, sample, rows.Err()
+}
+
+func underAnyRoot(path string, roots []string) bool {
+	for _, r := range roots {
+		if path == r || strings.HasPrefix(path, r+string(filepath.Separator)) {
+			return true
+		}
+	}
+	return false
 }
 
 // Ensure SqliteLibrary implements PlaylistRepository

@@ -226,10 +226,10 @@ func (s *Service) StartMerge(ctx context.Context, kind Kind, canonical string, m
 		return "", fmt.Errorf("nothing to merge into the canonical value")
 	}
 
-	jobID, err := s.jobService.StartJob("analyze_merge", fmt.Sprintf("Merge %ss", kind), map[string]any{
-		"kind":      string(kind),
-		"canonical": canonical,
-		"merged":    merged,
+	jobID, err := music.StartTypedJob(s.jobService, "analyze_merge", fmt.Sprintf("Merge %ss", kind), MergeParams{
+		Kind:      string(kind),
+		Canonical: canonical,
+		Merged:    merged,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to start merge job: %w", err)
@@ -267,10 +267,10 @@ func (s *Service) StartTrackMerge(ctx context.Context, allIDs, removeIDs []strin
 	}
 	canonical := kept[0].ID
 
-	jobID, err := s.jobService.StartJob("analyze_merge", "Merge tracks", map[string]any{
-		"kind":      string(KindTrack),
-		"canonical": canonical,
-		"merged":    removeIDs,
+	jobID, err := music.StartTypedJob(s.jobService, "analyze_merge", "Merge tracks", MergeParams{
+		Kind:      string(KindTrack),
+		Canonical: canonical,
+		Merged:    removeIDs,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to start merge job: %w", err)

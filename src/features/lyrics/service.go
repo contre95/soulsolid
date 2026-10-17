@@ -419,10 +419,10 @@ func (s *Service) SearchLyrics(ctx context.Context, trackID string, providerName
 // StartLyricsAnalysis starts a job to analyze all tracks for lyrics
 func (s *Service) StartLyricsAnalysis(ctx context.Context, provider string, skipExistingLyrics bool, overrideNoQueue bool) (string, error) {
 	slog.Info("Starting lyrics analysis job", "provider", provider, "skipExistingLyrics", skipExistingLyrics, "overrideNoQueue", overrideNoQueue)
-	jobID, err := s.jobService.StartJob("analyze_lyrics", "Analyze Lyrics for Library", map[string]any{
-		"provider":          provider,
-		"skip_existing":     skipExistingLyrics,
-		"override_no_queue": overrideNoQueue,
+	jobID, err := music.StartTypedJob(s.jobService, "analyze_lyrics", "Analyze Lyrics for Library", LyricsParams{
+		Provider:        provider,
+		SkipExisting:    skipExistingLyrics,
+		OverrideNoQueue: overrideNoQueue,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to start lyrics analysis job: %w", err)

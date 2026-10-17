@@ -102,10 +102,10 @@ func (s *Service) DownloadTrack(downloaderName, trackID string) (string, error) 
 		return "", fmt.Errorf("downloader %s not found", downloaderName)
 	}
 
-	jobID, err := s.jobService.StartJob("download_track", "Download Track", map[string]any{
-		"trackID":    trackID,
-		"downloader": downloaderName,
-		"type":       "track",
+	jobID, err := music.StartTypedJob(s.jobService, "download_track", "Download Track", DownloadParams{
+		Type:       "track",
+		Downloader: downloaderName,
+		TrackID:    trackID,
 	})
 	if err != nil {
 		slog.Error("Failed to start download job", "error", err)
@@ -122,10 +122,10 @@ func (s *Service) DownloadAlbum(downloaderName, albumID string) (string, error) 
 		return "", fmt.Errorf("downloader %s not found", downloaderName)
 	}
 
-	jobID, err := s.jobService.StartJob("download_album", "Download Album", map[string]any{
-		"albumID":    albumID,
-		"downloader": downloaderName,
-		"type":       "album",
+	jobID, err := music.StartTypedJob(s.jobService, "download_album", "Download Album", DownloadParams{
+		Type:       "album",
+		Downloader: downloaderName,
+		AlbumID:    albumID,
 	})
 	if err != nil {
 		slog.Error("Failed to start download job", "error", err)
@@ -142,10 +142,10 @@ func (s *Service) DownloadArtist(downloaderName, artistID string) (string, error
 		return "", fmt.Errorf("downloader %s not found", downloaderName)
 	}
 
-	jobID, err := s.jobService.StartJob("download_artist", "Download Artist", map[string]any{
-		"artistID":   artistID,
-		"downloader": downloaderName,
-		"type":       "artist",
+	jobID, err := music.StartTypedJob(s.jobService, "download_artist", "Download Artist", DownloadParams{
+		Type:       "artist",
+		Downloader: downloaderName,
+		ArtistID:   artistID,
 	})
 	if err != nil {
 		slog.Error("Failed to start download job", "error", err)
@@ -162,10 +162,10 @@ func (s *Service) DownloadTracks(downloaderName string, trackIDs []string) (stri
 		return "", fmt.Errorf("downloader %s not found", downloaderName)
 	}
 
-	jobID, err := s.jobService.StartJob("download_tracks", "Download Tracks", map[string]any{
-		"trackIDs":   trackIDs,
-		"downloader": downloaderName,
-		"type":       "tracks",
+	jobID, err := music.StartTypedJob(s.jobService, "download_tracks", "Download Tracks", DownloadParams{
+		Type:       "tracks",
+		Downloader: downloaderName,
+		TrackIDs:   trackIDs,
 	})
 	if err != nil {
 		slog.Error("Failed to start download job", "error", err)
@@ -182,11 +182,11 @@ func (s *Service) DownloadPlaylist(downloaderName string, trackIDs []string, pla
 		return "", fmt.Errorf("downloader %s not found", downloaderName)
 	}
 
-	jobID, err := s.jobService.StartJob("download_playlist", fmt.Sprintf("Download Playlist: %s", playlistName), map[string]any{
-		"trackIDs":     trackIDs,
-		"downloader":   downloaderName,
-		"playlistName": playlistName,
-		"type":         "playlist",
+	jobID, err := music.StartTypedJob(s.jobService, "download_playlist", fmt.Sprintf("Download Playlist: %s", playlistName), DownloadParams{
+		Type:         "playlist",
+		Downloader:   downloaderName,
+		TrackIDs:     trackIDs,
+		PlaylistName: playlistName,
 	})
 	if err != nil {
 		slog.Error("Failed to start download job", "error", err)
