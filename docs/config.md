@@ -18,7 +18,6 @@ The `config.yaml` file contains all application settings. Key sections:
 - **downloaders**: External service configurations in the form of plugins. Supports both local `.so` files and automatic building from Git repositories (see [Downloading](downloading.md))
 - **jobs**: Job logs and webhooks (see [Jobs](jobs.md))
 - **server**, **database**, **logger**: Web server port, SQLite path and logging
-- **telegram**: Bot configuration and allowed users (deprecated, will be removed in v0.30.0)
 
 **Security Note**: Never commit sensitive values like tokens or API keys to version control. Use environment variables or secret files instead.
 
@@ -35,13 +34,6 @@ This is the repository's [`config.example.yaml`](https://github.com/contre95/sou
 ```yaml
 libraryPath: ./music
 downloadPath: ./downloads
-# Deprecated: the Telegram bot will be removed in v0.30.0.
-telegram:
-  enabled: false
-  # token: !env_var TELEGRAM_BOT_TOKEN
-  allowedUsers:
-    - <your telegram username>
-  bot_handle: SoulsolidExampleBot # Without the @
 logger:
   enabled: true
   level: info

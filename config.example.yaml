@@ -1,12 +1,12 @@
 # Soulsolid Configuration Example
 #
 # Environment variables can be referenced using the !env_var tag:
-#   token: !env_var TELEGRAM_BOT_TOKEN
+#   secret: !env_var DISCOGS_API_KEY
 #
 # Secrets can also be loaded from a file (Docker/Kubernetes secrets convention)
 # using the !env_file tag: the named environment variable holds a *path*, and
 # the file's contents become the value:
-#   token: !env_file TELEGRAM_BOT_TOKEN_FILE   # TELEGRAM_BOT_TOKEN_FILE=/run/secrets/telegram_token
+#   secret: !env_file DISCOGS_API_KEY_FILE   # DISCOGS_API_KEY_FILE=/run/secrets/discogs_api_key
 #
 # Missing environment variables (or unreadable/empty files) will cause startup errors.
 # To simplify setup, secrets are commented out in config.example.yaml so you can copy it to config.yaml without requiring unused variables.
@@ -14,13 +14,6 @@
 
 libraryPath: ./music
 downloadPath: ./downloads
-# Deprecated: the Telegram bot will be removed in v0.30.0.
-telegram:
-  enabled: false
-  # token: !env_var TELEGRAM_BOT_TOKEN
-  allowedUsers:
-    - <your telegram username>
-  bot_handle: SoulsolidExampleBot # Without the @
 logger:
   enabled: true
   level: info

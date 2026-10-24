@@ -246,35 +246,9 @@
           </a>
         </button>
       </li>
-      {{if .Telegram.BotHandle}}
-      <li>
-        <hr class="border-gray-300 dark:border-gray-600">
-      </li>
-      <li>
-        <button type="button" class="w-full">
-          <a href="https://t.me/{{.Telegram.BotHandle}}" target="_blank"
-            class="sidebtn hover:outline outline-gray-600 dark:outline-none flex items-center px-4 py-2 mt-2 text-gray-600 transition-colors duration-200 transform rounded-md dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 dark:hover:text-gray-200 hover:text-gray-700 dark:focus:bg-neutral-700 dark:focus:text-cyan-300 dark:hover:text-cyan-400 dark:focus:shadow-[inset_0_0_10px_rgba(0,255,255,0.2)] focus:outline-none cursor-pointer">
-            <img src="/img/telegram.png" alt="Telegram" class="size-6">
-            <span class="mx-4">Telegram</span>
-          </a>
-        </button>
-      </li>
-      {{end}}
     </ul>
   </div>
-  <div class="absolute bottom-0 left-0 w-full p-4 pb-6"
-    _="on mouseenter remove .opacity-0 .invisible from #breaking-changes then add .opacity-100 .visible on mouseleave add .opacity-0 .invisible to #breaking-changes then remove .opacity-100 .visible">
-    <div id="breaking-changes"
-      class="mb-2 text-center opacity-0 invisible transition-all duration-300 animate__animated"
-      _="on load wait 500ms then remove .opacity-0 .invisible then add .opacity-100 .visible .animate__bounce then wait 4s then add .opacity-0 .invisible then remove .opacity-100 .visible">
-      <a href="https://github.com/contre95/soulsolid/pull/191" target="_blank"
-        class="text-amber-500 hover:text-amber-400 text-xs font-semibold items-center space-x-1">
-        <span>⚠️</span>
-        <span class="text-red-400">Telegram deprecation</span><span
-          class="flex items-center justify-center text-white glowy-blue space-x-2 text-xs pt-1">
-          will be removed at v0.30.0</span>
-      </a>
-    </div>
+  <div class="absolute bottom-0 left-0 w-full p-4 pb-6">
     <a href="https://github.com/contre95/soulsolid" target="_blank"
       class="flex items-center justify-center text-white glowy-blue space-x-2">
       <i class="fab fa-github fa-lg"></i>
