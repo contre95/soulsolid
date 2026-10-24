@@ -1,66 +1,47 @@
 ---
 weight: 130
 title: "UI / Dashboard"
-description: "The dashboard landing page and shared UI entry points."
+description: "The dashboard and finding your way around the app."
 icon: "dashboard"
 draft: false
 toc: true
 ---
 
-The **ui** feature provides the application's landing surface — the dashboard — and a
-couple of shared section entry points that don't belong to any single domain feature.
-It is intentionally tiny: it renders top-level pages and a dashboard card, leaning on
-the [hosting](./hosting.md) `respond` helpers and the Go templates for everything
-else. There is no business logic and no persistence here.
+Soulsolid runs in your browser. Once it's [running](../self-host.md), open
+`http://<your-server>:3535` and you land on the **Dashboard**.
 
-## What it does
+## The dashboard
 
-- Renders the **Dashboard** (the app's home page, served at both `/` and `/dashboard`).
-- Renders the **"All Analyze Jobs"** section — the hub that links to the individual
-  analyze flows (lyrics, reorganize, metadata, duplicates).
-- Serves the **Quick Actions** dashboard card partial.
+The dashboard is the app's home page. It shows:
 
-## How it works
+- **Library overview**: how many tracks, artists and albums you have.
+- **Charts** about your collection: release years, genres, formats and how complete
+  your tags are (see [Metrics](./metrics.md)). Use **Refresh Metrics** to update them.
+- **Quick Actions**: shortcuts to **Import Music** and **Browse Library**.
+- **Recent Jobs**: the latest background jobs and how they went.
 
-```
-routes.go    → registers /, /dashboard, /analyze, /dashboard/quick-actions
-handlers.go  → renders sections + the quick-actions card
-```
+## Finding your way around
 
-- **`Handler`** (`handlers.go`) is constructed with the `config.Manager` (so future
-  cards can surface config-derived data) but currently just renders templates via the
-  `respond` package.
-- **`RenderDashboard`** renders the `dashboard` section; because it uses
-  `respond.Section`, a normal browser navigation gets the full `main` layout while an
-  HTMX navigation gets just the section fragment.
-- **`RenderAnalyzeSection`** renders the `analyze` section — the umbrella page for the
-  analyze-style jobs. The actual analyze sub-sections (e.g. `/analyze/lyrics`,
-  `/analyze/files`) are registered by their own features.
-- **`GetQuickActionsCard`** returns the `cards/quick_actions` partial used on the
-  dashboard.
+The sidebar takes you to every part of the app:
 
-## Endpoints
+| Section | What it's for |
+|---------|---------------|
+| **Dashboard** | Overview and charts. |
+| **Library** | Browse, search and manage your music ([Library](./library.md)). |
+| **Playlists** | Your playlists ([Playlists](./playlists.md)). |
+| **Importing** | Import folders and review the import queue ([Importing](./importing.md)). |
+| **Downloaders** | One entry per downloader plugin you've configured ([Downloading](./downloading.md)). |
+| **Analyze** | Library-wide jobs: **Metadata** (AcoustID), **Lyrics**, **File Paths** and **Merge**. See [Analyze](../analyze.md). |
+| **All Jobs** | Everything running in the background ([Jobs](./jobs.md)). |
+| **Settings** | Change your configuration ([Configuration](./config.md)). |
 
-Registered in `src/features/ui/routes.go`.
+Badges in the sidebar show how many tracks you have, how many are waiting in the import
+and lyrics queues, and how many jobs are running.
 
-| Method | Route | Purpose | Response |
-|--------|-------|---------|----------|
-| GET | `/` | Dashboard (home) | Section |
-| GET | `/dashboard` | Dashboard (alias) | Section |
-| GET | `/analyze` | "All Analyze Jobs" hub | Section |
-| GET | `/dashboard/quick-actions` | Quick-actions card | Partial |
-
-> The analyze hub links out to feature-owned routes such as `/analyze/lyrics`
-> ([lyrics](./lyrics.md)), `/analyze/files` ([reorganize](./reorganize.md)), and the
-> metadata/duplicates analyze flows — those routes live in their respective features.
-
-## Configuration
-
-The UI feature has no config block of its own. It receives the `config.Manager` for
-consistency and potential future use but reads no settings directly.
+Every page has its own address, so you can bookmark a section or share a link to a
+specific track's tag editor.
 
 ## Related
 
-- [Hosting](./hosting.md) — the server, templates, and `respond` helpers this feature renders through.
-- [Lyrics](./lyrics.md), [Reorganize](./reorganize.md), [Metadata](./metadata.md) — the analyze flows the hub links to.
-- [Metrics](./metrics.md) — dashboard cards surface library stats.
+- [Metrics](./metrics.md): the dashboard charts.
+- [Screenshots](../screenshots.md): a visual tour of the app.

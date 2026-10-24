@@ -21,4 +21,4 @@ A feature-rich music organization app built for the music hoarder.
 These pages are published at [soulsolid.contre.io](https://soulsolid.contre.io) from the
 `docs/` folder of the [soulsolid repository](https://github.com/contre95/soulsolid).
 Start with [Self hosted](self-host.md) to get it running, then [Configuration](config.md).
-The [Features](features/) section describes how each part of the app works internally.
+The [Features](features/) section explains what each part of the app does and how to use it.

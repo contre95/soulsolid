@@ -1,161 +1,123 @@
 ---
 weight: 30
 title: "Importing"
-description: "Scanning directories, fingerprinting, duplicate handling, and the manual-review queue."
+description: "Importing folders of music, duplicate handling, and the review queue."
 icon: "drive_folder_upload"
 draft: false
 toc: true
 ---
 
-The **importing** feature ingests audio files from a local directory into the library:
-reading tags, computing acoustic fingerprints, detecting duplicates and missing
-metadata, organizing files into the library tree, and surfacing anything that needs a
-human decision in a **review queue**.
+**Importing** is how music gets into your library. Point Soulsolid at a folder and it
+reads each file's tags, checks whether you already have the song, organizes the file
+into your library folder and adds it to the library. Anything that needs your decision,
+such as a duplicate or a track with missing tags, is held in a **review queue** instead
+of being imported blindly.
 
-> This page focuses on how the feature is built and its endpoints. For the full
-> configuration reference (path templates, duplicate policy, FAT32 options) see the
-> [importing configuration guide](../importing.md) and [path templates](../paths.md).
+> This page explains how importing works from the app. For every import setting
+> (duplicate policy, path templates, FAT32 options) see the
+> [Importing configuration guide](../importing.md) and [Paths](../paths.md).
 
-## What it does
+## What you can do
 
-- **Imports a directory** recursively as a background [job](./jobs.md), processing only
-  `.mp3` and `.flac` files.
-- **Detects duplicates** via acoustic fingerprinting and applies the configured policy
-  (`queue` / `skip` / `replace`).
-- **Holds problem items in a queue** for manual review: duplicates, tracks with missing
-  required metadata, failed imports, and explicit manual-review items.
-- Lets you **act on queued items** individually or in **bulk by artist/album**:
-  import, replace, skip/cancel, or delete.
-- Optionally **watches** the download path and auto-imports new files.
-- **Prunes** the download path (deletes leftover audio + clears the queue).
+- **Import a folder**, including all its subfolders.
+- Let Soulsolid **watch your download folder** and import new music automatically.
+- **Review queued tracks**: duplicates, tracks with missing tags, and failed imports.
+- Act on the queue **one track at a time** or **a whole artist or album at once**.
+- **Clean up the download folder** once you're done.
 
-## How it works
+## Importing a folder
 
-### Layers and collaborators
+In the **Import** section, enter the folder to import (it defaults to your download
+folder) and start the import. It runs in the background as a [job](./jobs.md), so you
+can follow its progress and log in the **Jobs** section.
 
-The service (`service.go`) is wired in `main.go` with a rich set of collaborators:
+Only **MP3** and **FLAC** files are imported; anything else in the folder is ignored.
 
-| Collaborator | Role |
-|--------------|------|
-| `music.Library` | Persistence (find/add/update tracks, artists, albums) |
-| `TagReader` | Reads tags + embedded artwork from files |
-| `FingerprintProvider` | Computes acoustic fingerprints (chromaprint) |
-| `music.FileManager` | Copies/moves/deletes files using path templates |
-| `config.Manager` | Live import config |
-| `music.JobService` | Runs the directory import asynchronously |
-| `music.Queue` | In-memory review queue |
-| `Watcher` | Filesystem watcher over the download path |
+For each file, Soulsolid:
 
-### Directory import (the job)
+1. **Reads its tags** and computes an audio fingerprint.
+2. **Checks for duplicates**: is the same recording already in your library?
+3. **Checks for missing tags**: does it have an artist, album, title, year and genre?
+4. Either **imports it** or **sends it to the review queue**.
 
-`ImportDirectory` starts a `directory_import` job; the heavy lifting lives in
-`directory_job.go` (registered as a job handler in `main.go`). For each supported file
-the importer:
+When a track is imported, its file is copied (or moved, if you enabled *Move files
+instead of copying*) into your library folder, at a location built from your
+[path templates](../paths.md). Artists and albums are created automatically.
 
-1. Reads tags (and computes a fingerprint) to build a `music.Track`.
-2. Evaluates whether the track is a **duplicate** (fingerprint/ID match) and whether it
-   is **missing required metadata** (per the `allow_missing_metadata` config).
-3. Decides to import directly or to **enqueue** the item with one or more **status
-   types**, then continues to the next file.
+When the job finishes it reports how many tracks, albums and artists were imported,
+and how many were skipped, queued or failed.
 
-`ImportStats` (errors / albums / tracks / artists imported / skipped / queued) is
-accumulated and reported on the job.
+### Re-importing
 
-### Importing a single track
+Importing the same folder twice is safe. Tracks already in the library at the same
+location are skipped, and a track that was imported before from somewhere else is
+updated in place instead of being added a second time.
 
-`importTrack` (used by both the directory job and manual queue processing) is the core
-write path:
+## Watching the download folder
 
-1. **Fill defaults** — `EnsureMetadataDefaults` fills any *permitted* missing fields
-   (artist/album/title/year/genre) with fallbacks **before** path resolution, so they
-   feed the destination path template.
-2. **Organize the file** — move or copy into the library via the `FileManager`
-   (`Import.Move` decides which), producing the new on-disk path.
-3. **Resolve relations** — `populateTrackArtistsAndAlbum` find-or-creates the artist(s)
-   and album rows so the track links to real DB entities.
-4. **Validate** then **persist**, with two idempotency guards:
-   - if a track already exists at the same **path**, skip;
-   - if a track with the same **ID** exists at a different path, update it in place and
-     delete the old file (handles re-imports / relocations).
+Turn on **Watch Mode** in the Import section to have Soulsolid watch your download
+folder. When a new file appears there, Soulsolid waits for any running job to finish
+(for example, the download that's still writing files) and then imports the download
+folder automatically.
 
-`replaceTrack` is the duplicate-resolution variant: it organizes the new file, copies
-the new metadata onto the existing DB row, updates it, and removes the old file.
+To have the watcher start every time Soulsolid starts, set
+`import.auto_start_watcher: true`.
 
-### The review queue & status types
+## The review queue
 
-Queued items (`music.QueueItem`) can carry **several status types at once**
-(`HasType(...)`):
+The review queue holds tracks that need your decision. A track can be in the queue for
+more than one reason at once, and each reason is shown as a badge on it:
 
-- **Duplicate** — matches an existing library track.
-- **MissingMetadata** — missing a required field that isn't allowed to be defaulted.
-- **FailedImport** — the import attempt errored.
-- **ManualReview** — explicitly queued for review (e.g. `always_queue`).
+| Reason | Why it's queued | What you can do |
+|--------|-----------------|-----------------|
+| **Manual review** | You enabled *Always queue tracks for review*. | Import, Cancel, Delete |
+| **Duplicate** | The same recording is already in your library. | Replace, Skip, Delete |
+| **Missing metadata** | A required tag is missing (see [Allow missing metadata](../importing.md#configuration-options)). | Cancel, Delete |
+| **Failed import** | Something went wrong importing it, e.g. the file couldn't be read. | Skip, Delete |
 
-The handler's `convertQueueItem` derives **which buttons are available** from these
-types, encoding the rule *"a track missing required metadata cannot enter the library
-until it's fixed"*:
+What each action does:
 
-- **Replace** shows only for duplicates, and is disabled while metadata is missing or
-  the import failed (never overwrite the library with an incomplete track).
-- **Import** shows for manual-review / missing-metadata items (never duplicates/failed)
-  and stays disabled until the missing metadata is fixed.
-- The cancel button is labeled **Skip** for duplicates/failed items, **Cancel**
-  otherwise.
+- **Import**: adds the track to the library.
+- **Replace**: replaces the copy already in your library with this file. The existing
+  library entry is kept and updated, so it stays in your playlists.
+- **Cancel** / **Skip**: removes the track from the queue and leaves the file where it
+  is.
+- **Delete**: removes the track from the queue and deletes the file from disk.
 
-`ProcessQueueItem` enforces the same rules server-side, rejecting disallowed actions
-even if a client bypasses the UI.
+You can play a queued track and see its cover art right from the queue to help you
+decide.
 
-### Grouped (bulk) actions
+> **Missing tags block the library.** While a track is missing a required tag, Import
+> and Replace are disabled, so an incomplete track can never be added to your library or
+> overwrite one that's already there. Fix its tags in the [tag editor](./metadata.md)
+> first.
 
-Items can be grouped **by artist** or **by album**. `ProcessQueueGroup` applies an
-action to each item in a group, filtering by type so it does the right thing:
-`import` skips duplicates (use `replace` for those) and `replace` only touches
-duplicates. If every attempted item fails, the group operation reports failure rather
-than a misleading success.
+### Grouping and bulk actions
 
-### The watcher
+Use the buttons at the top of the queue to switch between the individual view and
+grouping **by artist** or **by album**. In a group you can apply an action to every
+track at once. Bulk actions only touch the tracks they make sense for: *Import* skips
+duplicates (use *Replace* for those), and *Replace* only touches duplicates.
 
-When `auto_start_watcher` is on (or toggled via the UI), the `Watcher` monitors the
-download path. On a file-create event, `handleFileEvent` **waits for any running jobs
-to finish** (polling up to 5 minutes) and then kicks off a directory import of the
-download path. This prevents the watcher from racing an in-progress download/import.
+**Clear Queue** empties the whole queue.
 
-### HTMX triggers
+> The queue is kept in memory, so it's **emptied when Soulsolid restarts**. The files
+> themselves are not touched; import the folder again to queue them again.
 
-Mutating handlers set `HX-Trigger` headers (e.g. `queueUpdated`,
-`refreshImportQueueBadge`, `activateIndividualGrouping`, `watcherStatusChanged`) so the
-frontend can refresh the queue, badge counts, and grouping views reactively.
+## Cleaning up the download folder
 
-## Endpoints
-
-Registered in `src/features/importing/routes.go` under `/import`.
-
-| Method | Route | Purpose | Response |
-|--------|-------|---------|----------|
-| GET | `/import` | Render the Import section | Section |
-| GET | `/import/directory/form` | Directory import form (with default path) | Partial |
-| POST | `/import/directory` | Start a directory import job | Toast Job (202) |
-| GET | `/import/queue/items` | Render queue items (oldest first, capped at 10) | Partial |
-| GET | `/import/queue/items/grouped` | Queue items grouped (`?type=artist\|album`) | Partial |
-| GET | `/import/queue/header` | Queue header with count | Partial |
-| GET | `/import/queue/count` | Queue count, formatted `(N)` | Text |
-| GET | `/import/queue/:id/artwork` | Embedded artwork for a queued track | Binary |
-| POST | `/import/queue/:id/:action` | Item action: `import`/`replace`/`cancel`/`delete` | Toast |
-| POST | `/import/queue/group/:groupType/:groupKey/:action` | Bulk group action | Toast |
-| POST | `/import/queue/clear` | Clear the entire queue | Toast |
-| POST | `/import/prune/download-path` | Delete download-path audio + clear queue | Toast |
-| POST | `/import/watcher/toggle` | Start/stop the watcher (`action=start\|stop`) | Toast |
-| GET | `/import/watcher/status` | Watcher status badge | Partial |
-| GET | `/import/watcher/toggle-state` | Watcher toggle input (checked state) | Partial |
+After importing, **Prune Download Path** (in the Import section) deletes the MP3 and
+FLAC files left in your download folder and clears the review queue. Use it when you've finished reviewing and want to
+start fresh.
 
 ## Configuration
 
 ```yaml
 import:
-  move: false              # copy (false) or move (true) source files into the library
-  always_queue: false      # queue every track for manual review
+  move: false              # copy files into the library (false) or move them (true)
+  always_queue: false      # send every track to the review queue
   duplicates: queue        # queue | skip | replace
-  allow_missing_metadata:  # per-field: true = fill with default, false = send to queue
+  allow_missing_metadata:  # per tag: true = fill in a default, false = send to the queue
     artist: false
     album: false
     title: false
@@ -165,19 +127,15 @@ import:
   paths:
     default_path: '%asciify{$albumartist}/%asciify{$album}/%asciify{$track $title}'
     fat32_safe: false
-download_path: /app/downloads   # watched + pruned location
+downloadPath: /app/downloads   # the folder that's watched and pruned
 ```
 
-Only `.mp3` and `.flac` files are processed (`supportedExtensions`).
-
-## Telegram
-
-The importing service is injected into the Telegram bot, which can trigger imports from
-chat. See [hosting](./hosting.md).
+All of these can also be changed from the **Settings** page. See the
+[Importing configuration guide](../importing.md) for what each option does.
 
 ## Related
 
-- [Importing configuration & path templates](../importing.md), [paths](../paths.md)
-- [Jobs](./jobs.md) — runs the directory import.
-- [Metadata](./metadata.md) — fixing missing tags before importing a queued item.
-- [Downloading](./downloading.md) — produces the files the watcher picks up.
+- [Importing configuration](../importing.md) and [Paths](../paths.md): every import option and the path template syntax.
+- [Metadata](./metadata.md): fix missing tags before importing a queued track.
+- [Downloading](./downloading.md): produces the files the watcher picks up.
+- [Jobs](./jobs.md): follow and cancel imports.

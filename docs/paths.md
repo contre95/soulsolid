@@ -7,7 +7,7 @@ draft: false
 toc: true
 ---
 
-This document describes all available placeholders and functions for the Soulsolid path parser, which is used to organize music files into directories based on metadata.
+Path templates decide where each track is placed in your library folder, based on its tags. This page describes the placeholders and functions you can use in them. Templates are used both when [importing](importing.md) and when [reorganizing](#reorganize-library) your library.
 
 ## Placeholders
 
@@ -177,43 +177,32 @@ The **Reorganize** feature applies the current path templates to every track in 
 
 ### How It Works
 
-1. Iterates all tracks in the library in batches of 100
-2. Computes each track's desired path using the active path templates
-3. Skips tracks whose files are missing on disk
-4. Skips tracks already at the correct path
-5. Moves the file to the new path, creating intermediate directories as needed
-6. Updates the track's path in the database
-7. Removes empty directories left behind after moving
+Start it from **Analyze → File Paths**. For every track in your library, Soulsolid:
 
-Progress is tracked as a background job and can be monitored in the Jobs section.
+1. Works out where the track should be, using your current path templates
+2. Skips it if its file is missing from disk
+3. Skips it if it's already in the right place
+4. Otherwise moves the file to its new location, creating folders as needed, and updates the library
+5. Removes folders left empty after files were moved out
+
+It runs as a background [job](jobs.md) that you can follow in the Jobs section. When it finishes, it reports how many files were moved, skipped and failed. See [Reorganize](features/reorganize.md) for more.
 
 ### FAT32 Safe Mode
 
-FAT32 safe mode sanitizes every path segment for FAT32 compatibility:
+FAT32 safe mode makes every folder and file name FAT32-compatible:
 
-- Lowercases all segments so the Linux library has consistent casing (prevents case collisions when rsyncing to FAT32, where `Rock/` and `rock/` are the same directory)
-- Replaces forbidden characters (`: * ? " < > | \`) with `-`
-- Strips trailing dots and spaces from each segment
-- Truncates segments to 255 bytes at valid UTF-8 boundaries, preserving the file extension for the filename
-- Appends a numeric suffix (`_1`, `_2`, …) when two tracks would resolve to the same path after lowercasing, so both files and their database entries remain distinct
+- Everything is lowercased, so names don't clash when syncing to FAT32 (where `Rock/` and `rock/` are the same folder)
+- Characters FAT32 doesn't allow (`: * ? " < > | \`) are replaced with `-`
+- Trailing dots and spaces are removed
+- Names longer than 255 bytes are shortened, keeping the file extension
+- When two tracks would end up at the same path, a number (`_1`, `_2`, …) is added so both files are kept
 
-This is useful when the library is synced to a FAT32 volume (e.g. an SD card or some NAS configurations) — the library itself lives on a normal Linux filesystem.
+This is useful when you sync your library to a FAT32 drive (e.g. an SD card, a USB stick or some NAS setups), while the library itself stays on a normal filesystem.
 
 #### During Import
 
-Enable persistently via `import.fat32_safe: true` in the config (or the Settings UI checkbox). All imported files will land at FAT32-safe paths automatically.
+Enable it with `import.paths.fat32_safe: true` in the config, or the **FAT32-safe filenames** checkbox in Settings. Every imported file then gets a FAT32-safe path.
 
 #### During Reorganize
 
-The Reorganize UI has its own per-run **FAT32 Safe** checkbox, useful for one-off cleanups on libraries where the config flag is off.
-
-### API
-
-```
-POST /analyze/reorganize
-Content-Type: application/x-www-form-urlencoded
-
-fat32_safe=true   # optional, defaults to false
-```
-
-The endpoint triggers a background job and returns a toast notification. The job result includes counts for `moved`, `skipped`, and `errors` out of the total track count.
+**Analyze → File Paths** has its own **FAT32-safe filenames** checkbox that applies only to that run, useful for a one-off cleanup when the setting is off.

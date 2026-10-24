@@ -7,101 +7,58 @@ draft: false
 toc: true
 ---
 
-The **playlists** feature lets you group library tracks into named, ordered
-collections and export them as standard `.m3u` files. Playlists are stored in the
-database and reference existing library tracks — adding an artist or an album is a
-convenience that expands to all of that entity's tracks. There is no background job
-here; everything is synchronous CRUD over the playlist repository.
+**Playlists** let you group tracks from your library into named, ordered lists and
+export them as standard `.m3u` files that other players and devices can open.
 
-## What it does
+## What you can do
 
-- **Create, rename, update, and delete** playlists (name + description).
-- **Add items** to a playlist by `track`, `artist`, or `album` — artists and albums
-  expand into all of their tracks, skipping duplicates already present.
-- **Remove** an individual track from a playlist.
-- **Export** a playlist to an `#EXTM3U` file with per-track `#EXTINF` duration/artist
-  lines and absolute file paths.
-- Provide HTMX **modal partials** for creating a playlist and for picking a playlist
-  to add an item to.
+- **Create** a playlist with a name and an optional description.
+- **Add** a single track, a whole album, or every track by an artist.
+- **Remove** tracks from a playlist.
+- **Rename**, edit the description of, or **delete** a playlist.
+- **Export** a playlist as an `.m3u` file.
 
-## How it works
+## Creating a playlist
 
-A standard, job-free three-layer feature backed by a dedicated repository:
+In the **Playlists** section, click to create a new playlist, give it a name and,
+optionally, a description.
 
-```
-routes.go    → registers the /playlists routes (and builds the handler)
-handlers.go  → HTTP layer: form parsing, HTMX partials, M3U streaming
-service.go   → domain logic over the PlaylistRepository + Library
-```
+## Adding music
 
-- **`Service`** (`service.go`) wraps a `music.PlaylistRepository` (persistence) and
-  the `music.Library` (to resolve track/artist/album names and expand entities). It
-  generates IDs with `music.GeneratePlaylistID()` and validates playlists via
-  `Playlist.Validate()` before create/update.
-- **`Handler`** (`handlers.go`) negotiates HTMX vs. plain responses, sets
-  `HX-Trigger` events (`refreshPlaylists`, `playlistUpdated`) so lists and badges
-  refresh, and surfaces results through the toast system.
+From the [Library](./library.md), use the **Add to Playlist** button on any track, album or
+artist and pick the playlist.
 
-### Adding items (track / artist / album)
+- Adding a **track** adds just that track.
+- Adding an **album** adds every track on it.
+- Adding an **artist** adds every track by that artist.
 
-`AddItemToPlaylist` first verifies the playlist exists, then resolves the set of
-track IDs to insert based on `item_type`:
+Tracks that are already in the playlist are skipped, so adding an album twice won't
+duplicate anything.
 
-- `track` → the single track (existence-checked).
-- `artist` → every track by that artist, fetched via
-  `GetTracksFilteredPaginated` with an `ArtistIDs` filter (large page size).
-- `album` → every track on that album, via an `AlbumIDs` filter.
+## Managing a playlist
 
-Each resolved track is added through `AddTrackToPlaylist`; an "already exists" error
-is treated as a benign skip so re-adding never errors. The handler then composes a
-type-appropriate success toast ("Track … added", "All tracks by … added", etc.).
+Open a playlist to see its tracks with their title, artist and duration, and the total
+duration of the playlist. From there you can remove tracks, edit the name and
+description, or delete the playlist.
 
-### M3U export
+Deleting a playlist doesn't delete any music: the tracks stay in your library.
 
-Two export paths exist:
+## Exporting to M3U
 
-- **`ExportM3U` handler** (`GET /playlists/:id/export`) builds the `#EXTM3U`
-  content in memory and streams it back with a `Content-Disposition` filename of
-  `<playlist name>.m3u`, routed through `respond.Resource`.
-- **`Service.ExportM3U`** writes the same content to a file path on disk (used by
-  non-HTTP callers).
+**Export** downloads the playlist as `<playlist name>.m3u`. The file lists each track
+in playlist order with its duration, artist and title, followed by the full path to the
+audio file on disk.
 
-Both emit a `#EXTINF:<duration>,<artists> - <title>` line followed by the track's
-absolute path for each track in playlist order.
-
-## Endpoints
-
-Registered in `src/features/playlists/routes.go`. Note that `/playlists/:id` is the
-catch-all GET and is registered last so the more specific routes match first.
-
-| Method | Route | Purpose | Response |
-|--------|-------|---------|----------|
-| GET | `/playlists` | Render the Playlists section | Section |
-| GET | `/playlists/create-modal` | Create-playlist modal partial | Partial |
-| POST | `/playlists/` | Create a playlist (`name`, `description`) | Toast |
-| PUT | `/playlists/:id` | Rename / update a playlist | Toast |
-| DELETE | `/playlists/:id` | Delete a playlist | Toast |
-| POST | `/playlists/items` | Add an item (`playlist_id`, `item_type`, `item_id`) | Toast |
-| DELETE | `/playlists/:playlistId/tracks/:trackId` | Remove a track from a playlist | Toast |
-| GET | `/playlists/:type/:id/playlists` | "Add to playlist" modal for a track/artist/album | Partial |
-| GET | `/playlists/:id/export` | Export the playlist as `.m3u` | Resource (M3U) |
-| GET | `/playlists/:id` | Render a single playlist | Partial |
-
-### Form fields for `POST /playlists/items`
-
-| Field | Meaning |
-|-------|---------|
-| `playlist_id` | Target playlist |
-| `item_type` | `track`, `artist`, or `album` |
-| `item_id` | ID of the entity to add (expanded to tracks for artist/album) |
+Because the file uses full paths, it works best with players that see your music at the
+same location as Soulsolid, such as a media server reading the same library folder.
 
 ## Configuration
 
-Playlists have no dedicated config block. The service receives the `config.Manager`
-for consistency with other features but relies on the database for all state.
+Playlists have no settings. They're stored in the library database, so they're
+included when you [back up the database](./config.md#backing-up-the-database).
 
 ## Related
 
-- [Library](./library.md) — the source of tracks, artists, and albums added to playlists.
-- [Streaming](./streaming.md) — play tracks that make up a playlist.
-- [API reference](../api.md) — response-type semantics (`Section`, `Partial`, `Resource`).
+- [Library](./library.md): where you add tracks, albums and artists to playlists.
+- [Streaming](./streaming.md): play your tracks in the browser.
+- [Downloading](./downloading.md): download playlists from a music service.

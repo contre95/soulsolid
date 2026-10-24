@@ -7,7 +7,7 @@ draft: false
 toc: true
 ---
 
-This guide explains how to create and distribute downloaders as plugins for Soulsolid using Go's native plugin system.
+This guide is for **developers** who want to write a downloader plugin for Soulsolid in Go. If you just want to use an existing plugin, see [Downloading](downloading.md) instead; no code needed.
 
 ## Overview
 
@@ -15,7 +15,7 @@ Soulsolid supports pluggable downloaders that can be loaded from `.so` files at 
 
 ## Plugin Interface
 
-Your plugin must implement the `Downloader` interface defined in `src/features/downloading/downloader.go`:
+Your plugin must implement the [`Downloader` interface](https://github.com/contre95/soulsolid/blob/main/src/features/downloading/downloader.go):
 
 ```go
 type Downloader interface {

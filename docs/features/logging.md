@@ -1,78 +1,57 @@
 ---
 weight: 140
 title: "Logging"
-description: "The application-wide structured logger setup."
+description: "Soulsolid's own logs: where to find them and how much detail they show."
 icon: "terminal"
 draft: false
 toc: true
 ---
 
-The **logging** feature configures the application-wide structured logger used
-everywhere via Go's standard `log/slog`. It is a small setup feature — a single
-`SetupLogger` function — but it underpins observability across the whole app: every
-`slog.Info`/`slog.Error` call in every other feature is formatted and filtered by what
-this feature builds. (It is distinct from the **per-job** log files described in
-[jobs](./jobs.md), which use their own dedicated loggers.)
+Soulsolid writes a log of what it's doing (starting up, requests, errors) to the
+console. It's the first place to look when something doesn't work as expected.
 
-## What it does
+These are the **application logs**. Each background job also writes its own log, which
+you can read from the app; see [Jobs → Job logs](./jobs.md#job-logs).
 
-- Builds a global `*slog.Logger` from the `logger` config block.
-- Supports three **output formats**: `logfmt` (default), `json`, and `text`.
-- Supports **log levels** `info` (default) and `debug`.
-- Uses the [charmbracelet/log](https://github.com/charmbracelet/log) handler for
-  colorized, caller-reporting, timestamped console output (prefixed `Soulsolid`).
+## Where to find the logs
 
-## How it works
+Logs are written to the standard output of the process:
 
-```
-logger.go → SetupLogger(cfg) builds and returns the *slog.Logger
-```
+- **Container**: `podman logs soulsolid` or `docker logs soulsolid`
+  (add `-f` to follow them live).
+- **Kubernetes**: `kubectl logs <pod>`.
+- **Running it directly**: in the terminal where you started it.
 
-- **`SetupLogger(cfg *config.Manager)`** reads `logger.format` and `logger.level`,
-  maps them onto charmbracelet `log` options, and wraps the handler in an `slog`
-  logger. It enables `ReportCaller` and `ReportTimestamp` (using `time.Kitchen`) and
-  sets the prefix to `Soulsolid`. It is called once during startup; the returned
-  logger is typically set as the `slog` default so package-level `slog.*` calls route
-  through it.
-- **`Dup(logger, msg, args...)`** is a small helper that logs a `[DUP]`-prefixed info
-  message (used to flag duplicate-related events).
+Each line shows the time, the level, where it came from, and the message.
 
-### Format & level mapping
+## Log levels
 
-| Config value | Effect |
-|--------------|--------|
-| `format: logfmt` | key=value console output (default / fallback) |
-| `format: json` | structured JSON lines |
-| `format: text` | human-readable text |
-| `level: info` | info and above (default) |
-| `level: debug` | includes debug logs (verbose HTMX/request logs become visible) |
+| Level | What you see |
+|-------|--------------|
+| `info` *(default)* | Normal activity, warnings and errors. Good for everyday use. |
+| `debug` | Much more detail, including every request made by the web interface. Use it when investigating a problem or reporting a bug. |
 
-> Only `info` and `debug` are wired up in `SetupLogger`; the `warn`/`error`/`fatal`
-> branches are present but commented out in the source.
+## Log formats
 
-## Endpoints
-
-The logging feature registers **no HTTP routes** — it is pure setup. Log *output* is
-to stderr; per-job logs are exposed through the [jobs](./jobs.md) feature's
-`/jobs/:id/logs` endpoint.
+| Format | Looks like | Use it for |
+|--------|------------|------------|
+| `logfmt` *(default)* | `key=value` pairs | Reading in a terminal, and most log tools. |
+| `text` | Plain, human-readable text | Reading in a terminal. |
+| `json` | One JSON object per line | Sending logs to a log collector (Loki, Elasticsearch, …). |
 
 ## Configuration
 
-Reads the `logger` block from the global config:
-
 ```yaml
 logger:
-  enabled: true     # toggle logging
-  level: info       # "info" or "debug"
-  format: logfmt    # "logfmt" (default), "json", or "text"
-  htmx_debug: false # surfaces extra HTMX debug info (used by hosting middleware/templates)
+  enabled: true     # turn logging on or off
+  level: info       # info or debug
+  format: logfmt    # logfmt, text or json
+  htmx_debug: false # extra debugging information in the web interface, for troubleshooting
 ```
 
-The `level: debug` setting also enables verbose request/HTMX logging in the
-[hosting](./hosting.md) middleware and template debug rendering.
+These can also be changed from the **Settings** page.
 
 ## Related
 
-- [Hosting](./hosting.md) — request/HTMX logging middleware that emits through this logger.
-- [Jobs](./jobs.md) — separate per-job log files and the log-viewing endpoint.
-- [Configuration](./config.md) — the `logger` config block.
+- [Jobs](./jobs.md#job-logs): per-job logs, readable from the app.
+- [Configuration](./config.md): the Settings page.

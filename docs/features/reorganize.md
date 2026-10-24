@@ -1,105 +1,78 @@
 ---
 weight: 60
 title: "Reorganize"
-description: "Rewriting on-disk file paths to match the configured library layout."
+description: "Moving library files to match your current folder layout."
 icon: "folder_managed"
 draft: false
 toc: true
 ---
 
-The **reorganize** feature brings the files already in your library into line with
-the configured path template. When you change your naming scheme (or import files
-that were placed before a template change), the audio files on disk no longer match
-where the library *would* put them. Reorganize walks every track, computes its
-desired path from the current configuration, and moves any file that is in the wrong
-place — updating the database to point at the new location.
+**Reorganize** moves the files already in your library so they match your current
+[path templates](../paths.md). When you change how folders and files are named, or fix
+the tags of a bunch of tracks, the files on disk are still in their old place.
+Reorganize works out where each track *should* be and moves it there.
 
-## What it does
+## What you can do
 
-- Runs a library-wide **`analyze_reorganize`** job that relocates misplaced files.
-- Computes each track's **target path** from the live path configuration (the same
-  logic used at import time — see [paths](../paths.md)).
-- Optionally rewrites paths to be **FAT32-safe**, stripping characters that are
-  illegal on FAT/exFAT volumes and resolving any resulting name collisions.
-- Skips tracks that are **already correct** or whose source file is **missing**.
-- Keeps the database in sync by updating each moved track's stored `Path`.
+- **Move every misplaced file** to the location your path templates give it.
+- Optionally make every path **FAT32-safe**, for syncing to SD cards, USB sticks and
+  similar devices.
+- See your current path templates, with a link to change them in **Settings**.
 
-## How it works
+## Running a reorganize
 
-This is one of the analyze-section features. It is intentionally thin — a handler,
-a service that starts a job, and the job task that does the work:
+Go to **Analyze → File Paths** and start the job. It runs in the background as a
+[job](./jobs.md), so you can follow its progress and cancel it from the Jobs section.
 
-```
-routes.go    → registers /analyze/reorganize and /analyze/files
-handlers.go  → HTTP layer: parse the fat32_safe flag, start the job
-service.go   → StartReorganizeAnalysis → JobService.StartJob("analyze_reorganize")
-job.go       → the background job task that moves files
-sanitize.go  → thin wrappers over infra/files FAT32 helpers
-```
+For each track in your library, Soulsolid:
 
-- **`Service`** (`service.go`) is wired with the `music.Library`, the
-  `music.FileManager` (the path/organizer in `infra/files`), the `config.Manager`,
-  and the `music.JobService`. Its only job is to launch the background job with the
-  `fat32_safe` flag in the job metadata.
+1. Works out where the file should be, using your current path templates and the
+   track's tags.
+2. **Skips** the track if it's already in the right place, or if its file is missing
+   from disk.
+3. Otherwise **moves the file** to its new location, creating folders as needed, and
+   updates the library to point to it.
 
-### The `analyze_reorganize` job
+Folders left empty after files are moved out are removed. A track that can't be moved
+never stops the job: it's counted as an error and logged, and the job carries on. When
+it finishes, the job reports how many files were **moved**, **skipped** and **failed**.
 
-The job task (`job.go`) iterates the library in **batches of 100** and, for each
-track:
+> Reorganize **moves files on disk**. If other programs (a media server, a sync tool)
+> point at the old locations, they'll need to rescan afterwards. A
+> [webhook](./jobs.md#webhooks) can do this for you.
 
-1. Asks the `FileManager` for the track's **desired path**
-   (`GetLibraryPath`) from the current config.
-2. **Skips** the track if its source file no longer exists on disk.
-3. Cleans both paths and, when `fat32_safe` is set, runs the desired path through
-   `sanitizeFAT32Path` and then `resolvePathConflict` to avoid clobbering an
-   existing file.
-4. If the current and desired paths are **equal**, the track is counted as
-   `skipped` (already correct) and left alone.
-5. Otherwise it **moves the file** via `FileManager.MoveTrackFile`, then updates the
-   track's `Path` in the database.
+## When to use it
 
-The job honors cancellation between batches and tracks (`ctx.Done()`), reports
-progress 0→100%, and tallies `moved`, `skipped`, and `errors`. Individual failures
-(failed path computation, failed move, failed DB update) are logged and counted but
-do not abort the run.
+- After **changing your path templates** in Settings.
+- After **correcting tags** on many tracks, for example after fixing an artist's name or
+  [merging](./merge.md) duplicate artists or albums. Merging doesn't move files, so run
+  a reorganize afterwards.
 
-### FAT32 safety
+## FAT32-safe filenames
 
-`sanitize.go` delegates to `infra/files`:
+Check **FAT32-safe filenames** before starting the job to also clean every path so it
+works on FAT32 drives:
 
-- `SanitizeFAT32Path` removes/replaces characters forbidden on FAT32/exFAT
-  (`" * : < > ? \ |` and friends) from each path segment.
-- `ResolvePathConflict` appends a disambiguating suffix when the sanitized path would
-  collide with a file that already exists.
+- Everything is **lowercased**.
+- Characters FAT32 doesn't allow (`: * ? " < > | \`) are replaced with `-`.
+- Trailing dots and spaces are removed.
+- Overly long names are shortened.
+- If two tracks would end up at the same path, a number is added to the second one
+  (`_1`, `_2`, …) so neither is lost.
 
-This mode is useful when syncing the library to a USB stick, SD card, or other
-FAT-formatted device.
-
-## Endpoints
-
-Registered in `src/features/reorganize/routes.go`.
-
-| Method | Route | Purpose | Response |
-|--------|-------|---------|----------|
-| GET | `/analyze/files` | Render the File-Paths section (shows current path config) | Section |
-| POST | `/analyze/reorganize` | Start the `analyze_reorganize` job | Toast (job) |
-
-### Form parameters for `POST /analyze/reorganize`
-
-| Field | Meaning |
-|-------|---------|
-| `fat32_safe` | `true` → also strip FAT32-illegal characters and resolve collisions |
+This checkbox applies only to that run. To have every import use FAT32-safe paths too,
+enable **FAT32-safe filenames** in Settings. See
+[Paths → FAT32 Safe Mode](../paths.md#fat32-safe-mode) for details.
 
 ## Configuration
 
-Reorganize has no config block of its own. It reuses the **path templates** that
-govern where imported files are placed. Adjust those (and preview them) under the
-File-Paths section; the same templates drive both import placement and
-reorganization. See [paths](../paths.md) for the template syntax and tokens.
+Reorganize has no settings of its own. It uses the same path templates as
+[importing](./importing.md), under `import.paths`. See [Paths](../paths.md) for the
+template syntax.
 
 ## Related
 
-- [Paths](../paths.md) — the path-template syntax that defines the target layout.
-- [Importing](./importing.md) — applies the same path logic when files first land.
-- [Jobs](./jobs.md) — runs and tracks the `analyze_reorganize` job.
-- [Library](./library.md) — the collection whose files get relocated.
+- [Paths](../paths.md): the path template syntax.
+- [Importing](./importing.md): uses the same templates when files first arrive.
+- [Merge](./merge.md): run a reorganize after merging.
+- [Jobs](./jobs.md): follow and cancel the reorganize job.

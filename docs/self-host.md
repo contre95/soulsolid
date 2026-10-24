@@ -18,8 +18,6 @@ The application can run without copying `config.yaml` into the container. If no 
 Soulsolid supports environment variables in configuration files using the `!env_var` tag:
 
 ```yaml
-telegram:
-  token: !env_var TELEGRAM_BOT_TOKEN
 metadata:
   providers:
     discogs:
@@ -123,45 +121,20 @@ mounted directories (`/music` and `/downloads` above).
 For a Kubernetes `Deployment` + `ConfigMap`, see the
 [Kubernetes examples](https://github.com/contre95/soulsolid/tree/main/docs/examples/kubernetes).
 
+## Logs
+
+Soulsolid logs to the container's output, so `podman logs soulsolid` (or
+`docker logs soulsolid`) shows what it's doing. Each background job also writes its own
+log, by default under `/app/logs/jobs`, which you can read from the **Jobs** section of
+the app. See [Logging](features/logging.md).
+
+## Health check
+
+`GET /health` returns `OK` while Soulsolid is running, for container health checks or
+Kubernetes probes. See [Hosting](features/hosting.md).
+
 ## Development
 
-To set up the development environment:
-
-### Option 1: Manual Setup
-
-```bash
-cp config.example.yaml config.yaml
-npm run dev
-```
-
-`npm run dev` builds the frontend assets and starts the server with
-`SOULSOLID_CONFIG_PATH=./config.yaml`.
-
-### Option 2: Using devenv (recommended)
-
-If you have [devenv](https://devenv.sh) installed, it provides every dependency
-(Go, Node.js, TailwindCSS, chromaprint, flac, id3v2). On entering the shell it runs
-`npm install`, builds the frontend assets, and exports `SOULSOLID_CONFIG_PATH=./config.yaml`:
-
-```bash
-cp config.example.yaml config.yaml
-devenv shell
-go run ./src/main.go
-```
-
-Or start everything (asset build + server) in one command with `devenv up`.
-
-The web interface will be available at `http://localhost:3535`.
-
-### Building CSS
-
-The stylesheet is generated with TailwindCSS:
-
-```bash
-npm run build:css        # one-off build
-npm run build:css:watch  # rebuild on changes
-```
-
-### Logs
-
-Application logs are written to stdout/stderr. For more detailed logging, check the job logs in `./logs/jobs/` by default.
+Want to run Soulsolid from source or contribute? See the
+[Development](https://github.com/contre95/soulsolid#development) section of the README and
+the [contributing guide](https://github.com/contre95/soulsolid/blob/main/CONTRIBUTING.md).
