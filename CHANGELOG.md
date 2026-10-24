@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.5](https://github.com/contre95/soulsolid/compare/v0.28.4...v0.28.5) (2026-10-24)
+
+
+### 🐛 Bug Fixes
+
+* bump fron and back deps ([#206](https://github.com/contre95/soulsolid/issues/206)) ([44d03aa](https://github.com/contre95/soulsolid/commit/44d03aaa722f969a4e8a76b9f2078bda2c5649b5))
+
 ## [0.28.4](https://github.com/contre95/soulsolid/compare/v0.28.3...v0.28.4) (2026-10-24)
 
 
