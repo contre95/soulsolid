@@ -1,7 +1,7 @@
 ---
-weight: 999
+weight: 40
 title: "Importing"
-description: ""
+description: "Importing music, duplicate handling and the import queue."
 icon: "article"
 date: "2025-09-09T21:10:30+02:00"
 lastmod: "2025-09-09T21:10:30+02:00"
@@ -73,7 +73,7 @@ The import behavior can be configured to either move or copy files:
 
 ### Library Structure
 
-Files are organized into a hierarchical depending on the `import.path` config.
+Files are organized into a hierarchical depending on the [`import.paths` config](paths.md).
 The following config:
 ```yaml
   paths:
