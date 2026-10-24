@@ -41,13 +41,15 @@ Applies the current path templates to every track in the library and moves files
 ### Merge
 
 Finds artists, albums and genres that are the same but spelled differently (for example
-`Hip-Hop` and `Hip Hop`) and lets you merge them into one.
+`Hip-Hop` and `Hip Hop`) and lets you merge them into one. It also finds duplicate
+tracks (the same recording stored in more than one file) using AcoustID. See
+[Merge](features/merge.md).
 
 ## Job Logs
 
 ![Analyze Jobs](img/analyze_jobs.jpg)
 
-This is how the job logs look. You'll be able to browse these logs and see which tracks could be processed correctly and which tracks failed. For those which failed, you'll be able to manually fix them by clicking on `manual_fix="track"`.
+This is how the job logs look. You can browse these logs and see which tracks were processed correctly and which failed. Failed tracks have a `manual_fix="track"` link: click it to open the track in the tag editor and fix it by hand.
 
 ```text
 time=2025-11-30T11:42:34.416+01:00 level=INFO msg="Starting job" name="Analyze Lyrics for Library"

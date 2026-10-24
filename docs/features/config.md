@@ -1,139 +1,92 @@
 ---
 weight: 110
 title: "Configuration"
-description: "Loading, validating, editing, and persisting the application config."
+description: "The Settings page: changing your configuration from the app and backing up your library."
 icon: "settings"
 draft: false
 toc: true
 ---
 
-The **config** feature owns the application's settings. It loads the YAML config on
-startup (resolving environment-variable references), validates it, exposes a
-thread-safe `Manager` that every other feature reads from, renders the Settings page,
-and persists edits made through the UI back to disk. It is effectively the central
-nervous system for runtime configuration: paths, import behaviour, providers,
-logging, jobs, and the Telegram bot all read their settings here.
+All of Soulsolid's settings live in a single `config.yaml` file. You can edit that file
+directly, or change most settings from the **Settings** page in the app. This page
+explains how the Settings page works; for every option in the file, see the
+[Configuration reference](../config.md).
 
-## What it does
+## What you can do
 
-- **Loads** `config.yaml` on startup, expands `!env_var` references, and **validates**
-  required fields.
-- Creates a **default config** the first time the app runs if no file exists.
-- Provides a thread-safe **`Manager`** (`Get`, `Update`, `Save`) injected into nearly
-  every other feature.
-- Renders the **Settings** section and a config form, and applies form submissions.
-- Exposes the config as **JSON** or **raw YAML**, and serves a **database download**.
-- Ensures the library and download **directories exist** on startup.
+- **Change settings** from the app, without touching the config file.
+- **View** your current `config.yaml`.
+- **Download a backup** of your library database.
 
-## How it works
+## First start
 
-```
-routes.go    → registers /settings + /config routes
-handlers.go  → HTTP layer: render settings, apply form edits, expose config
-manager.go   → the thread-safe Manager: load, validate, save, env-var expansion
-config.go    → the Config struct hierarchy (the YAML schema)
-default.go   → the built-in default configuration
-telegram.go  → Telegram-related config helpers
-```
+If there's no config file when Soulsolid starts, it creates one with sensible defaults,
+so you can run it without any setup. It also creates your library and download folders
+if they don't exist yet.
 
-### The `Manager`
+If the config file has a mistake (for example a required setting is missing, or it
+refers to an environment variable that isn't set), Soulsolid **won't start** and tells
+you what's wrong.
 
-`Manager` (`manager.go`) wraps a `*Config` behind a `sync.RWMutex`:
+## The Settings page
 
-- **`NewManager(path)`** — if the file is missing, writes `defaultConfig` to disk and
-  uses it; otherwise loads and validates the file. Either way it calls
-  `EnsureDirectories()` to create the library and download folders.
-- **`Get()`** returns the current config (read-locked); **`Update()`** swaps in a new
-  config; **`Save()`** re-encodes the in-memory config to YAML on disk.
-- **`GetEnabledMetadataProviders()` / `GetEnabledLyricsProviders()`** are convenience
-  reads used by the metadata and lyrics features.
-- **`GetYAML()`** returns the raw on-disk file contents for display.
+The Settings page lets you change:
 
-### Environment-variable references
+- your **download** folder,
+- **import** options: move or copy, duplicate handling, *always queue*, *allow missing
+  metadata*, FAT32-safe filenames,
+- your **path templates** (see [Paths](../paths.md)),
+- **metadata providers**: turn them on or off and set their API keys,
+- **logging** and **job logging**.
 
-`loadConfig` parses the YAML into a node tree and walks it with
-`processEnvVarNodes` *before* decoding into the struct. Any scalar tagged
-`!env_var` is replaced with the value of the named environment variable — and the app
-**fails to start** if that variable is unset or empty. This keeps secrets (API keys,
-tokens) out of the committed config:
+Changes take effect right away and are saved to `config.yaml`.
+
+Some settings are **read-only** in the app and can only be changed in the config file
+(they're marked as such on the page). These are the ones that only apply when Soulsolid
+starts, or that are risky to change while it's running:
+
+- the library folder,
+- the database location,
+- downloader plugins and artwork settings,
+- lyrics providers,
+- the server port,
+- whether the download folder watcher starts automatically,
+- webhooks.
+
+Edit `config.yaml` and restart Soulsolid to change them.
+
+> Running Soulsolid with a read-only config file (common with containers and
+> Kubernetes ConfigMaps)? Changes made on the Settings page still apply until the next
+> restart, but can't be saved to the file. Soulsolid logs a warning when this happens.
+
+## Keeping secrets out of the config file
+
+API keys and tokens don't have to be written in `config.yaml`. You can have Soulsolid
+read them from an environment variable (`!env_var`) or from a file (`!env_file`, handy
+for Docker and Kubernetes secrets):
 
 ```yaml
-telegram:
-  token: !env_var TELEGRAM_TOKEN
 metadata:
   providers:
     discogs:
-      secret: !env_var DISCOGS_SECRET
-```
-
-A scalar tagged `!env_file` is resolved the same way, except the named environment
-variable is expected to hold a *path* rather than the secret itself — the file at
-that path is read and its (trimmed) contents become the value. This follows the
-Docker/Kubernetes secrets convention of mounting a secret as a file and pointing to
-it with a `_FILE`-suffixed variable, so the secret value never has to touch the
-process environment or shell history:
-
-```yaml
-telegram:
-  token: !env_file TELEGRAM_TOKEN_FILE   # TELEGRAM_TOKEN_FILE=/run/secrets/telegram_token
-metadata:
-  providers:
+      secret: !env_var DISCOGS_API_KEY
     acoustid:
-      secret: !env_file ACOUSTID_CLIENT_KEY_FILE
+      secret: !env_file ACOUSTID_CLIENT_KEY_FILE   # ACOUSTID_CLIENT_KEY_FILE=/run/secrets/acoustid
 ```
 
-The app **fails to start** if the referenced variable is unset, the file can't be
-read, or the file is empty. `!env_var` and `!env_file` can be mixed freely across
-different fields.
+See [Configuration → Environment Variables](../config.md#environment-variables).
 
-After expansion the struct is validated with `go-playground/validator`; `libraryPath`,
-`downloadPath`, and `database.path` are required.
+## Backing up the database
 
-### Editing settings from the UI
+The Settings page has a button to **download your library database**. It contains
+everything Soulsolid knows about your library: tracks, artists, albums, playlists and
+tags.
 
-`UpdateSettings` (`handlers.go`) rebuilds a `Config` from form fields, but
-**deliberately preserves** a few areas that should not change at runtime — database
-settings, downloader plugins, artwork settings, lyrics providers, server settings,
-the auto-start-watcher flag, and webhook config — copying them from the current
-config. It then calls `Manager.Update()` and `Manager.Save()`. A save failure is
-logged as a warning rather than a hard error, since the filesystem may be read-only
-in containerized deployments (the in-memory update still takes effect).
-
-## The config schema
-
-The top-level `Config` struct (`config.go`) maps directly to `config.yaml`:
-
-| Block | Purpose |
-|-------|---------|
-| `libraryPath` / `downloadPath` | Root directories (both required) |
-| `database.path` | SQLite file location (required) |
-| `server` | Listen `port`, `show_routes` |
-| `import` | Move vs. copy, duplicate policy, queue behaviour, path templates, `allow_missing_metadata`, watcher |
-| `metadata.providers` | Tagging providers (`musicbrainz`, `discogs`, `deezer`, `acoustid`) with `enabled` + optional `secret` |
-| `lyrics.providers` | Lyrics providers with `enabled` + `prefer_synced` |
-| `downloaders` | Plugin list + embedded-artwork settings |
-| `logger` | `enabled`, `level`, `format`, `htmx_debug` |
-| `jobs` | Per-job logging + webhooks |
-| `telegram` | **Deprecated, removed in v0.30.0.** Bot `enabled`, `token`, `allowedUsers`, `bot_handle` |
-
-See [importing](./importing.md) and [paths](../paths.md) for the `import` block,
-[plugins](../plugins.md) for `downloaders`, and [jobs](./jobs.md) for the `jobs` block.
-
-## Endpoints
-
-Registered in `src/features/config/routes.go`.
-
-| Method | Route | Purpose | Response |
-|--------|-------|---------|----------|
-| GET | `/settings` | Render the Settings section | Section |
-| GET | `/config/form` | Render the settings form partial | Partial |
-| PUT | `/settings` | Apply a settings form submission | Toast |
-| GET | `/config` | Config as JSON (or raw YAML with `?fmt=yaml`) | JSON / YAML |
-| GET | `/config/database/download` | Download the SQLite database file | Resource |
+> The backup **only includes the database**, not your music files. Back up your library
+> folder separately.
 
 ## Related
 
-- [Importing](./importing.md), [Metadata](./metadata.md), [Lyrics](./lyrics.md), [Jobs](./jobs.md) — all read their settings from the `Manager`.
-- [Paths](../paths.md) — the `import.paths` template syntax.
-- [Plugins](../plugins.md) — downloader and provider configuration.
-- [Hosting](./hosting.md) — wires the `Manager` into the server and every feature.
+- [Configuration reference](../config.md): every option in `config.yaml`.
+- [Importing](../importing.md), [Paths](../paths.md), [Lyrics](../lyrics.md), [Jobs](../jobs.md): settings for each feature.
+- [Self hosted](../self-host.md): where the config file lives in a container.

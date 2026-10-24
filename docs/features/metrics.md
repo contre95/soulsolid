@@ -1,101 +1,48 @@
 ---
 weight: 90
 title: "Metrics"
-description: "Library analytics — genre, year, format, lyrics, and metadata-completeness charts."
+description: "Charts about your library: genres, years, formats and how complete your tags are."
 icon: "monitoring"
 draft: false
 toc: true
 ---
 
-The **metrics** feature turns the library into dashboards. It computes aggregate
-statistics about the collection — genre distribution, release-year spread, audio
-format breakdown, lyrics coverage, and metadata completeness — and renders them as
-[ApexCharts](https://apexcharts.com/) on the metrics page. Because computing these
-aggregates can be expensive on a large library, the heavy work runs as a background
-job that **caches** results in the database; the page then reads the cached values.
+**Metrics** turn your library into charts on the [dashboard](./ui.md), so you can see
+what your collection is made of and how well tagged it is.
 
-## What it does
+## The charts
 
-- Runs a **`metrics`** background job that calculates and **caches** all aggregates.
-- Serves a **metrics overview** partial with headline counts (tracks, artists, albums).
-- Serves individual **chart fragments** (genre treemap, year bars, format pie,
-  metadata horizontal bars) as ApexCharts-ready data.
-- Computes **metadata completeness** on the fly (ISRC/BPM/Year/Genre/Lyrics coverage
-  as percentages of total tracks).
+| Chart | What it shows |
+|-------|---------------|
+| **Overview** | How many tracks, artists and albums you have. |
+| **Release years** | How many tracks were released each year, from 1900 onwards. |
+| **Genres** | How your tracks are spread across genres. Bigger tiles mean more tracks. |
+| **Formats** | The share of each audio format (MP3, FLAC, …) in your library. |
+| **Metadata completeness** | The percentage of tracks that have an ISRC, BPM, year, genre and lyrics. |
 
-## How it works
+The **metadata completeness** chart is a quick way to see what needs work: a low
+*Lyrics* bar means it's time for a [lyrics analysis](./lyrics.md#lyrics-analysis), and
+low *Year* or *Genre* bars point to tracks worth fixing in the
+[tag editor](./metadata.md).
 
-The feature splits cleanly into a cached read path (handlers + service) and a
-write/compute path (the job task):
+## Keeping metrics up to date
 
-```
-routes.go        → registers /metrics chart + overview routes
-handlers.go      → HTTP layer: read cached metrics, shape ApexChart fragments
-service.go       → reads cached metrics from the store into MetricsData
-metrics.go       → LibraryMetrics interface + stat structs
-metrics_job.go   → the `metrics` job that computes + caches everything
-apex_charts.go   → converts MetricsData into ApexChartData (labels/series/colors)
-```
+Most charts are calculated once and saved, so the dashboard stays fast even with a
+large library. This means they **don't update by themselves** as your library changes.
 
-- **`LibraryMetrics`** (`metrics.go`) is the persistence/analytics interface
-  implemented by the SQLite store. It provides both the *computation* methods
-  (`GetGenreDistribution`, `GetYearDistribution`, `GetLyricsStats`, etc.) and the
-  *cache* methods (`StoreMetric`, `GetStoredMetrics`, `ClearStoredMetrics`).
-- **`Service`** (`service.go`) reads the cached values into a `MetricsData` struct.
-  It is resilient: a failure to read any single metric is logged as a warning and
-  leaves that slice empty rather than failing the whole page.
-- **`apex_charts.go`** converts `MetricsData` into `ApexChartData` (parallel
-  `Labels`, `Series`, and `Colors` slices) for each chart, including a fixed color
-  palette and, for the year chart, filtering to years ≥ 1900 and sorting ascending.
+Click **Refresh Metrics** on the dashboard to recalculate them. This runs in the
+background as a [job](./jobs.md); the charts show the new numbers once it finishes.
+Refresh after a big import, a merge, or a lyrics analysis.
 
-### The `metrics` job
-
-`metrics_job.go` (`MetricsCalculationTask`) is what makes the dashboards current. It:
-
-1. **Clears** all stored metrics.
-2. Calculates and stores each aggregate in turn, reporting progress at fixed
-   checkpoints:
-   - genre distribution (20%)
-   - lyrics stats (40%)
-   - metadata completeness (60%)
-   - format distribution (80%)
-   - year distribution (95%)
-3. Stores each data point via `StoreMetric(type, key, value)` keyed by a metric type
-   (`genre_counts`, `lyrics_stats`, `metadata_completeness`, `format_distribution`,
-   `year_distribution`).
-
-The page then reads these cached rows, so re-rendering charts is cheap. Run the job
-again whenever the library changes enough to want fresh numbers.
-
-### Metadata-completeness chart
-
-`GetMetadataChartHTML` is computed **live** rather than from the cache. It fetches the
-total track count plus the counts of tracks with ISRC, valid BPM, valid year, valid
-genre, and lyrics, then expresses each as a **percentage of total tracks** for a
-horizontal-bar chart. If the library is empty it renders an empty chart.
-
-## Endpoints
-
-Registered in `src/features/metrics/routes.go` under the `/metrics` group.
-
-| Method | Route | Purpose | Response |
-|--------|-------|---------|----------|
-| GET | `/metrics/overview` | Headline counts + metrics overview | Partial |
-| GET | `/metrics/charts/genre` | Genre distribution (treemap) | Partial (ApexChart) |
-| GET | `/metrics/charts/year` | Release-year distribution (vertical bars) | Partial (ApexChart) |
-| GET | `/metrics/charts/format` | Audio-format distribution (pie) | Partial (ApexChart) |
-| GET | `/metrics/charts/metadata` | Metadata completeness % (horizontal bars) | Partial (ApexChart) |
-
-> The `metrics` job itself is started through the [jobs](./jobs.md) system
-> (`POST /jobs/start/metrics`), not through a route in this feature.
+The *metadata completeness* chart is always calculated live, so it's always current.
 
 ## Configuration
 
-Metrics has no dedicated config block. It depends on the SQLite store (which holds
-both the source data and the cached metric rows) and the `config.Manager`.
+Metrics have no settings.
 
 ## Related
 
-- [Jobs](./jobs.md) — runs the `metrics` calculation job.
-- [Library](./library.md) — the source data the metrics summarize.
-- [Lyrics](./lyrics.md) and [Metadata](./metadata.md) — drive the lyrics-coverage and completeness charts.
+- [UI / Dashboard](./ui.md): where the charts are shown.
+- [Library](./library.md): the collection the metrics describe.
+- [Lyrics](./lyrics.md) and [Metadata](./metadata.md): improve the completeness numbers.
+- [Jobs](./jobs.md): the *calculate metrics* job.

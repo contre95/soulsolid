@@ -7,21 +7,22 @@ draft: false
 toc: true
 ---
 
-Soulsolid supports automatic lyric retrieval and embedding via  lyric providers
+Soulsolid can find lyrics for your tracks and embed them in the audio files, using lyrics providers. Lyrics providers are separate from downloader plugins, so you get lyrics no matter where your music came from.
 
-Lyric handling is separate from downloaders, allowing new providers to be added without modifying downloader plugins.
+For how to fetch lyrics and review them in the app, see [Lyrics](features/lyrics.md).
 
 ## Lyric Providers
 
-Lyric providers are responsible for searching, retrieving, and returning lyrics for tracks based on available metadata (e.g. title, artist, album, ISRC, duration).
+A lyrics provider looks up lyrics for a track using its tags (title, artist, album). Currently [LRCLIB](https://lrclib.net) is supported.
 
 Providers may supply:
-	•	Unsynced lyrics — plain text lyrics
-	•	Synced lyrics — time-aligned lyrics (e.g. LRC-style timestamps)
+
+- **Unsynced lyrics**: plain text lyrics
+- **Synced lyrics**: lyrics with timestamps for each line (LRC format), which some players use to scroll along with the song
 
 ## Configuration
 
-Lyric providers are configured in the main config.yaml file:
+Lyrics providers are configured in `config.yaml`:
 
 ```yml
 lyrics:
@@ -34,35 +35,36 @@ lyrics:
 ## Provider Options
 
 - **enabled**: Enables or disables the provider entirely.
-- **prefer_synced**: When set to true, synced (LRC timestamped) lyrics will be preferred over plain text lyrics if both are available.
+- **prefer_synced**: When `true`, synced (timestamped) lyrics are used instead of plain lyrics when both are available. Some players, like Navidrome, need synced lyrics.
 
 ## Lyrics Analysis Job
 
 The lyrics analysis job runs through all tracks in the library and attempts to fetch lyrics for each one. It can be started from the web UI under Analyze → Lyrics.
 
-### Job Parameters
+### Options
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `provider` | string | — | Which provider to use (e.g. `lrclib`) |
-| `skip_existing` | bool | `false` | Skip tracks that already have lyrics |
-| `override_no_queue` | bool | `false` | Apply new lyrics immediately without queuing for review, even when they differ from existing lyrics |
+| Option | Default | Description |
+|--------|---------|-------------|
+| **Provider** | — | Which provider to use (e.g. LRCLIB) |
+| **Skip tracks that already have lyrics** | on | Only look up tracks that don't have lyrics yet |
+| **Override without queuing** | off | Replace existing lyrics straight away, without sending them to the queue for review |
 
 ### Behavior
 
-- Tracks with no lyrics: fetched and embedded directly
-- Tracks with existing lyrics (when `skip_existing: false`): handled according to `override_no_queue`
-  - `false` (default): new lyrics go into the queue for manual review
-  - `true`: existing lyrics are silently replaced
+- Tracks with no lyrics: lyrics are fetched and embedded directly.
+- Tracks marked as instrumental: skipped.
+- Tracks with existing lyrics (when not skipped):
+  - by default, if the new lyrics differ, the track goes to the queue for review;
+  - with **Override without queuing**, the existing lyrics are replaced.
 
 ## Lyrics Queue
 
-When the analysis encounters tracks that need manual review, items are placed in the lyrics queue. Queue items persist in memory only and are lost on restart.
+When the analysis finds tracks that need your decision, they're placed in the lyrics queue. The queue is kept in memory, so it's emptied when Soulsolid restarts.
 
 ### Queue Types
 
 | Type | Trigger | Available Actions |
 |------|---------|-------------------|
-| `existing_lyrics` | Track already has lyrics and new lyrics differ | `override` (accept new), `keep_old` (discard new) |
-| `lyric_404` | Provider returned no lyrics for the track | `no_lyrics` (mark track as having no lyrics) |
-| `failed_lyrics` | Provider search returned an error | `skip`, `edit_manual`, `no_lyrics` |
+| **Existing lyrics** | Track already has lyrics and the new lyrics differ | **Override** (use the new lyrics), **Edit Manually** |
+| **Not found** | Provider has no lyrics for the track | **No Lyrics** (mark the track as instrumental), **Edit Manually** |
+| **Failed** | Provider search returned an error | **Skip**, **No Lyrics**, **Edit Manually** |

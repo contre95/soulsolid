@@ -9,13 +9,15 @@ draft: false
 toc: true
 ---
 
-Soulsolid supports downloading music through pluggable downloaders. The system is agnostic to specific music services: each service is supported by a plugin, and developers can create plugins for new platforms (see the [Plugin Development Guide](plugins.md)).
+Soulsolid can download music from online music services through **downloader plugins**. Soulsolid itself isn't tied to any service: each service is supported by its own plugin, which you add to your configuration. Anyone can write a plugin for a new service (see the [Plugin Development Guide](plugins.md)).
+
+This page covers installing and configuring plugins. For searching and downloading in the app, see [Downloading](features/downloading.md).
 
 Downloaded tracks are tagged with metadata and land in the configured `downloadPath`, from where they can be [imported](importing.md) into the library.
 
 ## Installing Plugins
 
-Downloaders are Go plugins loaded at runtime. There are two ways to install one: build it into your container image, or let Soulsolid build it from a Git repository on startup.
+Plugins are loaded when Soulsolid starts. There are two ways to install one: let Soulsolid build it from its Git repository on startup (the easiest), or build it into your own container image.
 
 ### Building a Plugin into the Image
 
@@ -31,11 +33,11 @@ RUN go build -buildmode=plugin -o /app/plugins/dummy/plugin.so .
 WORKDIR /app
 ```
 
-This clones the dummy plugin repository, replaces the module path to point to the Soulsolid source in the image, tidies the modules, builds the plugin as a shared object, and places it in the plugins directory. Point the plugin's `path` at the resulting `.so` file.
+This downloads the plugin's source, builds it against the Soulsolid version in the image and places it in `/app/plugins/dummy/plugin.so`. Point the plugin's `path` at that file. Building into the image means Soulsolid starts faster and doesn't need network access to load the plugin.
 
 ### Building from a Git Repository
 
-Soulsolid can also build plugins directly from Git repositories. Specify a `url` instead of a `path`, and the application will clone, build, and load the plugin on startup. This requires `git` and `go` in `PATH` (both are included in the official image). See [Building from Git Repositories](plugins.md#building-from-git-repositories) for how it works and its limitations.
+Set the plugin's `url` to its Git repository instead of a `path`, and Soulsolid downloads, builds and loads it every time it starts. This needs `git` and `go` to be installed, which they are in the official image. Only the repository's default branch is used. See [Building from Git Repositories](plugins.md#building-from-git-repositories) for details.
 
 ## Configuration
 
@@ -60,17 +62,18 @@ For a complete configuration example, see the [Configuration](config.md) documen
 
 ## Downloading Process
 
-The download process varies by plugin implementation, but generally follows this pattern:
+The details depend on the plugin, but a download generally goes like this:
 
-1. **Authentication**: The plugin handles authentication with the music service
-2. **Metadata Retrieval**: Fetches track/album metadata from the service's API
-3. **Audio Download**: Downloads audio data in the requested format
-4. **Format Processing**: Handles any decryption or format conversion if needed
-5. **File Writing**: Saves the audio file to the configured download directory
+1. **Login**: the plugin logs in to the music service with the credentials in its `config`
+2. **Track information**: it fetches the track or album details from the service
+3. **Audio**: it downloads the audio
+4. **Saving**: the file is saved to your `downloadPath`, tagged and with its cover art
+
+Downloads run as background [jobs](features/jobs.md). Once done, [import](importing.md) them into your library, or turn on the download folder watcher to do it automatically.
 
 ## Tagging Process
 
-After downloading, Soulsolid embeds comprehensive metadata into the audio files:
+After downloading, Soulsolid writes the track's details into the audio file's tags:
 
 ### For MP3 files (ID3v2 tags):
 

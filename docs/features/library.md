@@ -7,159 +7,91 @@ draft: false
 toc: true
 ---
 
-The **library** feature is the heart of Soulsolid. It is the read/search/delete
-layer over the music collection that has already been imported. Everything other
-features produce (imports, downloads, tagging, lyrics) ultimately lands in the
-library, and this feature is responsible for exposing it: paginated browsing,
-unified search, per-entity detail panels, storage statistics, a filesystem tree
-view, and cascading deletes.
+The **Library** is the heart of Soulsolid: it's your music collection once it has been
+imported. Everything else in the app (importing, downloading, tagging, lyrics) ends up
+here, and the Library section is where you browse, search, inspect and clean it up.
 
-## What it does
+## What you can do
 
-- Browses the collection as a paginated **track** list (server-side pagination).
-- Provides a single **unified search** box that matches across albums, artists, and
-  tracks at once — showing **albums and artists before tracks** — with optional
-  filters (genre, AcoustID presence, lyrics state).
-- Renders **detail panels** — a floating track-overview panel and per-entity JSON
-  endpoints.
-- Reports **collection statistics**: artist/album/track counts and total storage
-  size on disk.
-- Exposes a **file-tree** view of the library and download directories.
-- Performs **cascading deletes** of tracks, albums, and artists — removing both the
-  database rows and the underlying files on disk.
+- **Browse** every track in the collection, page by page.
+- **Search** artists, albums and tracks from a single search box.
+- **Filter** tracks by genre, lyrics, AcoustID or date added.
+- Open a **track overview** with its tags and audio details.
+- Jump to the **tag editor**, **add to a playlist**, or **play** a track.
+- **Delete** tracks, albums or whole artists.
+- See **collection stats**: how many artists, albums and tracks you have and how much
+  disk space they use.
 
-## How it works
+## Browsing and searching
 
-The feature follows the same three-layer shape used across the codebase:
+With the search box empty, the Library lists every track in your collection, 50 per
+page.
 
-```
-routes.go      → registers HTTP routes on the Fiber app
-handlers.go    → HTTP layer: parse params, call the service, render via respond.*
-service.go     → domain layer: business logic, wraps the library + file manager
-```
+Start typing to search. A single query looks at artist names, album titles and track
+titles at the same time. Matching **albums and artists are listed first**, followed
+by matching tracks. A track matches if its title, its artist or its album contains
+the text you typed.
 
-- **`Handler`** (`handlers.go`) is the HTTP boundary. It reads query params and path
-  params, calls the service, and hands the result to the `respond` package, which
-  performs content negotiation (HTMX fragment vs. JSON — see the [API reference](../api.md)).
-- **`Service`** (`service.go`) is the domain layer. It is constructed with three
-  collaborators wired in `main.go`:
-  - `library.Library` — the persistence interface, implemented by the SQLite store
-    (`infra/database`). All counts, fetches, and searches delegate here.
-  - `config.Manager` — supplies live config (library path, download path).
-  - `library.FileManager` — the file organizer (`infra/files`), used to delete the
-    actual audio files from disk during cascading deletes.
+### Filters
 
-### Pagination
+Filters narrow down the track results and can be combined with each other and with a
+text search:
 
-`handlers.go` defines a small `Pagination` helper (`NewPagination(page, limit,
-totalCount)`) that computes total pages and next/prev links. Browsing endpoints take
-`page` and `limit` query params (`limit` defaults to 50) and convert them to a
-SQL `LIMIT/OFFSET` via the service's `*Paginated` methods.
+| Filter | What it does |
+|--------|--------------|
+| **Genre** | Only tracks with exactly that genre. |
+| **AcoustID** | Only tracks that have (or don't have) an AcoustID. Useful to find tracks that still need [identifying](./metadata.md#acoustid-analysis). |
+| **Lyrics** | *Has lyrics*, *Empty lyrics*, *Instrumental*, or *Lyrics contain…* to search inside the lyrics text. |
+| **Added after / before** | Only tracks added to the library in a given date range. |
 
-### Unified search
+## Track overview
 
-`GetUnifiedSearch` is the most involved handler. It produces a single combined,
-paginated list of `SearchResult` items (each tagged `artist`, `album`, or `track`)
-and has two modes:
+The **Overview** button opens a floating panel with everything Soulsolid knows about a
+track: title, artist, album, year, genre, track number, ISRC, BPM and lyrics, plus
+technical details such as format, bitrate, sample rate, bit depth, channels, duration
+and the file's location on disk. You can also play the track right there (see
+[Streaming](./streaming.md)).
 
-- **Browse-all** (no query, no filters): only **tracks** are listed, paginated by
-  offset/limit. Albums and artists are not included in the browse view.
-- **Search/filter**: when a text query is present, results are ordered **albums,
-  then artists, then tracks**. Albums and artists are matched by name/title (capped
-  at 20 each) and shown first; tracks are matched with a single `TrackFilter` query
-  that OR-matches title, artist name, and album title and AND-combines the active
-  filters:
-  - `query` → `TextSearch`
-  - `genre` → exact genre match
-  - `has_acoustid=true|false` → presence of an AcoustID fingerprint
-  - `lyrics_filter` / `lyrics_text` → lyrics state and full-text lyrics search
+From each search result you can also:
 
-  Track results are offset relative to the album/artist results that precede them so
-  pagination stays correct across the combined list.
+- **Edit Tags** to open the track in the [tag editor](./metadata.md).
+- **Add to Playlist** to add the track, or a whole album or artist, to one of your
+  [playlists](./playlists.md).
 
-Album search uses a dedicated lightweight `SearchAlbums` query (single JOIN, no N+1)
-to keep it fast.
+## Deleting music
 
-### Cascading deletes
+You can delete a single track, an album, or an artist with all their tracks.
 
-`DeleteTrack`, `DeleteAlbum`, and `DeleteArtist` follow a **DB-first, files-second**
-strategy:
+> **Deleting removes the audio files from disk**, not just the entry in the library.
+> This can't be undone.
 
-1. Fetch the affected tracks (to capture their file paths) before deletion.
-2. Delete the rows from the database (artist/album deletes cascade to their tracks).
-3. Delete each track's file from disk via the `FileManager`.
+If a file can't be removed (for example it was already deleted by hand), the entry is
+still removed from the library and the problem is logged.
 
-File deletion failures are logged as warnings but do **not** fail the request — the
-database is treated as the source of truth, and orphaned files are considered a
-secondary concern.
+## Collection stats
 
-### Statistics & file tree
+The [dashboard](./ui.md) and the Library show how many **artists**, **albums** and
+**tracks** you have, and the **total size** of your library folder on disk.
 
-- `GetStorageSize` walks the library path with `filepath.Walk`, summing file sizes,
-  and formats the result (B/KB/MB/GB/TB).
-- `GetLibraryFileTree` shells out to the system `tree` command against either the
-  library or downloads path (selected by the `folder` query param). If `tree` is not
-  installed, the error surfaces in a toast.
-
-## Endpoints
-
-All routes are registered in `src/features/library/routes.go` under the `/library`
-group (plus the top-level section route).
-
-| Method | Route | Purpose | Response |
-|--------|-------|---------|----------|
-| GET | `/library` | Render the Library section (with search form data) | Section |
-| GET | `/library/table` | Render the tabbed library table partial | Partial |
-| GET | `/library/search` | Unified search across artists/albums/tracks | Partial |
-| GET | `/library/tracks/:trackId/overview` | Floating track-overview panel | Partial |
-| GET | `/library/artists/count` | Number of artists | Text |
-| GET | `/library/albums/count` | Number of albums | Text |
-| GET | `/library/tracks/count` | Number of tracks | Text |
-| GET | `/library/storage/size` | Total library size on disk (formatted) | Text |
-| GET | `/library/artists/:id` | Single artist | JSON |
-| GET | `/library/albums/:id` | Single album | JSON |
-| GET | `/library/tracks/:id` | Single track | JSON |
-| GET | `/library/tree` | Filesystem tree (`?folder=library\|downloads`) | Text |
-| DELETE | `/library/tracks/:trackId` | Delete a track (DB + file) | Toast |
-| DELETE | `/library/albums/:albumId` | Delete an album and its tracks | Toast |
-| DELETE | `/library/artists/:artistId` | Delete an artist and their tracks | Toast |
-
-### Query parameters for `/library/search`
-
-| Param | Default | Meaning |
-|-------|---------|---------|
-| `query` | `""` | Free-text search across artists, albums, tracks |
-| `page` | `1` | Page number |
-| `limit` | `50` | Results per page |
-| `genre` | `""` | Filter tracks by exact genre |
-| `has_acoustid` | `""` | `true`/`false` — filter tracks by AcoustID presence |
-| `lyrics_filter` | `""` | Filter by lyrics state |
-| `lyrics_text` | `""` | Full-text search within lyrics |
-
-> The `/library/tracks/:id/lyrics` route also exists but is registered by the
-> [lyrics](./lyrics.md) feature, not here.
+The folder buttons at the top of the Library open a **folder tree** of your library or
+downloads folder in a new tab, so you can check at a glance how files are laid out on
+disk. This needs the `tree` command
+to be installed (it is in the official container image).
 
 ## Configuration
 
-The library feature has no dedicated config block. It reads two paths from the global
-config via the `config.Manager`:
+The Library has no settings of its own. It uses:
 
 ```yaml
-library_path: /app/library    # root scanned for storage size & file tree
-download_path: /app/downloads  # used by the file-tree "downloads" view
+libraryPath: /app/music      # where your organized music lives
+downloadPath: /app/downloads # shown in the downloads folder tree
 database:
-  path: /data/library.db       # SQLite store backing all queries
+  path: /data/library.db     # the library database
 ```
-
-## Telegram
-
-The library service is also injected into the Telegram bot (`hosting.NewTelegramBot`),
-which exposes a subset of browse/search operations over chat. See
-[hosting](./hosting.md) for the bot wiring.
 
 ## Related
 
-- [Importing](./importing.md) and [Downloading](./downloading.md) populate the library.
-- [Metadata](./metadata.md) and [Lyrics](./lyrics.md) enrich existing library tracks.
-- [Metrics](./metrics.md) aggregates the same data into charts.
-- [API reference](../api.md) — full route table and response-type semantics.
+- [Importing](./importing.md) and [Downloading](./downloading.md) add music to the library.
+- [Metadata](./metadata.md) and [Lyrics](./lyrics.md) enrich the tracks already in it.
+- [Merge](./merge.md) cleans up duplicate artists, albums, genres and tracks.
+- [Metrics](./metrics.md) turns the library into charts.

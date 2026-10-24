@@ -8,11 +8,13 @@ lastmod: "2025-09-09T21:10:30+02:00"
 draft: false
 toc: true
 ---
-The soulsolid application supports importing music from local directories. The import process handles metadata extraction, duplicate detection, file organization, and automatic artist/album creation.
+Soulsolid imports music from folders on the server. When importing, it reads each file's tags, checks whether you already have the song, moves or copies the file into your library folder, and creates artists and albums as needed.
+
+This page covers the import settings. For how to import and review tracks in the app, see [Importing](features/importing.md).
 
 ## Configuration Options
 
-Import behavior is controlled through the application configuration:
+Import behavior is controlled in `config.yaml` (most options can also be changed from the **Settings** page):
 
 ```yaml
 import:
@@ -40,27 +42,27 @@ import:
 
 ### Directory Import
 
-Imports all supported audio files from a specified directory recursively. This is the most common way to import existing music collections.
+Imports every supported audio file in a folder and its subfolders. This is the most common way to bring an existing music collection into Soulsolid.
 
 **Supported file formats:**
 - MP3 (.mp3)
 - FLAC (.flac)
 
 **Process:**
-1. Scans directory recursively for supported audio files
-2. Extracts metadata from file tags
-3. Generates audio fingerprints for duplicate detection
-4. Organizes files into library structure
+1. Finds every supported audio file in the folder and its subfolders
+2. Reads the tags of each file
+3. Computes an audio fingerprint to detect duplicates
+4. Copies or moves the file into your library folder
 5. Creates artists and albums as needed
-6. Adds tracks to the music library
+6. Adds the track to your library
 
 ### Download Path Watcher
 
-The watcher monitors the configured `downloadPath` directory for new files. When a new audio file is created, it waits for any running jobs to finish (up to 5 minutes) and then automatically triggers a directory import of the download path.
+The watcher keeps an eye on your `downloadPath` folder. When a new audio file appears there, it waits for any running job to finish (up to 5 minutes, so a download can finish writing its files) and then imports the download folder automatically.
 
-- Enable on startup: `import.auto_start_watcher: true`
-- Toggle at runtime from the web UI or via `POST /import/watcher/toggle`
-- Only responds to file creation events (not modifications or deletions)
+- Start it automatically with Soulsolid: `import.auto_start_watcher: true`
+- Turn it on or off at any time with **Watch Mode** in the Import section
+- Only new files start an import; changing or deleting files doesn't
 
 ## File Organization
 
@@ -73,7 +75,7 @@ The import behavior can be configured to either move or copy files:
 
 ### Library Structure
 
-Files are organized into a hierarchical depending on the [`import.paths` config](paths.md).
+Files are organized into folders according to your [`import.paths` templates](paths.md).
 The following config:
 ```yaml
   paths:
@@ -97,23 +99,25 @@ Library/
 ### Special Handling
 
 - **Compilations**: Multi-artist albums are placed under `Various Artists`
-- **Path Customization**: Different path patterns for singles, EPs, soundtracks, etc. You can see the [default config](https://github.com/contre95/soulsolid/blob/2a07d80165471205f0498e0c0715b3a866562a74/config.yaml?plain=1#L39-L44) for reference.
-- **Filename Sanitization**: Removes invalid characters and creates clean filenames
+- **Path Customization**: Different path patterns for singles, EPs, soundtracks, etc. See [Paths](paths.md) for examples.
+- **Filename Sanitization**: Characters that aren't allowed in file names are removed
 
 ### FAT32-Safe Filenames
 
-When `fat32_safe: true` is set, every path segment is sanitized for FAT32 compatibility at import time:
+When `fat32_safe: true` is set, every folder and file name is made FAT32-compatible on import:
 
-- Lowercases all segments for consistent casing on the Linux library (avoids case collisions when syncing to FAT32 with rsync)
-- Replaces FAT32-forbidden characters (`: * ? " < > | \`) with `-`
-- Strips trailing dots and spaces from each segment
-- Truncates segments to 255 bytes at valid UTF-8 boundaries, preserving the file extension
+- Everything is lowercased, so names don't clash when syncing to FAT32 (where `Rock/` and `rock/` are the same folder)
+- Characters FAT32 doesn't allow (`: * ? " < > | \`) are replaced with `-`
+- Trailing dots and spaces are removed
+- Names longer than 255 bytes are shortened, keeping the file extension
 
-If two tracks would resolve to the same lowercased path (e.g. `Wos/lala.mp3` and `WoS/lala.mp3`), a numeric suffix is appended to the second (`wos/lala_1.mp3`) so both files and their database entries remain distinct.
+If two tracks would resolve to the same lowercased path (e.g. `Wos/lala.mp3` and `WoS/lala.mp3`), a number is added to the second (`wos/lala_1.mp3`) so both files are kept.
 
 ## Duplicate Detection
 
-Duplicate detection uses [Chromaprint](https://acoustid.org/chromaprint) audio fingerprints to identify identical audio content regardless of filename or tags. This is the most reliable method for detecting true duplicates.
+Duplicates are detected with [Chromaprint](https://acoustid.org/chromaprint) audio fingerprints, which identify the same recording by how it sounds, regardless of its file name or tags.
+
+To find duplicates already in your library, see [Merge](features/merge.md).
 
 ## Duplicate Handling Strategies
 
@@ -125,9 +129,10 @@ When duplicates are detected, the system can be configured to:
 - Fastest option for large imports
 
 ### Replace
-- Replaces existing track with new file
-- Updates metadata and file path
-- Preserves track ID and relationships
+- Replaces the track in your library with the new file
+- Updates its tags and location
+- Keeps the existing library entry, so it stays in your playlists
+- A new file that's missing required tags is queued instead, so it can't overwrite a complete track
 
 ### Queue
 - Adds duplicate to manual review queue
@@ -135,33 +140,34 @@ When duplicates are detected, the system can be configured to:
 - Most conservative approach
 
 ### Always Queue
-Additionally you can opt to always queue regardless weather they are duplicates setting the `always_queue: true`.
+You can also send every track to the queue, duplicate or not, with `always_queue: true`.
 - Forces all tracks (including non-duplicates) into queue
 - Maximum control over import process
 - Useful for carefully curated libraries
 
 ## Import Queue
 
-The import queue provides manual review capabilities for tracks that require user approval before being added to the library. The queue stores tracks in memory only, so all queued items will be lost if the system is restarted.
+The import queue holds tracks that need your approval before they're added to the library. The queue is kept in memory, so it's emptied when Soulsolid restarts (the files themselves aren't touched).
 
 ### Queue Types
 
-A queue item can carry **more than one type at once** (e.g. a track that is both a `duplicate`
-and `missing_metadata`). Each applicable type is shown as its own badge, and the available
-actions are the combination of what each type allows.
+A track can be in the queue for **more than one reason at once** (e.g. it's both a
+duplicate and missing metadata). Each reason is shown as its own badge.
 
 | Type | Trigger | Available Actions |
 |------|---------|-------------------|
-| `manual_review` | `always_queue: true` or first-time imports pending approval | `import`, `cancel`, `delete` |
-| `missing_metadata` | Track is missing a required metadata field whose `allow_missing_metadata.<field>` is `false` | `cancel`, `delete` |
-| `duplicate` | Track with matching fingerprint already exists in library | `replace`, `cancel`, `delete` |
-| `failed_import` | Import attempt errored (e.g. file unreadable) | `cancel`, `delete` |
+| **Manual review** | `always_queue: true` | Import, Cancel, Delete |
+| **Missing metadata** | Track is missing a tag whose `allow_missing_metadata.<field>` is `false` | Cancel, Delete |
+| **Duplicate** | The same recording is already in your library | Replace, Skip, Delete |
+| **Failed import** | Something went wrong importing it (e.g. the file can't be read) | Skip, Delete |
 
-**Missing metadata blocks the library.** While an item carries `missing_metadata`, the
-`import` and `replace` actions are disabled (only `cancel`/skip and `delete` remain) so an
-incomplete track can never enter or overwrite the library. This is enforced both in the UI and
-on the server. For example, a `duplicate` + `missing_metadata` item offers only skip/delete
-until the metadata is fixed.
+**Missing metadata blocks the library.** While a track is missing a required tag, Import
+and Replace are disabled (only Cancel/Skip and Delete remain), so an incomplete track can
+never be added to your library or overwrite one that's already there. For example, a
+duplicate that's also missing metadata can only be skipped or deleted until its tags are
+fixed in the [tag editor](features/metadata.md).
+
+See [Importing → The review queue](features/importing.md#the-review-queue) for what each action does.
 
 ### Telegram Integration
 
@@ -182,12 +188,13 @@ This allows you to manage imports remotely without needing to access the web int
 
 ### Queue Behavior with Move Option
 
-When the `move: true` option is enabled in the import configuration, tracks in the queue are automatically removed from the queue after being imported. This prevents errors that could occur when trying to import a track whose original file no longer exists at the source location after it has been moved to the library structure.
+With `move: true`, a queued track is removed from the queue once it's imported, since its original file has been moved into your library and is no longer where the queue expects it.
 
 ## Import Statistics
 
-Each import job provides detailed statistics:
-- **Tracks Imported**: Successfully added to library
-- **Skipped**: Duplicates that were ignored
-- **Errors**: Failed imports with error details
+Each import job reports:
+- **Imported**: tracks, albums and artists added to the library
+- **Skipped**: duplicates that were ignored
+- **Queued**: tracks sent to the review queue
+- **Errors**: tracks that failed, with details in the job log
 

@@ -1,157 +1,103 @@
 ---
 weight: 20
 title: "Downloading"
-description: "Searching external sources and fetching tracks, albums, artists, and playlists via plugins."
+description: "Searching external sources and downloading tracks, albums, artists, and playlists via plugins."
 icon: "download"
 draft: false
 toc: true
 ---
 
-The **downloading** feature lets Soulsolid search external music sources and pull
-down tracks, albums, artists, and playlists. Soulsolid ships with **no built-in
-source**: every source is provided by a **downloader plugin** loaded at startup, so
-the set of available providers (and their capabilities) depends entirely on your
-configuration.
+The **Download** section lets you search external music services and download tracks,
+albums, whole artists and playlists. Soulsolid doesn't come with any music service
+built in: each service is added through a **downloader plugin**, so what you can search
+and download depends on the plugins you have configured. See
+[Downloading](../downloading.md) for how to install one.
 
-Downloads land in the configured `download_path`. They are **not** added to the
-library directly — instead the [importing](./importing.md) feature picks them up
-(optionally via the directory watcher) and organizes them into the library.
+Downloaded music lands in your **download folder**, not straight in the library.
+From there it is [imported](./importing.md), either by hand or automatically with the
+download folder watcher, and organized into your library.
 
-## What it does
+## What you can do
 
-- **Searches** an external source for albums, tracks, artists, or by direct **link**
-  (URL paste), rendering provider-specific result partials.
-- **Starts download jobs** for a single track, an album, an artist's discography, an
-  arbitrary set of tracks, or a named playlist.
-- **Browses** an album's track list and a source's **chart** (top tracks).
-- Reports the connected **user info**, **status** (credential validity), and
-  **capabilities** of each configured downloader.
+- **Search** a service for albums, artists or tracks.
+- **Paste a link** to a track, album, playlist or artist from the service.
+- **Browse** an album's track list or an artist's albums before downloading.
+- See the service's **charts** (top tracks), if the plugin supports it.
+- **Download** a single track, a full album, an artist's whole discography, a selection
+  of tracks, or a playlist.
+- Check whether your **account and credentials** for the service are working.
 
-## How it works
+## Choosing a service
 
-### Plugin architecture
+Each configured plugin appears under **Downloaders** in the sidebar, with its icon. Click
+one to open the Download section for that service. The first plugin in your
+configuration is the default.
 
-The core abstraction is the `Downloader` interface (`downloader.go`). Any plugin must
-implement search, navigation, download, and info methods:
+Not every service supports everything. Each plugin tells Soulsolid what it can do
+(searching, searching artists, pasting links, charts), and the Download section only
+shows the options the selected service supports.
 
-```go
-type Downloader interface {
-    SearchAlbums / SearchTracks / SearchArtists / SearchLinks
-    GetAlbumTracks / GetArtistAlbums / GetChartTracks
-    DownloadTrack / DownloadAlbum / DownloadArtist / DownloadLink
-    GetUserInfo() *UserInfo
-    GetStatus() DownloaderStatus
-    Name() string
-    Capabilities() DownloaderCapabilities
-}
-```
+### Account status
 
-Plugins are compiled Go **`-buildmode=plugin` `.so` files** that export a
-`NewDownloader(config map[string]interface{}) (Downloader, error)` symbol. The
-`PluginManager` (`plugins.go`) loads them at startup from one of three sources per
-plugin config entry:
+The service panel shows who you're logged in as and the state of your credentials:
 
-1. **`url:`** — clones a git repo (`--depth 1`), adds a `replace` directive pointing
-   at the local soulsolid module, runs `go mod tidy`, and builds the `.so` in a temp
-   dir. This requires the Go toolchain to be present at runtime.
-2. **`path:` as an `http(s)://` URL** — downloads a prebuilt `.so` to a temp file.
-3. **`path:` as a local file** — opens the `.so` directly.
+| Status | Meaning |
+|--------|---------|
+| **Valid** | Everything is working. |
+| **Invalid credentials** | Your login or API key was rejected or has expired. Update it in the plugin's `config` and restart. |
+| **Disabled** | The plugin is loaded but not active. |
 
-Each loaded plugin is registered under its config `name`. `GetDownloader(name)` looks
-it up; missing names produce a "downloader not found" error. The manager is
-mutex-guarded so it is safe for concurrent request handling.
+If no plugin is configured, the Download section tells you so and links to the setup
+instructions.
 
-> See the dedicated [plugins guide](../plugins.md) for writing and packaging a plugin.
+## Searching
 
-### Capabilities & status
+Type in the search box and pick what you're looking for: **Albums**, **Artists**,
+**Tracks** or **Link**. Searches return 20 results by default.
 
-A downloader advertises `DownloaderCapabilities` (search / artist search / direct
-links / chart tracks). The UI uses these to show or hide features — e.g. the chart
-view renders a "not supported" state when `SupportsChartTracks` is false.
+With **Link**, paste a URL from the music service. Soulsolid works out whether it
+points to a track, an album, a playlist or an artist and shows the matching result,
+ready to download.
 
-`GetStatus()` returns a `DownloaderStatus` with one of `disabled`,
-`invalid_credentials`, or `valid`, surfaced in the user-info panel so you can tell at
-a glance whether credentials are working.
+## Downloading
 
-### Search flow
+Downloads run in the background as [jobs](./jobs.md), so you can keep using the app
+while they run. Starting a download shows a confirmation, and you can follow its
+progress (and read its log) in the **Jobs** section.
 
-`Handler.Search` is the general entry point and dispatches on a `type` field
-(`album`, `track`, `artist`, `link`). The dedicated `/search/albums` and
-`/search/tracks` routes are thin shortcuts. Search limits are clamped by the service
-to **1–100** (default 20). The `link` type accepts a pasted URL and returns a
-`LinkResult` tagged `track`/`album`/`playlist`/`artist`, rendered into the matching
-partial; for non-HTMX clients it returns the raw `LinkResult` as JSON.
+Each downloaded file is:
 
-### Download flow (jobs)
+- **Tagged** with the metadata provided by the service (title, artists, album, year,
+  genre, track and disc number, ISRC and more).
+- Given **cover art**, embedded in the file if artwork embedding is enabled.
+- Saved with a **safe filename**, with characters that aren't allowed on disk removed.
 
-Downloads are **asynchronous**. Each download handler validates input, then calls the
-service, which starts a background [job](./jobs.md) via `JobService.StartJob(...)` and
-immediately returns a **job ID** (HTTP `202`, rendered as a "download started" toast).
-The active downloader is chosen by the `?downloader=` query param (default `dummy`).
-
-The actual work runs in `DownloadJobTask.Execute` (`download_job.go`), keyed by the
-job's `type` metadata:
-
-- Ensures `download_path` exists (`MkdirAll`).
-- Dispatches to the per-type executor (`track`/`album`/`artist`/`tracks`/`playlist`).
-- Streams progress through the job's `progressUpdater` — the download phase is mapped
-  to the 25–75% band of overall progress, with a callback reporting MB downloaded.
-- Writes tags/artwork via the injected `TagWriter` (artwork embedding is controlled by
-  `downloaders.artwork.embedded`).
-- Filenames are sanitized (`Sanitize`) to strip filesystem-unsafe characters.
-
-Five job handler types are registered in `main.go` (`download_track`,
-`download_album`, `download_artist`, `download_tracks`, `download_playlist`), all
-backed by the same `DownloadJobTask`.
-
-## Endpoints
-
-Registered in `src/features/downloading/routes.go` under `/downloads`.
-
-| Method | Route | Purpose | Response |
-|--------|-------|---------|----------|
-| GET | `/downloads` | Render the Download section | Section |
-| POST | `/downloads/search` | General search (`type=album\|track\|artist\|link`) | Partial / JSON |
-| POST | `/downloads/search/albums` | Album search shortcut | Partial |
-| POST | `/downloads/search/tracks` | Track search shortcut | Partial |
-| GET | `/downloads/album/:albumId/tracks` | List an album's tracks | Partial |
-| POST | `/downloads/track` | Start a track download | Toast Job (202) |
-| POST | `/downloads/album` | Start an album download | Toast Job (202) |
-| POST | `/downloads/artist` | Start a full-artist download | Toast Job (202) |
-| POST | `/downloads/tracks` | Download multiple tracks (CSV `trackIds`) | Toast Job (202) |
-| POST | `/downloads/playlist` | Download a playlist (`trackIds` + `playlistName`) | Toast Job (202) |
-| GET | `/downloads/capabilities` | Downloader capabilities | JSON |
-| GET | `/downloads/user/info` | Connected user info + statuses | Partial |
-| GET | `/downloads/chart/tracks` | Source chart / top tracks | Partial |
-
-Most routes accept a `?downloader=<name>` query param selecting which plugin to use.
-Search bodies use the `SearchRequest` form/JSON shape (`query`, `type`, `limit`,
-`downloader`).
+When a download finishes, the files are in your download folder waiting to be
+[imported](./importing.md).
 
 ## Configuration
 
 ```yaml
+downloadPath: /app/downloads   # where downloaded files are saved
 downloaders:
   plugins:
     - name: dummy
-      url: https://github.com/contre95/soulsolid-dummy-plugin  # build from git, OR
-      # path: ../soulsolid-dummy-plugin/plugin.so              # local/remote .so
-      icon: https://demo2.contre.io/img/galaxy.png
-      config: {}        # plugin-specific config passed to NewDownloader
+      url: https://github.com/contre95/soulsolid-dummy-plugin  # build from git, or
+      # path: /app/plugins/dummy/plugin.so                     # use a pre-built plugin
+      icon: https://demo2.contre.io/img/galaxy.png             # shown in the UI
+      config: {}        # settings for the plugin itself, e.g. API keys
   artwork:
     embedded:
       enabled: true     # embed cover art into downloaded files
-      size: 1000        # max artwork dimension
-      quality: 85       # JPEG quality
-download_path: /app/downloads   # where downloaded files are written
+      size: 1000        # maximum artwork size in pixels
+      quality: 85       # JPEG quality (0-100)
 ```
 
-The first configured plugin is used as the default selection when the Download section
-is opened without an explicit `?downloader=`.
+See [Downloading](../downloading.md) for installing plugins.
 
 ## Related
 
-- [Plugins](../plugins.md) — building and packaging downloader plugins.
-- [Jobs](./jobs.md) — the async engine that runs every download.
-- [Importing](./importing.md) — picks up downloaded files into the library.
-- [API reference](../api.md) — full route table.
+- [Downloading setup](../downloading.md): installing and configuring plugins.
+- [Importing](./importing.md): moves downloaded files into the library.
+- [Jobs](./jobs.md): follow and cancel running downloads.
+- [Plugins](../plugins.md): writing your own downloader plugin.

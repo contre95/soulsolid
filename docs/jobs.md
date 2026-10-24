@@ -9,7 +9,9 @@ draft: false
 toc: true
 ---
 
-The `jobs` section configures how Soulsolid handles background tasks. These jobs are stored in runtime and their logs are persisted in files under a specified location. The default location for these logs is `./logs/jobs`.
+Long-running tasks like imports, downloads and analyses run in the background as jobs. The `jobs` section configures their log files and webhooks. Jobs themselves are kept in memory (the list is emptied on restart), while their logs are saved as files, by default in `./logs/jobs`.
+
+For following, cancelling and reading jobs in the app, and how webhooks work in detail, see [Jobs](features/jobs.md).
 
 Here's an example configuration:
 
@@ -31,11 +33,11 @@ jobs:
 - **webhooks**: Configuration for sending notifications about job status.
   - **enabled**: Enable or disable webhooks.
   - **job_trigger**: List of job types to send notifications for (`"*"` = all). Formerly `job_types`, which is still read but deprecated.
-  - **command**: Shell command executed via `/bin/sh -c` when a matching job finishes. Runs asynchronously with a 30-second timeout. Supports Go template syntax with these variables: `{{.Name}}`, `{{.Type}}`, `{{.Status}}`, `{{.Message}}`, `{{.Duration}}`.
+  - **command**: Shell command run when a matching job finishes. It runs in the background and is stopped after 30 seconds. It can use these placeholders: `{{.Name}}`, `{{.Type}}`, `{{.Status}}`, `{{.Message}}`, `{{.Duration}}`. See [Webhooks](features/jobs.md#webhooks) for how they're filled in safely and how to pass secrets.
 
 ## Job Scheduling
 
-Only one job runs at a time. Additional jobs are queued and start automatically when the current job finishes.
+Only one job runs at a time. Additional jobs wait in line and start automatically when the current job finishes. Webhooks are the exception: they start right away.
 
 ## Job Types
 
@@ -52,6 +54,7 @@ Only one job runs at a time. Additional jobs are queued and start automatically 
 | `analyze_lyrics` | Running lyrics analysis on the library |
 | `analyze_reorganize` | Reorganizing library file paths |
 | `analyze_merge` | Merging artists, albums, genres or tracks |
+| `webhook` | A webhook command run after another job |
 
 ## Notification Examples
 

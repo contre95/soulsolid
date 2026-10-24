@@ -1,184 +1,157 @@
 ---
 weight: 100
 title: "Jobs"
-description: "The in-memory background-job engine: queueing, progress, logs, and webhooks."
+description: "Background jobs: progress, logs, cancelling, and webhooks."
 icon: "manufacturing"
 draft: false
 toc: true
 ---
 
-The **jobs** feature is the background-processing engine the rest of Soulsolid builds
-on. Long-running operations — importing a directory, analyzing lyrics, reorganizing
-files, computing metrics — are not run inline on the request; instead they are
-registered as **job types** and dispatched here. The jobs service runs them one at a
-time, tracks their progress and status, optionally writes per-job log files, and can
-fire a webhook command when a job finishes.
+Anything in Soulsolid that can take a while (importing a folder, downloading an album,
+running a lyrics analysis, reorganizing files, refreshing metrics) runs as a background
+**job**. You can keep using the app while it runs, follow its progress, read its log,
+and cancel it. Soulsolid can also run a **webhook** command when a job finishes, for
+example to send you a notification or tell your media server to rescan.
 
-## What it does
+## What you can do
 
-- Provides a **`JobService`** (the `music.JobService` interface) used by every
-  analyze/import feature to launch work.
-- Runs jobs **serially** — only one job executes at a time; the rest queue as
-  `pending` and start automatically as slots free up.
-- Tracks each job's **status** (`pending`, `running`, `completed`, `failed`,
-  `cancelled`), **progress** (0–100), and message.
-- Optionally writes a **per-job log file** and serves it raw, color-highlighted, or
-  full-screen.
-- Supports **cancellation** via context, plus cleanup of old/finished jobs.
-- Fires an optional **webhook command** on completion, templated with job details.
+- **Follow** every job's progress and status in the **All Jobs** section.
+- **Read the log** of any job, live while it runs.
+- **Cancel** a running or waiting job.
+- **Clear** finished jobs from the list.
+- Run a **webhook** command when certain jobs finish.
 
-## How it works
+## How jobs run
 
-```
-routes.go    → registers the /jobs routes
-handlers.go  → HTTP layer: start/list/status/progress/logs/cancel + HTMX partials
-service.go   → the engine: registry, scheduling, execution, webhooks
-log_colors.go→ converts log text into color-highlighted HTML
-```
+**Only one job runs at a time.** If you start a job while another is running, it waits
+in line and starts automatically when the current one finishes, oldest first. This keeps
+jobs from getting in each other's way, for example an import reading files that a
+download is still writing.
 
-### Tasks, handlers, and the registry
+Each job has a status:
 
-The engine separates *what to run* from *how it is run*:
+| Status | Meaning |
+|--------|---------|
+| **Pending** | Waiting for the running job to finish. |
+| **Running** | In progress, with a progress bar and a message saying what it's doing. |
+| **Completed** | Finished. Some jobs (like imports) can complete *with errors* when only some items failed. |
+| **Failed** | Stopped because of an error. |
+| **Cancelled** | You cancelled it. |
 
-- A **`Task`** (implemented by each feature, e.g. `LyricsJobTask`,
-  `ReorganizeJobTask`, `MetricsCalculationTask`) defines `MetadataKeys()`,
-  `Execute(ctx, job, progressUpdater)`, and `Cleanup(job)`.
-- A **`TaskHandler`** wraps a task. `BaseTaskHandler` is the standard wrapper: it
-  validates the required metadata keys, builds the `progressUpdater` callback, runs
-  the task, and always runs `Cleanup` via `defer`.
-- `RegisterHandler(jobType, handler)` registers a handler under a job-type string.
-  This wiring happens in `main.go`, e.g. `analyze_lyrics`, `analyze_reorganize`,
-  `metrics`, `import_directory`.
+Jobs are kept in memory, so the jobs list is **emptied when Soulsolid restarts**. Their
+log files stay on disk.
 
-### Lifecycle and serial scheduling
+## Job logs
 
-`StartJob(jobType, name, metadata)`:
+When job logging is enabled (`jobs.log: true`), every job writes its own log file in
+`jobs.log_path`, named after the date and the job. You can read it from the job's card
+in the app:
 
-1. Creates a `music.Job` with a UUID, `pending` status, and the supplied metadata.
-2. If job logging is enabled, creates the log directory and a dated log file
-   (`YYYY-MM-DD-<id>.log`) and attaches a `slog` text logger; otherwise attaches a
-   discard logger.
-3. Stores the job. If **no job is currently running**, it flips to `running` and
-   executes in a goroutine; otherwise it stays `pending`.
+- inline, refreshed live while the job runs,
+- **full screen**, with colors,
+- **raw**, as plain text.
 
-`executeJob` looks up the handler, creates a cancellable context, streams progress
-updates over a channel into `UpdateJobProgress`, merges the task's returned stats
-into `job.Metadata`, sets the final status, fires the webhook, and then calls
-`startNextPendingJob` — which promotes the **oldest** pending job. A special case
-detects "partial import" errors and records them as *completed with errors* rather
-than failed.
+Logs are color-coded so errors (red) and warnings (yellow) stand out. When a job fails
+on a specific track, the log line includes a link to open that track in the
+[tag editor](./metadata.md) and fix it by hand. See [Analyze → Job Logs](../analyze.md#job-logs)
+for an example.
 
-### Cancellation, progress, and cleanup
+## Cancelling and clearing
 
-- **Cancel** (`CancelJob`) marks the job cancelled, calls its context `CancelFunc`,
-  and lets the task's cooperative `ctx.Done()` checks unwind it.
-- **Progress** updates are ignored once a job is in a terminal state, so late channel
-  writes can't resurrect a finished job's progress bar.
-- **Cleanup**: `ClearFinishedJobs` removes all terminal jobs (and their log files);
-  `CleanupOldJobs(maxAge)` removes terminal jobs older than a cutoff (the
-  cleanup endpoint uses 24h).
+- **Cancel** stops a running job as soon as it safely can (usually after the current
+  track), or removes a pending one from the line.
+- **Clear Finished Jobs** removes every completed, failed and cancelled job from the
+  list, and deletes their log files.
 
-### Log coloring
+## Webhooks
 
-`log_colors.go` (`ParseAndColorLogContent`) wraps each log line in a CSS class based
-on its level (`ERROR`→red, `WARN`→yellow) and on `color=...` hints embedded in
-`INFO` lines (`green`, `blue`, `orange`, `violet`, `cyan`, …). The features emit
-those `color=` hints in their log calls so the job log reads like a colored console.
-The logs endpoint can return raw text, the colored HTML fragment (for HTMX
-polling), or a full-screen HTML page.
+A webhook is a shell command Soulsolid runs when a job finishes. Use it to send a
+notification (ntfy, Telegram, Discord…), trigger a media server rescan, start a backup,
+or anything else you can do from a shell. See [Jobs configuration](../jobs.md) for how to
+set it up and ready-to-use examples.
 
-### Webhooks
+Webhooks are configured with:
 
-When `jobs.webhooks.enabled` is set and the finished job's type matches the
-configured list (or `*`), `executeWebhook` renders the configured command template
-with `{{.Name}}`, `{{.Type}}`, `{{.Status}}`, `{{.Message}}`, and `{{.Duration}}`,
-and runs it as a **`webhook` job** named `Webhook: <job name>`. This is how job
-completions can be pushed to notification services.
+- `job_trigger`: which [job types](../jobs.md#job-types) trigger the command (`"*"` for all).
+- `command`: the command to run. It can use these placeholders:
 
-Webhook jobs appear in the jobs list like any other job:
+| Placeholder | Value |
+|-------------|-------|
+| `{{.Name}}` | The job's name, e.g. `Download Album` or `Download Playlist: Road trip` |
+| `{{.Type}}` | The [job type](../jobs.md#job-types), e.g. `download_album` |
+| `{{.Status}}` | `completed`, `failed` or `cancelled` |
+| `{{.Message}}` | The job's final message |
+| `{{.Duration}}` | How long the job took |
 
-- The command runs via `/bin/sh -c` in its own process group. Its **output** goes
-  into the job's log as it runs: stdout as `INFO` lines and stderr as `WARN` lines,
-  up to 64 KiB per stream. Output is only kept when `jobs.log` is enabled.
-- A non-zero exit fails the job, with the exit status as its message. So does
-  running past the **30-second timeout**. **Cancel** kills the command and anything
-  it started.
-- Nothing the command starts outlives the job. Background processes (`curl ... &`) are
-  stopped when the shell exits. If one still held the output open, the job completes
-  with a warning in its log, and output written after the shell exited is dropped.
-- Webhook jobs **skip the queue**. They start immediately, even while another job
-  runs, and never hold up queued jobs, so notifications aren't delayed.
+You can also use simple conditions, such as
+`{{if eq .Status "failed"}}...{{end}}` or `{{or .Message "no message"}}`.
+
+### How webhook commands run
+
+Each webhook shows up in the jobs list as its own job, named `Webhook: <job name>`, so
+you can check that it worked:
+
+- The command runs with `/bin/sh`. What it prints is saved in the webhook job's log
+  (when job logging is enabled).
+- If the command exits with an error, or takes longer than **30 seconds**, the webhook
+  job fails. **Cancel** stops the command and everything it started.
+- Nothing the command starts keeps running after it finishes, including background
+  processes (`curl ... &`).
+- Webhooks **don't wait in line**: they start right away, even while another job runs,
+  so notifications aren't delayed.
 - Webhook jobs never trigger webhooks themselves, even with `job_trigger: ["*"]`.
-- The triggering job's log records `Webhook job started` with the webhook job's ID.
 
-#### Environment
+### Passing secrets to webhooks
 
-A webhook command doesn't inherit the server's environment, so secrets passed to
-Soulsolid (for example through `!env_var`) can't leak into it. It only sees:
+For safety, a webhook command does **not** see Soulsolid's environment variables, so API
+keys you've given Soulsolid can't leak into it. It only sees:
 
 - `PATH`, so commands like `curl` can be found.
-- Server variables starting with **`SOULSOLID_WEBHOOK_`**, passed through unchanged.
-- The job's `SOULSOLID_JOB_*` values (see below). They can't be overridden from
-  the server environment.
+- Variables whose name starts with **`SOULSOLID_WEBHOOK_`**, passed through as they are.
+- The job's values as `SOULSOLID_JOB_NAME`, `SOULSOLID_JOB_TYPE`,
+  `SOULSOLID_JOB_STATUS`, `SOULSOLID_JOB_MESSAGE` and `SOULSOLID_JOB_DURATION`.
 
-Use `SOULSOLID_WEBHOOK_*` variables for tokens and URLs. That way they never appear
-in `config.yaml`, in job metadata or in the logged command:
+Put tokens and URLs in `SOULSOLID_WEBHOOK_*` variables so they never appear in
+`config.yaml` or in logs:
 
 ```yaml
 command: curl -s -d "{{.Name}} {{.Status}}" "https://ntfy.sh/$SOULSOLID_WEBHOOK_NTFY_TOPIC"
 ```
 
 Anything else the command needs, such as `HOME` or `SSL_CERT_FILE`, has to be passed
-under that prefix and exported in the command, e.g.
+the same way and exported in the command, e.g.
 `export SSL_CERT_FILE="$SOULSOLID_WEBHOOK_SSL_CERT_FILE"; curl ...`.
 
-Job values never become part of the shell source. Job names and messages can contain
-text the user or a file's tags control, such as playlist names and track titles. The
-values are passed to the command as environment variables (`SOULSOLID_JOB_NAME`,
-`SOULSOLID_JOB_TYPE`, `SOULSOLID_JOB_STATUS`, `SOULSOLID_JOB_MESSAGE`,
-`SOULSOLID_JOB_DURATION`), and each placeholder becomes a reference to one, quoted for
-where it sits in the command:
+### Track titles and names are safe
 
-| Template | Rendered as |
-|----------|-------------|
-| `{{.Name}}` (unquoted) | `"${SOULSOLID_JOB_NAME}"` |
-| `"{{.Name}}"` (inside double quotes) | `${SOULSOLID_JOB_NAME}` |
-| `'{{.Name}}'` (inside single quotes) | `'"${SOULSOLID_JOB_NAME}"'` |
+Job names and messages can contain text that comes from your files, like track titles
+or playlist names. Soulsolid makes sure that text is always treated as plain text: each
+placeholder becomes exactly **one argument** of the command, however it's quoted. A
+track titled `"; rm -rf ~; "` is just a title, not a command.
 
-Either way a placeholder expands to exactly **one literal argument** of the webhook's
-shell. A value like `"; rm -rf ~; "` isn't run by that shell, `*` isn't expanded into
-file names, and a message like `x --data-binary @/etc/passwd` can't add options to
-`curl`. Scripts can also read the `SOULSOLID_JOB_*` variables directly.
-
-This protects values only from the webhook's own shell. A command that hands a value
-to **another parser of shell code**, such as `sh -c`, `bash -c`, `ssh host '...'`,
-`su -c` or `eval`, runs it as code there: with `sh -c 'echo {{.Name}}'`, a track titled
-`x; rm -rf ~` runs `rm`. Pass the value as an argument instead, or let the inner shell
-read the variable itself:
+There's one thing to watch out for: if your command hands a value to **another shell**
+(`sh -c`, `bash -c`, `ssh host '...'`, `su -c`, `eval`), that shell *will* run it as
+code. Pass the value as an argument instead, or read the variable inside:
 
 ```yaml
-command: sh -c 'notify "$1"' _ {{.Name}}            # value as a positional argument
+command: sh -c 'notify "$1"' _ {{.Name}}            # value as an argument
 command: sh -c 'notify "$SOULSOLID_JOB_NAME"'       # the inner shell reads the variable
 ```
 
-Template logic uses the real values, so `{{if eq .Status "failed"}}...{{end}}`,
-`{{or .Message "no message"}}` and `{{len .Name}}` work as expected. Functions that
-would turn a job value into new text, such as `printf`, `urlquery`, `html`, `js` or
-`slice`, are rejected and the webhook doesn't run. Do that formatting in the command
-instead, for example with `jq` (see below).
+To keep things safe, a webhook **doesn't run** if its command:
 
-Placeholders inside `$(...)`, backticks, heredocs or `$'...'`, or anywhere after one of
-these in the command, are rejected and the webhook doesn't run, because their quoting
-can't be tracked reliably. Use the environment variables there instead.
+- uses a placeholder inside `$(...)`, backticks, heredocs or `$'...'`, or anywhere after
+  one of these (use the `SOULSOLID_JOB_*` variables there instead);
+- formats a value with `printf`, `urlquery`, `html`, `js` or `slice` (do that formatting
+  in the command itself, for example with `jq`).
 
-#### Building JSON payloads
+### Sending JSON
 
-Placeholders insert values verbatim, so a `"` or `\` in a playlist name or track title
-will still break a hand-written JSON body such as
-`-d '{"text": "{{.Name}}"}'`. That can't run a command, but the receiving service may
-reject the request. To always send valid JSON, build the payload with a JSON
-serializer such as [`jq`](https://jqlang.org), which must be installed where Soulsolid
-runs, and pipe it to `curl`:
+Placeholders are inserted as they are, so a `"` or `\` in a track title can break a JSON
+body written by hand, such as `-d '{"text": "{{.Name}}"}'`. That can't run anything,
+but the service you're calling may reject the request. To always send valid JSON, build
+it with [`jq`](https://jqlang.org) (it must be installed where Soulsolid runs) and pipe
+it to `curl`:
 
 ```yaml
 command: >-
@@ -187,45 +160,21 @@ command: >-
   | curl -X POST -H 'Content-Type: application/json' -d @- https://example.com/hook
 ```
 
-## Endpoints
-
-Registered in `src/features/jobs/routes.go`. Several endpoints return JSON with
-HATEOAS-style `_links` (self / progress / logs).
-
-| Method | Route | Purpose | Response |
-|--------|-------|---------|----------|
-| GET | `/jobs` | Render the Jobs section | Section |
-| GET | `/jobs/active` | Active (running/pending) jobs, newest first | Partial |
-| GET | `/jobs/list` | All jobs, optionally `?prefix=` filtered by type | Partial |
-| GET | `/jobs/latest` | The 5 most recent jobs | Partial |
-| GET | `/jobs/count` | Count of `?filter=active\|all` jobs, formatted `(N)` | Text |
-| GET | `/jobs/all` | All jobs as JSON (with `_links`) | JSON |
-| POST | `/jobs/start/:type` | Start a job of the given type (`?name=`) | Toast (job) |
-| POST | `/jobs/clear-finished` | Remove all terminal jobs + their logs | Toast |
-| GET | `/jobs/:id` | Single job status as JSON (with `_links`) | JSON |
-| GET | `/jobs/:id/progress` | Progress-bar partial (`HX-Trigger: done` when terminal) | Partial |
-| GET | `/jobs/:id/logs` | Job logs — `?color=true` for HTML, else raw text | Text / HTML |
-| POST | `/jobs/:id/cancel` | Cancel a job, returns refreshed job card | Partial |
-
 ## Configuration
-
-The jobs feature reads a `jobs` block from the global config:
 
 ```yaml
 jobs:
-  log: true                 # write per-job log files
-  log_path: /app/logs/jobs  # directory for the dated log files
+  log: true                 # write a log file for every job
+  log_path: /app/logs/jobs  # where log files are written
   webhooks:
-    enabled: false          # fire a command on job completion
-    job_trigger: ["*"]      # which job types trigger the webhook ("*" = all)
-    command: 'curl -X POST ... -d "{{.Name}} {{.Status}}"'  # templated shell command
+    enabled: false          # run a command when a job finishes
+    job_trigger: ["*"]      # which job types trigger it ("*" = all)
+    command: 'curl -d "{{.Name}} {{.Status}}" ntfy.sh/mytopic'
 ```
 
-When `log` is false, jobs use a discard logger and the logs endpoint reports no logs.
+When `log` is off, jobs still run but no logs are kept.
 
 ## Related
 
-- [Importing](./importing.md), [Lyrics](./lyrics.md), [Reorganize](./reorganize.md), [Metadata](./metadata.md), [Metrics](./metrics.md) — all run their heavy work as jobs.
-- [Configuration](./config.md) — the `jobs` config block and webhook settings.
-- [Jobs (overview)](../jobs.md) — original high-level notes on the job system.
-- [API reference](../api.md) — response-type semantics.
+- [Jobs configuration](../jobs.md): job types and webhook examples.
+- [Importing](./importing.md), [Downloading](./downloading.md), [Lyrics](./lyrics.md), [Reorganize](./reorganize.md), [Merge](./merge.md), [Metadata](./metadata.md), [Metrics](./metrics.md): everything that runs as a job.

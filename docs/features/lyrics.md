@@ -1,147 +1,102 @@
 ---
 weight: 50
 title: "Lyrics"
-description: "Fetching lyrics from providers, bulk analysis, and a review queue for conflicts."
+description: "Fetching lyrics for one track or the whole library, and reviewing conflicts."
 icon: "lyrics"
 draft: false
 toc: true
 ---
 
-The **lyrics** feature fetches song lyrics from external providers and writes them
-into both the track's file tags and the database. It works in two modes: an
-**on-demand** mode in the tag editor (pick a provider, pull lyrics for one track)
-and a **bulk analysis** mode that walks the entire library as a background job.
-Because overwriting human-curated lyrics is destructive, anything ambiguous is sent
-to a **review queue** instead of being applied automatically.
+Soulsolid can find lyrics for your tracks and save them into the audio files, so any
+player that reads embedded lyrics can show them. You can fetch lyrics for **one track**
+from the tag editor, or run a **lyrics analysis** over your whole library. Because
+lyrics you've curated by hand are easy to lose, Soulsolid never overwrites existing
+lyrics without asking: anything unclear goes to a **review queue**.
 
-## What it does
+Lyrics come from **lyrics providers**. Currently [LRCLIB](https://lrclib.net) is
+supported, which offers both plain and synced (time-stamped) lyrics. See
+[Lyrics configuration](../lyrics.md) for provider settings.
 
-- Lists the configured **lyrics providers** and their enabled state.
-- Fetches lyrics for a **single track** from a chosen provider (tag-editor flow).
-- Runs a **library-wide analysis job** (`analyze_lyrics`) that attempts to add
-  lyrics to every track.
-- Routes conflicts and failures into a **review queue** with three item types
-  (`existing_lyrics`, `lyric_404`, `failed_lyrics`) so the user decides what to do.
-- Supports **grouped queue processing** (by artist or album) and bulk actions.
-- Writes lyrics to the audio file tags **and** the SQLite store, keeping the
-  `has_lyrics` flag consistent.
+## What you can do
 
-## How it works
+- **Fetch lyrics for a single track** in the tag editor.
+- **Analyze the whole library** and add lyrics to every track that's missing them.
+- **Review** tracks where the new lyrics differ from the existing ones, or where no
+  lyrics were found.
+- Mark tracks as **instrumental** so they're skipped from now on.
 
-The feature follows the standard three-layer shape, plus a job task and a queue:
+## Lyrics for one track
 
-```
-routes.go      → registers HTTP routes (/tag, /library, /lyrics/queue, /analyze)
-handlers.go    → HTTP layer: params, HTMX/JSON negotiation, queue view models
-service.go     → domain logic: fetch, compare, persist, queue management
-lyrics.go      → LyricsProvider interface
-lyrics_job.go  → the analyze_lyrics background job task
-queue.go       → queue item type constants
-```
+In the [tag editor](./metadata.md), the **Lyrics** buttons fetch lyrics from each enabled
+provider and put them in the lyrics field. Review them and click **Save Changes** to
+write them to the file.
 
-- **`Service`** (`service.go`) is wired with a `TagWriter`/`TagReader` (file tags),
-  the `music.Library` (SQLite store), the map of `LyricsProvider`s, the
-  `config.Manager`, a `music.Queue`, and the `music.JobService`.
-- **`LyricsProvider`** (`lyrics.go`) is the provider contract: `SearchLyrics`,
-  `Name`, `DisplayName`, `IsEnabled`. Providers are registered in `main.go` and
-  toggled via config.
+## Lyrics analysis
 
-### The `AddLyrics` decision tree
+Go to **Analyze → Lyrics**, choose a provider and click **Start Lyrics Analysis**. It
+runs in the background as a [job](./jobs.md) that goes through every track in your
+library. You can follow its progress and cancel it from the Jobs section.
 
-`AddLyrics` is the core routine and returns an `AddLyricsResult` describing what
-happened:
+Two options control what happens to tracks that **already have lyrics** (you can pick
+one or neither):
 
-1. **Instrumental guard** — if the track's `HasLyrics` flag is `false`, it is
-   treated as instrumental and skipped (`LyricsSkippedInstrumental`).
-2. **Search** — build `LyricsSearchParams` (title, artist, album, album artist),
-   validate the provider is enabled, and query it. No result / empty result →
-   `LyricsSkippedNotFound`.
-3. **Conflict handling** — if the track *already* has lyrics:
-   - identical to the fetched text → `LyricsSkippedIdentical` (no-op).
-   - different → either **override directly** (when `overrideNoQueue` is set) or
-     **enqueue** an `existing_lyrics` item for manual review (`LyricsQueued`).
-4. **Apply** — otherwise write the lyrics to the file tags and persist via
-   `UpdateTrack`, setting `HasLyrics = true` (`LyricsAdded`).
+| Option | Behavior |
+|--------|----------|
+| **Skip tracks that already have lyrics** *(on by default)* | Tracks with lyrics are left alone; only tracks without lyrics are looked up. |
+| **Override without queuing** | New lyrics replace existing ones straight away, without asking. |
+| *Neither* | When the new lyrics differ from the existing ones, the track goes to the review queue so you can decide. |
 
-File-tag write failures are logged as warnings but do not abort the DB update.
+For every track:
 
-### The review queue
+- **Instrumental** tracks are skipped.
+- If the track has **no lyrics**, the ones found are saved directly.
+- If the new lyrics are **identical** to the existing ones, nothing changes.
+- If **no lyrics are found**, or the provider **fails**, the track goes to the review
+  queue.
 
-The queue holds tracks that need a human decision. Each item carries a
-`QueueItemType` and per-item metadata (e.g. the candidate `new_lyrics` and the
-`provider` that produced it). The three types and their allowed actions:
+A track that fails never stops the analysis. When it finishes, the job reports how many
+tracks were updated, skipped, queued or failed. In the [job log](./jobs.md#job-logs), each
+failed track has a link to open it in the tag editor and fix it by hand.
 
-| Type | Meaning | Allowed actions |
-|------|---------|-----------------|
-| `existing_lyrics` | Provider found lyrics that **differ** from existing ones | `override`, `keep_old` |
-| `lyric_404` | Provider could not find lyrics | `no_lyrics` (mark instrumental) |
-| `failed_lyrics` | Fetch failed / errored | `skip`, `edit_manual`, `no_lyrics` |
+## The lyrics queue
 
-`ProcessLyricsQueueItem` validates the action against the item type, applies the
-change (writing tags + DB where relevant), and removes the item. Group processing
-(`ProcessLyricsQueueGroup`) fans the same action out over every item grouped under
-an artist or album, continuing past individual failures.
+The lyrics queue, under **Analyze → Lyrics**, holds the tracks that need your decision:
 
-Handlers emit `HX-Trigger` events (`lyricsQueueUpdated`, `refreshLyricsQueueBadge`,
-`updateLyricsQueueCount`, and grouping-activation events) so the UI refreshes badges
-and lists after each action.
+| Reason | What happened | What you can do |
+|--------|---------------|-----------------|
+| **Existing lyrics** | New lyrics were found that differ from the ones already on the track. Compare the old and new versions. | **Override** with the new lyrics, or **Edit Manually** |
+| **Not found** | The provider has no lyrics for this track. | **No Lyrics** (mark as instrumental), or **Edit Manually** |
+| **Failed** | The provider returned an error. | **Skip**, **No Lyrics**, or **Edit Manually** |
 
-### The `analyze_lyrics` job
+*Edit Manually* opens the track in the [tag editor](./metadata.md), where you can paste or
+fetch lyrics yourself.
 
-`StartLyricsAnalysis` launches the `analyze_lyrics` job with three options carried in
-the job metadata: `provider`, `skip_existing`, and `override_no_queue`. The job task
-(`lyrics_job.go`):
+As with the [import queue](./importing.md#grouping-and-bulk-actions), you can group items
+**by artist** or **by album** and act on a whole group at once, or clear the queue.
 
-- Aborts early if no provider is enabled.
-- Iterates the library in **batches of 100** (paginated) to bound memory.
-- Honors cancellation via `ctx.Done()` between batches and tracks.
-- Per track, applies the skip rules (skip tracks that already have lyrics when
-  `skip_existing`; skip instrumentals unless `override_no_queue`), then calls
-  `AddLyrics`.
-- Tallies `updated`, `skipped`, `errors`, and the number of new queue items by type,
-  and reports a final summary plus progress (0→100%).
+> The lyrics queue is kept in memory, so it's **emptied when Soulsolid restarts**. Run
+> the analysis again to rebuild it.
 
-Per-track failures never fail the whole job — they are counted and logged with a
-manual-fix link to the track's tag editor.
+## Where lyrics are saved
 
-## Endpoints
-
-Routes are registered in `src/features/lyrics/routes.go` across four groups.
-
-| Method | Route | Purpose | Response |
-|--------|-------|---------|----------|
-| GET | `/tag/:trackId/lyrics` | Provider buttons for a track (or provider list as JSON) | Partial / JSON |
-| GET | `/tag/:trackId/lyrics/text/:provider` | Fetch lyrics text from a provider | Text / JSON / Toast |
-| GET | `/library/tracks/:id/lyrics` | The track's stored lyrics, plain text | Text |
-| GET | `/lyrics/queue/header` | Queue header partial | Partial |
-| GET | `/lyrics/queue/items` | Ungrouped queue items (capped at 10) | Partial |
-| GET | `/lyrics/queue/items/grouped` | Queue items grouped (`?type=artist\|album`) | Partial |
-| POST | `/lyrics/queue/:id/:action` | Process a single queue item | Toast |
-| POST | `/lyrics/queue/group/:groupType/:groupKey/:action` | Process a whole group | Toast |
-| POST | `/lyrics/queue/clear` | Clear the entire queue | Toast |
-| GET | `/lyrics/queue/count` | Queue count, formatted as `(N)` | Text |
-| GET | `/lyrics/queue/:id/new_lyrics` | Candidate lyrics held in a queue item | Text |
-| POST | `/analyze/lyrics` | Start the `analyze_lyrics` job | Toast (job) |
-| GET | `/analyze/lyrics` | Render the lyrics-analysis section | Section |
-
-### Form parameters for `POST /analyze/lyrics`
-
-| Field | Meaning |
-|-------|---------|
-| `provider` | Lyrics provider to use (required) |
-| `skip_existing_lyrics` | `true` → skip tracks that already have lyrics |
-| `override_no_queue` | `true` → overwrite conflicting lyrics directly instead of queuing (ignored when skip is on) |
+Lyrics are written to the **audio file's tags** and to the library, so you can
+[search inside lyrics](./library.md#filters) and see them in the track overview.
 
 ## Configuration
 
-Lyrics providers are toggled in the global config under the lyrics-providers block,
-read via `config.Manager.GetEnabledLyricsProviders()`. A provider is only usable when
-both the config flag and the provider's own `IsEnabled()` return true. See
-[plugins / providers](../plugins.md) for adding new providers.
+```yaml
+lyrics:
+  providers:
+    lrclib:
+      enabled: true
+      prefer_synced: false  # prefer time-stamped lyrics when available
+```
+
+See [Lyrics configuration](../lyrics.md) for details.
 
 ## Related
 
-- [Metadata / Tagging](./metadata.md) — the tag editor where on-demand lyrics fetch lives.
-- [Jobs](./jobs.md) — the background-job system that runs `analyze_lyrics`.
-- [Library](./library.md) — lyrics state is a search filter (`lyrics_filter`, `lyrics_text`).
-- [API reference](../api.md) — response-type semantics.
+- [Lyrics configuration](../lyrics.md): providers and their options.
+- [Metadata / Tagging](./metadata.md): the tag editor, and marking tracks as instrumental.
+- [Jobs](./jobs.md): follow and cancel the lyrics analysis.
+- [Library](./library.md): filter tracks by lyrics.
