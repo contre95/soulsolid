@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.4](https://github.com/contre95/soulsolid/compare/v0.28.3...v0.28.4) (2026-10-24)
+
+
+### 🐛 Bug Fixes
+
+* user-oriented docs and clearer duplicate skip label ([#203](https://github.com/contre95/soulsolid/issues/203)) ([07596a8](https://github.com/contre95/soulsolid/commit/07596a86dc32770f5287bc78ec9e0d5cd137a7ee))
+
 ## [0.28.3](https://github.com/contre95/soulsolid/compare/v0.28.2...v0.28.3) (2026-10-24)
 
 
