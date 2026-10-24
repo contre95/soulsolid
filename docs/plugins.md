@@ -1,4 +1,11 @@
-# Plugin Development Guide
+---
+weight: 55
+title: "Plugins"
+description: "Writing and distributing downloader plugins."
+icon: "article"
+draft: false
+toc: true
+---
 
 This guide explains how to create and distribute downloaders as plugins for Soulsolid using Go's native plugin system.
 

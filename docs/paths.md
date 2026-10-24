@@ -1,4 +1,11 @@
-# Path Parser Documentation
+---
+weight: 30
+title: "Paths"
+description: "Placeholders and functions for library path templates."
+icon: "article"
+draft: false
+toc: true
+---
 
 This document describes all available placeholders and functions for the Soulsolid path parser, which is used to organize music files into directories based on metadata.
 

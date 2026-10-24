@@ -1,4 +1,11 @@
-# SoulSolid API Reference
+---
+weight: 90
+title: "API"
+description: "HTTP API reference and content negotiation."
+icon: "article"
+draft: false
+toc: true
+---
 
 Most endpoints that return Resource responses or support both HTML and API clients perform content negotiation.
 HTMX sends `HX-Request: true` automatically; anything else is treated as an API client.

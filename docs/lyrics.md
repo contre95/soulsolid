@@ -1,4 +1,11 @@
-# Lyrics
+---
+weight: 65
+title: "Lyrics"
+description: "Lyrics providers, analysis and the lyrics queue."
+icon: "article"
+draft: false
+toc: true
+---
 
 Soulsolid supports automatic lyric retrieval and embedding via  lyric providers
 
