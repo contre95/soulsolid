@@ -63,12 +63,6 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 				Fat32Safe:       c.FormValue("import.paths.fat32_safe") == "true",
 			},
 		},
-		Telegram: Telegram{
-			Enabled:      c.FormValue("telegram.enabled") == "true",
-			Token:        c.FormValue("telegram.token"),
-			AllowedUsers: parseStringSlice(c.FormValue("telegram.allowedUsers")),
-			BotHandle:    c.FormValue("telegram.bot_handle"),
-		},
 		Downloaders: Downloaders{
 			Plugins: currentConfig.Downloaders.Plugins, // Preserve plugins
 			Artwork: currentConfig.Downloaders.Artwork, // Preserve artwork settings
@@ -181,21 +175,6 @@ func (h *Handler) apply(c *fiber.Ctx, newConfig *Config, msg string) error {
 		slog.Info("Configuration saved to file successfully")
 	}
 	return respond.ToastOk(c, msg)
-}
-
-func parseStringSlice(s string) []string {
-	if s == "" {
-		return []string{}
-	}
-	// Split by comma and trim spaces
-	var result []string
-	for part := range strings.SplitSeq(s, ",") {
-		trimmed := strings.TrimSpace(part)
-		if trimmed != "" {
-			result = append(result, trimmed)
-		}
-	}
-	return result
 }
 
 func (h *Handler) GetConfigForm(c *fiber.Ctx) error {

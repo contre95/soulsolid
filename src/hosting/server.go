@@ -118,7 +118,6 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 		}
 		c.Locals("Version", version)
 		c.Locals("Downloaders", downloaders)
-		c.Locals("Telegram", cfgData.Telegram)
 		return c.Next()
 	})
 

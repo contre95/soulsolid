@@ -7,10 +7,10 @@
   "pages": [
     {
       "title": "Overview",
-      "purpose": "Introduce Soulsolid: what it is, what problems it solves, its major features (library management, downloading, importing, metadata tagging, Telegram integration), and links to sub-pages for deeper coverage.",
+      "purpose": "Introduce Soulsolid: what it is, what problems it solves, its major features (library management, downloading, importing, metadata tagging), and links to sub-pages for deeper coverage.",
       "page_notes": [
         {
-          "content": "Reference README.md for the project tagline, feature list (lines 27-33), screenshots (lines 14-24), and links to docs/demo. Mention it is a Go + Fiber web app with HTMX UI, SQLite database, and plugin-based downloader architecture. Highlight the key selling points: self-hosted, mobile-friendly UI, background job processing, and Telegram bot control."
+          "content": "Reference README.md for the project tagline, feature list (lines 27-33), screenshots (lines 14-24), and links to docs/demo. Mention it is a Go + Fiber web app with HTMX UI, SQLite database, and plugin-based downloader architecture. Highlight the key selling points: self-hosted, mobile-friendly UI, and background job processing."
         }
       ]
     },
@@ -39,17 +39,17 @@
       "purpose": "Document the configuration system: the Config struct and all its fields, the config.yaml file format, how the Manager loads and saves config, the !env_var YAML tag for environment variable injection, default values, and the web-based settings UI.",
       "page_notes": [
         {
-          "content": "Reference src/features/config/config.go:4-16 for the Config struct with all sub-structs (Telegram, Logger, Downloaders, Server, Database, Import, Metadata, Lyrics, Jobs). The Manager is in src/features/config/manager.go - it uses sync.RWMutex for thread safety, supports !env_var YAML tag for secret injection (manager.go lines 22-86), auto-creates default config if missing (manager.go lines 149-163). Default values are in src/features/config/default.go. Example config is config.example.yaml. The settings UI is in views/sections/settings.html."
+          "content": "Reference src/features/config/config.go:4-16 for the Config struct with all sub-structs (Logger, Downloaders, Server, Database, Import, Metadata, Lyrics, Jobs). The Manager is in src/features/config/manager.go - it uses sync.RWMutex for thread safety, supports !env_var YAML tag for secret injection (manager.go lines 22-86), auto-creates default config if missing (manager.go lines 149-163). Default values are in src/features/config/default.go. Example config is config.example.yaml. The settings UI is in views/sections/settings.html."
         }
       ]
     },
     {
       "title": "Configuration Reference",
-      "purpose": "A complete field-by-field reference for every configuration section: libraryPath, downloadPath, server, logger, telegram, database, import, downloaders, metadata providers, lyrics providers, sync devices, and jobs webhooks.",
+      "purpose": "A complete field-by-field reference for every configuration section: libraryPath, downloadPath, server, logger, database, import, downloaders, metadata providers, lyrics providers, sync devices, and jobs webhooks.",
       "parent": "Configuration",
       "page_notes": [
         {
-          "content": "Reference config.example.yaml for the full YAML format with inline comments. Config struct fields map directly: libraryPath (string), downloadPath (string), telegram (enabled, token, allowedUsers, bot_handle - config.go:65-70), logger (enabled, level, format, htmx_debug - config.go:58-63), downloaders (plugins array with name/path/url/icon/config, artwork.embedded with enabled/size/quality - config.go:73-76, 100-118), server (show_routes, port - config.go:52-55), database (path - config.go:47-49), import (move, always_queue, duplicates, paths, auto_start_watcher, allow_missing_metadata - config.go:29-36), metadata.providers map with enabled/secret per provider (config.go:79-87), lyrics.providers map with enabled/prefer_synced (config.go:90-98), jobs (log, log_path, webhooks with enabled/job_trigger/command - config.go:17-27)."
+          "content": "Reference config.example.yaml for the full YAML format with inline comments. Config struct fields map directly: libraryPath (string), downloadPath (string), logger (enabled, level, format, htmx_debug - config.go:58-63), downloaders (plugins array with name/path/url/icon/config, artwork.embedded with enabled/size/quality - config.go:73-76, 100-118), server (show_routes, port - config.go:52-55), database (path - config.go:47-49), import (move, always_queue, duplicates, paths, auto_start_watcher, allow_missing_metadata - config.go:29-36), metadata.providers map with enabled/secret per provider (config.go:79-87), lyrics.providers map with enabled/prefer_synced (config.go:90-98), jobs (log, log_path, webhooks with enabled/job_trigger/command - config.go:17-27)."
         }
       ]
     },
