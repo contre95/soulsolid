@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.3](https://github.com/contre95/soulsolid/compare/v0.28.2...v0.28.3) (2026-10-24)
+
+
+### 🐛 Bug Fixes
+
+* make docs/ the source for the docs site ([#201](https://github.com/contre95/soulsolid/issues/201)) ([9da970a](https://github.com/contre95/soulsolid/commit/9da970ac8bda66c9d45106d40e5c9e7148408ad4))
+
 ## [0.28.2](https://github.com/contre95/soulsolid/compare/v0.28.1...v0.28.2) (2026-10-17)
 
 
