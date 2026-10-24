@@ -18,15 +18,15 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.7.2",
     "@iconify/iconify": "^3.1.1",
-    "@tailwindcss/cli": "^4.1.12",
+    "@tailwindcss/cli": "^4.3.3",
     "animate.css": "^4.1.1",
-    "apexcharts": "^5.3.6",
-    "chart.js": "^4.4.0",
-    "htmx.org": "^2.0.6",
-    "hyperscript.org": "^0.9.14",
+    "apexcharts": "^5.16.0",
+    "chart.js": "^4.6.1",
+    "htmx.org": "^2.0.11",
+    "hyperscript.org": "^0.9.94",
     "jquery": "^3.7.1",
-    "slim-select": "^3.0.3",
-    "sweetalert2": "^11.26.24",
-    "tailwindcss": "^4.1.12"
+    "slim-select": "^3.6.1",
+    "sweetalert2": "^11.26.25",
+    "tailwindcss": "^4.3.3"
   }
 }

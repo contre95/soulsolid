@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine AS app-builder
+FROM golang:1.26-alpine AS app-builder
 ARG IMAGE_TAG
 ENV CGO_ENABLED=2
 RUN apk add --no-cache go gcc libc-dev sqlite-dev nodejs npm git
@@ -10,7 +10,7 @@ RUN go mod tidy
 # Build without static linking for plugin compatibility
 RUN go build -o /app/soulsolid src/main.go
 
-FROM golang:1.25-alpine
+FROM golang:1.26-alpine
 ARG IMAGE_TAG
 ENV CGO_ENABLED=2
 RUN apk add --no-cache git tree chromaprint
