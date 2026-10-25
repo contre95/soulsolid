@@ -59,7 +59,7 @@ func warnOnOrphanedTracks(db *database.SqliteLibrary, cfg *config.Config) {
 }
 
 func main() {
-	configPath := "/config/config.yaml"
+	configPath := "./config.yaml"
 	if envPath := os.Getenv("SOULSOLID_CONFIG_PATH"); envPath != "" {
 		configPath = envPath
 	}
