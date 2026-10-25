@@ -19,6 +19,11 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Tailwind 4.3 switched font-sans to an explicit stack (Roboto, …); keep the system UI font as before. */
+@theme {
+  --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
 body, aside, #navbar-menu {
   background-image: 
     linear-gradient(135deg, rgba(57, 124, 175, 0.03) 0%, transparent 50%),
