@@ -7,7 +7,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Handler is the handler for the playlists feature.
@@ -21,7 +21,7 @@ func NewHandler(service *Service) *Handler {
 }
 
 // RenderPlaylistsSection renders the playlists page.
-func (h *Handler) RenderPlaylistsSection(c *fiber.Ctx) error {
+func (h *Handler) RenderPlaylistsSection(c fiber.Ctx) error {
 	slog.Debug("RenderPlaylistsSection handler called")
 
 	playlists, err := h.service.GetAllPlaylists(c.Context())
@@ -37,7 +37,7 @@ func (h *Handler) RenderPlaylistsSection(c *fiber.Ctx) error {
 }
 
 // GetPlaylist renders a single playlist page.
-func (h *Handler) GetPlaylist(c *fiber.Ctx) error {
+func (h *Handler) GetPlaylist(c fiber.Ctx) error {
 	slog.Debug("GetPlaylist handler called", "id", c.Params("id"))
 
 	playlist, err := h.service.GetPlaylist(c.Context(), c.Params("id"))
@@ -56,7 +56,7 @@ func (h *Handler) GetPlaylist(c *fiber.Ctx) error {
 }
 
 // CreatePlaylist handles creating a new playlist.
-func (h *Handler) CreatePlaylist(c *fiber.Ctx) error {
+func (h *Handler) CreatePlaylist(c fiber.Ctx) error {
 	slog.Debug("CreatePlaylist handler called")
 
 	name := c.FormValue("name")
@@ -77,7 +77,7 @@ func (h *Handler) CreatePlaylist(c *fiber.Ctx) error {
 }
 
 // UpdatePlaylist handles updating a playlist.
-func (h *Handler) UpdatePlaylist(c *fiber.Ctx) error {
+func (h *Handler) UpdatePlaylist(c fiber.Ctx) error {
 	slog.Debug("UpdatePlaylist handler called", "id", c.Params("id"))
 
 	playlistID := c.Params("id")
@@ -110,7 +110,7 @@ func (h *Handler) UpdatePlaylist(c *fiber.Ctx) error {
 }
 
 // DeletePlaylist handles deleting a playlist.
-func (h *Handler) DeletePlaylist(c *fiber.Ctx) error {
+func (h *Handler) DeletePlaylist(c fiber.Ctx) error {
 	slog.Debug("DeletePlaylist handler called", "id", c.Params("id"))
 
 	err := h.service.DeletePlaylist(c.Context(), c.Params("id"))
@@ -124,7 +124,7 @@ func (h *Handler) DeletePlaylist(c *fiber.Ctx) error {
 }
 
 // AddItemToPlaylist handles adding tracks, artists, or albums to a playlist.
-func (h *Handler) AddItemToPlaylist(c *fiber.Ctx) error {
+func (h *Handler) AddItemToPlaylist(c fiber.Ctx) error {
 	playlistID := c.FormValue("playlist_id")
 	itemType := c.FormValue("item_type")
 	itemID := c.FormValue("item_id")
@@ -178,7 +178,7 @@ func (h *Handler) AddItemToPlaylist(c *fiber.Ctx) error {
 }
 
 // RemoveTrackFromPlaylist handles removing a track from a playlist.
-func (h *Handler) RemoveTrackFromPlaylist(c *fiber.Ctx) error {
+func (h *Handler) RemoveTrackFromPlaylist(c fiber.Ctx) error {
 	slog.Debug("RemoveTrackFromPlaylist handler called")
 
 	playlistID := c.Params("playlistId")
@@ -199,14 +199,14 @@ func (h *Handler) RemoveTrackFromPlaylist(c *fiber.Ctx) error {
 }
 
 // GetPlaylistCreationModal returns the create playlist modal.
-func (h *Handler) GetPlaylistCreationModal(c *fiber.Ctx) error {
+func (h *Handler) GetPlaylistCreationModal(c fiber.Ctx) error {
 	slog.Debug("GetCreatePlaylistModal handler called")
 
 	return respond.Partial(c, "playlists/create_playlist_modal", fiber.Map{})
 }
 
 // GetPlaylistsForItem returns playlists for adding tracks, artists, or albums.
-func (h *Handler) GetPlaylistsForItem(c *fiber.Ctx) error {
+func (h *Handler) GetPlaylistsForItem(c fiber.Ctx) error {
 	itemType := c.Params("type")
 	itemID := c.Params("id")
 
@@ -254,7 +254,7 @@ func (h *Handler) GetPlaylistsForItem(c *fiber.Ctx) error {
 }
 
 // ExportM3U handles exporting a playlist to an M3U file.
-func (h *Handler) ExportM3U(c *fiber.Ctx) error {
+func (h *Handler) ExportM3U(c fiber.Ctx) error {
 	slog.Debug("ExportM3U handler called", "id", c.Params("id"))
 
 	playlistID := c.Params("id")

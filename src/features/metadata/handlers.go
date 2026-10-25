@@ -7,7 +7,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Handler handles tag editing requests
@@ -21,7 +21,7 @@ func NewHandler(service *Service) *Handler {
 }
 
 // RenderTagEditor renders the tag editing page
-func (h *Handler) RenderTagEditor(c *fiber.Ctx) error {
+func (h *Handler) RenderTagEditor(c fiber.Ctx) error {
 	slog.Debug("RenderTagEditor handler called", "trackId", c.Params("trackId"))
 
 	trackID := c.Params("trackId")
@@ -165,7 +165,7 @@ func (h *Handler) getProviderColors(providerName string) map[string]string {
 }
 
 // ServeArtwork serves the embedded album art for a track directly from the file.
-func (h *Handler) ServeArtwork(c *fiber.Ctx) error {
+func (h *Handler) ServeArtwork(c fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	if trackID == "" {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Track ID is required")
@@ -185,7 +185,7 @@ func (h *Handler) ServeArtwork(c *fiber.Ctx) error {
 }
 
 // FetchFromProvider handles fetching metadata from any provider and rendering the form
-func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
+func (h *Handler) FetchFromProvider(c fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	providerName := c.Params("provider")
 
@@ -399,7 +399,7 @@ func (h *Handler) FetchFromProvider(c *fiber.Ctx) error {
 }
 
 // SearchTracksFromProvider handles searching for tracks from a specific provider
-func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
+func (h *Handler) SearchTracksFromProvider(c fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	providerName := c.Params("provider")
 
@@ -426,9 +426,9 @@ func (h *Handler) SearchTracksFromProvider(c *fiber.Ctx) error {
 }
 
 // SelectTrackFromResults handles selecting a track from search results and applying its metadata
-func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
+func (h *Handler) SelectTrackFromResults(c fiber.Ctx) error {
 	trackID := c.Params("trackId")
-	selectedTrackIndex := c.QueryInt("index", -1)
+	selectedTrackIndex := fiber.Query[int](c, "index", -1)
 	providerName := c.Params("provider")
 
 	if trackID == "" || selectedTrackIndex == -1 || providerName == "" {
@@ -569,7 +569,7 @@ func (h *Handler) SelectTrackFromResults(c *fiber.Ctx) error {
 }
 
 // CalculateFingerprint handles fingerprint calculation for a track
-func (h *Handler) CalculateFingerprint(c *fiber.Ctx) error {
+func (h *Handler) CalculateFingerprint(c fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	if trackID == "" || trackID == "0" {
 		slog.Error("Invalid track ID in CalculateFingerprint", "trackId", trackID)
@@ -588,7 +588,7 @@ func (h *Handler) CalculateFingerprint(c *fiber.Ctx) error {
 }
 
 // ViewFingerprint handles viewing fingerprint
-func (h *Handler) ViewFingerprint(c *fiber.Ctx) error {
+func (h *Handler) ViewFingerprint(c fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	if trackID == "" || trackID == "0" {
 		slog.Error("Invalid track ID in ViewFingerprint", "trackId", trackID)
@@ -609,7 +609,7 @@ func (h *Handler) ViewFingerprint(c *fiber.Ctx) error {
 }
 
 // GetMetadataProviders returns metadata provider buttons for HTMX or provider list as JSON.
-func (h *Handler) GetMetadataProviders(c *fiber.Ctx) error {
+func (h *Handler) GetMetadataProviders(c fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	if trackID == "" {
 		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
@@ -634,7 +634,7 @@ func (h *Handler) GetMetadataProviders(c *fiber.Ctx) error {
 }
 
 // UpdateTags handles the form submission to update track tags
-func (h *Handler) UpdateTags(c *fiber.Ctx) error {
+func (h *Handler) UpdateTags(c fiber.Ctx) error {
 	slog.Info("UpdateTags handler called", "trackId", c.Params("trackId"))
 
 	trackID := c.Params("trackId")
@@ -644,7 +644,7 @@ func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 
 	// Parse form data
 	formData := make(map[string]string)
-	c.BodyParser(&formData)
+	c.Bind().Body(&formData)
 
 	// Get form values
 	if title := c.FormValue("title"); title != "" {
@@ -652,7 +652,7 @@ func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 	}
 
 	// Handle dropdown fields - strict selection only
-	if artistIDs := c.Context().PostArgs().PeekMulti("artist_ids"); len(artistIDs) > 0 {
+	if artistIDs := c.RequestCtx().PostArgs().PeekMulti("artist_ids"); len(artistIDs) > 0 {
 		artistIDsStr := make([]string, len(artistIDs))
 		for i, b := range artistIDs {
 			artistIDsStr[i] = string(b)
@@ -721,7 +721,7 @@ func (h *Handler) UpdateTags(c *fiber.Ctx) error {
 }
 
 // StartAcoustIDAnalysis handles starting the AcoustID analysis job
-func (h *Handler) StartAcoustIDAnalysis(c *fiber.Ctx) error {
+func (h *Handler) StartAcoustIDAnalysis(c fiber.Ctx) error {
 	slog.Info("Starting AcoustID analysis via HTTP request")
 
 	jobID, err := h.service.StartAcoustIDAnalysis(c.Context())
@@ -738,7 +738,7 @@ func (h *Handler) StartAcoustIDAnalysis(c *fiber.Ctx) error {
 }
 
 // RenderMetadataAnalysisSection renders the metadata analysis section page
-func (h *Handler) RenderMetadataAnalysisSection(c *fiber.Ctx) error {
+func (h *Handler) RenderMetadataAnalysisSection(c fiber.Ctx) error {
 	slog.Debug("Rendering metadata analysis section")
 	return respond.Section(c, "analyze_metadata", fiber.Map{"Title": "Metadata Analysis"})
 }

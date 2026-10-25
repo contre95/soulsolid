@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Handler is the handler for the config feature.
@@ -23,13 +23,13 @@ func NewHandler(configManager *Manager) *Handler {
 }
 
 // RenderSettingsSection renders the settings form with current configuration values.
-func (h *Handler) RenderSettingsSection(c *fiber.Ctx) error {
+func (h *Handler) RenderSettingsSection(c fiber.Ctx) error {
 	slog.Debug("RenderSettings handler called")
 	return respond.Section(c, "settings", fiber.Map{"Title": "Settings"})
 }
 
 // UpdateSettings handles the form submission to update configuration.
-func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
+func (h *Handler) UpdateSettings(c fiber.Ctx) error {
 	slog.Info("Configuration update requested")
 
 	// Get current config to preserve server settings
@@ -127,7 +127,7 @@ func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
 
 // UpdateImportOptions saves the import options edited from the Import Directory card.
 // Only these fields change; the rest of the config is kept as is.
-func (h *Handler) UpdateImportOptions(c *fiber.Ctx) error {
+func (h *Handler) UpdateImportOptions(c fiber.Ctx) error {
 	duplicates := c.FormValue("import.duplicates")
 	switch duplicates {
 	case "replace", "skip", "queue":
@@ -146,7 +146,7 @@ func (h *Handler) UpdateImportOptions(c *fiber.Ctx) error {
 }
 
 // UpdatePathTemplates saves the path templates edited from the Path Templates card.
-func (h *Handler) UpdatePathTemplates(c *fiber.Ctx) error {
+func (h *Handler) UpdatePathTemplates(c fiber.Ctx) error {
 	paths := h.configManager.Get().Import.PathOptions
 	paths.DefaultPath = strings.TrimSpace(c.FormValue("import.paths.default_path"))
 	paths.Compilations = strings.TrimSpace(c.FormValue("import.paths.compilations"))
@@ -172,7 +172,7 @@ func (h *Handler) UpdatePathTemplates(c *fiber.Ctx) error {
 }
 
 // apply swaps in newConfig, persists it, and responds with a toast.
-func (h *Handler) apply(c *fiber.Ctx, newConfig *Config, msg string) error {
+func (h *Handler) apply(c fiber.Ctx, newConfig *Config, msg string) error {
 	h.configManager.Update(newConfig)
 	slog.Info("Configuration updated in memory")
 	if err := h.configManager.Save(); err != nil {
@@ -198,7 +198,7 @@ func parseStringSlice(s string) []string {
 	return result
 }
 
-func (h *Handler) GetConfigForm(c *fiber.Ctx) error {
+func (h *Handler) GetConfigForm(c fiber.Ctx) error {
 	slog.Debug("GetSettingsForm handler called")
 	config := h.configManager.Get()
 
@@ -208,7 +208,7 @@ func (h *Handler) GetConfigForm(c *fiber.Ctx) error {
 }
 
 // GetConfig returns the config as JSON, or as raw YAML text when ?fmt=yaml is set.
-func (h *Handler) GetConfig(c *fiber.Ctx) error {
+func (h *Handler) GetConfig(c fiber.Ctx) error {
 	slog.Debug("GetConfig handler called")
 	if c.Query("fmt") == "yaml" {
 		c.Set("Content-Type", "text/yaml")
@@ -218,7 +218,7 @@ func (h *Handler) GetConfig(c *fiber.Ctx) error {
 }
 
 // DownloadDatabase serves the database file for download.
-func (h *Handler) DownloadDatabase(c *fiber.Ctx) error {
+func (h *Handler) DownloadDatabase(c fiber.Ctx) error {
 	slog.Debug("DownloadDatabase handler called")
 
 	config := h.configManager.Get()

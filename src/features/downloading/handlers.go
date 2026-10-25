@@ -7,7 +7,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Handler handles HTTP requests for downloading
@@ -21,7 +21,7 @@ func NewHandler(service *Service) *Handler {
 }
 
 // RenderDownloadSection renders the download page.
-func (h *Handler) RenderDownloadSection(c *fiber.Ctx) error {
+func (h *Handler) RenderDownloadSection(c fiber.Ctx) error {
 	slog.Debug("RenderDownloadSection handler called")
 	downloader := c.Query("downloader", "")
 	if downloader == "" {
@@ -45,11 +45,11 @@ type SearchRequest struct {
 }
 
 // SearchAlbums handles album search requests
-func (h *Handler) SearchAlbums(c *fiber.Ctx) error {
+func (h *Handler) SearchAlbums(c fiber.Ctx) error {
 	slog.Debug("SearchAlbums handler called")
 
 	var req SearchRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.Query == "" {
@@ -68,11 +68,11 @@ func (h *Handler) SearchAlbums(c *fiber.Ctx) error {
 }
 
 // SearchTracks handles track search requests
-func (h *Handler) SearchTracks(c *fiber.Ctx) error {
+func (h *Handler) SearchTracks(c fiber.Ctx) error {
 	slog.Debug("SearchTracks handler called")
 
 	var req SearchRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.Query == "" {
@@ -96,11 +96,11 @@ func (h *Handler) SearchTracks(c *fiber.Ctx) error {
 }
 
 // Search handles general search requests
-func (h *Handler) Search(c *fiber.Ctx) error {
+func (h *Handler) Search(c fiber.Ctx) error {
 	slog.Debug("Search handler called")
 
 	var req SearchRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.Query == "" {
@@ -204,11 +204,11 @@ type DownloadTracksRequest struct {
 }
 
 // DownloadTrack handles track download requests
-func (h *Handler) DownloadTrack(c *fiber.Ctx) error {
+func (h *Handler) DownloadTrack(c fiber.Ctx) error {
 	slog.Debug("DownloadTrack handler called")
 
 	var req DownloadTrackRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.TrackID == "" {
@@ -228,11 +228,11 @@ func (h *Handler) DownloadTrack(c *fiber.Ctx) error {
 }
 
 // DownloadAlbum handles album download requests
-func (h *Handler) DownloadAlbum(c *fiber.Ctx) error {
+func (h *Handler) DownloadAlbum(c fiber.Ctx) error {
 	slog.Debug("DownloadAlbum handler called")
 
 	var req DownloadAlbumRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.AlbumID == "" {
@@ -250,11 +250,11 @@ func (h *Handler) DownloadAlbum(c *fiber.Ctx) error {
 }
 
 // DownloadArtist handles artist download requests
-func (h *Handler) DownloadArtist(c *fiber.Ctx) error {
+func (h *Handler) DownloadArtist(c fiber.Ctx) error {
 	slog.Debug("DownloadArtist handler called")
 
 	var req DownloadArtistRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.ArtistID == "" {
@@ -272,11 +272,11 @@ func (h *Handler) DownloadArtist(c *fiber.Ctx) error {
 }
 
 // DownloadTracks handles multiple track download requests
-func (h *Handler) DownloadTracks(c *fiber.Ctx) error {
+func (h *Handler) DownloadTracks(c fiber.Ctx) error {
 	slog.Debug("DownloadTracks handler called")
 
 	var req DownloadTracksRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.TrackIDs == "" {
@@ -299,14 +299,14 @@ func (h *Handler) DownloadTracks(c *fiber.Ctx) error {
 }
 
 // DownloadPlaylist handles playlist download requests
-func (h *Handler) DownloadPlaylist(c *fiber.Ctx) error {
+func (h *Handler) DownloadPlaylist(c fiber.Ctx) error {
 	slog.Debug("DownloadPlaylist handler called")
 
 	var req struct {
 		TrackIDs     string `json:"trackIds" form:"trackIds"`
 		PlaylistName string `json:"playlistName" form:"playlistName"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 	if req.TrackIDs == "" {
@@ -332,7 +332,7 @@ func (h *Handler) DownloadPlaylist(c *fiber.Ctx) error {
 }
 
 // GetAlbumTracks handles requests to get tracks from an album
-func (h *Handler) GetAlbumTracks(c *fiber.Ctx) error {
+func (h *Handler) GetAlbumTracks(c fiber.Ctx) error {
 	slog.Debug("GetAlbumTracks handler called")
 
 	albumID := c.Params("albumId")
@@ -370,7 +370,7 @@ func (h *Handler) GetAlbumTracks(c *fiber.Ctx) error {
 }
 
 // GetChartTracks handles chart track requests
-func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
+func (h *Handler) GetChartTracks(c fiber.Ctx) error {
 	limit := 20
 	if limitStr := c.Query("limit"); limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil {
@@ -430,7 +430,7 @@ func (h *Handler) GetChartTracks(c *fiber.Ctx) error {
 }
 
 // GetUserInfo handles requests for user information
-func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
+func (h *Handler) GetUserInfo(c fiber.Ctx) error {
 	downloader := strings.Clone(c.Query("downloader", "dummy"))
 	userInfo := h.service.GetUserInfo(downloader)
 	statuses := h.service.GetDownloaderStatuses()
@@ -460,7 +460,7 @@ func (h *Handler) GetUserInfo(c *fiber.Ctx) error {
 }
 
 // GetDownloaderCapabilities handles requests for downloader capabilities
-func (h *Handler) GetDownloaderCapabilities(c *fiber.Ctx) error {
+func (h *Handler) GetDownloaderCapabilities(c fiber.Ctx) error {
 	downloader := strings.Clone(c.Query("downloader", "dummy"))
 	caps, err := h.service.GetDownloaderCapabilities(downloader)
 	if err != nil {

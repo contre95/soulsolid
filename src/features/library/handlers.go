@@ -9,7 +9,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 var lrcTimestamp = regexp.MustCompile(`^\[\d+:\d+\.\d+\]\s*`)
@@ -36,7 +36,7 @@ func NewHandler(service *Service) *Handler {
 }
 
 // RenderLibrarySection renders the library page.
-func (h *Handler) RenderLibrarySection(c *fiber.Ctx) error {
+func (h *Handler) RenderLibrarySection(c fiber.Ctx) error {
 	slog.Debug("RenderLibrary handler called")
 
 	// Fetch all artists and albums for search form
@@ -91,7 +91,7 @@ func NewPagination(page, limit, totalCount int) Pagination {
 }
 
 // GetArtist is the handler for getting a single artist.
-func (h *Handler) GetArtist(c *fiber.Ctx) error {
+func (h *Handler) GetArtist(c fiber.Ctx) error {
 	slog.Debug("GetArtist handler called", "id", c.Params("id"))
 	artist, err := h.service.GetArtist(c.Context(), c.Params("id"))
 	if err != nil {
@@ -104,7 +104,7 @@ func (h *Handler) GetArtist(c *fiber.Ctx) error {
 }
 
 // GetAlbum is the handler for getting a single album.
-func (h *Handler) GetAlbum(c *fiber.Ctx) error {
+func (h *Handler) GetAlbum(c fiber.Ctx) error {
 	slog.Debug("GetAlbum handler called", "id", c.Params("id"))
 	album, err := h.service.GetAlbum(c.Context(), c.Params("id"))
 	if err != nil {
@@ -117,7 +117,7 @@ func (h *Handler) GetAlbum(c *fiber.Ctx) error {
 }
 
 // GetTrack is the handler for getting a single track.
-func (h *Handler) GetTrack(c *fiber.Ctx) error {
+func (h *Handler) GetTrack(c fiber.Ctx) error {
 	slog.Debug("GetTrack handler called", "id", c.Params("id"))
 	track, err := h.service.GetTrack(c.Context(), c.Params("id"))
 	if err != nil {
@@ -130,7 +130,7 @@ func (h *Handler) GetTrack(c *fiber.Ctx) error {
 }
 
 // GetArtistsCount returns the count of artists in the library.
-func (h *Handler) GetArtistsCount(c *fiber.Ctx) error {
+func (h *Handler) GetArtistsCount(c fiber.Ctx) error {
 	slog.Debug("GetArtistsCount handler called")
 	artists, err := h.service.GetArtists(c.Context())
 	if err != nil {
@@ -141,7 +141,7 @@ func (h *Handler) GetArtistsCount(c *fiber.Ctx) error {
 }
 
 // GetAlbumsCount returns the count of albums in the library.
-func (h *Handler) GetAlbumsCount(c *fiber.Ctx) error {
+func (h *Handler) GetAlbumsCount(c fiber.Ctx) error {
 	slog.Debug("GetAlbumsCount handler called")
 	albums, err := h.service.GetAlbums(c.Context())
 	if err != nil {
@@ -152,7 +152,7 @@ func (h *Handler) GetAlbumsCount(c *fiber.Ctx) error {
 }
 
 // GetTracksCount returns the count of tracks in the library.
-func (h *Handler) GetTracksCount(c *fiber.Ctx) error {
+func (h *Handler) GetTracksCount(c fiber.Ctx) error {
 	slog.Debug("GetTracksCount handler called")
 	count, err := h.service.GetTracksCount(c.Context())
 	if err != nil {
@@ -163,7 +163,7 @@ func (h *Handler) GetTracksCount(c *fiber.Ctx) error {
 }
 
 // GetStorageSize returns the storage size of the library.
-func (h *Handler) GetStorageSize(c *fiber.Ctx) error {
+func (h *Handler) GetStorageSize(c fiber.Ctx) error {
 	slog.Debug("GetStorageSize handler called")
 	size, err := h.service.GetStorageSize(c.Context())
 	if err != nil {
@@ -187,7 +187,7 @@ func (h *Handler) GetStorageSize(c *fiber.Ctx) error {
 }
 
 // GetLibraryTable renders the library table section with tabs.
-func (h *Handler) GetLibraryTable(c *fiber.Ctx) error {
+func (h *Handler) GetLibraryTable(c fiber.Ctx) error {
 	slog.Debug("GetLibraryTable handler called")
 
 	// Fetch all artists and albums for search form
@@ -304,12 +304,12 @@ func artistToSearchResult(artist *music.Artist) SearchResult {
 }
 
 // GetUnifiedSearch performs a unified search across artists, albums, and tracks.
-func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
+func (h *Handler) GetUnifiedSearch(c fiber.Ctx) error {
 	slog.Debug("GetUnifiedSearch handler called")
 
 	query := strings.TrimSpace(c.Query("query", ""))
-	page := c.QueryInt("page", 1)
-	limit := c.QueryInt("limit", 50)
+	page := fiber.Query[int](c, "page", 1)
+	limit := fiber.Query[int](c, "limit", 50)
 	genre := c.Query("genre", "")
 	hasAcoustID := parseBoolFilter(c.Query("has_acoustid", ""))
 	lyricsFilter := c.Query("lyrics_filter", "")
@@ -429,7 +429,7 @@ func (h *Handler) GetUnifiedSearch(c *fiber.Ctx) error {
 }
 
 // GetLibraryFileTree returns a tree structure of the library path.
-func (h *Handler) GetLibraryFileTree(c *fiber.Ctx) error {
+func (h *Handler) GetLibraryFileTree(c fiber.Ctx) error {
 	slog.Debug("GetLibraryFileTree handler called")
 	var tree string
 	var err error
@@ -448,7 +448,7 @@ func (h *Handler) GetLibraryFileTree(c *fiber.Ctx) error {
 }
 
 // DeleteTrack deletes a track from the library.
-func (h *Handler) DeleteTrack(c *fiber.Ctx) error {
+func (h *Handler) DeleteTrack(c fiber.Ctx) error {
 	slog.Debug("DeleteTrack handler called", "trackId", c.Params("trackId"))
 
 	trackID := c.Params("trackId")
@@ -463,7 +463,7 @@ func (h *Handler) DeleteTrack(c *fiber.Ctx) error {
 }
 
 // DeleteAlbum deletes an album from the library.
-func (h *Handler) DeleteAlbum(c *fiber.Ctx) error {
+func (h *Handler) DeleteAlbum(c fiber.Ctx) error {
 	slog.Debug("DeleteAlbum handler called", "albumId", c.Params("albumId"))
 
 	albumID := c.Params("albumId")
@@ -478,7 +478,7 @@ func (h *Handler) DeleteAlbum(c *fiber.Ctx) error {
 }
 
 // DeleteArtist deletes an artist from the library.
-func (h *Handler) DeleteArtist(c *fiber.Ctx) error {
+func (h *Handler) DeleteArtist(c fiber.Ctx) error {
 	slog.Debug("DeleteArtist handler called", "artistId", c.Params("artistId"))
 
 	artistID := c.Params("artistId")
@@ -493,7 +493,7 @@ func (h *Handler) DeleteArtist(c *fiber.Ctx) error {
 }
 
 // RenderTrackOverviewPanel renders the floating track overview panel.
-func (h *Handler) RenderTrackOverviewPanel(c *fiber.Ctx) error {
+func (h *Handler) RenderTrackOverviewPanel(c fiber.Ctx) error {
 	slog.Debug("RenderTrackOverviewPanel handler called", "trackId", c.Params("trackId"))
 
 	trackID := c.Params("trackId")

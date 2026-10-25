@@ -5,7 +5,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/hosting/respond"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Handler handles HTTP requests for the reorganize feature.
@@ -23,7 +23,7 @@ func NewHandler(service *Service, config *config.Manager) *Handler {
 }
 
 // StartReorganizeAnalysis handles starting the file reorganization job
-func (h *Handler) StartReorganizeAnalysis(c *fiber.Ctx) error {
+func (h *Handler) StartReorganizeAnalysis(c fiber.Ctx) error {
 	slog.Info("Starting file reorganization job from web request")
 
 	fat32Safe := c.FormValue("fat32_safe") == "true"
@@ -40,7 +40,7 @@ func (h *Handler) StartReorganizeAnalysis(c *fiber.Ctx) error {
 }
 
 // RenderFilesReorganizationSection renders the file paths section page
-func (h *Handler) RenderFilesReorganizationSection(c *fiber.Ctx) error {
+func (h *Handler) RenderFilesReorganizationSection(c fiber.Ctx) error {
 	slog.Debug("Rendering file paths section")
 	return respond.Section(c, "analyze_files", fiber.Map{
 		"Title":  "File Paths",
