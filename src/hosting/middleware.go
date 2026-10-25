@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // HTMXMiddleware creates middleware for logging HTMX requests
 func HTMXMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		start := time.Now()
 
 		// Check if this is an HTMX request
@@ -45,7 +45,7 @@ func HTMXMiddleware() fiber.Handler {
 
 // HTMXDebugMiddleware provides detailed debugging for HTMX requests
 func HTMXDebugMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		isHTMX := c.Get("HX-Request") == "true"
 
 		if isHTMX {
@@ -70,7 +70,7 @@ func HTMXDebugMiddleware() fiber.Handler {
 }
 
 // getHTMXHeaders extracts all HTMX-related headers from the request
-func getHTMXHeaders(c *fiber.Ctx) map[string]string {
+func getHTMXHeaders(c fiber.Ctx) map[string]string {
 	headers := make(map[string]string)
 
 	// List of HTMX headers to check
@@ -95,7 +95,7 @@ func getHTMXHeaders(c *fiber.Ctx) map[string]string {
 }
 
 // getHTMXResponseHeaders extracts HTMX-related response headers
-func getHTMXResponseHeaders(c *fiber.Ctx) map[string]string {
+func getHTMXResponseHeaders(c fiber.Ctx) map[string]string {
 	headers := make(map[string]string)
 
 	// Check for HTMX response headers
@@ -125,7 +125,7 @@ func getHTMXResponseHeaders(c *fiber.Ctx) map[string]string {
 
 // LogAllRequestsMiddleware logs all requests with HTMX context
 func LogAllRequestsMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		start := time.Now()
 
 		isHTMX := c.Get("HX-Request") == "true"

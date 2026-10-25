@@ -11,7 +11,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Handler handles lyrics requests
@@ -67,7 +67,7 @@ func convertQueueItem(item music.QueueItem) (queueItemView, error) {
 }
 
 // GetLyricsProviders returns lyrics provider buttons for HTMX or provider list as JSON.
-func (h *Handler) GetLyricsProviders(c *fiber.Ctx) error {
+func (h *Handler) GetLyricsProviders(c fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	if trackID == "" {
 		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
@@ -92,7 +92,7 @@ func (h *Handler) GetLyricsProviders(c *fiber.Ctx) error {
 }
 
 // GetLyricsText returns plain lyrics text for HTMX to set in textarea, or JSON for API clients.
-func (h *Handler) GetLyricsText(c *fiber.Ctx) error {
+func (h *Handler) GetLyricsText(c fiber.Ctx) error {
 	trackID := c.Params("trackId")
 	providerName := c.Params("provider")
 
@@ -118,7 +118,7 @@ func (h *Handler) GetLyricsText(c *fiber.Ctx) error {
 }
 
 // GetTrackLyrics returns the lyrics of a track in plain text.
-func (h *Handler) GetTrackLyrics(c *fiber.Ctx) error {
+func (h *Handler) GetTrackLyrics(c fiber.Ctx) error {
 	slog.Debug("GetTrackLyrics handler called", "id", c.Params("id"))
 	track, err := h.service.libraryRepo.GetTrack(c.Context(), c.Params("id"))
 	if err != nil {
@@ -132,7 +132,7 @@ func (h *Handler) GetTrackLyrics(c *fiber.Ctx) error {
 }
 
 // GetQueueNewLyrics returns the new lyrics from a queue item's metadata.
-func (h *Handler) GetQueueNewLyrics(c *fiber.Ctx) error {
+func (h *Handler) GetQueueNewLyrics(c fiber.Ctx) error {
 	itemID := c.Params("id")
 	queueItemsMap := h.service.GetLyricsQueueItems()
 	item, ok := queueItemsMap[itemID]
@@ -146,7 +146,7 @@ func (h *Handler) GetQueueNewLyrics(c *fiber.Ctx) error {
 }
 
 // RenderLyricsQueueItems renders the lyrics queue content for HTMX
-func (h *Handler) RenderLyricsQueueItems(c *fiber.Ctx) error {
+func (h *Handler) RenderLyricsQueueItems(c fiber.Ctx) error {
 	slog.Debug("RenderLyricsQueueItems handler called")
 	queueItemsMap := h.service.GetLyricsQueueItems()
 	slog.Info("Lyrics queue items", "count", len(queueItemsMap))
@@ -182,7 +182,7 @@ func (h *Handler) RenderLyricsQueueItems(c *fiber.Ctx) error {
 }
 
 // ProcessLyricsQueueItem handles actions for individual lyrics queue items
-func (h *Handler) ProcessLyricsQueueItem(c *fiber.Ctx) error {
+func (h *Handler) ProcessLyricsQueueItem(c fiber.Ctx) error {
 	itemID := c.Params("id")
 	action := c.Params("action")
 	slog.Info("Processing lyrics queue item", "itemID", itemID, "action", action)
@@ -209,7 +209,7 @@ func (h *Handler) ProcessLyricsQueueItem(c *fiber.Ctx) error {
 }
 
 // LyricsQueueCount returns the current lyrics queue count formatted as "(X)" or empty if 0
-func (h *Handler) LyricsQueueCount(c *fiber.Ctx) error {
+func (h *Handler) LyricsQueueCount(c fiber.Ctx) error {
 	count := len(h.service.GetLyricsQueueItems())
 	formatted := ""
 	if count > 0 {
@@ -219,7 +219,7 @@ func (h *Handler) LyricsQueueCount(c *fiber.Ctx) error {
 }
 
 // ClearLyricsQueue handles clearing all items from the lyrics queue
-func (h *Handler) ClearLyricsQueue(c *fiber.Ctx) error {
+func (h *Handler) ClearLyricsQueue(c fiber.Ctx) error {
 	err := h.service.ClearLyricsQueue()
 	if err != nil {
 		slog.Error("Failed to clear lyrics queue", "error", err)
@@ -230,7 +230,7 @@ func (h *Handler) ClearLyricsQueue(c *fiber.Ctx) error {
 }
 
 // RenderGroupedLyricsQueueItems renders lyrics queue items grouped by artist or album
-func (h *Handler) RenderGroupedLyricsQueueItems(c *fiber.Ctx) error {
+func (h *Handler) RenderGroupedLyricsQueueItems(c fiber.Ctx) error {
 	groupType := c.Query("type", "artist") // default to artist grouping
 
 	var groups map[string][]music.QueueItem
@@ -272,7 +272,7 @@ func (h *Handler) RenderGroupedLyricsQueueItems(c *fiber.Ctx) error {
 }
 
 // ProcessLyricsQueueGroup processes all items in a group with the given action
-func (h *Handler) ProcessLyricsQueueGroup(c *fiber.Ctx) error {
+func (h *Handler) ProcessLyricsQueueGroup(c fiber.Ctx) error {
 	groupKey := c.Params("groupKey")
 	groupType := c.Params("groupType") // "artist" or "album"
 	action := c.Params("action")
@@ -308,7 +308,7 @@ func (h *Handler) ProcessLyricsQueueGroup(c *fiber.Ctx) error {
 }
 
 // RenderLyricsQueueHeader renders the lyrics queue header for HTMX
-func (h *Handler) RenderLyricsQueueHeader(c *fiber.Ctx) error {
+func (h *Handler) RenderLyricsQueueHeader(c fiber.Ctx) error {
 	slog.Debug("RenderLyricsQueueHeader handler called")
 	count := len(h.service.GetLyricsQueueItems())
 	return respond.Partial(c, "lyrics/queue_header", fiber.Map{
@@ -317,7 +317,7 @@ func (h *Handler) RenderLyricsQueueHeader(c *fiber.Ctx) error {
 }
 
 // StartLyricsAnalysis handles starting the lyrics analysis job
-func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
+func (h *Handler) StartLyricsAnalysis(c fiber.Ctx) error {
 	slog.Info("Starting lyrics analysis via HTTP request")
 
 	// Get provider from form data
@@ -349,7 +349,7 @@ func (h *Handler) StartLyricsAnalysis(c *fiber.Ctx) error {
 }
 
 // RenderLyricsAnalysisSection renders the lyrics analysis section page
-func (h *Handler) RenderLyricsAnalysisSection(c *fiber.Ctx) error {
+func (h *Handler) RenderLyricsAnalysisSection(c fiber.Ctx) error {
 	slog.Debug("Rendering lyrics analysis section")
 	return respond.Section(c, "analyze_lyrics", fiber.Map{
 		"Title":           "Lyrics Analysis",

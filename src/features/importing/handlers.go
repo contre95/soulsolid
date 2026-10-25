@@ -10,7 +10,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Handler is the handler for the organizing feature.
@@ -97,18 +97,18 @@ func NewHandler(service *Service) *Handler {
 }
 
 // RenderImportSection renders the import page.
-func (h *Handler) RenderImportSection(c *fiber.Ctx) error {
+func (h *Handler) RenderImportSection(c fiber.Ctx) error {
 	slog.Debug("RenderImport handler called")
 	return respond.Section(c, "import", fiber.Map{"Title": "Import"})
 }
 
 // ImportDirectory is the handler for importing a directory.
-func (h *Handler) ImportDirectory(c *fiber.Ctx) error {
+func (h *Handler) ImportDirectory(c fiber.Ctx) error {
 	type ImportPathRequest struct {
 		DirectoryPath string `json:"directoryPath"`
 	}
 	var req ImportPathRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Cannot parse request body")
 	}
 	jobID, err := h.service.ImportDirectory(c.Context(), req.DirectoryPath)
@@ -122,7 +122,7 @@ func (h *Handler) ImportDirectory(c *fiber.Ctx) error {
 }
 
 // ProcessQueueItem handles import/cancel actions for individual queue items
-func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
+func (h *Handler) ProcessQueueItem(c fiber.Ctx) error {
 	itemID := c.Params("id")
 	action := c.Params("action") // "import" or "cancel"
 	err := h.service.ProcessQueueItem(c.Context(), itemID, action)
@@ -144,7 +144,7 @@ func (h *Handler) ProcessQueueItem(c *fiber.Ctx) error {
 }
 
 // QueueCount returns the current queue count formatted as "(X)" or empty if 0
-func (h *Handler) QueueCount(c *fiber.Ctx) error {
+func (h *Handler) QueueCount(c fiber.Ctx) error {
 	count := len(h.service.GetQueuedItems())
 	formatted := ""
 	if count > 0 {
@@ -154,7 +154,7 @@ func (h *Handler) QueueCount(c *fiber.Ctx) error {
 }
 
 // ClearQueue handles clearing all items from the import queue
-func (h *Handler) ClearQueue(c *fiber.Ctx) error {
+func (h *Handler) ClearQueue(c fiber.Ctx) error {
 	err := h.service.ClearQueue()
 	if err != nil {
 		slog.Error("Failed to clear queue", "error", err)
@@ -165,7 +165,7 @@ func (h *Handler) ClearQueue(c *fiber.Ctx) error {
 }
 
 // PruneDownloadPath handles pruning the download path and clearing the queue
-func (h *Handler) PruneDownloadPath(c *fiber.Ctx) error {
+func (h *Handler) PruneDownloadPath(c fiber.Ctx) error {
 	err := h.service.PruneDownloadPath(c.Context())
 	if err != nil {
 		slog.Error("Failed to prune download path", "error", err)
@@ -176,7 +176,7 @@ func (h *Handler) PruneDownloadPath(c *fiber.Ctx) error {
 }
 
 // ToggleWatcher toggles the file system watcher on/off
-func (h *Handler) ToggleWatcher(c *fiber.Ctx) error {
+func (h *Handler) ToggleWatcher(c fiber.Ctx) error {
 	action := c.FormValue("action")
 	if action == "" {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "action parameter required")
@@ -206,7 +206,7 @@ func (h *Handler) ToggleWatcher(c *fiber.Ctx) error {
 }
 
 // GetWatcherStatus returns the current status of the watcher
-func (h *Handler) GetWatcherStatus(c *fiber.Ctx) error {
+func (h *Handler) GetWatcherStatus(c fiber.Ctx) error {
 	running := h.service.GetWatcherStatus()
 	return respond.Partial(c, "components/status_badge", fiber.Map{
 		"Running": running,
@@ -214,7 +214,7 @@ func (h *Handler) GetWatcherStatus(c *fiber.Ctx) error {
 }
 
 // GetWatcherToggleState returns the toggle input element with correct checked state
-func (h *Handler) GetWatcherToggleState(c *fiber.Ctx) error {
+func (h *Handler) GetWatcherToggleState(c fiber.Ctx) error {
 	running := h.service.GetWatcherStatus()
 	return respond.Partial(c, "components/toggle", fiber.Map{
 		"ID":      "watcher-toggle",
@@ -226,7 +226,7 @@ func (h *Handler) GetWatcherToggleState(c *fiber.Ctx) error {
 
 // UI Hanlders
 // GetDirectoryForm renders the directory import form
-func (h *Handler) GetDirectoryForm(c *fiber.Ctx) error {
+func (h *Handler) GetDirectoryForm(c fiber.Ctx) error {
 	slog.Debug("GetDirectoryForm handler called")
 
 	// Get default download path from service
@@ -239,14 +239,14 @@ func (h *Handler) GetDirectoryForm(c *fiber.Ctx) error {
 }
 
 // GetImportBadges renders the import option badges shown on the directory form.
-func (h *Handler) GetImportBadges(c *fiber.Ctx) error {
+func (h *Handler) GetImportBadges(c fiber.Ctx) error {
 	return respond.Partial(c, "importing/import_badges", fiber.Map{
 		"Config": h.service.config.Get(),
 	})
 }
 
 // RenderQueueItems renders the queue content for HTMX
-func (h *Handler) RenderQueueItems(c *fiber.Ctx) error {
+func (h *Handler) RenderQueueItems(c fiber.Ctx) error {
 	slog.Debug("RenderImportQueue handler called")
 	// Get queue data from importing service
 	c.Response().Header.Set("HX-Trigger", "updateQueueCount")
@@ -279,7 +279,7 @@ func (h *Handler) RenderQueueItems(c *fiber.Ctx) error {
 }
 
 // GetQueueHeader renders the queue header for HTMX
-func (h *Handler) GetQueueHeader(c *fiber.Ctx) error {
+func (h *Handler) GetQueueHeader(c fiber.Ctx) error {
 	slog.Debug("GetQueueHeader handler called")
 
 	// Get queue count for display
@@ -292,7 +292,7 @@ func (h *Handler) GetQueueHeader(c *fiber.Ctx) error {
 }
 
 // ProcessQueueGroup handles bulk actions for queue item groups
-func (h *Handler) ProcessQueueGroup(c *fiber.Ctx) error {
+func (h *Handler) ProcessQueueGroup(c fiber.Ctx) error {
 	groupKey := c.Params("groupKey")
 	groupType := c.Params("groupType") // "artist" or "album"
 	action := c.Params("action")       // "import", "cancel", "delete", "replace"
@@ -342,7 +342,7 @@ func (h *Handler) ProcessQueueGroup(c *fiber.Ctx) error {
 }
 
 // RenderGroupedQueueItems renders queue items grouped by artist or album
-func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
+func (h *Handler) RenderGroupedQueueItems(c fiber.Ctx) error {
 	groupType := c.Query("type", "artist") // default to artist grouping
 
 	var groups map[string][]music.QueueItem
@@ -397,7 +397,7 @@ func (h *Handler) RenderGroupedQueueItems(c *fiber.Ctx) error {
 }
 
 // ServeQueueItemArtwork serves the embedded album art for a queue item's track file.
-func (h *Handler) ServeQueueItemArtwork(c *fiber.Ctx) error {
+func (h *Handler) ServeQueueItemArtwork(c fiber.Ctx) error {
 	id := c.Params("id")
 	data, mimeType, err := h.service.GetPendingTrackArtwork(id)
 	if err != nil || len(data) == 0 {

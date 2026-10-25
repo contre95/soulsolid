@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"net/url"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Handler handles audio streaming requests.
@@ -18,7 +18,7 @@ func NewHandler(service *Service) *Handler {
 }
 
 // Stream serves the file at the given path query parameter.
-func (h *Handler) Stream(c *fiber.Ctx) error {
+func (h *Handler) Stream(c fiber.Ctx) error {
 	rawPath := c.Query("path")
 	if rawPath == "" {
 		return c.Status(fiber.StatusBadRequest).SendString("missing path")
@@ -34,9 +34,8 @@ func (h *Handler) Stream(c *fiber.Ctx) error {
 	}
 	c.Set("Content-Type", mimeType)
 	c.Set("Accept-Ranges", "bytes")
-	// Fiber's SendFile feeds the path to fasthttp as a request URI, so characters
-	// like '?' or '#' in a filename are parsed as query/fragment and truncate the
-	// path, causing a spurious 404. Percent-encode the path so it round-trips
-	// through fasthttp's URI decoding intact.
-	return c.SendFile((&url.URL{Path: resolved}).EscapedPath())
+	// Fiber v3's SendFile percent-encodes the path itself before handing it to
+	// fasthttp, so pass it raw; escaping here would double-encode it. Byte ranges
+	// are off by default in v3 and are needed for seeking in the audio player.
+	return c.SendFile(resolved, fiber.SendFile{ByteRange: true})
 }

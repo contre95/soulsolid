@@ -9,7 +9,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type Handler struct {
@@ -27,11 +27,11 @@ func NewHandler(service *Service) *Handler {
 }
 
 // RenderJobsSection renders the jobs page.
-func (h *Handler) RenderJobsSection(c *fiber.Ctx) error {
+func (h *Handler) RenderJobsSection(c fiber.Ctx) error {
 	return respond.Section(c, "jobs", fiber.Map{"Title": "Jobs"})
 }
 
-func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
+func (h *Handler) HandleStartJob(c fiber.Ctx) error {
 	jobType := strings.Clone(c.Params("type"))
 	name := c.Query("name", jobType)
 
@@ -44,7 +44,7 @@ func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
 	return respond.ToastJob(c, jobID, fmt.Sprintf("Started %s job", jobType))
 }
 
-func (h *Handler) HandleJobStatus(c *fiber.Ctx) error {
+func (h *Handler) HandleJobStatus(c fiber.Ctx) error {
 	jobID := c.Params("id")
 	job, exists := h.service.GetJob(jobID)
 	if !exists {
@@ -64,7 +64,7 @@ func (h *Handler) HandleJobStatus(c *fiber.Ctx) error {
 	return c.JSON(response)
 }
 
-func (h *Handler) HandleJobLogs(c *fiber.Ctx) error {
+func (h *Handler) HandleJobLogs(c fiber.Ctx) error {
 	jobID := c.Params("id")
 	job, exists := h.service.GetJob(jobID)
 	if !exists {
@@ -106,7 +106,7 @@ func (h *Handler) HandleJobLogs(c *fiber.Ctx) error {
 	}
 }
 
-func (h *Handler) HandleJobProgress(c *fiber.Ctx) error {
+func (h *Handler) HandleJobProgress(c fiber.Ctx) error {
 	jobID := c.Params("id")
 	job, exists := h.service.GetJob(jobID)
 	if !exists {
@@ -130,7 +130,7 @@ func (h *Handler) HandleJobProgress(c *fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) HandleJobList(c *fiber.Ctx) error {
+func (h *Handler) HandleJobList(c fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 	baseURL := c.BaseURL()
 	responses := make([]*JobResponse, len(jobs))
@@ -147,7 +147,7 @@ func (h *Handler) HandleJobList(c *fiber.Ctx) error {
 	return c.JSON(responses)
 }
 
-func (h *Handler) HandleCancelJob(c *fiber.Ctx) error {
+func (h *Handler) HandleCancelJob(c fiber.Ctx) error {
 	jobID := c.Params("id")
 
 	err := h.service.CancelJob(jobID)
@@ -174,12 +174,12 @@ func (h *Handler) HandleCancelJob(c *fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) HandleCleanupJobs(c *fiber.Ctx) error {
+func (h *Handler) HandleCleanupJobs(c fiber.Ctx) error {
 	h.service.CleanupOldJobs(24 * time.Hour)
 	return respond.ToastOk(c, "cleanup completed")
 }
 
-func (h *Handler) HandleClearFinishedJobs(c *fiber.Ctx) error {
+func (h *Handler) HandleClearFinishedJobs(c fiber.Ctx) error {
 	if err := h.service.ClearFinishedJobs(); err != nil {
 		return respond.ToastErr(c, 500, err.Error())
 	}
@@ -187,7 +187,7 @@ func (h *Handler) HandleClearFinishedJobs(c *fiber.Ctx) error {
 	return respond.ToastOk(c, "Finished jobs cleared")
 }
 
-func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
+func (h *Handler) HandleActiveJob(c fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 
 	// Filter out completed/failed/cancelled jobs to show only active ones
@@ -208,7 +208,7 @@ func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) HandleFilteredJobsList(c *fiber.Ctx) error {
+func (h *Handler) HandleFilteredJobsList(c fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 
 	// Filter jobs by type if specified
@@ -233,7 +233,7 @@ func (h *Handler) HandleFilteredJobsList(c *fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) HandleLatestJobs(c *fiber.Ctx) error {
+func (h *Handler) HandleLatestJobs(c fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 	sort.Slice(jobs, func(i, j int) bool {
 		return jobs[i].CreatedAt.After(jobs[j].CreatedAt)
@@ -246,7 +246,7 @@ func (h *Handler) HandleLatestJobs(c *fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) HandleJobsCount(c *fiber.Ctx) error {
+func (h *Handler) HandleJobsCount(c fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 	filter := c.Query("filter", "active")
 	count := 0

@@ -22,15 +22,17 @@ import (
 	"github.com/contre95/soulsolid/src/features/streaming"
 	"github.com/contre95/soulsolid/src/features/ui"
 	"github.com/contre95/soulsolid/src/music"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/template/html/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofiber/fiber/v3/middleware/static"
+	"github.com/gofiber/template/html/v3"
 )
 
 // Server is the HTTP server for the application.
 type Server struct {
-	app  *fiber.App
-	port uint32
+	app         *fiber.App
+	port        uint32
+	printRoutes bool
 }
 
 // NewServer creates a new HTTP server.
@@ -88,16 +90,14 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 
 	app := fiber.New(fiber.Config{
 		Views: engine,
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
+		ErrorHandler: func(c fiber.Ctx, err error) error {
 			slog.Error("Internal Server Error", "error", err)
 			return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
 		},
-		AppName:               "Soulsolid",
-		DisableStartupMessage: true,
-		EnablePrintRoutes:     cfg.Get().Server.PrintRoutes,
-		BodyLimit:             1000 * 1024 * 1024, // ~1GB limit for file uploads
-		PassLocalsToViews:     true,
-		Immutable:             true,
+		AppName:           "Soulsolid",
+		BodyLimit:         1000 * 1024 * 1024, // ~1GB limit for file uploads
+		PassLocalsToViews: true,
+		Immutable:         true,
 	})
 
 	// Add middleware
@@ -106,7 +106,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	app.Use(HTMXMiddleware())
 	app.Use(LogAllRequestsMiddleware())
 
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		version := os.Getenv("IMAGE_TAG")
 		if version == "" {
 			version = "dev"
@@ -122,9 +122,9 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 		return c.Next()
 	})
 
-	app.Static("/", "./public")
-	app.Static("/node_modules", "./node_modules")
-	app.Get("/health", func(c *fiber.Ctx) error {
+	app.Use("/", static.New("./public"))
+	app.Use("/node_modules", static.New("./node_modules"))
+	app.Get("/health", func(c fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
@@ -152,12 +152,15 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	merge.RegisterRoutes(app, mergeService)
 	streaming.RegisterRoutes(app, streamingService)
 
-	return &Server{app: app, port: cfg.Get().Server.Port}
+	return &Server{app: app, port: cfg.Get().Server.Port, printRoutes: cfg.Get().Server.PrintRoutes}
 }
 
 // Start starts the HTTP server.
 func (s *Server) Start() error {
-	return s.app.Listen(":" + fmt.Sprint(s.port))
+	return s.app.Listen(":"+fmt.Sprint(s.port), fiber.ListenConfig{
+		DisableStartupMessage: true,
+		EnablePrintRoutes:     s.printRoutes,
+	})
 }
 
 // Shutdown gracefully shuts down the server.
