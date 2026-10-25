@@ -58,7 +58,7 @@ func (h *Handler) RenderGenreGroups(c fiber.Ctx) error {
 // The includeKept query param brings back groups already dismissed via "Keep", so an accidental
 // click can be found again and corrected.
 func (h *Handler) RenderTrackGroups(c fiber.Ctx) error {
-	includeKept := c.Query("includeKept") == "true"
+	includeKept := fiber.Query[bool](c, "includeKept")
 	groups, err := h.service.FindTrackGroups(c.Context(), includeKept)
 	if err != nil {
 		slog.Error("failed to find duplicate track groups", "error", err)
@@ -91,44 +91,59 @@ func (h *Handler) MergeGenres(c fiber.Ctx) error { return h.startMerge(c, KindGe
 // MergeTracks starts a merge job for a group of duplicate tracks: every checked file ("delete")
 // is hard-deleted from the library and from disk; the unchecked ones stay.
 func (h *Handler) MergeTracks(c fiber.Ctx) error {
-	all := formValues(c, "all")
-	remove := formValues(c, "delete")
-	cardID := c.FormValue("card_id")
-	if _, err := h.service.StartTrackMerge(c.Context(), all, remove); err != nil {
+	var form struct {
+		mergeForm
+		All    []string `form:"all"`
+		Delete []string `form:"delete"`
+	}
+	if err := c.Bind().Form(&form); err != nil {
+		return respond.BindErr(c, err)
+	}
+	if _, err := h.service.StartTrackMerge(c.Context(), form.All, form.Delete); err != nil {
 		slog.Error("failed to start track merge", "error", err)
 		return h.mergeResult(c, "", false, "Failed to start merge: "+err.Error())
 	}
-	c.Set("HX-Trigger", "refreshJobList")
-	return h.mergeResult(c, cardID, true, "Merge started")
+	respond.Trigger(c, "refreshJobList")
+	return h.mergeResult(c, form.CardID, true, "Merge started")
 }
 
 // KeepTracks marks a duplicate-track group as intentional: every track of the group is recorded
 // as a known duplicate in the database (files and tags untouched) and the group leaves future
 // scans. The checkboxes play no role here — all files are kept.
 func (h *Handler) KeepTracks(c fiber.Ctx) error {
-	acoustID := c.FormValue("acoustid")
-	members := formValues(c, "all")
-	cardID := c.FormValue("card_id")
-	if err := h.service.KeepTracks(c.Context(), acoustID, members); err != nil {
-		slog.Error("failed to keep duplicate tracks", "acoustID", acoustID, "error", err)
+	var form struct {
+		mergeForm
+		AcoustID string   `form:"acoustid"`
+		All      []string `form:"all"`
+	}
+	if err := c.Bind().Form(&form); err != nil {
+		return respond.BindErr(c, err)
+	}
+	if err := h.service.KeepTracks(c.Context(), form.AcoustID, form.All); err != nil {
+		slog.Error("failed to keep duplicate tracks", "acoustID", form.AcoustID, "error", err)
 		return h.mergeResult(c, "", false, "Failed to keep duplicates: "+err.Error())
 	}
-	return h.mergeResult(c, cardID, true, "Kept all files — group marked as intentional duplicates")
+	return h.mergeResult(c, form.CardID, true, "Kept all files — group marked as intentional duplicates")
 }
 
 func (h *Handler) startMerge(c fiber.Ctx, kind Kind) error {
-	canonical := c.FormValue("canonical")
-	members := formValues(c, "members")
-	cardID := c.FormValue("card_id")
-	if canonical == "" || len(members) < 2 {
+	var form struct {
+		mergeForm
+		Canonical string   `form:"canonical"`
+		Members   []string `form:"members"`
+	}
+	if err := c.Bind().Form(&form); err != nil {
+		return respond.BindErr(c, err)
+	}
+	if form.Canonical == "" || len(form.Members) < 2 {
 		return h.mergeResult(c, "", false, "Select at least two items and a canonical value to merge")
 	}
-	if _, err := h.service.StartMerge(c.Context(), kind, canonical, members); err != nil {
+	if _, err := h.service.StartMerge(c.Context(), kind, form.Canonical, form.Members); err != nil {
 		slog.Error("failed to start merge", "kind", kind, "error", err)
 		return h.mergeResult(c, "", false, "Failed to start merge: "+err.Error())
 	}
-	c.Set("HX-Trigger", "refreshJobList")
-	return h.mergeResult(c, cardID, true, "Merge started")
+	respond.Trigger(c, "refreshJobList")
+	return h.mergeResult(c, form.CardID, true, "Merge started")
 }
 
 // mergeResult returns a 200 response carrying only out-of-band swaps: a toast and, on success,
@@ -139,13 +154,7 @@ func (h *Handler) mergeResult(c fiber.Ctx, cardID string, ok bool, msg string) e
 	return respond.HTMX(c, "merge/merge_result", fiber.Map{"OK": ok, "CardID": cardID, "Msg": msg})
 }
 
-// formValues returns every value submitted under key (Fiber's FormValue only returns the first).
-func formValues(c fiber.Ctx, key string) []string {
-	var out []string
-	c.Request().PostArgs().VisitAll(func(k, v []byte) {
-		if string(k) == key {
-			out = append(out, string(v))
-		}
-	})
-	return out
+// mergeForm holds the field every merge form posts: the card to remove once the merge starts.
+type mergeForm struct {
+	CardID string `form:"card_id"`
 }

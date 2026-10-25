@@ -583,7 +583,7 @@ func (h *Handler) CalculateFingerprint(c fiber.Ctx) error {
 		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to calculate fingerprint: %v", err))
 	}
 
-	c.Set("HX-Trigger", "refreshEditForm")
+	respond.Trigger(c, "refreshEditForm")
 	return respond.ToastOk(c, "Fingerprint calculated successfully!")
 }
 
@@ -617,7 +617,7 @@ func (h *Handler) GetMetadataProviders(c fiber.Ctx) error {
 
 	providers := h.service.GetEnabledMetadataProviders()
 
-	if c.Get("HX-Request") != "true" {
+	if !respond.IsHTMX(c) {
 		return c.JSON(providers)
 	}
 
@@ -642,70 +642,29 @@ func (h *Handler) UpdateTags(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString("Track ID is required")
 	}
 
-	// Parse form data
-	formData := make(map[string]string)
-	c.Bind().Body(&formData)
-
-	// Get form values
-	if title := c.FormValue("title"); title != "" {
-		formData["title"] = title
+	// Parse form data. Every field keeps its last value, except artist_ids,
+	// a multi-select joined into a comma-separated list. The bound strings point
+	// into the request buffer, so they're copied before leaving the handler.
+	var form map[string][]string
+	if err := c.Bind().Body(&form); err != nil {
+		return respond.BindErr(c, err)
 	}
-
-	// Handle dropdown fields - strict selection only
-	if artistIDs := c.RequestCtx().PostArgs().PeekMulti("artist_ids"); len(artistIDs) > 0 {
-		artistIDsStr := make([]string, len(artistIDs))
-		for i, b := range artistIDs {
-			artistIDsStr[i] = string(b)
+	formData := make(map[string]string, len(form)+1)
+	for k, v := range form {
+		k = strings.Clone(k)
+		formData[k] = ""
+		if len(v) > 0 {
+			formData[k] = strings.Clone(v[len(v)-1])
 		}
-		formData["artist_ids"] = strings.Join(artistIDsStr, ",")
 	}
-	if albumID := c.FormValue("album_id"); albumID != "" {
-		formData["album_id"] = albumID
+	if artistIDs := form["artist_ids"]; len(artistIDs) > 0 {
+		formData["artist_ids"] = strings.Join(artistIDs, ",")
 	}
-	if albumArtistID := c.FormValue("album_artist_id"); albumArtistID != "" {
-		formData["album_artist_id"] = albumArtistID
-	}
-	if year := c.FormValue("year"); year != "" {
-		formData["year"] = year
-	}
-	if genre := c.FormValue("genre"); genre != "" {
-		formData["genre"] = genre
-	}
-	if trackNumber := c.FormValue("track_number"); trackNumber != "" {
-		formData["track_number"] = trackNumber
-	}
-	if discNumber := c.FormValue("disc_number"); discNumber != "" {
-		formData["disc_number"] = discNumber
-	}
-	if isrc := c.FormValue("isrc"); isrc != "" {
-		formData["isrc"] = isrc
-	}
-	if composer := c.FormValue("composer"); composer != "" {
-		formData["composer"] = composer
-	}
-	if lyrics := c.FormValue("lyrics"); lyrics != "" {
-		formData["lyrics"] = lyrics
-	}
-	if c.FormValue("instrumental") == "true" {
+	if formData["instrumental"] == "true" {
 		formData["has_lyrics"] = "false"
 		formData["lyrics"] = ""
 	} else {
 		formData["has_lyrics"] = "true"
-	}
-	if bpm := c.FormValue("bpm"); bpm != "" {
-		formData["bpm"] = bpm
-	}
-	if gain := c.FormValue("gain"); gain != "" {
-		formData["gain"] = gain
-	}
-	if titleVersion := c.FormValue("title_version"); titleVersion != "" {
-		formData["title_version"] = titleVersion
-	}
-	if source := c.FormValue("source"); source != "" {
-		formData["source"] = source
-	}
-	if sourceURL := c.FormValue("source_url"); sourceURL != "" {
-		formData["source_url"] = sourceURL
 	}
 
 	slog.Debug("Parsed form data", "formData", formData)
@@ -733,7 +692,7 @@ func (h *Handler) StartAcoustIDAnalysis(c fiber.Ctx) error {
 	slog.Info("AcoustID analysis job started successfully", "jobID", jobID)
 
 	// // Trigger HTMX to refresh the job list
-	c.Set("HX-Trigger", "refreshJobList")
+	respond.Trigger(c, "refreshJobList")
 	return respond.ToastJob(c, jobID, "AcoustID analysis started successfully")
 }
 

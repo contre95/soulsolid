@@ -11,7 +11,7 @@ import (
 // Assumes templates follow the "sections/<section>" naming convention.
 // data must not be nil — a nil map causes a panic when "Section" is injected for non-HTMX requests.
 func Section(c fiber.Ctx, section string, data fiber.Map) error {
-	if c.Get("HX-Request") != "true" {
+	if !IsHTMX(c) {
 		data["Section"] = section
 		return c.Render("main", data)
 	}
@@ -20,7 +20,7 @@ func Section(c fiber.Ctx, section string, data fiber.Map) error {
 
 // ToastErr responds with an error toast for HTMX requests or a JSON error body otherwise.
 func ToastErr(c fiber.Ctx, status int, msg string) error {
-	if c.Get("HX-Request") == "true" {
+	if IsHTMX(c) {
 		return c.Status(status).Render("toast/toastErr", fiber.Map{"Msg": msg})
 	}
 	return c.Status(status).JSON(fiber.Map{"error": msg})
@@ -28,7 +28,7 @@ func ToastErr(c fiber.Ctx, status int, msg string) error {
 
 // ToastOk responds with a success toast for HTMX requests or a JSON message otherwise.
 func ToastOk(c fiber.Ctx, msg string) error {
-	if c.Get("HX-Request") == "true" {
+	if IsHTMX(c) {
 		return c.Render("toast/toastOk", fiber.Map{"Msg": msg})
 	}
 	return c.JSON(fiber.Map{"message": msg})
@@ -36,7 +36,7 @@ func ToastOk(c fiber.Ctx, msg string) error {
 
 // ToastJob responds with a success toast for HTMX requests or a 202 JSON body with the job_id otherwise.
 func ToastJob(c fiber.Ctx, jobID string, msg string) error {
-	if c.Get("HX-Request") == "true" {
+	if IsHTMX(c) {
 		return c.Render("toast/toastOk", fiber.Map{"Msg": msg})
 	}
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{"job_id": jobID})
@@ -44,7 +44,7 @@ func ToastJob(c fiber.Ctx, jobID string, msg string) error {
 
 // Partial renders the given template for HTMX requests or returns the same data as JSON otherwise.
 func Partial(c fiber.Ctx, template string, data fiber.Map) error {
-	if c.Get("HX-Request") == "true" {
+	if IsHTMX(c) {
 		return c.Render(template, data)
 	}
 	return c.JSON(data)
@@ -53,7 +53,7 @@ func Partial(c fiber.Ctx, template string, data fiber.Map) error {
 // Text sends a plain string for HTMX requests or {"key": key, "value": value} JSON otherwise.
 // An optional htmxText overrides the formatted string sent to HTMX; without it, value is stringified.
 func Text(c fiber.Ctx, key string, value any, htmxText ...string) error {
-	if c.Get("HX-Request") == "true" {
+	if IsHTMX(c) {
 		if len(htmxText) > 0 {
 			return c.SendString(htmxText[0])
 		}
@@ -83,10 +83,20 @@ func Resource(c fiber.Ctx, mimeType, url string, serve func() error) error {
 // Do NOT use it just because a JSON response is inconvenient; prefer Partial
 // if the data can stand alone as JSON.
 func HTMX(c fiber.Ctx, template string, data fiber.Map) error {
-	if c.Get("HX-Request") != "true" {
+	if !IsHTMX(c) {
 		return c.Status(fiber.StatusNotAcceptable).JSON(fiber.Map{
 			"error": "this endpoint is only available via HTMX",
 		})
 	}
 	return c.Render(template, data)
+}
+
+// IsHTMX reports whether the request was made by htmx.
+func IsHTMX(c fiber.Ctx) bool {
+	return c.Get("HX-Request") == "true"
+}
+
+// Trigger sets the HX-Trigger response header so htmx fires the given client-side events.
+func Trigger(c fiber.Ctx, events ...string) {
+	c.Set("HX-Trigger", strings.Join(events, ","))
 }
