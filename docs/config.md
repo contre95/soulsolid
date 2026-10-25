@@ -22,7 +22,7 @@ The `config.yaml` file contains all application settings. Key sections:
 
 **Security Note**: Never commit sensitive values like tokens or API keys to version control. Use environment variables or secret files instead.
 
-The config file is read from `/config/config.yaml` by default; set `SOULSOLID_CONFIG_PATH` to use another location.
+The config file is read from `./config.yaml` by default (`/config/config.yaml` in the container image); set `SOULSOLID_CONFIG_PATH` to use another location.
 
 ### Automatic Configuration
 
@@ -131,5 +131,5 @@ The variable names in the examples above are conventions, not fixed names. The a
 
 | Variable                | Description                                  | Default               |
 | ----------------------- | -------------------------------------------- | --------------------- |
-| `SOULSOLID_CONFIG_PATH` | Path to the config file                      | `/config/config.yaml` |
+| `SOULSOLID_CONFIG_PATH` | Path to the config file                      | `./config.yaml` (`/config/config.yaml` in the image) |
 | `IMAGE_TAG`             | Application version shown in the UI          | `dev`                 |

@@ -17,6 +17,7 @@ ENV CGO_ENABLED=2
 RUN apk add --no-cache git tree chromaprint
 RUN apk add --no-cache gcc libc-dev
 RUN mkdir -p /app/plugins /config /data
+ENV SOULSOLID_CONFIG_PATH=/config/config.yaml
 WORKDIR /app
 ENV IMAGE_TAG=$IMAGE_TAG
 # Copy the dynamically built app and assets
