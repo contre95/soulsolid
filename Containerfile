@@ -11,6 +11,7 @@ RUN go mod tidy
 RUN go build -o /app/soulsolid src/main.go
 
 FROM golang:1.25-alpine
+LABEL org.opencontainers.image.source=https://github.com/contre95/soulsolid
 ARG IMAGE_TAG
 ENV CGO_ENABLED=2
 RUN apk add --no-cache git tree chromaprint
