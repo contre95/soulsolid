@@ -4,6 +4,7 @@ on:
 permissions:
   contents: read
   actions: write
+  packages: write
 jobs:
   feature-build:
     runs-on: ubuntu-latest
@@ -19,6 +20,9 @@ jobs:
       - name: Login to DockerHub
         run: |
           podman login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} docker.io
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login -u ${{ github.actor }} --password-stdin ghcr.io
       - name: Extract feature name
         id: extract_feature
         run: |
@@ -30,3 +34,5 @@ jobs:
           feature_name=${{ steps.extract_feature.outputs.feature_name }}
           podman image build --build-arg IMAGE_TAG=$feature_name -t contre95/soulsolid:feat-$feature_name .
           podman push contre95/soulsolid:feat-$feature_name
+          podman tag contre95/soulsolid:feat-$feature_name ghcr.io/contre95/soulsolid:feat-$feature_name
+          podman push ghcr.io/contre95/soulsolid:feat-$feature_name

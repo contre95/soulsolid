@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   actions: write
+  packages: write
 
 jobs:
   dev-build:
@@ -25,8 +26,13 @@ jobs:
       - name: Login to DockerHub
         run: |
           podman login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} docker.io
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login -u ${{ github.actor }} --password-stdin ghcr.io
       - name: Build and push dev image
         run: |
           commit_sha=$(git rev-parse --short HEAD)
           podman image build --build-arg IMAGE_TAG=dev-$commit_sha -t contre95/soulsolid:dev .
           podman push contre95/soulsolid:dev
+          podman tag contre95/soulsolid:dev ghcr.io/contre95/soulsolid:dev
+          podman push ghcr.io/contre95/soulsolid:dev

@@ -10,6 +10,7 @@ RUN go mod tidy
 # Build without static linking for plugin compatibility
 RUN go build -o /app/soulsolid src/main.go
 
+LABEL org.opencontainers.image.source=https://github.com/contre95/soulsolid
 FROM golang:1.26-alpine
 ARG IMAGE_TAG
 ENV CGO_ENABLED=2
