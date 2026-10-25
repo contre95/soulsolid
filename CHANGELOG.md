@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.29.0](https://github.com/contre95/soulsolid/compare/v0.28.4...v0.29.0) (2026-10-25)
+
+
+### ✨ Features
+
+* Major dependencies update ([#208](https://github.com/contre95/soulsolid/issues/208)) ([e5f1936](https://github.com/contre95/soulsolid/commit/e5f193699cabcbe058ba38d091f2a5443512946f))
+
+
+### 🐛 Bug Fixes
+
+* bump fron and back deps ([#206](https://github.com/contre95/soulsolid/issues/206)) ([44d03aa](https://github.com/contre95/soulsolid/commit/44d03aaa722f969a4e8a76b9f2078bda2c5649b5))
+* Change config path ([#210](https://github.com/contre95/soulsolid/issues/210)) ([affb2d4](https://github.com/contre95/soulsolid/commit/affb2d4ae4358ee0f5b0d1fa1d3a6fcf65dae94e))
+
 ## [0.28.4](https://github.com/contre95/soulsolid/compare/v0.28.3...v0.28.4) (2026-10-24)
 
 
