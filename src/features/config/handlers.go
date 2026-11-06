@@ -28,46 +28,116 @@ func (h *Handler) RenderSettingsSection(c fiber.Ctx) error {
 	return respond.Section(c, "settings", fiber.Map{"Title": "Settings"})
 }
 
+// importOptionsForm holds the import options shared by the settings form and the Import Directory card.
+type importOptionsForm struct {
+	Move        bool   `form:"move"`
+	AlwaysQueue bool   `form:"always_queue"`
+	Duplicates  string `form:"duplicates" validate:"oneof=replace skip queue"`
+}
+
+// pathTemplatesForm holds the path templates shared by the settings form and the Path Templates card.
+type pathTemplatesForm struct {
+	DefaultPath     string `form:"default_path"`
+	Compilations    string `form:"compilations"`
+	AlbumSoundtrack string `form:"album:soundtrack"`
+	AlbumSingle     string `form:"album:single"`
+	AlbumEP         string `form:"album:ep"`
+	Fat32Safe       bool   `form:"fat32_safe"`
+}
+
+type providerForm struct {
+	Enabled bool   `form:"enabled"`
+	Secret  string `form:"secret"`
+}
+
+// secret returns nil for an empty secret, so it's left out of the saved config.
+func (p providerForm) secret() *string {
+	if p.Secret == "" {
+		return nil
+	}
+	return &p.Secret
+}
+
+// settingsForm mirrors the field names of views/config/config_form.html.
+// Dotted names like "import.paths.fat32_safe" bind to the nested structs.
+type settingsForm struct {
+	DownloadPath string `form:"downloadPath"`
+	Import       struct {
+		importOptionsForm
+		AllowMissingMetadata struct {
+			Artist bool `form:"artist"`
+			Album  bool `form:"album"`
+			Title  bool `form:"title"`
+			Year   bool `form:"year"`
+			Genre  bool `form:"genre"`
+		} `form:"allow_missing_metadata"`
+		Paths pathTemplatesForm `form:"paths"`
+	} `form:"import"`
+	Telegram struct {
+		Enabled      bool   `form:"enabled"`
+		Token        string `form:"token"`
+		AllowedUsers string `form:"allowedUsers"`
+		BotHandle    string `form:"bot_handle"`
+	} `form:"telegram"`
+	Metadata struct {
+		Providers struct {
+			MusicBrainz providerForm `form:"musicbrainz"`
+			Discogs     providerForm `form:"discogs"`
+			Deezer      providerForm `form:"deezer"`
+			AcoustID    providerForm `form:"acoustid"`
+		} `form:"providers"`
+	} `form:"metadata"`
+	Logger struct {
+		Enabled   bool   `form:"enabled"`
+		Level     string `form:"level"`
+		Format    string `form:"format"`
+		HTMXDebug bool   `form:"htmx_debug"`
+	} `form:"logger"`
+	Jobs struct {
+		Log     bool   `form:"log"`
+		LogPath string `form:"log_path"`
+	} `form:"jobs"`
+}
+
 // UpdateSettings handles the form submission to update configuration.
 func (h *Handler) UpdateSettings(c fiber.Ctx) error {
 	slog.Info("Configuration update requested")
 
+	var form settingsForm
+	if err := c.Bind().Form(&form); err != nil {
+		return respond.BindErr(c, err)
+	}
+
 	// Get current config to preserve server settings
 	currentConfig := h.configManager.Get()
-	// Parse form data into a new config struct
-	// TODO: We might want to add some validations probably, not sure if here.
+	providers := form.Metadata.Providers
+	paths := form.Import.Paths
 	newConfig := &Config{
 		// Not read from the form: libraryPath is immutable at runtime
 		// (enforced by Manager.Update). Config file + restart only.
 		LibraryPath:  currentConfig.LibraryPath,
-		DownloadPath: c.FormValue("downloadPath"),
+		DownloadPath: form.DownloadPath,
 		Database:     currentConfig.Database, // Preserve database settings
 		Import: Import{
-			AutoStartWatcher: currentConfig.Import.AutoStartWatcher,
-			Move:             c.FormValue("import.move") == "true",
-			AlwaysQueue:      c.FormValue("import.always_queue") == "true",
-			Duplicates:       c.FormValue("import.duplicates"),
-			AllowMissingMetadata: AllowMissingMetadata{
-				Artist: c.FormValue("import.allow_missing_metadata.artist") == "true",
-				Album:  c.FormValue("import.allow_missing_metadata.album") == "true",
-				Title:  c.FormValue("import.allow_missing_metadata.title") == "true",
-				Year:   c.FormValue("import.allow_missing_metadata.year") == "true",
-				Genre:  c.FormValue("import.allow_missing_metadata.genre") == "true",
-			},
+			AutoStartWatcher:     currentConfig.Import.AutoStartWatcher,
+			Move:                 form.Import.Move,
+			AlwaysQueue:          form.Import.AlwaysQueue,
+			Duplicates:           form.Import.Duplicates,
+			AllowMissingMetadata: AllowMissingMetadata(form.Import.AllowMissingMetadata),
 			PathOptions: Paths{
-				DefaultPath:     c.FormValue("import.paths.default_path"),
-				Compilations:    c.FormValue("import.paths.compilations"),
-				AlbumSoundtrack: c.FormValue("import.paths.album:soundtrack"),
-				AlbumSingle:     c.FormValue("import.paths.album:single"),
-				AlbumEP:         c.FormValue("import.paths.album:ep"),
-				Fat32Safe:       c.FormValue("import.paths.fat32_safe") == "true",
+				DefaultPath:     paths.DefaultPath,
+				Compilations:    paths.Compilations,
+				AlbumSoundtrack: paths.AlbumSoundtrack,
+				AlbumSingle:     paths.AlbumSingle,
+				AlbumEP:         paths.AlbumEP,
+				Fat32Safe:       paths.Fat32Safe,
 			},
 		},
 		Telegram: Telegram{
-			Enabled:      c.FormValue("telegram.enabled") == "true",
-			Token:        c.FormValue("telegram.token"),
-			AllowedUsers: parseStringSlice(c.FormValue("telegram.allowedUsers")),
-			BotHandle:    c.FormValue("telegram.bot_handle"),
+			Enabled:      form.Telegram.Enabled,
+			Token:        form.Telegram.Token,
+			AllowedUsers: parseStringSlice(form.Telegram.AllowedUsers),
+			BotHandle:    form.Telegram.BotHandle,
 		},
 		Downloaders: Downloaders{
 			Plugins: currentConfig.Downloaders.Plugins, // Preserve plugins
@@ -75,32 +145,10 @@ func (h *Handler) UpdateSettings(c fiber.Ctx) error {
 		},
 		Metadata: Metadata{
 			Providers: map[string]Provider{
-				"musicbrainz": {
-					Enabled: c.FormValue("metadata.providers.musicbrainz.enabled") == "true",
-				},
-				"discogs": {
-					Enabled: c.FormValue("metadata.providers.discogs.enabled") == "true",
-					Secret: func() *string {
-						secret := c.FormValue("metadata.providers.discogs.secret")
-						if secret != "" {
-							return &secret
-						}
-						return nil
-					}(),
-				},
-				"deezer": {
-					Enabled: c.FormValue("metadata.providers.deezer.enabled") == "true",
-				},
-				"acoustid": {
-					Enabled: c.FormValue("metadata.providers.acoustid.enabled") == "true",
-					Secret: func() *string {
-						secret := c.FormValue("metadata.providers.acoustid.secret")
-						if secret != "" {
-							return &secret
-						}
-						return nil
-					}(),
-				},
+				"musicbrainz": {Enabled: providers.MusicBrainz.Enabled},
+				"discogs":     {Enabled: providers.Discogs.Enabled, Secret: providers.Discogs.secret()},
+				"deezer":      {Enabled: providers.Deezer.Enabled},
+				"acoustid":    {Enabled: providers.AcoustID.Enabled, Secret: providers.AcoustID.secret()},
 			},
 		},
 		Lyrics: currentConfig.Lyrics,
@@ -109,15 +157,10 @@ func (h *Handler) UpdateSettings(c fiber.Ctx) error {
 			Port:        currentConfig.Server.Port,
 			PrintRoutes: currentConfig.Server.PrintRoutes,
 		},
-		Logger: Logger{
-			Enabled:   c.FormValue("logger.enabled") == "true",
-			Level:     c.FormValue("logger.level"),
-			Format:    c.FormValue("logger.format"),
-			HTMXDebug: c.FormValue("logger.htmx_debug") == "true",
-		},
+		Logger: Logger(form.Logger),
 		Jobs: Jobs{
-			Log:      c.FormValue("jobs.log") == "true",
-			LogPath:  c.FormValue("jobs.log_path"),
+			Log:      form.Jobs.Log,
+			LogPath:  form.Jobs.LogPath,
 			Webhooks: currentConfig.Jobs.Webhooks,
 		},
 	}
@@ -128,31 +171,40 @@ func (h *Handler) UpdateSettings(c fiber.Ctx) error {
 // UpdateImportOptions saves the import options edited from the Import Directory card.
 // Only these fields change; the rest of the config is kept as is.
 func (h *Handler) UpdateImportOptions(c fiber.Ctx) error {
-	duplicates := c.FormValue("import.duplicates")
-	switch duplicates {
-	case "replace", "skip", "queue":
-	default:
-		return respond.ToastErr(c, fiber.StatusBadRequest, "Invalid duplicate handling: "+duplicates)
+	var form struct {
+		Import importOptionsForm `form:"import"`
+	}
+	if err := c.Bind().Form(&form); err != nil {
+		return respond.BindErr(c, err)
 	}
 
 	newConfig := *h.configManager.Get()
-	newConfig.Import.Move = c.FormValue("import.move") == "true"
-	newConfig.Import.AlwaysQueue = c.FormValue("import.always_queue") == "true"
-	newConfig.Import.Duplicates = duplicates
+	newConfig.Import.Move = form.Import.Move
+	newConfig.Import.AlwaysQueue = form.Import.AlwaysQueue
+	newConfig.Import.Duplicates = form.Import.Duplicates
 
 	// Lets the card's badges re-render with the saved values.
-	c.Set("HX-Trigger", "importOptionsChanged")
+	respond.Trigger(c, "importOptionsChanged")
 	return h.apply(c, &newConfig, "Import options saved")
 }
 
 // UpdatePathTemplates saves the path templates edited from the Path Templates card.
 func (h *Handler) UpdatePathTemplates(c fiber.Ctx) error {
+	var form struct {
+		Import struct {
+			Paths pathTemplatesForm `form:"paths"`
+		} `form:"import"`
+	}
+	if err := c.Bind().Form(&form); err != nil {
+		return respond.BindErr(c, err)
+	}
+
 	paths := h.configManager.Get().Import.PathOptions
-	paths.DefaultPath = strings.TrimSpace(c.FormValue("import.paths.default_path"))
-	paths.Compilations = strings.TrimSpace(c.FormValue("import.paths.compilations"))
-	paths.AlbumSoundtrack = strings.TrimSpace(c.FormValue("import.paths.album:soundtrack"))
-	paths.AlbumSingle = strings.TrimSpace(c.FormValue("import.paths.album:single"))
-	paths.AlbumEP = strings.TrimSpace(c.FormValue("import.paths.album:ep"))
+	paths.DefaultPath = strings.TrimSpace(form.Import.Paths.DefaultPath)
+	paths.Compilations = strings.TrimSpace(form.Import.Paths.Compilations)
+	paths.AlbumSoundtrack = strings.TrimSpace(form.Import.Paths.AlbumSoundtrack)
+	paths.AlbumSingle = strings.TrimSpace(form.Import.Paths.AlbumSingle)
+	paths.AlbumEP = strings.TrimSpace(form.Import.Paths.AlbumEP)
 
 	// An empty template would render tracks straight into the library root.
 	for _, t := range []struct{ name, tmpl string }{

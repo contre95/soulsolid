@@ -40,7 +40,7 @@ func (h *Handler) HandleStartJob(c fiber.Ctx) error {
 		return respond.ToastErr(c, 500, fmt.Sprintf("Failed to start job: %s", err.Error()))
 	}
 
-	c.Set("HX-Trigger", "refreshActiveJobsBadge")
+	respond.Trigger(c, "refreshActiveJobsBadge")
 	return respond.ToastJob(c, jobID, fmt.Sprintf("Started %s job", jobType))
 }
 
@@ -81,11 +81,11 @@ func (h *Handler) HandleJobLogs(c fiber.Ctx) error {
 	}
 
 	// Check if color parameter is set
-	color := c.Query("color") == "true"
+	color := fiber.Query[bool](c, "color")
 
 	if color {
 		// Check if this is a direct request (not HTMX)
-		if c.Get("HX-Request") != "true" {
+		if !respond.IsHTMX(c) {
 			// Return full HTML page for direct access (full screen)
 			return c.Render("jobs/job_logs_fullscreen", fiber.Map{
 				"Job": job,
@@ -93,7 +93,7 @@ func (h *Handler) HandleJobLogs(c fiber.Ctx) error {
 		} else {
 			// Return just the colored content for HTMX requests
 			if job.Status == music.JobStatusCompleted || job.Status == music.JobStatusFailed || job.Status == music.JobStatusCancelled {
-				c.Set("HX-Trigger", "logsComplete")
+				respond.Trigger(c, "logsComplete")
 			}
 			coloredContent := ParseAndColorLogContent(string(logContent))
 			c.Set("Content-Type", "text/html")
@@ -114,7 +114,7 @@ func (h *Handler) HandleJobProgress(c fiber.Ctx) error {
 	}
 
 	if job.Status == music.JobStatusCompleted || job.Status == music.JobStatusFailed || job.Status == music.JobStatusCancelled {
-		c.Set("HX-Trigger", "done")
+		respond.Trigger(c, "done")
 	}
 
 	return respond.Partial(c, "jobs/job_card_progress_bar", fiber.Map{
@@ -183,7 +183,7 @@ func (h *Handler) HandleClearFinishedJobs(c fiber.Ctx) error {
 	if err := h.service.ClearFinishedJobs(); err != nil {
 		return respond.ToastErr(c, 500, err.Error())
 	}
-	c.Set("HX-Trigger", "refreshJobList")
+	respond.Trigger(c, "refreshJobList")
 	return respond.ToastOk(c, "Finished jobs cleared")
 }
 

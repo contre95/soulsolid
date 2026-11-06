@@ -2,7 +2,6 @@ package downloading
 
 import (
 	"log/slog"
-	"strconv"
 	"strings"
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
@@ -154,7 +153,7 @@ func (h *Handler) Search(c fiber.Ctx) error {
 			slog.Error("Failed to search links", "error", err)
 			return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to search links")
 		}
-		if c.Get("HX-Request") != "true" {
+		if !respond.IsHTMX(c) {
 			return c.JSON(result)
 		}
 		if result.Type == "artist" {
@@ -371,12 +370,7 @@ func (h *Handler) GetAlbumTracks(c fiber.Ctx) error {
 
 // GetChartTracks handles chart track requests
 func (h *Handler) GetChartTracks(c fiber.Ctx) error {
-	limit := 20
-	if limitStr := c.Query("limit"); limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil {
-			limit = l
-		}
-	}
+	limit := fiber.Query(c, "limit", 20)
 
 	downloader := strings.Clone(c.Query("downloader", "dummy"))
 

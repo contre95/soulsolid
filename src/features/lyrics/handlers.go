@@ -75,7 +75,7 @@ func (h *Handler) GetLyricsProviders(c fiber.Ctx) error {
 
 	providers := h.service.GetLyricsProvidersInfo()
 
-	if c.Get("HX-Request") != "true" {
+	if !respond.IsHTMX(c) {
 		return c.JSON(providers)
 	}
 
@@ -111,7 +111,7 @@ func (h *Handler) GetLyricsText(c fiber.Ctx) error {
 
 	slog.Info("Lyrics fetched successfully", "trackId", trackID, "provider", providerName, "lyricsLength", len(lyrics))
 
-	if c.Get("HX-Request") == "true" {
+	if respond.IsHTMX(c) {
 		return c.SendString(lyrics)
 	}
 	return c.JSON(fiber.Map{"track_id": trackID, "lyrics": lyrics})
@@ -204,7 +204,7 @@ func (h *Handler) ProcessLyricsQueueItem(c fiber.Ctx) error {
 	case "skip":
 		actionMsg = "skipped"
 	}
-	c.Response().Header.Set("HX-Trigger", "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount,activateIndividualGroupingLyrics")
+	respond.Trigger(c, "lyricsQueueUpdated", "refreshLyricsQueueBadge", "updateLyricsQueueCount", "activateIndividualGroupingLyrics")
 	return respond.ToastOk(c, fmt.Sprintf("Track %s successfully", actionMsg))
 }
 
@@ -225,7 +225,7 @@ func (h *Handler) ClearLyricsQueue(c fiber.Ctx) error {
 		slog.Error("Failed to clear lyrics queue", "error", err)
 		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to clear lyrics queue")
 	}
-	c.Response().Header.Set("HX-Trigger", "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount,activateIndividualGroupingLyrics")
+	respond.Trigger(c, "lyricsQueueUpdated", "refreshLyricsQueueBadge", "updateLyricsQueueCount", "activateIndividualGroupingLyrics")
 	return respond.ToastOk(c, "Lyrics queue cleared successfully")
 }
 
@@ -297,13 +297,11 @@ func (h *Handler) ProcessLyricsQueueGroup(c fiber.Ctx) error {
 		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to process group %s", decodedGroupKey))
 	}
 
-	trigger := "lyricsQueueUpdated,refreshLyricsQueueBadge,updateLyricsQueueCount"
+	grouping := "activateAlbumGroupingLyrics"
 	if groupType == "artist" {
-		trigger += ",activateArtistGroupingLyrics"
-	} else {
-		trigger += ",activateAlbumGroupingLyrics"
+		grouping = "activateArtistGroupingLyrics"
 	}
-	c.Response().Header.Set("HX-Trigger", trigger)
+	respond.Trigger(c, "lyricsQueueUpdated", "refreshLyricsQueueBadge", "updateLyricsQueueCount", grouping)
 	return respond.ToastOk(c, fmt.Sprintf("Group '%s' processed successfully", decodedGroupKey))
 }
 
@@ -320,22 +318,23 @@ func (h *Handler) RenderLyricsQueueHeader(c fiber.Ctx) error {
 func (h *Handler) StartLyricsAnalysis(c fiber.Ctx) error {
 	slog.Info("Starting lyrics analysis via HTTP request")
 
-	// Get provider from form data
-	provider := c.FormValue("provider")
+	var form struct {
+		Provider           string `form:"provider"`
+		SkipExistingLyrics bool   `form:"skip_existing_lyrics"`
+		OverrideNoQueue    bool   `form:"override_no_queue"`
+	}
+	if err := c.Bind().Form(&form); err != nil {
+		return respond.BindErr(c, err)
+	}
+	provider := form.Provider
 	if provider == "" {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Please select a lyrics provider")
 	}
 
-	// Get options from form data
-	skipExistingLyrics := c.FormValue("skip_existing_lyrics") == "true"
-	overrideNoQueue := c.FormValue("override_no_queue") == "true"
-
 	// If skip is enabled, override is not applicable
-	if skipExistingLyrics {
-		overrideNoQueue = false
-	}
+	overrideNoQueue := form.OverrideNoQueue && !form.SkipExistingLyrics
 
-	jobID, err := h.service.StartLyricsAnalysis(c.Context(), provider, skipExistingLyrics, overrideNoQueue)
+	jobID, err := h.service.StartLyricsAnalysis(c.Context(), provider, form.SkipExistingLyrics, overrideNoQueue)
 	if err != nil {
 		slog.Error("Failed to start lyrics analysis", "error", err)
 		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start lyrics analysis: "+err.Error())
@@ -344,7 +343,7 @@ func (h *Handler) StartLyricsAnalysis(c fiber.Ctx) error {
 	slog.Info("Lyrics analysis job started successfully", "jobID", jobID, "provider", provider)
 
 	// Trigger HTMX to refresh the job list
-	c.Set("HX-Trigger", "refreshJobList")
+	respond.Trigger(c, "refreshJobList")
 	return respond.ToastJob(c, jobID, "Lyrics analysis started successfully")
 }
 

@@ -26,8 +26,13 @@ func NewHandler(service *Service, config *config.Manager) *Handler {
 func (h *Handler) StartReorganizeAnalysis(c fiber.Ctx) error {
 	slog.Info("Starting file reorganization job from web request")
 
-	fat32Safe := c.FormValue("fat32_safe") == "true"
-	jobID, err := h.service.StartReorganizeAnalysis(c.Context(), fat32Safe)
+	var form struct {
+		Fat32Safe bool `form:"fat32_safe"`
+	}
+	if err := c.Bind().Form(&form); err != nil {
+		return respond.BindErr(c, err)
+	}
+	jobID, err := h.service.StartReorganizeAnalysis(c.Context(), form.Fat32Safe)
 	if err != nil {
 		slog.Error("Failed to start file reorganization job", "error", err)
 		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start file reorganization job: "+err.Error())
@@ -35,7 +40,7 @@ func (h *Handler) StartReorganizeAnalysis(c fiber.Ctx) error {
 
 	slog.Info("File reorganization job started", "jobID", jobID)
 
-	c.Set("HX-Trigger", "refreshJobList")
+	respond.Trigger(c, "refreshJobList")
 	return respond.ToastJob(c, jobID, "File reorganization started successfully")
 }
 

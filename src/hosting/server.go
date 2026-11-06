@@ -21,6 +21,7 @@ import (
 	"github.com/contre95/soulsolid/src/features/reorganize"
 	"github.com/contre95/soulsolid/src/features/streaming"
 	"github.com/contre95/soulsolid/src/features/ui"
+	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/recover"
@@ -98,6 +99,8 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 		BodyLimit:         1000 * 1024 * 1024, // ~1GB limit for file uploads
 		PassLocalsToViews: true,
 		Immutable:         true,
+		// Every c.Bind() call validates the bound struct's `validate` tags.
+		StructValidator: respond.NewValidator(),
 	})
 
 	// Add middleware

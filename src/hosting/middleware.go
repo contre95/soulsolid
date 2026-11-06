@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -14,7 +15,7 @@ func HTMXMiddleware() fiber.Handler {
 		start := time.Now()
 
 		// Check if this is an HTMX request
-		isHTMX := c.Get("HX-Request") == "true"
+		isHTMX := respond.IsHTMX(c)
 
 		// Process the request
 		err := c.Next()
@@ -46,7 +47,7 @@ func HTMXMiddleware() fiber.Handler {
 // HTMXDebugMiddleware provides detailed debugging for HTMX requests
 func HTMXDebugMiddleware() fiber.Handler {
 	return func(c fiber.Ctx) error {
-		isHTMX := c.Get("HX-Request") == "true"
+		isHTMX := respond.IsHTMX(c)
 
 		if isHTMX {
 			slog.Debug("HTMX request received",
@@ -128,7 +129,7 @@ func LogAllRequestsMiddleware() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		start := time.Now()
 
-		isHTMX := c.Get("HX-Request") == "true"
+		isHTMX := respond.IsHTMX(c)
 		requestType := "normal"
 		if isHTMX {
 			requestType = "htmx"
