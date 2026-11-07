@@ -37,33 +37,8 @@ jobs:
 
       - name: Run deadcode
         run: |
-          set -o pipefail
-          # -test: treat test binaries as roots too, so code only used by tests isn't reported.
-          # Packages in PLUGIN_PKGS are filtered out; deadcode emits a blank line per skipped package, hence the sed.
-          deadcode -test -f="{{if not (eq .Path $PLUGIN_PKGS)}}{{range .Funcs}}{{printf \"%s\t%d\t%s\n\" .Position.File .Position.Line .Name}}{{end}}{{end}}" ./... \
-            | sed '/^$/d' > deadcode.tsv
-
-          count=$(wc -l < deadcode.tsv)
-          {
-            echo "## Dead code analysis"
-            echo
-            if [ "$count" -eq 0 ]; then
-              echo "No unreachable functions found."
-            else
-              echo "Found **$count** unreachable function(s):"
-              echo
-              echo "| Function | Location |"
-              echo "|---|---|"
-              while IFS=$'\t' read -r file line name; do
-                echo "| \`$name\` | \`$file:$line\` |"
-              done < deadcode.tsv
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          # Inline error annotations on the PR diff / run page.
-          while IFS=$'\t' read -r file line name; do
-            echo "::error file=$file,line=$line,title=Dead code::$name is unreachable"
-          done < deadcode.tsv
-
-          # Fail the check if any dead code was found.
-          [ "$count" -eq 0 ] || exit 1
+          # -test: code only used by tests isn't dead. PLUGIN_PKGS are skipped.
+          # Each finding is printed as an ::error annotation (shown on the PR diff).
+          out=$(deadcode -test -f="{{if not (eq .Path $PLUGIN_PKGS)}}{{range .Funcs}}{{printf \"::error file=%s,line=%d,title=Dead code::%s is unreachable\n\" .Position.File .Position.Line .Name}}{{end}}{{end}}" ./...)
+          echo "$out"
+          if grep -q . <<< "$out"; then exit 1; fi
