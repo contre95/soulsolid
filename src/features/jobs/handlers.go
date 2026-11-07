@@ -5,7 +5,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
@@ -172,11 +171,6 @@ func (h *Handler) HandleCancelJob(c fiber.Ctx) error {
 		"CreatedAt": job.CreatedAt,
 		"LogPath":   job.LogPath,
 	})
-}
-
-func (h *Handler) HandleCleanupJobs(c fiber.Ctx) error {
-	h.service.CleanupOldJobs(24 * time.Hour)
-	return respond.ToastOk(c, "cleanup completed")
 }
 
 func (h *Handler) HandleClearFinishedJobs(c fiber.Ctx) error {
