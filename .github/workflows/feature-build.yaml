@@ -8,6 +8,8 @@ permissions:
 jobs:
   feature-build:
     runs-on: ubuntu-latest
+    outputs:
+      feature_name: ${{ steps.extract_feature.outputs.feature_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,3 +38,53 @@ jobs:
           podman push contre95/soulsolid:feat-$feature_name
           podman tag contre95/soulsolid:feat-$feature_name ghcr.io/contre95/soulsolid:feat-$feature_name
           podman push ghcr.io/contre95/soulsolid:feat-$feature_name
+
+  # Lists the image in a "Feature builds" section of the latest release notes.
+  # The section sits between HTML comment markers (invisible on GitHub), so later
+  # builds add a row, and rebuilding a branch replaces that branch's row.
+  # Runs one at a time so two builds can't overwrite each other's edit.
+  add-to-release:
+    needs: feature-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: feature-build-release-notes
+      cancel-in-progress: false
+    steps:
+      - name: Add feature image to latest release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE_TAG: feat-${{ needs.feature-build.outputs.feature_name }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          release=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName,body) \
+            || { echo "No release found, skipping"; exit 0; }
+          tag=$(jq -r .tagName <<<"$release")
+          body=$(jq -r .body <<<"$release")
+
+          start='<!-- feature-builds:start -->'
+          end='<!-- feature-builds:end -->'
+          repo_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+
+          # Rows already in the section, minus an earlier build of this branch
+          rows=$(awk -v s="$start" -v e="$end" '$0==e {f=0} f && /^\| `/ {print} $0==s {f=1}' <<<"$body" \
+            | grep -vF "| \`$IMAGE_TAG\` |" || true)
+          # Release notes without the section
+          rest=$(awk -v s="$start" -v e="$end" '$0==s {f=1} !f {print} $0==e {f=0}' <<<"$body")
+
+          {
+            printf '%s\n\n' "$rest"
+            echo "$start"
+            echo "## 🧪 Feature builds"
+            echo
+            echo "Preview images built from feature branches after this release. Each tag is on both [Docker Hub](https://hub.docker.com/r/contre95/soulsolid/tags) and [GHCR](https://github.com/contre95/soulsolid/pkgs/container/soulsolid)."
+            echo
+            echo "| Image tag | Branch | Commit | Built | Pull |"
+            echo "|---|---|---|---|---|"
+            if [ -n "$rows" ]; then printf '%s\n' "$rows"; fi
+            echo "| \`$IMAGE_TAG\` | [\`$BRANCH\`]($repo_url/tree/$BRANCH) | [\`${SHA::7}\`]($repo_url/commit/$SHA) | $(date -u +%F) | \`podman pull ghcr.io/contre95/soulsolid:$IMAGE_TAG\` |"
+            echo "$end"
+          } | gh release edit "$tag" -R "$GITHUB_REPOSITORY" --notes-file -
+          echo "Added $IMAGE_TAG to release $tag"
