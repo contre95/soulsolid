@@ -69,10 +69,10 @@
         <div class="lib-row group flex items-center gap-3 px-3 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-neutral-800/60 player-track-row cursor-pointer"
              data-id="{{.ID}}" data-title="{{.Title}}" data-artist="{{.Artists}}" data-path="{{.Path}}"
              _="on click[no event.target.closest('button')] call playerPlayRow(me)">
-          <!-- Track number, swapped for a play icon on hover -->
+          <!-- Track number, swapped for a play icon on hover and while the track is playing -->
           <span class="relative flex-shrink-0 w-6 text-right text-sm text-gray-400 dark:text-gray-500 tabular-nums">
-            <span class="group-hover:invisible">{{if .Number}}{{.Number}}{{else}}–{{end}}</span>
-            <i class="player-row-icon fas fa-play absolute inset-0 m-auto h-fit text-[11px] text-gray-600 dark:text-gray-300 opacity-0 group-hover:opacity-100"></i>
+            <span class="player-row-num group-hover:invisible">{{if .Number}}{{.Number}}{{else}}–{{end}}</span>
+            <i class="player-row-icon fas fa-play absolute right-0 top-1/2 -translate-y-1/2 text-[11px] text-gray-600 dark:text-gray-300 opacity-0 group-hover:opacity-100"></i>
           </span>
 
           <span class="flex-1 min-w-0">
