@@ -21,6 +21,7 @@ env:
 
 jobs:
   deadcode:
+    name: Dead code
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -36,6 +37,7 @@ jobs:
 
       - name: Run deadcode
         run: |
+          set -o pipefail
           # -test: treat test binaries as roots too, so code only used by tests isn't reported.
           # Packages in PLUGIN_PKGS are filtered out; deadcode emits a blank line per skipped package, hence the sed.
           deadcode -test -f="{{if not (eq .Path $PLUGIN_PKGS)}}{{range .Funcs}}{{printf \"%s\t%d\t%s\n\" .Position.File .Position.Line .Name}}{{end}}{{end}}" ./... \
@@ -58,11 +60,10 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-          # Inline warning annotations on the PR diff / run page.
+          # Inline error annotations on the PR diff / run page.
           while IFS=$'\t' read -r file line name; do
-            echo "::warning file=$file,line=$line,title=Dead code::$name is unreachable"
+            echo "::error file=$file,line=$line,title=Dead code::$name is unreachable"
           done < deadcode.tsv
 
-          # Report-only for now. To make this a blocking check once the existing
-          # findings are cleaned up, uncomment the next line.
-          # [ "$count" -eq 0 ] || exit 1
+          # Fail the check if any dead code was found.
+          [ "$count" -eq 0 ] || exit 1
