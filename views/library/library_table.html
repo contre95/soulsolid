@@ -1,7 +1,10 @@
   <div id="library-table">
    <!-- Search Form -->
+   <!-- hx-sync is inherited by every input/select below, so all search requests share one queue on the
+        form and a new one aborts the in-flight one (a stale track search can't overwrite the album grid). -->
    <form id="search-form" class="p-6 border-b border-gray-200/50 dark:border-gray-700/50" onsubmit="return false;"
-         hx-get="/library/search" hx-trigger="libsearch" hx-target="#search-results" hx-swap="innerHTML">
+         hx-get="/library/search" hx-trigger="libsearch" hx-target="#search-results" hx-swap="innerHTML"
+         hx-sync="this:replace">
      <!-- Library view (tracks / albums). The hidden input is sent with every search request. -->
      <input type="hidden" id="library-view" name="view" value="tracks">
 
