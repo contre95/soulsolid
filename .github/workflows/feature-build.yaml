@@ -43,7 +43,7 @@ jobs:
   # The section sits between HTML comment markers (invisible on GitHub), so later
   # builds add a row, and rebuilding a branch replaces that branch's row.
   # Runs one at a time so two builds can't overwrite each other's edit.
-  add-to-release:
+  add-to-latest-release:
     needs: feature-build
     runs-on: ubuntu-latest
     permissions:
