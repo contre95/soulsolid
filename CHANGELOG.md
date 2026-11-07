@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.29.1](https://github.com/contre95/soulsolid/compare/v0.29.0...v0.29.1) (2026-11-07)
+
+
+### 🐛 Bug Fixes
+
+* removes dead code reported by deadcode ([#213](https://github.com/contre95/soulsolid/issues/213)) ([a3f7671](https://github.com/contre95/soulsolid/commit/a3f767192cc86ff584842c19b6ead6b19e1b97f7))
+
 ## [0.29.0](https://github.com/contre95/soulsolid/compare/v0.28.4...v0.29.0) (2026-11-06)
 
 
