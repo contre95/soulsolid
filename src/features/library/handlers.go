@@ -454,7 +454,11 @@ func (h *Handler) renderAlbumGrid(c fiber.Ctx, query, genre string) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
 	}
-	albums, err := h.service.GetAlbumSummaries(c.Context(), limit, (page-1)*limit, filter)
+	// Clamp a stale page (e.g. albums removed since the link was built) to the last one.
+	if lastPage := max((count+limit-1)/limit, 1); page > lastPage {
+		page = lastPage
+	}
+	albums, err :=h.service.GetAlbumSummaries(c.Context(), limit, (page-1)*limit, filter)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
 	}
@@ -511,17 +515,15 @@ func (h *Handler) RenderAlbumView(c fiber.Ctx) error {
 	}
 
 	albumArtists := joinArtistNames(album.Artists)
+	// Same rule as the album grid: release date year, else the newest track year.
+	// Years 0 and 1 are the placeholders written for unknown release dates.
+	releaseYear := album.ReleaseDate.Year()
 	year := 0
-	if album.ReleaseDate.Year() > 1 {
-		year = album.ReleaseDate.Year()
-	}
 	totalDuration := 0
 	var discs []AlbumDisc
 	for _, t := range tracks {
 		totalDuration += t.Metadata.Duration
-		if year == 0 && t.Metadata.Year > 0 {
-			year = t.Metadata.Year
-		}
+		year = max(year, t.Metadata.Year)
 		// Tracks come ordered by disc, so a new disc number starts a new group.
 		if len(discs) == 0 || discs[len(discs)-1].Number != t.Metadata.DiscNumber {
 			discs = append(discs, AlbumDisc{Number: t.Metadata.DiscNumber})
@@ -541,6 +543,10 @@ func (h *Handler) RenderAlbumView(c fiber.Ctx) error {
 			Duration:    t.Metadata.Duration,
 			Path:        t.Path,
 		})
+	}
+
+	if releaseYear > 1 {
+		year = releaseYear
 	}
 
 	coverTrackID := ""
