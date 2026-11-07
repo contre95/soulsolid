@@ -91,19 +91,6 @@ func (s *Service) GetAllMetrics(ctx context.Context) (*MetricsData, error) {
 	return data, nil
 }
 
-// convertMapToMetrics converts a map[string]int to []Metric
-func convertMapToMetrics(data map[string]int, metricType string) []Metric {
-	metrics := make([]Metric, 0, len(data))
-	for key, value := range data {
-		metrics = append(metrics, Metric{
-			Type:  metricType,
-			Key:   key,
-			Value: value,
-		})
-	}
-	return metrics
-}
-
 // getMetricsByType retrieves metrics of a specific type.
 func (s *Service) getMetricsByType(ctx context.Context, metricType string) ([]Metric, error) {
 	stored, err := s.metrics.GetStoredMetrics(ctx, metricType)

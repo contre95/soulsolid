@@ -47,7 +47,3 @@ func SetupLogger(cfg *config.Manager) *slog.Logger {
 	logger.Info("Logger initialized", "time", time.Now().Format(time.RFC3339))
 	return logger
 }
-
-func Dup(logger *slog.Logger, msg string, args ...any) {
-	logger.Info("[DUP] "+msg, args...)
-}
