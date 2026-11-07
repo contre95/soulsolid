@@ -1,8 +1,12 @@
   <div id="library-table">
    <!-- Search Form -->
-   <form id="search-form" class="p-6 border-b border-gray-200/50 dark:border-gray-700/50" onsubmit="return false;">
-     <!-- Text search row -->
-     <div class="flex flex-col md:flex-row gap-4 mb-4">
+   <form id="search-form" class="p-6 border-b border-gray-200/50 dark:border-gray-700/50" onsubmit="return false;"
+         hx-get="/library/search" hx-trigger="libsearch" hx-target="#search-results" hx-swap="innerHTML">
+     <!-- Library view (tracks / albums). The hidden input is sent with every search request. -->
+     <input type="hidden" id="library-view" name="view" value="tracks">
+
+     <!-- Text search row: search box + view toggle -->
+     <div class="flex flex-col md:flex-row md:items-end gap-3 mb-4">
        <div class="flex-1">
          <label for="search-query" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
            <i class="fas fa-search mr-2 text-blue-500"></i>Search Library
@@ -17,6 +21,36 @@
                 hx-target="#search-results"
                 hx-swap="innerHTML"
                 hx-include="closest form">
+       </div>
+
+       <div class="inline-flex h-10 self-start md:self-auto flex-shrink-0 whitespace-nowrap rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-hidden divide-x divide-gray-300 dark:divide-gray-600"
+            role="group" aria-label="Library view">
+         <button type="button" id="lib-view-tracks" aria-pressed="true" title="Browse tracks"
+                 class="cursor-pointer inline-flex items-center h-full px-3 text-sm font-medium transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 aria-pressed:bg-blue-500/10 aria-pressed:text-blue-600 aria-pressed:dark:bg-blue-500/20 aria-pressed:dark:text-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+                 _="on click
+                      if #library-view.value is 'tracks' exit end
+                      set #library-view.value to 'tracks'
+                      set @aria-pressed of #lib-view-albums to 'false'
+                      set @aria-pressed of me to 'true'
+                      remove .hidden from .lib-track-filter
+                      add .hidden to .lib-album-filter
+                      set #search-query.placeholder to 'Search artists, albums, tracks...'
+                      send libsearch to #search-form">
+           <i class="fas fa-music mr-2 text-xs"></i>Tracks
+         </button>
+         <button type="button" id="lib-view-albums" aria-pressed="false" title="Browse albums"
+                 class="cursor-pointer inline-flex items-center h-full px-3 text-sm font-medium transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 aria-pressed:bg-blue-500/10 aria-pressed:text-blue-600 aria-pressed:dark:bg-blue-500/20 aria-pressed:dark:text-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+                 _="on click
+                      if #library-view.value is 'albums' exit end
+                      set #library-view.value to 'albums'
+                      set @aria-pressed of #lib-view-tracks to 'false'
+                      set @aria-pressed of me to 'true'
+                      add .hidden to .lib-track-filter
+                      remove .hidden from .lib-album-filter
+                      set #search-query.placeholder to 'Search albums or album artists...'
+                      send libsearch to #search-form">
+           <i class="fas fa-compact-disc mr-2 text-xs"></i>Albums
+         </button>
        </div>
      </div>
 
@@ -39,8 +73,25 @@
          </select>
        </div>
 
+       <!-- Album sort (albums view only) -->
+       <div class="lib-album-filter hidden min-w-40">
+         <label for="album_sort" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Sort albums by</label>
+         <select id="album_sort" name="album_sort"
+                 class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 hx-get="/library/search"
+                 hx-trigger="change"
+                 hx-target="#search-results"
+                 hx-swap="innerHTML"
+                 hx-include="closest form">
+           <option value="artist">Artist</option>
+           <option value="title">Title</option>
+           <option value="year">Year (newest first)</option>
+           <option value="recent">Recently added</option>
+         </select>
+       </div>
+
        <!-- Lyrics filter dropdown -->
-       <div class="min-w-36">
+       <div class="lib-track-filter min-w-36">
          <label for="lyrics_filter" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Lyrics</label>
          <select id="lyrics_filter" name="lyrics_filter"
                  class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -57,7 +108,7 @@
        </div>
 
        <!-- Lyrics text search -->
-       <div class="flex-1 min-w-40">
+       <div class="lib-track-filter flex-1 min-w-40">
          <label for="lyrics_text" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Lyrics contain</label>
          <input type="text"
                 id="lyrics_text"
@@ -72,7 +123,7 @@
        </div>
 
        <!-- Added after -->
-       <div class="flex-1 min-w-36">
+       <div class="lib-track-filter flex-1 min-w-36">
          <label for="added_after" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Added after</label>
          <input type="date"
                 id="added_after"
@@ -86,7 +137,7 @@
        </div>
 
        <!-- Added before -->
-       <div class="flex-1 min-w-36">
+       <div class="lib-track-filter flex-1 min-w-36">
          <label for="added_before" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Added before</label>
          <input type="date"
                 id="added_before"
@@ -100,7 +151,7 @@
        </div>
 
        <!-- AcoustID checkbox -->
-       <div class="flex items-center gap-4 pb-1.5">
+       <div class="lib-track-filter flex items-center gap-4 pb-1.5">
          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
            <input type="checkbox"
                   name="has_acoustid"

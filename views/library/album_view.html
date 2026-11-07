@@ -1,0 +1,123 @@
+<div id="album-view" class="animate__animated animate__fadeIn">
+  <!-- Back to the album grid, keeping the search form's filters and the page we came from -->
+  <button type="button"
+          class="cursor-pointer mb-4 inline-flex items-center px-3 py-1.5 rounded-md text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+          hx-get="/library/search?page={{.BackPage}}" hx-include="#search-form"
+          hx-target="#search-results" hx-swap="innerHTML">
+    <i class="fas fa-chevron-left mr-1 text-xs"></i> Albums
+  </button>
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row gap-y-4 gap-x-6 sm:items-end px-4 py-2">
+    <span class="relative flex-shrink-0 w-40 h-40 sm:w-48 sm:h-48 rounded-lg overflow-hidden shadow-lg bg-gradient-to-br from-purple-400 to-fuchsia-600">
+      <span class="absolute inset-0 flex items-center justify-center">
+        <i class="fas fa-compact-disc text-5xl text-white/80"></i>
+      </span>
+      {{if .CoverTrackID}}
+      <img src="/tag/{{.CoverTrackID}}/artwork" alt="" class="absolute inset-0 w-full h-full object-cover" onerror="this.remove()">
+      {{end}}
+    </span>
+
+    <div class="min-w-0 flex-1">
+      <p class="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+        {{$type := print .Album.Type}}{{if eq $type "ep"}}EP{{else if and $type (ne $type "default")}}{{capitalize $type}}{{else}}Album{{end}}
+      </p>
+      <h2 class="mt-1 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words">{{.Album.Title}}</h2>
+      <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{if .AlbumArtists}}{{.AlbumArtists}}{{else}}Unknown artist{{end}}</p>
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+        {{if .Year}}{{.Year}} · {{end}}{{.TrackCount}} {{if eq .TrackCount 1}}track{{else}}tracks{{end}}{{if .TotalDuration}} · {{formatDuration .TotalDuration}}{{end}}{{if .Album.Label}} · {{.Album.Label}}{{end}}
+      </p>
+
+      <div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        {{if .TrackCount}}
+        <button type="button"
+                class="cursor-pointer inline-flex items-center gap-2 h-9 px-5 rounded-full text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 shadow transition-colors"
+                _="on click call playerPlayRow(first .player-track-row in #album-tracklist)">
+          <i class="fas fa-play text-xs"></i> Play
+        </button>
+        {{end}}
+        <button type="button" title="Add album to playlist"
+                class="cursor-pointer w-9 h-9 flex items-center justify-center rounded-full text-orange-600 dark:text-orange-400 bg-orange-100/70 dark:bg-orange-900/30 hover:bg-orange-200/70 dark:hover:bg-orange-900/50 transition-colors"
+                hx-get="/playlists/album/{{.Album.ID}}/playlists" hx-target="#contenido" hx-swap="beforeend">
+          <i class="fas fa-plus text-xs"></i>
+        </button>
+        <button type="button" title="Delete album"
+                class="cursor-pointer w-9 h-9 flex items-center justify-center rounded-full text-red-600 dark:text-red-400 bg-red-100/70 dark:bg-red-900/30 hover:bg-red-200/70 dark:hover:bg-red-900/50 transition-colors"
+                hx-delete="/library/albums/{{.Album.ID}}"
+                hx-confirm="Delete this album and its audio files from disk? This can't be undone."
+                hx-target="#toast-container" hx-swap="beforeend"
+                hx-on:htmx:after-request="if (event.detail.successful) { htmx.trigger('#search-form', 'libsearch'); }">
+          <i class="fas fa-trash text-xs"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tracklist -->
+  <div id="album-tracklist" class="mt-6">
+    {{if .Discs}}
+    {{$multi := .MultiDisc}}
+    {{range .Discs}}
+    {{if $multi}}
+    <p class="px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+      <i class="fas fa-compact-disc mr-1"></i>Disc {{if .Number}}{{.Number}}{{else}}?{{end}}
+    </p>
+    {{end}}
+    <ul class="divide-y divide-gray-100 dark:divide-neutral-800/70">
+      {{range .Tracks}}
+      <li>
+        <div class="lib-row group flex items-center gap-3 px-3 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-neutral-800/60 player-track-row cursor-pointer"
+             data-id="{{.ID}}" data-title="{{.Title}}" data-artist="{{.Artists}}" data-path="{{.Path}}"
+             _="on click[no event.target.closest('button')] call playerPlayRow(me)">
+          <!-- Track number, swapped for a play icon on hover -->
+          <span class="relative flex-shrink-0 w-6 text-right text-sm text-gray-400 dark:text-gray-500 tabular-nums">
+            <span class="group-hover:invisible">{{if .Number}}{{.Number}}{{else}}–{{end}}</span>
+            <i class="player-row-icon fas fa-play absolute inset-0 m-auto h-fit text-[11px] text-gray-600 dark:text-gray-300 opacity-0 group-hover:opacity-100"></i>
+          </span>
+
+          <span class="flex-1 min-w-0">
+            <span class="block truncate text-sm font-medium text-gray-900 dark:text-white">{{.Title}}</span>
+            {{if .ShowArtists}}
+            <span class="block truncate text-xs text-gray-500 dark:text-gray-400">{{.Artists}}</span>
+            {{end}}
+          </span>
+
+          {{if .Duration}}
+          <span class="flex-shrink-0 text-xs text-gray-400 dark:text-gray-500 tabular-nums">{{duration .Duration}}</span>
+          {{end}}
+
+          <span class="flex-shrink-0 flex items-center gap-1">
+            <button class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-200/70 dark:hover:bg-neutral-700"
+                    hx-get="/library/tracks/{{.ID}}/overview" hx-target="#modal-container" hx-swap="innerHTML" title="Overview">
+              <i class="fas fa-eye text-xs"></i>
+            </button>
+            <button class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 w-7 h-7 flex items-center justify-center rounded-md hover:bg-blue-100/70 dark:hover:bg-blue-900/40"
+                    hx-get="/tag/{{.ID}}" hx-target="#contenido" hx-swap="outerHTML" hx-push-url="true" title="Edit Tags">
+              <i class="fas fa-tag text-xs"></i>
+            </button>
+            <button class="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 w-7 h-7 flex items-center justify-center rounded-md hover:bg-orange-100/70 dark:hover:bg-orange-900/40"
+                    hx-get="/playlists/track/{{.ID}}/playlists" hx-target="#contenido" hx-swap="beforeend" title="Add to Playlist">
+              <i class="fas fa-plus text-xs"></i>
+            </button>
+            <button class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-100/70 dark:hover:bg-red-900/40"
+                    hx-delete="/library/tracks/{{.ID}}"
+                    hx-confirm="Are you sure you want to delete this track?"
+                    hx-target="#toast-container" hx-swap="beforeend"
+                    hx-on:htmx:after-request="if (event.detail.successful) { event.target.closest('li').remove(); }"
+                    title="Delete track">
+              <i class="fas fa-trash text-xs"></i>
+            </button>
+          </span>
+        </div>
+      </li>
+      {{end}}
+    </ul>
+    {{end}}
+    {{else}}
+    <div class="text-center py-12">
+      <i class="fas fa-music text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+      <p class="text-gray-500 dark:text-gray-400">This album has no tracks in the library.</p>
+    </div>
+    {{end}}
+  </div>
+</div>
