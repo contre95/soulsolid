@@ -10,7 +10,7 @@ import (
 )
 
 // seedAlbumLibrary builds a small library:
-//   - "Zeta" by Alpha (2001): 3 tracks across 2 discs, genre Rock
+//   - "Zeta" by Alpha (2001): 3 tracks across 2 discs, genres Rock (2) and Electronic (1)
 //   - "Beta" by Bravo (release date unknown, tracks from 1999): 1 track, genre Jazz
 //   - "Empty" by Alpha: no tracks
 func seedAlbumLibrary(t *testing.T) (*SqliteLibrary, context.Context) {
@@ -43,7 +43,7 @@ func seedAlbumLibrary(t *testing.T) (*SqliteLibrary, context.Context) {
 	tracks := []*music.Track{
 		// Inserted out of order on purpose: disc 2 first, then disc 1 track 2, then disc 1 track 1.
 		{ID: "t-z-2-1", Path: "/m/z21", Title: "Z disc2 one", Artists: main(alpha), Album: zeta, AddedDate: day(1),
-			Metadata: music.Metadata{DiscNumber: 2, TrackNumber: 1, Duration: 100, Genre: "Rock", Year: 2001}},
+			Metadata: music.Metadata{DiscNumber: 2, TrackNumber: 1, Duration: 100, Genre: "Electronic", Year: 2001}},
 		{ID: "t-z-1-2", Path: "/m/z12", Title: "Z disc1 two", Artists: main(alpha), Album: zeta, AddedDate: day(2),
 			Metadata: music.Metadata{DiscNumber: 1, TrackNumber: 2, Duration: 200, Genre: "Rock", Year: 2001}},
 		{ID: "t-z-1-1", Path: "/m/z11", Title: "Z disc1 one", Artists: main(alpha), Album: zeta, AddedDate: day(3),
@@ -129,6 +129,15 @@ func TestGetAlbumSummaries(t *testing.T) {
 		if count != len(tc.want) {
 			t.Errorf("%s: count %d want %d", tc.name, count, len(tc.want))
 		}
+	}
+
+	// A genre filter selects albums, not tracks: a mixed-genre album keeps its full aggregates.
+	mixed, err := lib.GetAlbumSummaries(ctx, 50, 0, &music.AlbumFilter{Genre: "Electronic"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mixed) != 1 || mixed[0].ID != "al-zeta" || mixed[0].TrackCount != 3 || mixed[0].Duration != 600 {
+		t.Errorf("genre filter should return zeta with all 3 tracks / 600s, got %+v", mixed)
 	}
 
 	// Pagination

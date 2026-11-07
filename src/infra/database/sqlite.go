@@ -1998,7 +1998,7 @@ func (d *SqliteLibrary) GetAlbumSummaries(ctx context.Context, limit, offset int
 			MAX(t.added_date) AS last_added,
 			(SELECT t2.id FROM track_albums ta2 JOIN tracks t2 ON t2.id = ta2.track_id
 				WHERE ta2.album_id = a.id
-				ORDER BY t2.disc_number, t2.track_number, t2.title LIMIT 1) AS cover_track_id
+				ORDER BY t2.disc_number, t2.track_number, t2.title COLLATE NOCASE, t2.id LIMIT 1) AS cover_track_id
 		FROM albums a
 		LEFT JOIN track_albums ta ON ta.album_id = a.id
 		LEFT JOIN tracks t ON t.id = ta.track_id` + where + `
@@ -2043,7 +2043,7 @@ func (d *SqliteLibrary) GetAlbumTracks(ctx context.Context, albumID string) ([]*
 		SELECT t.id FROM track_albums ta
 		JOIN tracks t ON t.id = ta.track_id
 		WHERE ta.album_id = ?
-		ORDER BY t.disc_number, t.track_number, t.title COLLATE NOCASE
+		ORDER BY t.disc_number, t.track_number, t.title COLLATE NOCASE, t.id
 	`, albumID)
 	if err != nil {
 		return nil, err
