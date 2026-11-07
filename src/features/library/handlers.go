@@ -317,6 +317,10 @@ func (h *Handler) GetUnifiedSearch(c fiber.Ctx) error {
 	addedAfter := strings.TrimSpace(c.Query("added_after", ""))
 	addedBefore := strings.TrimSpace(c.Query("added_before", ""))
 
+	if c.Query("view") == "albums" {
+		return h.renderAlbumGrid(c, query, genre)
+	}
+
 	var results []SearchResult
 	var totalCount int
 
@@ -425,6 +429,141 @@ func (h *Handler) GetUnifiedSearch(c fiber.Ctx) error {
 		"Results":    results,
 		"Pagination": pagination,
 		"Query":      query,
+	})
+}
+
+// albumGridPageSize is divisible by every column count the album grid uses (2–6),
+// so full pages never end with a partial row.
+const albumGridPageSize = 48
+
+// renderAlbumGrid renders the album browser: a paginated cover grid filtered by the
+// library search form. Track-only filters (lyrics, AcoustID, dates) don't apply here.
+func (h *Handler) renderAlbumGrid(c fiber.Ctx, query, genre string) error {
+	page := max(fiber.Query[int](c, "page", 1), 1)
+	limit := fiber.Query[int](c, "limit", albumGridPageSize)
+	if limit <= 0 {
+		limit = albumGridPageSize
+	}
+	filter := &music.AlbumFilter{
+		TextSearch: query,
+		Genre:      genre,
+		Sort:       music.AlbumSort(c.Query("album_sort", string(music.AlbumSortArtist))),
+	}
+
+	count, err := h.service.GetAlbumSummariesCount(c.Context(), filter)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
+	}
+	// Clamp a stale page (e.g. albums removed since the link was built) to the last one.
+	if lastPage := max((count+limit-1)/limit, 1); page > lastPage {
+		page = lastPage
+	}
+	albums, err :=h.service.GetAlbumSummaries(c.Context(), limit, (page-1)*limit, filter)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Error loading albums")
+	}
+
+	return respond.Partial(c, "library/album_grid", fiber.Map{
+		"Albums":     albums,
+		"Pagination": NewPagination(page, limit, count),
+		"Query":      query,
+		"Filtered":   query != "" || genre != "",
+	})
+}
+
+// AlbumTrackRow is one track line in the album view.
+type AlbumTrackRow struct {
+	ID          string
+	Number      int
+	Title       string
+	Artists     string
+	ShowArtists bool // only when the track artists differ from the album artists
+	Duration    int
+	Path        string
+}
+
+// AlbumDisc groups an album's tracks by disc number.
+type AlbumDisc struct {
+	Number int
+	Tracks []AlbumTrackRow
+}
+
+// joinArtistNames returns the non-nil artist names of the roles, comma separated.
+func joinArtistNames(roles []music.ArtistRole) string {
+	names := make([]string, 0, len(roles))
+	for _, ar := range roles {
+		if ar.Artist != nil {
+			names = append(names, ar.Artist.Name)
+		}
+	}
+	return strings.Join(names, ", ")
+}
+
+// RenderAlbumView renders an album's header and tracklist in place of the album grid.
+func (h *Handler) RenderAlbumView(c fiber.Ctx) error {
+	albumID := c.Params("id")
+	album, err := h.service.GetAlbum(c.Context(), albumID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Error loading album")
+	}
+	if album == nil {
+		return c.Status(fiber.StatusNotFound).SendString("Album not found")
+	}
+	tracks, err := h.service.GetAlbumTracks(c.Context(), albumID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Error loading album tracks")
+	}
+
+	albumArtists := joinArtistNames(album.Artists)
+	// Same rule as the album grid: release date year, else the newest track year.
+	// Years 0 and 1 are the placeholders written for unknown release dates.
+	releaseYear := album.ReleaseDate.Year()
+	year := 0
+	totalDuration := 0
+	var discs []AlbumDisc
+	for _, t := range tracks {
+		totalDuration += t.Metadata.Duration
+		year = max(year, t.Metadata.Year)
+		// Tracks come ordered by disc, so a new disc number starts a new group.
+		if len(discs) == 0 || discs[len(discs)-1].Number != t.Metadata.DiscNumber {
+			discs = append(discs, AlbumDisc{Number: t.Metadata.DiscNumber})
+		}
+		title := t.Title
+		if t.TitleVersion != "" {
+			title += " (" + t.TitleVersion + ")"
+		}
+		artists := joinArtistNames(t.Artists)
+		d := &discs[len(discs)-1]
+		d.Tracks = append(d.Tracks, AlbumTrackRow{
+			ID:          t.ID,
+			Number:      t.Metadata.TrackNumber,
+			Title:       title,
+			Artists:     artists,
+			ShowArtists: artists != "" && artists != albumArtists,
+			Duration:    t.Metadata.Duration,
+			Path:        t.Path,
+		})
+	}
+
+	if releaseYear > 1 {
+		year = releaseYear
+	}
+
+	coverTrackID := ""
+	if len(tracks) > 0 {
+		coverTrackID = tracks[0].ID
+	}
+
+	return respond.Partial(c, "library/album_view", fiber.Map{
+		"Album":         album,
+		"AlbumArtists":  albumArtists,
+		"Year":          year,
+		"TrackCount":    len(tracks),
+		"TotalDuration": totalDuration,
+		"CoverTrackID":  coverTrackID,
+		"Discs":         discs,
+		"MultiDisc":     len(discs) > 1,
+		"BackPage":      max(fiber.Query[int](c, "page", 1), 1),
 	})
 }
 

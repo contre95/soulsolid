@@ -13,7 +13,7 @@ here, and the Library section is where you browse, search, inspect and clean it 
 
 ## What you can do
 
-- **Browse** every track in the collection, page by page.
+- **Browse** every track in the collection page by page, or switch to the **album view** to browse by cover.
 - **Search** artists, albums and tracks from a single search box.
 - **Filter** tracks by genre, lyrics, AcoustID or date added.
 - Open a **track overview** with its tags and audio details.
@@ -43,6 +43,27 @@ text search:
 | **AcoustID** | Only tracks that have (or don't have) an AcoustID. Useful to find tracks that still need [identifying](./metadata.md#acoustid-analysis). |
 | **Lyrics** | *Has lyrics*, *Empty lyrics*, *Instrumental*, or *Lyrics contain…* to search inside the lyrics text. |
 | **Added after / before** | Only tracks added to the library in a given date range. |
+
+## Album view
+
+Use the **Tracks / Albums** switch above the search box to browse your collection as a
+grid of album covers instead of a list of tracks. Each album shows its cover (taken
+from the first track's embedded artwork), album artist, year and number of tracks.
+
+In album view:
+
+- The search box matches **album titles and album artists**.
+- **Genre** shows albums that contain at least one track of that genre.
+- **Sort albums by** orders the grid by artist (default), title, year (newest first)
+  or most recently added.
+- Track-only filters (lyrics, AcoustID, dates added) are hidden because they don't
+  apply to albums.
+
+Click an album to open it. You get the full tracklist in disc and track order (split by
+disc for multi-disc releases), and you can **play** the album, **add it to a
+playlist** or **delete** it. Each track keeps its usual actions: overview, edit tags,
+add to playlist and delete. **Albums** goes back to the grid with your search, filters
+and page kept.
 
 ## Track overview
 
