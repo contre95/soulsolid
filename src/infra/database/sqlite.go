@@ -186,6 +186,7 @@ func createTables(db *sql.DB) error {
 		CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist ON playlist_tracks(playlist_id);
 		CREATE INDEX IF NOT EXISTS idx_playlist_tracks_track ON playlist_tracks(track_id);
 		CREATE INDEX IF NOT EXISTS idx_tracks_genre ON tracks(genre);
+		CREATE INDEX IF NOT EXISTS idx_track_albums_album ON track_albums(album_id);
 	`)
 	if err != nil {
 		return err
@@ -1929,6 +1930,150 @@ func (d *SqliteLibrary) SearchAlbums(ctx context.Context, query string, limit, o
 		albums = append(albums, album)
 	}
 	return albums, rows.Err()
+}
+
+// albumFilterWhere builds the WHERE clause (including the keyword, or empty) shared by
+// GetAlbumSummaries and GetAlbumSummariesCount. The albums table must be aliased as "a".
+func albumFilterWhere(filter *music.AlbumFilter) (string, []any) {
+	if filter == nil {
+		return "", nil
+	}
+	var conditions []string
+	var args []any
+	if filter.TextSearch != "" {
+		like := "%" + filter.TextSearch + "%"
+		conditions = append(conditions, `(a.title LIKE ? OR EXISTS (
+			SELECT 1 FROM album_artists aa2 JOIN artists ar2 ON ar2.id = aa2.artist_id
+			WHERE aa2.album_id = a.id AND ar2.name LIKE ?))`)
+		args = append(args, like, like)
+	}
+	if filter.Genre != "" {
+		conditions = append(conditions, `EXISTS (
+			SELECT 1 FROM track_albums ta3 JOIN tracks t3 ON t3.id = ta3.track_id
+			WHERE ta3.album_id = a.id AND t3.genre = ?)`)
+		args = append(args, filter.Genre)
+	}
+	if len(conditions) == 0 {
+		return "", nil
+	}
+	return " WHERE " + strings.Join(conditions, " AND "), args
+}
+
+// albumSortOrder maps an AlbumSort to a fixed ORDER BY clause (never user-supplied SQL).
+// a.id is the final tie-breaker so pagination stays stable.
+func albumSortOrder(sort music.AlbumSort) string {
+	switch sort {
+	case music.AlbumSortTitle:
+		return "a.title COLLATE NOCASE, a.id"
+	case music.AlbumSortYear:
+		return "year DESC, a.title COLLATE NOCASE, a.id"
+	case music.AlbumSortRecent:
+		return "last_added DESC, a.title COLLATE NOCASE, a.id"
+	default:
+		return "artists COLLATE NOCASE, year, a.title COLLATE NOCASE, a.id"
+	}
+}
+
+// GetAlbumSummaries returns a page of albums with their track count, duration, year and a
+// cover track, computed in a single query instead of loading each album and its tracks.
+func (d *SqliteLibrary) GetAlbumSummaries(ctx context.Context, limit, offset int, filter *music.AlbumFilter) ([]*music.AlbumSummary, error) {
+	where, args := albumFilterWhere(filter)
+	sort := music.AlbumSortArtist
+	if filter != nil {
+		sort = filter.Sort
+	}
+	// The release year comes from the album's release_date; years 0 and 1 are the
+	// placeholders written for unknown dates, so fall back to the newest track year.
+	query := `
+		SELECT a.id, a.title,
+			(SELECT GROUP_CONCAT(name, ', ') FROM (
+				SELECT DISTINCT ar.name AS name FROM album_artists aa
+				JOIN artists ar ON ar.id = aa.artist_id
+				WHERE aa.album_id = a.id)) AS artists,
+			CASE WHEN CAST(substr(a.release_date, 1, 4) AS INTEGER) > 1
+				THEN CAST(substr(a.release_date, 1, 4) AS INTEGER)
+				ELSE COALESCE(MAX(t.year), 0) END AS year,
+			COUNT(t.id) AS track_count,
+			COALESCE(SUM(t.duration), 0) AS duration,
+			MAX(t.added_date) AS last_added,
+			(SELECT t2.id FROM track_albums ta2 JOIN tracks t2 ON t2.id = ta2.track_id
+				WHERE ta2.album_id = a.id
+				ORDER BY t2.disc_number, t2.track_number, t2.title LIMIT 1) AS cover_track_id
+		FROM albums a
+		LEFT JOIN track_albums ta ON ta.album_id = a.id
+		LEFT JOIN tracks t ON t.id = ta.track_id` + where + `
+		GROUP BY a.id
+		ORDER BY ` + albumSortOrder(sort) + `
+		LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
+
+	rows, err := d.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	summaries := []*music.AlbumSummary{}
+	for rows.Next() {
+		s := &music.AlbumSummary{}
+		var artists, lastAdded, coverTrackID sql.NullString
+		if err := rows.Scan(&s.ID, &s.Title, &artists, &s.Year, &s.TrackCount, &s.Duration, &lastAdded, &coverTrackID); err != nil {
+			return nil, err
+		}
+		s.Artists = artists.String
+		s.CoverTrackID = coverTrackID.String
+		summaries = append(summaries, s)
+	}
+	return summaries, rows.Err()
+}
+
+// GetAlbumSummariesCount returns how many albums match the filter.
+func (d *SqliteLibrary) GetAlbumSummariesCount(ctx context.Context, filter *music.AlbumFilter) (int, error) {
+	where, args := albumFilterWhere(filter)
+	var count int
+	if err := d.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM albums a`+where, args...).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// GetAlbumTracks returns every track of an album ordered by disc number, track number and title.
+func (d *SqliteLibrary) GetAlbumTracks(ctx context.Context, albumID string) ([]*music.Track, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT t.id FROM track_albums ta
+		JOIN tracks t ON t.id = ta.track_id
+		WHERE ta.album_id = ?
+		ORDER BY t.disc_number, t.track_number, t.title COLLATE NOCASE
+	`, albumID)
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Load full tracks after closing the cursor: GetTrack opens its own transaction.
+	tracks := make([]*music.Track, 0, len(ids))
+	for _, id := range ids {
+		track, err := d.GetTrack(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if track != nil {
+			tracks = append(tracks, track)
+		}
+	}
+	return tracks, nil
 }
 
 // GetTracksCount gets the total count of tracks in the database.
