@@ -1,0 +1,68 @@
+name: Dead Code Analysis
+# Reports functions that are unreachable from main (and tests) using
+# golang.org/x/tools/cmd/deadcode. See https://go.dev/blog/deadcode
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DEADCODE_VERSION: v0.52.0
+  # Packages imported by out-of-tree downloader plugins (loaded at runtime via
+  # plugin.Open). deadcode can't see those callers, so findings here are skipped.
+  PLUGIN_PKGS: >-
+    "github.com/contre95/soulsolid/src/features/downloading"
+    "github.com/contre95/soulsolid/src/music"
+
+jobs:
+  deadcode:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install deadcode
+        run: go install golang.org/x/tools/cmd/deadcode@${DEADCODE_VERSION}
+
+      - name: Run deadcode
+        run: |
+          # -test: treat test binaries as roots too, so code only used by tests isn't reported.
+          # Packages in PLUGIN_PKGS are filtered out; deadcode emits a blank line per skipped package, hence the sed.
+          deadcode -test -f="{{if not (eq .Path $PLUGIN_PKGS)}}{{range .Funcs}}{{printf \"%s\t%d\t%s\n\" .Position.File .Position.Line .Name}}{{end}}{{end}}" ./... \
+            | sed '/^$/d' > deadcode.tsv
+
+          count=$(wc -l < deadcode.tsv)
+          {
+            echo "## Dead code analysis"
+            echo
+            if [ "$count" -eq 0 ]; then
+              echo "No unreachable functions found."
+            else
+              echo "Found **$count** unreachable function(s):"
+              echo
+              echo "| Function | Location |"
+              echo "|---|---|"
+              while IFS=$'\t' read -r file line name; do
+                echo "| \`$name\` | \`$file:$line\` |"
+              done < deadcode.tsv
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Inline warning annotations on the PR diff / run page.
+          while IFS=$'\t' read -r file line name; do
+            echo "::warning file=$file,line=$line,title=Dead code::$name is unreachable"
+          done < deadcode.tsv
+
+          # Report-only for now. To make this a blocking check once the existing
+          # findings are cleaned up, uncomment the next line.
+          # [ "$count" -eq 0 ] || exit 1
