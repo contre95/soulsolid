@@ -268,6 +268,37 @@ func (s *Service) SearchAlbums(ctx context.Context, query string, limit, offset 
 	return albums, nil
 }
 
+// GetAlbumSummaries returns a page of albums for the album browser.
+func (s *Service) GetAlbumSummaries(ctx context.Context, limit, offset int, filter *library.AlbumFilter) ([]*library.AlbumSummary, error) {
+	slog.Debug("GetAlbumSummaries service called", "limit", limit, "offset", offset, "filter", filter)
+	summaries, err := s.library.GetAlbumSummaries(ctx, limit, offset, filter)
+	if err != nil {
+		slog.Error("GetAlbumSummaries failed", "error", err)
+		return nil, err
+	}
+	return summaries, nil
+}
+
+// GetAlbumSummariesCount returns how many albums match the filter.
+func (s *Service) GetAlbumSummariesCount(ctx context.Context, filter *library.AlbumFilter) (int, error) {
+	count, err := s.library.GetAlbumSummariesCount(ctx, filter)
+	if err != nil {
+		slog.Error("GetAlbumSummariesCount failed", "error", err)
+		return 0, err
+	}
+	return count, nil
+}
+
+// GetAlbumTracks returns the tracks of an album in disc and track order.
+func (s *Service) GetAlbumTracks(ctx context.Context, albumID string) ([]*library.Track, error) {
+	tracks, err := s.library.GetAlbumTracks(ctx, albumID)
+	if err != nil {
+		slog.Error("GetAlbumTracks failed", "albumID", albumID, "error", err)
+		return nil, err
+	}
+	return tracks, nil
+}
+
 // GetAlbumsCount returns the total count of albums in the library.
 func (s *Service) GetAlbumsCount(ctx context.Context) (int, error) {
 	slog.Debug("GetAlbumsCount service called")
