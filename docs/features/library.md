@@ -115,4 +115,5 @@ database:
 - [Importing](./importing.md) and [Downloading](./downloading.md) add music to the library.
 - [Metadata](./metadata.md) and [Lyrics](./lyrics.md) enrich the tracks already in it.
 - [Merge](./merge.md) cleans up duplicate artists, albums, genres and tracks.
+- [Album Completeness](./completeness.md) shows on each album page whether you have all of its tracks.
 - [Metrics](./metrics.md) turns the library into charts.

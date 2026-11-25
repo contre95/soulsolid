@@ -57,8 +57,15 @@ type deezerGenres struct {
 type deezerAlbum struct {
 	ID          int          `json:"id"`
 	Title       string       `json:"title"`
+	Link        string       `json:"link"`
 	ReleaseDate string       `json:"release_date"`
+	NbTracks    int          `json:"nb_tracks"`
 	Genres      deezerGenres `json:"genres"`
+	Artist      deezerArtist `json:"artist"`
+}
+
+type deezerAlbumSearchResponse struct {
+	Data []deezerAlbum `json:"data"`
 }
 
 // DeezerProvider implements MetadataProvider for Deezer
@@ -141,6 +148,76 @@ func (p *DeezerProvider) SearchTracks(ctx context.Context, params metadata.Searc
 	}
 
 	return tracks, nil
+}
+
+var _ metadata.AlbumMetadataProvider = (*DeezerProvider)(nil)
+
+// FetchAlbumInfo looks an album up by title and artist and returns its official track count.
+// Only an exact (case and punctuation insensitive) title match by the same artist is accepted:
+// a near match is more likely a different edition than the one in the library.
+func (p *DeezerProvider) FetchAlbumInfo(ctx context.Context, params metadata.AlbumSearchParams) (*metadata.AlbumInfo, error) {
+	if strings.TrimSpace(params.Album) == "" {
+		return nil, nil
+	}
+	query := fmt.Sprintf("album:\"%s\"", stripQuotes(params.Album))
+	if strings.TrimSpace(params.AlbumArtist) != "" {
+		query = fmt.Sprintf("artist:\"%s\" %s", stripQuotes(params.AlbumArtist), query)
+	}
+	searchURL := fmt.Sprintf("https://api.deezer.com/search/album?q=%s&limit=10", url.QueryEscape(query))
+
+	req, err := http.NewRequestWithContext(ctx, "GET", searchURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("User-Agent", "SoulSolid/1.0")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Deezer API request failed with status %d", resp.StatusCode)
+	}
+
+	var searchResp deezerAlbumSearchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	wantTitle := normalizeMatch(params.Album)
+	wantArtist := normalizeMatch(params.AlbumArtist)
+	for _, candidate := range searchResp.Data {
+		if normalizeMatch(candidate.Title) != wantTitle {
+			continue
+		}
+		if wantArtist != "" && normalizeMatch(candidate.Artist.Name) != wantArtist {
+			continue
+		}
+		total := candidate.NbTracks
+		link := candidate.Link
+		if total == 0 {
+			details, err := p.fetchAlbumDetails(ctx, candidate.ID)
+			if err != nil {
+				return nil, err
+			}
+			total = details.NbTracks
+			if link == "" {
+				link = details.Link
+			}
+		}
+		if total == 0 {
+			continue
+		}
+		return &metadata.AlbumInfo{
+			Title:       candidate.Title,
+			Artist:      candidate.Artist.Name,
+			TotalTracks: total,
+			Source:      "deezer",
+			SourceURL:   link,
+		}, nil
+	}
+	return nil, nil
 }
 
 // fetchAlbumDetails fetches detailed album information including genres

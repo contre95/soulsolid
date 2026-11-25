@@ -504,6 +504,49 @@ func (s *Service) SearchTrackMetadata(ctx context.Context, trackID string, provi
 	return tracks, nil
 }
 
+// albumInfoProviderOrder is the order in which providers are asked for an album's official
+// track count: Deezer first (a single cheap call), then MusicBrainz (rate limited).
+var albumInfoProviderOrder = []string{"deezer", "musicbrainz"}
+
+// FetchAlbumInfo looks up the official release info of an album, asking each enabled provider
+// that supports album lookups until one answers. It returns (nil, nil) when no provider found a
+// match, and an error only when no provider could answer at all.
+func (s *Service) FetchAlbumInfo(ctx context.Context, params AlbumSearchParams) (*AlbumInfo, error) {
+	var failures []string
+	supported, answered := false, false
+	for _, name := range albumInfoProviderOrder {
+		provider, ok := s.metadataProviders[name]
+		if !ok || provider == nil || !provider.IsEnabled() {
+			continue
+		}
+		albumProvider, ok := provider.(AlbumMetadataProvider)
+		if !ok {
+			continue
+		}
+		supported = true
+		info, err := albumProvider.FetchAlbumInfo(ctx, params)
+		if err != nil {
+			slog.Warn("Album info lookup failed", "provider", name, "album", params.Album, "error", err)
+			failures = append(failures, fmt.Sprintf("%s: %v", name, err))
+			continue
+		}
+		answered = true
+		if info != nil && info.TotalTracks > 0 {
+			if info.Source == "" {
+				info.Source = name
+			}
+			return info, nil
+		}
+	}
+	if !supported {
+		return nil, fmt.Errorf("no enabled metadata provider supports album lookups (enable deezer or musicbrainz)")
+	}
+	if !answered {
+		return nil, fmt.Errorf("album lookup failed: %s", strings.Join(failures, "; "))
+	}
+	return nil, nil
+}
+
 // MergeFetchedData merges fetched metadata with existing track data
 // Prioritizes keeping the maximum amount of tags by preserving existing values when fetched values are empty
 func (s *Service) MergeFetchedData(existing, fetched *music.Track) *music.Track {
