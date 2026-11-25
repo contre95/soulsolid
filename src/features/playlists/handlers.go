@@ -7,7 +7,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Handler is the handler for the playlists feature.
@@ -21,7 +21,7 @@ func NewHandler(service *Service) *Handler {
 }
 
 // RenderPlaylistsSection renders the playlists page.
-func (h *Handler) RenderPlaylistsSection(c *fiber.Ctx) error {
+func (h *Handler) RenderPlaylistsSection(c fiber.Ctx) error {
 	slog.Debug("RenderPlaylistsSection handler called")
 
 	playlists, err := h.service.GetAllPlaylists(c.Context())
@@ -37,7 +37,7 @@ func (h *Handler) RenderPlaylistsSection(c *fiber.Ctx) error {
 }
 
 // GetPlaylist renders a single playlist page.
-func (h *Handler) GetPlaylist(c *fiber.Ctx) error {
+func (h *Handler) GetPlaylist(c fiber.Ctx) error {
 	slog.Debug("GetPlaylist handler called", "id", c.Params("id"))
 
 	playlist, err := h.service.GetPlaylist(c.Context(), c.Params("id"))
@@ -55,36 +55,44 @@ func (h *Handler) GetPlaylist(c *fiber.Ctx) error {
 	})
 }
 
+// playlistForm is the create/edit playlist form.
+type playlistForm struct {
+	Name        string `form:"name"`
+	Description string `form:"description"`
+}
+
 // CreatePlaylist handles creating a new playlist.
-func (h *Handler) CreatePlaylist(c *fiber.Ctx) error {
+func (h *Handler) CreatePlaylist(c fiber.Ctx) error {
 	slog.Debug("CreatePlaylist handler called")
 
-	name := c.FormValue("name")
-	description := c.FormValue("description")
-
-	if name == "" {
+	var form playlistForm
+	if err := c.Bind().Form(&form); err != nil {
+		return respond.BindErr(c, err)
+	}
+	if form.Name == "" {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Playlist name is required")
 	}
 
-	_, err := h.service.CreatePlaylist(c.Context(), name, description)
+	_, err := h.service.CreatePlaylist(c.Context(), form.Name, form.Description)
 	if err != nil {
 		slog.Error("Error creating playlist", "error", err)
 		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to create playlist")
 	}
 
-	c.Set("HX-Trigger", "refreshPlaylists")
+	respond.Trigger(c, "refreshPlaylists")
 	return respond.ToastOk(c, "Playlist created successfully")
 }
 
 // UpdatePlaylist handles updating a playlist.
-func (h *Handler) UpdatePlaylist(c *fiber.Ctx) error {
+func (h *Handler) UpdatePlaylist(c fiber.Ctx) error {
 	slog.Debug("UpdatePlaylist handler called", "id", c.Params("id"))
 
 	playlistID := c.Params("id")
-	name := c.FormValue("name")
-	description := c.FormValue("description")
-
-	if name == "" {
+	var form playlistForm
+	if err := c.Bind().Form(&form); err != nil {
+		return respond.BindErr(c, err)
+	}
+	if form.Name == "" {
 		return respond.ToastErr(c, fiber.StatusBadRequest, "Playlist name is required")
 	}
 
@@ -97,8 +105,8 @@ func (h *Handler) UpdatePlaylist(c *fiber.Ctx) error {
 		return respond.ToastErr(c, fiber.StatusNotFound, "Playlist not found")
 	}
 
-	playlist.Name = name
-	playlist.Description = description
+	playlist.Name = form.Name
+	playlist.Description = form.Description
 
 	err = h.service.UpdatePlaylist(c.Context(), playlist)
 	if err != nil {
@@ -110,7 +118,7 @@ func (h *Handler) UpdatePlaylist(c *fiber.Ctx) error {
 }
 
 // DeletePlaylist handles deleting a playlist.
-func (h *Handler) DeletePlaylist(c *fiber.Ctx) error {
+func (h *Handler) DeletePlaylist(c fiber.Ctx) error {
 	slog.Debug("DeletePlaylist handler called", "id", c.Params("id"))
 
 	err := h.service.DeletePlaylist(c.Context(), c.Params("id"))
@@ -119,15 +127,21 @@ func (h *Handler) DeletePlaylist(c *fiber.Ctx) error {
 		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to delete playlist")
 	}
 
-	c.Set("HX-Trigger", "refreshPlaylists")
+	respond.Trigger(c, "refreshPlaylists")
 	return respond.ToastOk(c, "Playlist deleted successfully")
 }
 
 // AddItemToPlaylist handles adding tracks, artists, or albums to a playlist.
-func (h *Handler) AddItemToPlaylist(c *fiber.Ctx) error {
-	playlistID := c.FormValue("playlist_id")
-	itemType := c.FormValue("item_type")
-	itemID := c.FormValue("item_id")
+func (h *Handler) AddItemToPlaylist(c fiber.Ctx) error {
+	var form struct {
+		PlaylistID string `form:"playlist_id"`
+		ItemType   string `form:"item_type"`
+		ItemID     string `form:"item_id"`
+	}
+	if err := c.Bind().Form(&form); err != nil {
+		return respond.BindErr(c, err)
+	}
+	playlistID, itemType, itemID := form.PlaylistID, form.ItemType, form.ItemID
 
 	slog.Debug("AddItemToPlaylist handler called", "playlistID", playlistID, "itemType", itemType, "itemID", itemID)
 
@@ -173,12 +187,12 @@ func (h *Handler) AddItemToPlaylist(c *fiber.Ctx) error {
 
 	slog.Info("Item successfully added to playlist", "playlistID", playlistID, "itemType", itemType, "itemID", itemID)
 
-	c.Set("HX-Trigger", "playlistUpdated")
+	respond.Trigger(c, "playlistUpdated")
 	return respond.ToastOk(c, successMsg)
 }
 
 // RemoveTrackFromPlaylist handles removing a track from a playlist.
-func (h *Handler) RemoveTrackFromPlaylist(c *fiber.Ctx) error {
+func (h *Handler) RemoveTrackFromPlaylist(c fiber.Ctx) error {
 	slog.Debug("RemoveTrackFromPlaylist handler called")
 
 	playlistID := c.Params("playlistId")
@@ -194,19 +208,19 @@ func (h *Handler) RemoveTrackFromPlaylist(c *fiber.Ctx) error {
 		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to remove track from playlist")
 	}
 
-	c.Set("HX-Trigger", "playlistUpdated")
+	respond.Trigger(c, "playlistUpdated")
 	return respond.ToastOk(c, "Track removed from playlist")
 }
 
 // GetPlaylistCreationModal returns the create playlist modal.
-func (h *Handler) GetPlaylistCreationModal(c *fiber.Ctx) error {
+func (h *Handler) GetPlaylistCreationModal(c fiber.Ctx) error {
 	slog.Debug("GetCreatePlaylistModal handler called")
 
 	return respond.Partial(c, "playlists/create_playlist_modal", fiber.Map{})
 }
 
 // GetPlaylistsForItem returns playlists for adding tracks, artists, or albums.
-func (h *Handler) GetPlaylistsForItem(c *fiber.Ctx) error {
+func (h *Handler) GetPlaylistsForItem(c fiber.Ctx) error {
 	itemType := c.Params("type")
 	itemID := c.Params("id")
 
@@ -254,7 +268,7 @@ func (h *Handler) GetPlaylistsForItem(c *fiber.Ctx) error {
 }
 
 // ExportM3U handles exporting a playlist to an M3U file.
-func (h *Handler) ExportM3U(c *fiber.Ctx) error {
+func (h *Handler) ExportM3U(c fiber.Ctx) error {
 	slog.Debug("ExportM3U handler called", "id", c.Params("id"))
 
 	playlistID := c.Params("id")

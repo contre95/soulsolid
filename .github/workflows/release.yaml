@@ -10,6 +10,7 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
+  packages: write
 
 jobs:
   release-please:
@@ -38,10 +39,13 @@ jobs:
           cat > "$RUNNER_TEMP/header.md" <<EOF
           # <img src="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/public/img/galaxy.png" width="48" alt="soulsolid"> Soulsolid
 
-          🐳 Pull the image from [Docker Hub](https://hub.docker.com/r/contre95/soulsolid/tags):
+          🐳 Pull the image from [Docker Hub](https://hub.docker.com/r/contre95/soulsolid/tags) or [GitHub Container Registry](https://github.com/contre95/soulsolid/pkgs/container/soulsolid):
 
           \`\`\`sh
+          # Docker Hub
           podman pull docker.io/contre95/soulsolid:${version}
+          # GitHub Container Registry
+          podman pull ghcr.io/contre95/soulsolid:${version}
           \`\`\`
           EOF
 
@@ -81,17 +85,19 @@ jobs:
       - name: Login to DockerHub
         run: |
           podman login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} docker.io
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login -u ${{ github.actor }} --password-stdin ghcr.io
       - name: Build and push Container image
         run: |
           version=${{ needs.release-please.outputs.tag_name }}
           podman image build --build-arg IMAGE_TAG=$version -t contre95/soulsolid:$version .
-          podman push contre95/soulsolid:$version
-
-          podman tag contre95/soulsolid:$version contre95/soulsolid:beta
-          podman push contre95/soulsolid:beta
-
-          podman tag contre95/soulsolid:$version contre95/soulsolid:latest
-          podman push contre95/soulsolid:latest
+          for tag in $version beta latest; do
+            for image in contre95/soulsolid ghcr.io/contre95/soulsolid; do
+              podman tag contre95/soulsolid:$version $image:$tag
+              podman push $image:$tag
+            done
+          done
 
   # Discord doesn't render HTML, so the same template is rebuilt as an embed:
   # logo as the author icon, headings turned into bold lines.
@@ -108,7 +114,7 @@ jobs:
           if [ -z "$WEBHOOK" ]; then echo "DISCORD_WEBHOOK not set, skipping"; exit 0; fi
           release=$(gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json body,url)
           changelog=$(jq -r .body <<<"$release" | awk '/^## \[/ {f=1} f' | sed -E 's/^#+ (.*)/**\1**/')
-          description=$(printf '🐳 Pull the image from [Docker Hub](https://hub.docker.com/r/contre95/soulsolid/tags):\n```sh\npodman pull docker.io/contre95/soulsolid:%s\n```\n%s' "$TAG" "$changelog")
+          description=$(printf '🐳 Pull the image from [Docker Hub](https://hub.docker.com/r/contre95/soulsolid/tags) or [GitHub Container Registry](https://github.com/contre95/soulsolid/pkgs/container/soulsolid):\n```sh\n# Docker Hub\npodman pull docker.io/contre95/soulsolid:%s\n# GitHub Container Registry\npodman pull ghcr.io/contre95/soulsolid:%s\n```\n%s' "$TAG" "$TAG" "$changelog")
           jq -n \
             --arg url "$(jq -r .url <<<"$release")" \
             --arg logo "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/public/img/galaxy.png" \

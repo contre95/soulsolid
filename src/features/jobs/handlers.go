@@ -5,11 +5,10 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
 	"github.com/contre95/soulsolid/src/music"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type Handler struct {
@@ -27,11 +26,11 @@ func NewHandler(service *Service) *Handler {
 }
 
 // RenderJobsSection renders the jobs page.
-func (h *Handler) RenderJobsSection(c *fiber.Ctx) error {
+func (h *Handler) RenderJobsSection(c fiber.Ctx) error {
 	return respond.Section(c, "jobs", fiber.Map{"Title": "Jobs"})
 }
 
-func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
+func (h *Handler) HandleStartJob(c fiber.Ctx) error {
 	jobType := strings.Clone(c.Params("type"))
 	name := c.Query("name", jobType)
 
@@ -40,11 +39,11 @@ func (h *Handler) HandleStartJob(c *fiber.Ctx) error {
 		return respond.ToastErr(c, 500, fmt.Sprintf("Failed to start job: %s", err.Error()))
 	}
 
-	c.Set("HX-Trigger", "refreshActiveJobsBadge")
+	respond.Trigger(c, "refreshActiveJobsBadge")
 	return respond.ToastJob(c, jobID, fmt.Sprintf("Started %s job", jobType))
 }
 
-func (h *Handler) HandleJobStatus(c *fiber.Ctx) error {
+func (h *Handler) HandleJobStatus(c fiber.Ctx) error {
 	jobID := c.Params("id")
 	job, exists := h.service.GetJob(jobID)
 	if !exists {
@@ -64,7 +63,7 @@ func (h *Handler) HandleJobStatus(c *fiber.Ctx) error {
 	return c.JSON(response)
 }
 
-func (h *Handler) HandleJobLogs(c *fiber.Ctx) error {
+func (h *Handler) HandleJobLogs(c fiber.Ctx) error {
 	jobID := c.Params("id")
 	job, exists := h.service.GetJob(jobID)
 	if !exists {
@@ -81,11 +80,11 @@ func (h *Handler) HandleJobLogs(c *fiber.Ctx) error {
 	}
 
 	// Check if color parameter is set
-	color := c.Query("color") == "true"
+	color := fiber.Query[bool](c, "color")
 
 	if color {
 		// Check if this is a direct request (not HTMX)
-		if c.Get("HX-Request") != "true" {
+		if !respond.IsHTMX(c) {
 			// Return full HTML page for direct access (full screen)
 			return c.Render("jobs/job_logs_fullscreen", fiber.Map{
 				"Job": job,
@@ -93,7 +92,7 @@ func (h *Handler) HandleJobLogs(c *fiber.Ctx) error {
 		} else {
 			// Return just the colored content for HTMX requests
 			if job.Status == music.JobStatusCompleted || job.Status == music.JobStatusFailed || job.Status == music.JobStatusCancelled {
-				c.Set("HX-Trigger", "logsComplete")
+				respond.Trigger(c, "logsComplete")
 			}
 			coloredContent := ParseAndColorLogContent(string(logContent))
 			c.Set("Content-Type", "text/html")
@@ -106,7 +105,7 @@ func (h *Handler) HandleJobLogs(c *fiber.Ctx) error {
 	}
 }
 
-func (h *Handler) HandleJobProgress(c *fiber.Ctx) error {
+func (h *Handler) HandleJobProgress(c fiber.Ctx) error {
 	jobID := c.Params("id")
 	job, exists := h.service.GetJob(jobID)
 	if !exists {
@@ -114,7 +113,7 @@ func (h *Handler) HandleJobProgress(c *fiber.Ctx) error {
 	}
 
 	if job.Status == music.JobStatusCompleted || job.Status == music.JobStatusFailed || job.Status == music.JobStatusCancelled {
-		c.Set("HX-Trigger", "done")
+		respond.Trigger(c, "done")
 	}
 
 	return respond.Partial(c, "jobs/job_card_progress_bar", fiber.Map{
@@ -130,7 +129,7 @@ func (h *Handler) HandleJobProgress(c *fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) HandleJobList(c *fiber.Ctx) error {
+func (h *Handler) HandleJobList(c fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 	baseURL := c.BaseURL()
 	responses := make([]*JobResponse, len(jobs))
@@ -147,7 +146,7 @@ func (h *Handler) HandleJobList(c *fiber.Ctx) error {
 	return c.JSON(responses)
 }
 
-func (h *Handler) HandleCancelJob(c *fiber.Ctx) error {
+func (h *Handler) HandleCancelJob(c fiber.Ctx) error {
 	jobID := c.Params("id")
 
 	err := h.service.CancelJob(jobID)
@@ -174,20 +173,15 @@ func (h *Handler) HandleCancelJob(c *fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) HandleCleanupJobs(c *fiber.Ctx) error {
-	h.service.CleanupOldJobs(24 * time.Hour)
-	return respond.ToastOk(c, "cleanup completed")
-}
-
-func (h *Handler) HandleClearFinishedJobs(c *fiber.Ctx) error {
+func (h *Handler) HandleClearFinishedJobs(c fiber.Ctx) error {
 	if err := h.service.ClearFinishedJobs(); err != nil {
 		return respond.ToastErr(c, 500, err.Error())
 	}
-	c.Set("HX-Trigger", "refreshJobList")
+	respond.Trigger(c, "refreshJobList")
 	return respond.ToastOk(c, "Finished jobs cleared")
 }
 
-func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
+func (h *Handler) HandleActiveJob(c fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 
 	// Filter out completed/failed/cancelled jobs to show only active ones
@@ -208,7 +202,7 @@ func (h *Handler) HandleActiveJob(c *fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) HandleFilteredJobsList(c *fiber.Ctx) error {
+func (h *Handler) HandleFilteredJobsList(c fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 
 	// Filter jobs by type if specified
@@ -233,7 +227,7 @@ func (h *Handler) HandleFilteredJobsList(c *fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) HandleLatestJobs(c *fiber.Ctx) error {
+func (h *Handler) HandleLatestJobs(c fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 	sort.Slice(jobs, func(i, j int) bool {
 		return jobs[i].CreatedAt.After(jobs[j].CreatedAt)
@@ -246,7 +240,7 @@ func (h *Handler) HandleLatestJobs(c *fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) HandleJobsCount(c *fiber.Ctx) error {
+func (h *Handler) HandleJobsCount(c fiber.Ctx) error {
 	jobs := h.service.GetJobs()
 	filter := c.Query("filter", "active")
 	count := 0

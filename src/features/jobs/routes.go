@@ -1,6 +1,6 @@
 package jobs
 
-import "github.com/gofiber/fiber/v2"
+import "github.com/gofiber/fiber/v3"
 
 func RegisterRoutes(app *fiber.App, service *Service) {
 	handler := NewHandler(service)

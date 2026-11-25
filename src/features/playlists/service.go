@@ -1,11 +1,9 @@
 package playlists
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 	"time"
 
@@ -214,105 +212,4 @@ func (s *Service) RemoveTrackFromPlaylist(ctx context.Context, playlistID, track
 
 	slog.Debug("RemoveTrackFromPlaylist completed", "playlistID", playlistID, "trackID", trackID)
 	return nil
-}
-
-// GetPlaylistTracks gets all tracks for a playlist.
-func (s *Service) GetPlaylistTracks(ctx context.Context, playlistID string) ([]*music.Track, error) {
-	slog.Debug("GetPlaylistTracks service called", "playlistID", playlistID)
-
-	tracks, err := s.playlistRepo.GetTracksForPlaylist(ctx, playlistID)
-	if err != nil {
-		slog.Error("GetPlaylistTracks failed", "playlistID", playlistID, "error", err)
-		return nil, err
-	}
-
-	slog.Debug("GetPlaylistTracks completed", "playlistID", playlistID, "count", len(tracks))
-	return tracks, nil
-}
-
-// ExportM3U exports a playlist to an M3U file.
-func (s *Service) ExportM3U(ctx context.Context, playlistID, filePath string) error {
-	slog.Debug("ExportM3U service called", "playlistID", playlistID, "filePath", filePath)
-
-	// Get playlist tracks
-	tracks, err := s.playlistRepo.GetTracksForPlaylist(ctx, playlistID)
-	if err != nil {
-		slog.Error("ExportM3U: failed to get playlist tracks", "playlistID", playlistID, "error", err)
-		return err
-	}
-
-	// Create output file
-	file, err := os.Create(filePath)
-	if err != nil {
-		slog.Error("ExportM3U: failed to create file", "filePath", filePath, "error", err)
-		return fmt.Errorf("failed to create M3U file: %w", err)
-	}
-	defer file.Close()
-
-	writer := bufio.NewWriter(file)
-
-	// Write M3U header
-	_, err = writer.WriteString("#EXTM3U\n")
-	if err != nil {
-		return err
-	}
-
-	// Write each track
-	for _, track := range tracks {
-		// Write extended M3U info
-		duration := track.Metadata.Duration
-		artists := make([]string, len(track.Artists))
-		for i, ar := range track.Artists {
-			if ar.Artist != nil {
-				artists[i] = ar.Artist.Name
-			}
-		}
-		artistStr := strings.Join(artists, ", ")
-
-		_, err = writer.WriteString(fmt.Sprintf("#EXTINF:%d,%s - %s\n", duration, artistStr, track.Title))
-		if err != nil {
-			return err
-		}
-
-		// Write file path
-		_, err = writer.WriteString(track.Path + "\n")
-		if err != nil {
-			return err
-		}
-	}
-
-	err = writer.Flush()
-	if err != nil {
-		slog.Error("ExportM3U: failed to flush writer", "error", err)
-		return err
-	}
-
-	slog.Debug("ExportM3U completed", "playlistID", playlistID, "filePath", filePath, "tracksExported", len(tracks))
-	return nil
-}
-
-// GetPlaylistsContainingTrack gets all playlists that contain a specific track.
-func (s *Service) GetPlaylistsContainingTrack(ctx context.Context, trackID string) ([]*music.Playlist, error) {
-	slog.Debug("GetPlaylistsContainingTrack service called", "trackID", trackID)
-
-	allPlaylists, err := s.playlistRepo.GetAll(ctx)
-	if err != nil {
-		slog.Error("GetPlaylistsContainingTrack: failed to get all playlists", "error", err)
-		return nil, err
-	}
-
-	var containingPlaylists []*music.Playlist
-	for _, playlist := range allPlaylists {
-		fullPlaylist, err := s.playlistRepo.GetByID(ctx, playlist.ID)
-		if err != nil {
-			slog.Warn("GetPlaylistsContainingTrack: failed to get full playlist", "playlistID", playlist.ID, "error", err)
-			continue
-		}
-		if fullPlaylist.ContainsTrack(trackID) {
-			containingPlaylists = append(containingPlaylists, fullPlaylist)
-		}
-	}
-
-	slog.Debug("GetPlaylistsContainingTrack completed", "trackID", trackID, "count", len(containingPlaylists))
-	return containingPlaylists, nil
 }

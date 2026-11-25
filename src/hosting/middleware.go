@@ -5,16 +5,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/contre95/soulsolid/src/hosting/respond"
+	"github.com/gofiber/fiber/v3"
 )
 
 // HTMXMiddleware creates middleware for logging HTMX requests
 func HTMXMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		start := time.Now()
 
 		// Check if this is an HTMX request
-		isHTMX := c.Get("HX-Request") == "true"
+		isHTMX := respond.IsHTMX(c)
 
 		// Process the request
 		err := c.Next()
@@ -43,92 +44,12 @@ func HTMXMiddleware() fiber.Handler {
 	}
 }
 
-// HTMXDebugMiddleware provides detailed debugging for HTMX requests
-func HTMXDebugMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		isHTMX := c.Get("HX-Request") == "true"
-
-		if isHTMX {
-			slog.Debug("HTMX request received",
-				"method", c.Method(),
-				"path", c.Path(),
-				"headers", getHTMXHeaders(c),
-			)
-		}
-
-		err := c.Next()
-
-		if isHTMX && err == nil {
-			slog.Debug("HTMX response sent",
-				"status", c.Response().StatusCode(),
-				"response_headers", getHTMXResponseHeaders(c),
-			)
-		}
-
-		return err
-	}
-}
-
-// getHTMXHeaders extracts all HTMX-related headers from the request
-func getHTMXHeaders(c *fiber.Ctx) map[string]string {
-	headers := make(map[string]string)
-
-	// List of HTMX headers to check
-	htmxHeaders := []string{
-		"HX-Request",
-		"HX-Trigger",
-		"HX-Trigger-Name",
-		"HX-Target",
-		"HX-Current-URL",
-		"HX-Prompt",
-		"HX-Boosted",
-		"HX-History-Restore-Request",
-	}
-
-	for _, header := range htmxHeaders {
-		if value := c.Get(header); value != "" {
-			headers[header] = value
-		}
-	}
-
-	return headers
-}
-
-// getHTMXResponseHeaders extracts HTMX-related response headers
-func getHTMXResponseHeaders(c *fiber.Ctx) map[string]string {
-	headers := make(map[string]string)
-
-	// Check for HTMX response headers
-	response := c.Response()
-	htmxResponseHeaders := []string{
-		"HX-Location",
-		"HX-Push-Url",
-		"HX-Redirect",
-		"HX-Refresh",
-		"HX-Replace-Url",
-		"HX-Reswap",
-		"HX-Retarget",
-		"HX-Reselect",
-		"HX-Trigger",
-		"HX-Trigger-After-Settle",
-		"HX-Trigger-After-Swap",
-	}
-
-	for _, header := range htmxResponseHeaders {
-		if value := response.Header.Peek(header); len(value) > 0 {
-			headers[header] = string(value)
-		}
-	}
-
-	return headers
-}
-
 // LogAllRequestsMiddleware logs all requests with HTMX context
 func LogAllRequestsMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		start := time.Now()
 
-		isHTMX := c.Get("HX-Request") == "true"
+		isHTMX := respond.IsHTMX(c)
 		requestType := "normal"
 		if isHTMX {
 			requestType = "htmx"

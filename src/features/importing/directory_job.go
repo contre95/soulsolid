@@ -180,22 +180,6 @@ func (e *DirectoryImportTask) addTrackToQueue(track *music.Track, queueTypes []m
 	return nil
 }
 
-// importFile moves or copies a track file to the library location and returns the new path
-func (e *DirectoryImportTask) importFile(ctx context.Context, track *music.Track, moveFiles bool, logger *slog.Logger) (string, error) {
-	var newPath string
-	var err error
-	if moveFiles {
-		newPath, err = e.service.fileManager.MoveTrackToLibrary(ctx, track)
-	} else {
-		newPath, err = e.service.fileManager.CopyTrackToLibrary(ctx, track)
-	}
-	if err != nil {
-		logger.Error("Service.runDirectoryImport: could not organize track", "error", err)
-		return "", err
-	}
-	return newPath, nil
-}
-
 func (e *DirectoryImportTask) findDuplicateTrack(ctx context.Context, trackToImport *music.Track, fingerprint string, logger *slog.Logger) (*music.Track, error) {
 	trackID := music.GenerateTrackID(fingerprint)
 	duplicateTrack, err := e.service.library.GetTrack(ctx, trackID)

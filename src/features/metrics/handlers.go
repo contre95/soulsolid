@@ -4,7 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/contre95/soulsolid/src/hosting/respond"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Handler handles HTTP requests for the metrics feature.
@@ -18,7 +18,7 @@ func NewHandler(service *Service) *Handler {
 }
 
 // GetMetricsOverview renders the metrics overview page.
-func (h *Handler) GetMetricsOverview(c *fiber.Ctx) error {
+func (h *Handler) GetMetricsOverview(c fiber.Ctx) error {
 	slog.Debug("GetMetricsOverview handler called")
 
 	metrics, err := h.service.GetAllMetrics(c.Context())
@@ -31,7 +31,7 @@ func (h *Handler) GetMetricsOverview(c *fiber.Ctx) error {
 }
 
 // GetGenreChartHTML returns genre chart as HTML fragment for HTMX.
-func (h *Handler) GetGenreChartHTML(c *fiber.Ctx) error {
+func (h *Handler) GetGenreChartHTML(c fiber.Ctx) error {
 	slog.Debug("GetGenreChartHTML handler called")
 
 	metrics, err := h.service.GetAllMetrics(c.Context())
@@ -47,7 +47,7 @@ func (h *Handler) GetGenreChartHTML(c *fiber.Ctx) error {
 }
 
 // GetYearChartHTML returns year chart as HTML fragment for HTMX.
-func (h *Handler) GetYearChartHTML(c *fiber.Ctx) error {
+func (h *Handler) GetYearChartHTML(c fiber.Ctx) error {
 	slog.Debug("GetYearChartHTML handler called")
 
 	metrics, err := h.service.GetAllMetrics(c.Context())
@@ -63,7 +63,7 @@ func (h *Handler) GetYearChartHTML(c *fiber.Ctx) error {
 }
 
 // GetFormatChartHTML returns format chart as HTML fragment for HTMX.
-func (h *Handler) GetFormatChartHTML(c *fiber.Ctx) error {
+func (h *Handler) GetFormatChartHTML(c fiber.Ctx) error {
 	slog.Debug("GetFormatChartHTML handler called")
 
 	metrics, err := h.service.GetAllMetrics(c.Context())
@@ -79,7 +79,7 @@ func (h *Handler) GetFormatChartHTML(c *fiber.Ctx) error {
 }
 
 // GetMetadataChartHTML returns metadata chart as HTML fragment for HTMX.
-func (h *Handler) GetMetadataChartHTML(c *fiber.Ctx) error {
+func (h *Handler) GetMetadataChartHTML(c fiber.Ctx) error {
 	slog.Debug("GetMetadataChartHTML handler called")
 
 	totalTracks, err := h.service.metrics.GetTotalTracks(c.Context())

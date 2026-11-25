@@ -1,6 +1,6 @@
 package streaming
 
-import "github.com/gofiber/fiber/v2"
+import "github.com/gofiber/fiber/v3"
 
 // RegisterRoutes registers the audio streaming routes.
 func RegisterRoutes(app *fiber.App, service *Service) {

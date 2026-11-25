@@ -1,0 +1,44 @@
+name: Dead Code Analysis
+# Reports functions that are unreachable from main (and tests) using
+# golang.org/x/tools/cmd/deadcode. See https://go.dev/blog/deadcode
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DEADCODE_VERSION: v0.52.0
+  # Packages imported by out-of-tree downloader plugins (loaded at runtime via
+  # plugin.Open). deadcode can't see those callers, so findings here are skipped.
+  PLUGIN_PKGS: >-
+    "github.com/contre95/soulsolid/src/features/downloading"
+    "github.com/contre95/soulsolid/src/music"
+
+jobs:
+  deadcode:
+    name: Dead code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install deadcode
+        run: go install golang.org/x/tools/cmd/deadcode@${DEADCODE_VERSION}
+
+      - name: Run deadcode
+        run: |
+          # -test: code only used by tests isn't dead. PLUGIN_PKGS are skipped.
+          # Each finding is printed as an ::error annotation (shown on the PR diff).
+          out=$(deadcode -test -f="{{if not (eq .Path $PLUGIN_PKGS)}}{{range .Funcs}}{{printf \"::error file=%s,line=%d,title=Dead code::%s is unreachable\n\" .Position.File .Position.Line .Name}}{{end}}{{end}}" ./...)
+          echo "$out"
+          if grep -q . <<< "$out"; then exit 1; fi

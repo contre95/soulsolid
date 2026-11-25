@@ -18,6 +18,35 @@ type TrackFilter struct {
 	AddedBefore string // "": any, else "YYYY-MM-DD"; matches tracks added on or before this date (inclusive)
 }
 
+// AlbumSort is the ordering used when browsing albums.
+type AlbumSort string
+
+const (
+	AlbumSortArtist AlbumSort = "artist" // album artist, then year, then title
+	AlbumSortTitle  AlbumSort = "title"
+	AlbumSortYear   AlbumSort = "year"   // newest first
+	AlbumSortRecent AlbumSort = "recent" // most recently added tracks first
+)
+
+// AlbumFilter represents the filter criteria for browsing albums.
+type AlbumFilter struct {
+	TextSearch string    // OR-match across album title and album artist name
+	Genre      string    // albums containing at least one track with exactly this genre
+	Sort       AlbumSort // defaults to AlbumSortArtist
+}
+
+// AlbumSummary is a lightweight, read-only view of an album used to browse the library.
+// It is computed in a single query, so it avoids loading every track of every album.
+type AlbumSummary struct {
+	ID           string
+	Title        string
+	Artists      string // album artist names, comma separated
+	Year         int    // release year, falling back to the newest track year; 0 when unknown
+	TrackCount   int
+	Duration     int    // total duration in seconds
+	CoverTrackID string // first track of the album, used to serve the artwork; empty for albums without tracks
+}
+
 // Library is the interface for managing the music library.
 // It's our primary repository interface for the library domain.
 type Library interface {
@@ -46,6 +75,9 @@ type Library interface {
 	GetAlbumsCount(ctx context.Context) (int, error)
 	GetAlbumsFilteredCount(ctx context.Context, titleFilter string, artistIDs []string) (int, error)
 	SearchAlbums(ctx context.Context, query string, limit, offset int) ([]*Album, error)
+	GetAlbumSummaries(ctx context.Context, limit, offset int, filter *AlbumFilter) ([]*AlbumSummary, error)
+	GetAlbumSummariesCount(ctx context.Context, filter *AlbumFilter) (int, error)
+	GetAlbumTracks(ctx context.Context, albumID string) ([]*Track, error) // ordered by disc and track number
 	GetGenres(ctx context.Context) ([]string, error)
 	GetAlbumByArtistAndName(ctx context.Context, artistID, name string) (*Album, error)
 	FindOrCreateAlbum(ctx context.Context, artist *Artist, albumTitle string, year int) (*Album, error)

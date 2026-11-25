@@ -5,7 +5,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/hosting/respond"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Handler handles HTTP requests for the reorganize feature.
@@ -23,11 +23,16 @@ func NewHandler(service *Service, config *config.Manager) *Handler {
 }
 
 // StartReorganizeAnalysis handles starting the file reorganization job
-func (h *Handler) StartReorganizeAnalysis(c *fiber.Ctx) error {
+func (h *Handler) StartReorganizeAnalysis(c fiber.Ctx) error {
 	slog.Info("Starting file reorganization job from web request")
 
-	fat32Safe := c.FormValue("fat32_safe") == "true"
-	jobID, err := h.service.StartReorganizeAnalysis(c.Context(), fat32Safe)
+	var form struct {
+		Fat32Safe bool `form:"fat32_safe"`
+	}
+	if err := c.Bind().Form(&form); err != nil {
+		return respond.BindErr(c, err)
+	}
+	jobID, err := h.service.StartReorganizeAnalysis(c.Context(), form.Fat32Safe)
 	if err != nil {
 		slog.Error("Failed to start file reorganization job", "error", err)
 		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to start file reorganization job: "+err.Error())
@@ -35,12 +40,12 @@ func (h *Handler) StartReorganizeAnalysis(c *fiber.Ctx) error {
 
 	slog.Info("File reorganization job started", "jobID", jobID)
 
-	c.Set("HX-Trigger", "refreshJobList")
+	respond.Trigger(c, "refreshJobList")
 	return respond.ToastJob(c, jobID, "File reorganization started successfully")
 }
 
 // RenderFilesReorganizationSection renders the file paths section page
-func (h *Handler) RenderFilesReorganizationSection(c *fiber.Ctx) error {
+func (h *Handler) RenderFilesReorganizationSection(c fiber.Ctx) error {
 	slog.Debug("Rendering file paths section")
 	return respond.Section(c, "analyze_files", fiber.Map{
 		"Title":  "File Paths",

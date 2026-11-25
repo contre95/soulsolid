@@ -80,25 +80,6 @@ func (s *Service) generateFingerprintWithFpcalc(ctx context.Context, filePath st
 	return result.Fingerprint, nil
 }
 
-// getAudioDuration gets audio duration using fpcalc
-func (s *Service) getAudioDuration(filePath string) (int, error) {
-	cmd := exec.Command("fpcalc", "-json", filePath)
-	output, err := cmd.Output()
-	if err != nil {
-		return 0, fmt.Errorf("failed to get audio duration: %w", err)
-	}
-
-	var result struct {
-		Duration float64 `json:"duration"`
-	}
-
-	if err := json.Unmarshal(output, &result); err != nil {
-		return 0, fmt.Errorf("failed to parse fpcalc output: %w", err)
-	}
-
-	return int(result.Duration), nil
-}
-
 // CompareFingerprints compares two fingerprints and returns a similarity score (0.0 to 1.0)
 func (s *Service) CompareFingerprints(fp1, fp2 string) (float64, error) {
 	// For now, use simple string comparison

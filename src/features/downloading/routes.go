@@ -1,7 +1,7 @@
 package downloading
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // RegisterRoutes registers downloading-related routes

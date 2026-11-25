@@ -83,13 +83,10 @@ features/yourfeature/
 - Return HTML partials for UI, JSON for API
 - Consistent error handling for both response types
 
-<<<<<<< Updated upstream
-**Error Response Pattern**: 
+**Error Response Pattern**:
 - HTMX errors: `src/features/downloading/handlers.go:43-46`
 - API errors: `src/features/downloading/handlers.go:47-50`
 
-=======
->>>>>>> Stashed changes
 ### 3. Routes (`routes.go`)
 
 **Reference**: `src/features/downloading/routes.go:8-40`

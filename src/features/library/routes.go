@@ -1,7 +1,7 @@
 package library
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // RegisterRoutes registers the routes for the library feature.
@@ -19,6 +19,7 @@ func RegisterRoutes(app *fiber.App, service *Service) {
 	library.Get("/tracks/count", handler.GetTracksCount)
 	library.Get("/storage/size", handler.GetStorageSize)
 	library.Get("/artists/:id", handler.GetArtist)
+	library.Get("/albums/:id/view", handler.RenderAlbumView)
 	library.Get("/albums/:id", handler.GetAlbum)
 	library.Get("/tracks/:id", handler.GetTrack)
 	library.Get("/tree", handler.GetLibraryFileTree)
