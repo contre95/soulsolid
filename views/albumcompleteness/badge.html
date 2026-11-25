@@ -1,0 +1,50 @@
+<span id="completeness-badge-{{.C.AlbumID}}" class="completeness-badge mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+  {{if eq .C.Status "complete"}}
+  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+        title="You have {{.C.LocalCount}} of the {{.C.ExpectedCount}} official tracks">
+    <i class="fas fa-circle-check"></i> Complete · {{.C.ExpectedCount}} {{if eq .C.ExpectedCount 1}}track{{else}}tracks{{end}}
+  </span>
+  {{else if eq .C.Status "incomplete"}}
+  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+        title="You have {{.C.LocalCount}} of the {{.C.ExpectedCount}} official tracks">
+    <i class="fas fa-triangle-exclamation"></i> Missing {{.C.Missing}} · {{.C.LocalCount}} of {{.C.ExpectedCount}} tracks
+  </span>
+  {{else}}
+  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600 dark:bg-neutral-800 dark:text-gray-300">
+    <i class="fas fa-circle-question"></i> {{if .C.CheckedAt}}No matching release found{{else}}Completeness not checked{{end}}
+  </span>
+  {{end}}
+
+  {{if .C.Source}}
+  <span class="text-gray-400 dark:text-gray-500">
+    {{if .C.Manual}}set manually{{else if .C.SourceURL}}via <a href="{{.C.SourceURL}}" target="_blank" rel="noopener noreferrer" class="underline hover:text-gray-600 dark:hover:text-gray-300">{{.C.Source}}</a>{{else}}via {{.C.Source}}{{end}}
+  </span>
+  {{end}}
+
+  <button type="button" title="Look up the official track count"
+          class="cursor-pointer inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-300 hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors"
+          hx-post="/completeness/albums/{{.C.AlbumID}}/check"
+          hx-target="#completeness-badge-{{.C.AlbumID}}" hx-swap="outerHTML">
+    <i class="fas fa-rotate-right"></i> {{if .C.CheckedAt}}Re-check{{else}}Check{{end}}
+    <i class="htmx-indicator fas fa-spinner fa-spin"></i>
+  </button>
+  <button type="button" title="Set the expected track count by hand"
+          class="cursor-pointer inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-300 hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors"
+          _="on click toggle .hidden on next .completeness-expected">
+    <i class="fas fa-pen"></i> Set count
+  </button>
+  <span class="completeness-expected{{if not .Error}} hidden{{end}}">
+    <form class="inline-flex items-center gap-1"
+          hx-post="/completeness/albums/{{.C.AlbumID}}/expected"
+          hx-target="#completeness-badge-{{.C.AlbumID}}" hx-swap="outerHTML">
+      <input type="number" name="expected" min="1" max="999" required placeholder="Tracks" aria-label="Expected track count"
+             value="{{if .C.ExpectedCount}}{{.C.ExpectedCount}}{{end}}"
+             class="w-20 px-2 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+      <button type="submit" class="cursor-pointer px-2 py-0.5 rounded-md text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors">Save</button>
+    </form>
+  </span>
+
+  {{if .Error}}
+  <span class="basis-full text-red-600 dark:text-red-400"><i class="fas fa-circle-exclamation mr-1"></i>{{.Error}}</span>
+  {{end}}
+</span>
