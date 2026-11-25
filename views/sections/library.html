@@ -36,7 +36,7 @@
   </div>
 
   <!-- Library Table Section - Loaded from UI library feature -->
-  <div hx-get="/library/table" hx-trigger="load" hx-swap="outerHTML">
+  <div hx-get="/library/table{{if .OpenAlbum}}?album={{.OpenAlbum}}{{end}}" hx-trigger="load" hx-swap="outerHTML">
     <!-- Loading state -->
     <div>
       <div class="border-b border-slate-200 dark:border-slate-700">

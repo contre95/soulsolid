@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/contre95/soulsolid/src/features/albumcompleteness"
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/features/importing"
@@ -139,6 +140,8 @@ func main() {
 		"deezer":      deezerProvider,
 	}, acoustIDService, cfgManager, jobService)
 
+	completenessService := albumcompleteness.NewService(db, tagService, jobService)
+
 	downloadingService := downloading.NewService(cfgManager, jobService, pluginManager, tagWriter)
 
 	downloadTask := downloading.NewDownloadJobTask(downloadingService)
@@ -160,6 +163,9 @@ func main() {
 	mergeTask := merge.NewMergeJobTask(mergeService)
 	jobService.RegisterHandler("analyze_merge", jobs.NewBaseTaskHandler(mergeTask))
 
+	completenessTask := albumcompleteness.NewCompletenessJobTask(completenessService)
+	jobService.RegisterHandler("analyze_completeness", jobs.NewBaseTaskHandler(completenessTask))
+
 	var telegramBot *hosting.TelegramBot
 	if cfgManager.Get().Telegram.Enabled {
 		slog.Warn(hosting.TelegramDeprecationNotice)
@@ -174,7 +180,7 @@ func main() {
 	}
 
 	streamingService := streaming.NewService(cfgManager)
-	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService, streamingService, mergeService)
+	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService, streamingService, mergeService, completenessService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped", "error", err)

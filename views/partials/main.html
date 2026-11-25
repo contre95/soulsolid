@@ -52,6 +52,8 @@
                   {{template "sections/analyze_metadata" .}}
                   {{else if eq .Section "analyze_merge"}}
                   {{template "sections/analyze_merge" .}}
+                   {{else if eq .Section "analyze_completeness"}}
+                   {{template "sections/analyze_completeness" .}}
                  {{end}}
             </div>
            </div>

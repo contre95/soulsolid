@@ -2076,6 +2076,83 @@ func (d *SqliteLibrary) GetAlbumTracks(ctx context.Context, albumID string) ([]*
 	return tracks, nil
 }
 
+// SetAlbumAttributes upserts the given attributes of an album without touching the album's
+// other attributes or fields.
+func (d *SqliteLibrary) SetAlbumAttributes(ctx context.Context, albumID string, attrs map[string]string) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for key, value := range attrs {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM album_attributes WHERE album_id = ? AND key = ?`, albumID, key); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO album_attributes (album_id, key, value) VALUES (?, ?, ?)`, albumID, key, value); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+// incompleteAlbumsFrom is the FROM/JOIN/GROUP/HAVING part shared by GetIncompleteAlbums and its
+// count: albums whose expected track count (an album attribute) exceeds the tracks held locally.
+const incompleteAlbumsFrom = `
+	FROM albums a
+	JOIN album_attributes ex ON ex.album_id = a.id AND ex.key = '` + music.AlbumAttrExpectedTracks + `'
+	LEFT JOIN album_attributes src ON src.album_id = a.id AND src.key = '` + music.AlbumAttrCompletenessSource + `'
+	LEFT JOIN album_attributes chk ON chk.album_id = a.id AND chk.key = '` + music.AlbumAttrCompletenessCheckedAt + `'
+	LEFT JOIN track_albums ta ON ta.album_id = a.id
+	LEFT JOIN tracks t ON t.id = ta.track_id
+	GROUP BY a.id
+	HAVING CAST(ex.value AS INTEGER) > COUNT(t.id)`
+
+// GetIncompleteAlbums returns albums missing tracks, the ones missing the most first.
+func (d *SqliteLibrary) GetIncompleteAlbums(ctx context.Context, limit, offset int) ([]*music.AlbumCompletenessRow, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT a.id, a.title,
+			(SELECT GROUP_CONCAT(name, ', ') FROM (
+				SELECT DISTINCT ar.name AS name FROM album_artists aa
+				JOIN artists ar ON ar.id = aa.artist_id
+				WHERE aa.album_id = a.id)) AS artists,
+			COUNT(t.id) AS local_count,
+			CAST(ex.value AS INTEGER) AS expected_count,
+			COALESCE(src.value, ''), COALESCE(chk.value, ''),
+			(SELECT t2.id FROM track_albums ta2 JOIN tracks t2 ON t2.id = ta2.track_id
+				WHERE ta2.album_id = a.id
+				ORDER BY t2.disc_number, t2.track_number, t2.title COLLATE NOCASE, t2.id LIMIT 1) AS cover_track_id`+
+		incompleteAlbumsFrom+`
+		ORDER BY (CAST(ex.value AS INTEGER) - COUNT(t.id)) DESC, a.title COLLATE NOCASE, a.id
+		LIMIT ? OFFSET ?`, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := []*music.AlbumCompletenessRow{}
+	for rows.Next() {
+		r := &music.AlbumCompletenessRow{}
+		var artists, cover sql.NullString
+		if err := rows.Scan(&r.ID, &r.Title, &artists, &r.LocalCount, &r.ExpectedCount, &r.Source, &r.CheckedAt, &cover); err != nil {
+			return nil, err
+		}
+		r.Artists = artists.String
+		r.CoverTrackID = cover.String
+		result = append(result, r)
+	}
+	return result, rows.Err()
+}
+
+// GetIncompleteAlbumsCount returns how many albums are missing tracks.
+func (d *SqliteLibrary) GetIncompleteAlbumsCount(ctx context.Context) (int, error) {
+	var count int
+	if err := d.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM (SELECT a.id`+incompleteAlbumsFrom+`)`).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 // GetTracksCount gets the total count of tracks in the database.
 func (d *SqliteLibrary) GetTracksCount(ctx context.Context) (int, error) {
 	var count int

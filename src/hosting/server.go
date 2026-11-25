@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/contre95/soulsolid/src/features/albumcompleteness"
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/downloading"
 	"github.com/contre95/soulsolid/src/features/importing"
@@ -37,7 +38,7 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server.
-func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, playlistsService *playlists.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, reorganizeService *reorganize.Service, streamingService *streaming.Service, mergeService *merge.Service) *Server {
+func NewServer(cfg *config.Manager, importingService *importing.Service, libraryService *library.Service, playlistsService *playlists.Service, downloadingService *downloading.Service, jobService *jobs.Service, tagService *metadata.Service, lyricsService *lyrics.Service, metricsService *metrics.Service, reorganizeService *reorganize.Service, streamingService *streaming.Service, mergeService *merge.Service, completenessService *albumcompleteness.Service) *Server {
 	engine := html.New("./views", ".html")
 	engine.Debug(cfg.Get().Logger.Level == "debug")
 	// Add custom template functions
@@ -153,6 +154,7 @@ func NewServer(cfg *config.Manager, importingService *importing.Service, library
 	reorganizeHandler := reorganize.NewHandler(reorganizeService, cfg)
 	reorganize.RegisterRoutes(app, reorganizeHandler)
 	merge.RegisterRoutes(app, mergeService)
+	albumcompleteness.RegisterRoutes(app, completenessService)
 	streaming.RegisterRoutes(app, streamingService)
 
 	return &Server{app: app, port: cfg.Get().Server.Port, printRoutes: cfg.Get().Server.PrintRoutes}
