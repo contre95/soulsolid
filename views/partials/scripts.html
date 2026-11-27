@@ -1,5 +1,14 @@
 {{define "scripts"}}
 <script>
+  // Error toasts come with a 4xx or 5xx status, which htmx doesn't swap in by
+  // default, so a refused action would show nothing at all
+  document.addEventListener("htmx:beforeSwap", function (evt) {
+    if (evt.detail.xhr.status >= 400 && evt.detail.target && evt.detail.target.id === "toast-container") {
+      evt.detail.shouldSwap = true;
+      evt.detail.isError = false;
+    }
+  });
+
   function toggleDarkMode() {
     console.log("toggleDarkMode called");
     document.documentElement.classList.toggle("dark");
