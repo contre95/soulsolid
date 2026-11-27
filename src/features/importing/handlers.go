@@ -404,7 +404,5 @@ func (h *Handler) ServeQueueItemArtwork(c fiber.Ctx) error {
 	if err != nil || len(data) == 0 {
 		return c.Status(fiber.StatusNotFound).SendString("No artwork found")
 	}
-	c.Set("Content-Type", mimeType)
-	c.Set("Cache-Control", "public, max-age=3600")
-	return c.Send(data)
+	return respond.Revalidated(c, mimeType, data)
 }

@@ -178,9 +178,7 @@ func (h *Handler) ServeArtwork(c fiber.Ctx) error {
 	}
 
 	return respond.Resource(c, mimeType, fmt.Sprintf("%s/tag/%s/artwork", c.BaseURL(), trackID), func() error {
-		c.Set("Content-Type", mimeType)
-		c.Set("Cache-Control", "public, max-age=3600")
-		return c.Send(data)
+		return respond.Revalidated(c, mimeType, data)
 	})
 }
 
