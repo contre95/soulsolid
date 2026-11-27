@@ -204,7 +204,7 @@ func (h *Handler) ProcessLyricsQueueItem(c fiber.Ctx) error {
 	case "skip":
 		actionMsg = "skipped"
 	}
-	respond.Trigger(c, "lyricsQueueUpdated", "refreshLyricsQueueBadge", "updateLyricsQueueCount", "activateIndividualGroupingLyrics")
+	respond.Trigger(c, "lyricsQueueUpdated", "refreshLyricsQueueBadge", "updateLyricsQueueCount")
 	return respond.ToastOk(c, fmt.Sprintf("Track %s successfully", actionMsg))
 }
 
@@ -225,7 +225,7 @@ func (h *Handler) ClearLyricsQueue(c fiber.Ctx) error {
 		slog.Error("Failed to clear lyrics queue", "error", err)
 		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to clear lyrics queue")
 	}
-	respond.Trigger(c, "lyricsQueueUpdated", "refreshLyricsQueueBadge", "updateLyricsQueueCount", "activateIndividualGroupingLyrics")
+	respond.Trigger(c, "lyricsQueueUpdated", "refreshLyricsQueueBadge", "updateLyricsQueueCount")
 	return respond.ToastOk(c, "Lyrics queue cleared successfully")
 }
 
@@ -297,11 +297,7 @@ func (h *Handler) ProcessLyricsQueueGroup(c fiber.Ctx) error {
 		return respond.ToastErr(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to process group %s", decodedGroupKey))
 	}
 
-	grouping := "activateAlbumGroupingLyrics"
-	if groupType == "artist" {
-		grouping = "activateArtistGroupingLyrics"
-	}
-	respond.Trigger(c, "lyricsQueueUpdated", "refreshLyricsQueueBadge", "updateLyricsQueueCount", grouping)
+	respond.Trigger(c, "lyricsQueueUpdated", "refreshLyricsQueueBadge", "updateLyricsQueueCount")
 	return respond.ToastOk(c, fmt.Sprintf("Group '%s' processed successfully", decodedGroupKey))
 }
 

@@ -139,7 +139,7 @@ func (h *Handler) ProcessQueueItem(c fiber.Ctx) error {
 	case "delete":
 		actionMsg = "deleted"
 	}
-	respond.Trigger(c, "queueUpdated", "refreshImportQueueBadge", "activateIndividualGrouping")
+	respond.Trigger(c, "queueUpdated", "refreshImportQueueBadge")
 	return respond.ToastOk(c, fmt.Sprintf("Track %s successfully", actionMsg))
 }
 
@@ -160,7 +160,7 @@ func (h *Handler) ClearQueue(c fiber.Ctx) error {
 		slog.Error("Failed to clear queue", "error", err)
 		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to clear queue")
 	}
-	respond.Trigger(c, "queueUpdated", "refreshImportQueueBadge", "activateIndividualGrouping")
+	respond.Trigger(c, "queueUpdated", "refreshImportQueueBadge")
 	return respond.ToastOk(c, "Queue cleared successfully")
 }
 
@@ -171,7 +171,7 @@ func (h *Handler) PruneDownloadPath(c fiber.Ctx) error {
 		slog.Error("Failed to prune download path", "error", err)
 		return respond.ToastErr(c, fiber.StatusInternalServerError, "Failed to prune download path")
 	}
-	respond.Trigger(c, "queueUpdated", "refreshImportQueueBadge", "activateIndividualGrouping")
+	respond.Trigger(c, "queueUpdated", "refreshImportQueueBadge")
 	return respond.ToastOk(c, "Download path pruned and queue cleared successfully")
 }
 
@@ -334,11 +334,7 @@ func (h *Handler) ProcessQueueGroup(c fiber.Ctx) error {
 		actionMsg = "deleted"
 	}
 
-	grouping := "activateAlbumGrouping"
-	if groupType == "artist" {
-		grouping = "activateArtistGrouping"
-	}
-	respond.Trigger(c, "queueUpdated", "refreshImportQueueBadge", grouping)
+	respond.Trigger(c, "queueUpdated", "refreshImportQueueBadge")
 	return respond.ToastOk(c, fmt.Sprintf("Group '%s' %s successfully", decodedGroupKey, actionMsg))
 }
 
