@@ -39,6 +39,7 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, params 
 			"totalTracks": 0,
 			"moved":       0,
 			"skipped":     0,
+			"conflicts":   0,
 			"errors":      0,
 			"msg":         "No tracks found in library",
 		}, nil
@@ -50,6 +51,7 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, params 
 	attempted := 0
 	moved := 0
 	skipped := 0
+	conflicts := 0
 	errors := 0
 
 	batchSize := 100
@@ -107,6 +109,25 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, params 
 				continue
 			}
 
+			// A move never overwrites: when another track or file already holds
+			// the destination, the track stays where it is and is reported.
+			other, err := t.service.library.FindTrackByPath(ctx, desiredPath)
+			if err != nil {
+				job.Logger.Warn("Failed to check whether another track has the destination", "trackID", track.ID, "title", track.Title, "to", desiredPath, "error", err, "color", "red")
+				errors++
+				continue
+			}
+			if other != nil && other.ID != track.ID {
+				job.Logger.Warn("Skipping track: another track already has its destination", "trackID", track.ID, "title", track.Title, "path", currentPath, "to", desiredPath, "otherTrackID", other.ID, "otherTitle", other.Title, "color", "orange")
+				conflicts++
+				continue
+			}
+			if _, err := os.Lstat(desiredPath); err == nil {
+				job.Logger.Warn("Skipping track: a file already exists at its destination", "trackID", track.ID, "title", track.Title, "path", currentPath, "to", desiredPath, "color", "orange")
+				conflicts++
+				continue
+			}
+
 			job.Logger.Info("Moving track to new location", "trackID", track.ID, "title", track.Title, "from", currentPath, "to", desiredPath, "color", "yellow")
 			newPath, err := t.service.fileManager.MoveTrackFile(ctx, track.Path, desiredPath)
 			if err != nil {
@@ -115,10 +136,16 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, params 
 				continue
 			}
 
+			oldPath := track.Path
 			track.Path = newPath
 			err = t.service.library.UpdateTrack(ctx, track)
 			if err != nil {
 				job.Logger.Warn("Failed to update track path in database", "trackID", track.ID, "title", track.Title, "newPath", newPath, "error", err, "color", "red")
+				if _, err := t.service.fileManager.MoveTrackFile(ctx, newPath, oldPath); err != nil {
+					job.Logger.Error("Failed to move track back, so its database path no longer exists", "trackID", track.ID, "title", track.Title, "path", oldPath, "file", newPath, "error", err, "color", "red")
+				} else {
+					job.Logger.Info("Moved track back to its previous location", "trackID", track.ID, "title", track.Title, "path", oldPath, "color", "orange")
+				}
 				errors++
 				continue
 			}
@@ -128,14 +155,15 @@ func (t *ReorganizeJobTask) Execute(ctx context.Context, job *music.Job, params 
 		}
 	}
 
-	finalMsg := fmt.Sprintf("Reorganization completed: %d path(s) modified, %d already correct, %d errors (of %d total tracks)", moved, skipped, errors, totalTracks)
-	job.Logger.Info("File reorganization completed", "totalTracks", totalTracks, "moved", moved, "skipped", skipped, "errors", errors, "color", "green")
-	progressUpdater(100, fmt.Sprintf("Done — %d path(s) modified, %d skipped, %d errors", moved, skipped, errors))
+	finalMsg := fmt.Sprintf("Reorganization completed: %d path(s) modified, %d already correct, %d left in place because their path is taken, %d errors (of %d total tracks)", moved, skipped, conflicts, errors, totalTracks)
+	job.Logger.Info("File reorganization completed", "totalTracks", totalTracks, "moved", moved, "skipped", skipped, "conflicts", conflicts, "errors", errors, "color", "green")
+	progressUpdater(100, fmt.Sprintf("Done — %d path(s) modified, %d skipped, %d conflicts, %d errors", moved, skipped, conflicts, errors))
 
 	return map[string]any{
 		"totalTracks": totalTracks,
 		"moved":       moved,
 		"skipped":     skipped,
+		"conflicts":   conflicts,
 		"errors":      errors,
 		"msg":         finalMsg,
 	}, nil
