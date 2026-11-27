@@ -314,7 +314,7 @@ func (e *DirectoryImportTask) runDirectoryImport(ctx context.Context, pathToImpo
 					stats.Errors++
 				} else {
 					stats.Queued++
-					logger.Info("Service.runDirectoryImport: track queued as duplicate", "reason", "duplicate track found", "duplicate_path", path, "title", trackToImport.Title, "color", "violet")
+					logger.Info("Service.runDirectoryImport: track queued", "types", queueTypes, "path", path, "title", trackToImport.Title, "color", "violet")
 				}
 			case ReplaceTrack:
 				if err := e.service.replaceTrack(ctx, trackToImport, duplicateTrack, moveFiles, logger); err != nil {
