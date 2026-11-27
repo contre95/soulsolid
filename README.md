@@ -103,7 +103,7 @@ go run ./src/main.go
 ### Option 2: Using devenv (recommended)
 
 If you have [devenv](https://devenv.sh) installed, it provides every dependency
-(Go, Node.js 24, TailwindCSS, chromaprint, flac, id3v2, tree). On entering the
+(Go, Node.js 24, TailwindCSS, chromaprint, ffmpeg, flac, id3v2, tree). On entering the
 shell it runs `npm install`, builds the frontend assets, and exports
 `SOULSOLID_CONFIG_PATH=./config.yaml`:
 
