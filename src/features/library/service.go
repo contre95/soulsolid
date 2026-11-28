@@ -11,7 +11,6 @@ import (
 
 	"github.com/contre95/soulsolid/src/features/config"
 	library "github.com/contre95/soulsolid/src/music"
-	"github.com/google/uuid"
 )
 
 // Service is the domain service for the library feature.
@@ -107,18 +106,6 @@ func (s *Service) GetAlbums(ctx context.Context) ([]*library.Album, error) {
 	return albums, nil
 }
 
-// GetTracks returns all tracks from the library.
-func (s *Service) GetTracks(ctx context.Context) ([]*library.Track, error) {
-	slog.Debug("GetTracks service called")
-	tracks, err := s.library.GetTracks(ctx)
-	if err != nil {
-		slog.Error("GetTracks failed", "error", err)
-		return nil, err
-	}
-	slog.Debug("GetTracks completed", "count", len(tracks))
-	return tracks, nil
-}
-
 // GetTracksPaginated returns paginated tracks from the library.
 func (s *Service) GetTracksPaginated(ctx context.Context, limit, offset int) ([]*library.Track, error) {
 	slog.Debug("GetTracksPaginated service called", "limit", limit, "offset", offset)
@@ -167,18 +154,6 @@ func (s *Service) GetTracksCount(ctx context.Context) (int, error) {
 	return count, nil
 }
 
-// GetArtistsPaginated returns paginated artists from the library.
-func (s *Service) GetArtistsPaginated(ctx context.Context, limit, offset int) ([]*library.Artist, error) {
-	slog.Debug("GetArtistsPaginated service called", "limit", limit, "offset", offset)
-	artists, err := s.library.GetArtistsPaginated(ctx, limit, offset)
-	if err != nil {
-		slog.Error("GetArtistsPaginated failed", "error", err)
-		return nil, err
-	}
-	slog.Debug("GetArtistsPaginated completed", "count", len(artists))
-	return artists, nil
-}
-
 // GetArtistsFilteredPaginated returns paginated artists from the library with filtering.
 func (s *Service) GetArtistsFilteredPaginated(ctx context.Context, limit, offset int, nameFilter string) ([]*library.Artist, error) {
 	slog.Debug("GetArtistsFilteredPaginated service called", "limit", limit, "offset", offset, "nameFilter", nameFilter)
@@ -189,66 +164,6 @@ func (s *Service) GetArtistsFilteredPaginated(ctx context.Context, limit, offset
 	}
 	slog.Debug("GetArtistsFilteredPaginated completed", "count", len(artists))
 	return artists, nil
-}
-
-// GetArtistsFilteredCount returns the filtered count of artists in the library.
-func (s *Service) GetArtistsFilteredCount(ctx context.Context, nameFilter string) (int, error) {
-	slog.Debug("GetArtistsFilteredCount service called", "nameFilter", nameFilter)
-	count, err := s.library.GetArtistsFilteredCount(ctx, nameFilter)
-	if err != nil {
-		slog.Error("GetArtistsFilteredCount failed", "error", err)
-		return 0, err
-	}
-	slog.Debug("GetArtistsFilteredCount completed", "count", count)
-	return count, nil
-}
-
-// GetArtistsCount returns the total count of artists in the library.
-func (s *Service) GetArtistsCount(ctx context.Context) (int, error) {
-	slog.Debug("GetArtistsCount service called")
-	count, err := s.library.GetArtistsCount(ctx)
-	if err != nil {
-		slog.Error("GetArtistsCount failed", "error", err)
-		return 0, err
-	}
-	slog.Debug("GetArtistsCount completed", "count", count)
-	return count, nil
-}
-
-// GetAlbumsPaginated returns paginated albums from the library.
-func (s *Service) GetAlbumsPaginated(ctx context.Context, limit, offset int) ([]*library.Album, error) {
-	slog.Debug("GetAlbumsPaginated service called", "limit", limit, "offset", offset)
-	albums, err := s.library.GetAlbumsPaginated(ctx, limit, offset)
-	if err != nil {
-		slog.Error("GetAlbumsPaginated failed", "error", err)
-		return nil, err
-	}
-	slog.Debug("GetAlbumsPaginated completed", "count", len(albums))
-	return albums, nil
-}
-
-// GetAlbumsFilteredPaginated returns paginated albums from the library with filtering.
-func (s *Service) GetAlbumsFilteredPaginated(ctx context.Context, limit, offset int, titleFilter string, artistIDs []string) ([]*library.Album, error) {
-	slog.Debug("GetAlbumsFilteredPaginated service called", "limit", limit, "offset", offset, "titleFilter", titleFilter, "artistIDs", artistIDs)
-	albums, err := s.library.GetAlbumsFilteredPaginated(ctx, limit, offset, titleFilter, artistIDs)
-	if err != nil {
-		slog.Error("GetAlbumsFilteredPaginated failed", "error", err)
-		return nil, err
-	}
-	slog.Debug("GetAlbumsFilteredPaginated completed", "count", len(albums))
-	return albums, nil
-}
-
-// GetAlbumsFilteredCount returns the filtered count of albums in the library.
-func (s *Service) GetAlbumsFilteredCount(ctx context.Context, titleFilter string, artistIDs []string) (int, error) {
-	slog.Debug("GetAlbumsFilteredCount service called", "titleFilter", titleFilter, "artistIDs", artistIDs)
-	count, err := s.library.GetAlbumsFilteredCount(ctx, titleFilter, artistIDs)
-	if err != nil {
-		slog.Error("GetAlbumsFilteredCount failed", "error", err)
-		return 0, err
-	}
-	slog.Debug("GetAlbumsFilteredCount completed", "count", count)
-	return count, nil
 }
 
 // GetGenres returns all distinct non-empty genres in the library.
@@ -299,18 +214,6 @@ func (s *Service) GetAlbumTracks(ctx context.Context, albumID string) ([]*librar
 	return tracks, nil
 }
 
-// GetAlbumsCount returns the total count of albums in the library.
-func (s *Service) GetAlbumsCount(ctx context.Context) (int, error) {
-	slog.Debug("GetAlbumsCount service called")
-	count, err := s.library.GetAlbumsCount(ctx)
-	if err != nil {
-		slog.Error("GetAlbumsCount failed", "error", err)
-		return 0, err
-	}
-	slog.Debug("GetAlbumsCount completed", "count", count)
-	return count, nil
-}
-
 // GetArtist returns a single artist from the library.
 func (s *Service) GetArtist(ctx context.Context, id string) (*library.Artist, error) {
 	slog.Debug("GetArtist service called", "id", id)
@@ -333,42 +236,6 @@ func (s *Service) GetAlbum(ctx context.Context, id string) (*library.Album, erro
 	}
 	slog.Debug("GetAlbum completed", "id", id)
 	return album, nil
-}
-
-// GetAlbumByArtistAndName returns an album by artist ID and album name.
-func (s *Service) GetAlbumByArtistAndName(ctx context.Context, artistID, name string) (*library.Album, error) {
-	slog.Debug("GetAlbumByArtistAndName service called", "artistID", artistID, "name", name)
-	album, err := s.library.GetAlbumByArtistAndName(ctx, artistID, name)
-	if err != nil {
-		slog.Error("GetAlbumByArtistAndName failed", "artistID", artistID, "name", name, "error", err)
-		return nil, err
-	}
-	slog.Debug("GetAlbumByArtistAndName completed", "artistID", artistID, "name", name)
-	return album, nil
-}
-
-// AddAlbum adds an album to the library.
-func (s *Service) AddAlbum(ctx context.Context, album *library.Album) error {
-	slog.Debug("AddAlbum service called", "id", album.ID, "title", album.Title)
-	err := s.library.AddAlbum(ctx, album)
-	if err != nil {
-		slog.Error("AddAlbum failed", "id", album.ID, "title", album.Title, "error", err)
-		return err
-	}
-	slog.Debug("AddAlbum completed", "id", album.ID, "title", album.Title)
-	return nil
-}
-
-// UpdateAlbum updates an album in the library.
-func (s *Service) UpdateAlbum(ctx context.Context, album *library.Album) error {
-	slog.Debug("UpdateAlbum service called", "id", album.ID, "title", album.Title)
-	err := s.library.UpdateAlbum(ctx, album)
-	if err != nil {
-		slog.Error("UpdateAlbum failed", "id", album.ID, "title", album.Title, "error", err)
-		return err
-	}
-	slog.Debug("UpdateAlbum completed", "id", album.ID, "title", album.Title)
-	return nil
 }
 
 // DeleteAlbum deletes an album from the library.
@@ -421,62 +288,6 @@ func (s *Service) GetTrack(ctx context.Context, id string) (*library.Track, erro
 	}
 	slog.Debug("GetTrack completed", "id", id)
 	return track, nil
-}
-
-// GetLibraryTrackPath returns the file path of an imported library track.
-func (s *Service) GetLibraryTrackPath(ctx context.Context, trackID string) (string, error) {
-	track, err := s.library.GetTrack(ctx, trackID)
-	if err != nil {
-		return "", fmt.Errorf("track not found: %w", err)
-	}
-	if track == nil {
-		return "", fmt.Errorf("track not found")
-	}
-	return track.Path, nil
-}
-
-// GetArtistByName finds an artist by name without creating it.
-func (s *Service) GetArtistByName(ctx context.Context, artistName string) (*library.Artist, error) {
-	artist, err := s.library.GetArtistByName(ctx, artistName)
-	if err != nil {
-		slog.Error("Failed to get artist by name", "artistName", artistName, "error", err)
-		return nil, err
-	}
-	if artist == nil {
-		slog.Debug("Artist not found by name", "artistName", artistName)
-		return nil, nil
-	}
-	slog.Debug("Found artist by name", "artistName", artistName, "artistID", artist.ID)
-	return artist, nil
-}
-
-// FindOrCreateArtist finds an existing artist by name or creates a new one.
-func (s *Service) FindOrCreateArtist(ctx context.Context, artistName string) (*library.Artist, error) {
-	slog.Debug("FindOrCreateArtist service called", "artistName", artistName)
-
-	// First try to find existing artist
-	artist, err := s.library.GetArtistByName(ctx, artistName)
-	if err == nil && artist != nil {
-		slog.Debug("Found existing artist", "artistName", artistName, "artistID", artist.ID)
-		return artist, nil
-	} else if err == nil && artist == nil {
-		// Artist not found
-		return nil, fmt.Errorf("artist '%s' not found in library", artistName)
-	}
-
-	// If not found, create new artist
-	newArtist := &library.Artist{
-		ID:   uuid.New().String(),
-		Name: artistName,
-	}
-	err = s.library.AddArtist(ctx, newArtist)
-	if err != nil {
-		slog.Error("Failed to create new artist", "artistName", artistName, "error", err)
-		return nil, err
-	}
-
-	slog.Debug("Created new artist", "artistName", artistName, "artistID", newArtist.ID)
-	return newArtist, nil
 }
 
 // DeleteArtist deletes an artist from the library.
