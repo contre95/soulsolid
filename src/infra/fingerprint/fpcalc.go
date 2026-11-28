@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+const fpcalcBin = "fpcalc"
+
 // Fpcalc returns the Chromaprint fingerprint of an audio file and its
 // duration in seconds.
 //
@@ -22,12 +24,15 @@ import (
 // covers the whole of fpcalc's window. fpcalc's partial fingerprint is the
 // fallback when that fails too.
 func Fpcalc(ctx context.Context, filePath string) (string, float64, error) {
-	if _, err := exec.LookPath("fpcalc"); err != nil {
-		return "", 0, fmt.Errorf("fpcalc not found. Please install chromaprint tools: %w", err)
+	if _, err := exec.LookPath(fpcalcBin); err != nil {
+		return "", 0, fmt.Errorf("%s not found, please install chromaprint tools: %w", fpcalcBin, err)
 	}
-	fingerprint, duration, err := runFpcalc(exec.CommandContext(ctx, "fpcalc", "-json", filePath))
+	fingerprint, duration, err := runFpcalc(exec.CommandContext(ctx, fpcalcBin, "-json", filePath))
 	if err == nil {
 		return fingerprint, duration, nil
+	}
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return "", 0, ctxErr
 	}
 	decodedFingerprint, decodedDuration, decodeErr := fpcalcDecoded(ctx, filePath)
 	if decodeErr == nil {
@@ -52,14 +57,14 @@ func runFpcalc(cmd *exec.Cmd) (string, float64, error) {
 		Duration    float64 `json:"duration"`
 	}
 	if parseErr := json.Unmarshal(output, &result); parseErr != nil && err == nil {
-		return "", 0, fmt.Errorf("failed to parse fpcalc output: %w", parseErr)
+		return "", 0, fmt.Errorf("failed to parse %s output: %w", fpcalcBin, parseErr)
 	}
 	if err == nil && result.Fingerprint == "" {
 		err = errors.New("no fingerprint in its output")
 	}
 	if err != nil {
 		reason := strings.ReplaceAll(strings.TrimSpace(stderr.String()), "\n", "; ")
-		return result.Fingerprint, result.Duration, fmt.Errorf("failed to generate fingerprint with fpcalc: %w: %s", err, reason)
+		return result.Fingerprint, result.Duration, fmt.Errorf("failed to generate fingerprint with %s: %w: %s", fpcalcBin, err, reason)
 	}
 	return result.Fingerprint, result.Duration, nil
 }
@@ -79,13 +84,17 @@ func fpcalcDecoded(ctx context.Context, filePath string) (string, float64, error
 		pcmReader.Close()
 		return "", 0, fmt.Errorf("ffmpeg: %w", err)
 	}
-	fpcalc := exec.CommandContext(ctx, "fpcalc", "-json", "-format", "s16le", "-rate", "44100", "-channels", "2", "-")
+	fpcalc := exec.CommandContext(ctx, fpcalcBin, "-json", "-format", "s16le", "-rate", "44100", "-channels", "2", "-")
 	fpcalc.Stdin = pcmReader
 	fingerprint, _, err := runFpcalc(fpcalc)
 	// fpcalc stops reading after its window; closing our end of the pipe
-	// lets ffmpeg exit on the broken pipe rather than block.
+	// lets ffmpeg exit on the broken pipe rather than block. That exit is
+	// expected on the success path, but when fingerprinting failed too it
+	// can carry the actual reason, such as an unreadable or corrupt file.
 	pcmReader.Close()
-	ffmpeg.Wait()
+	if waitErr := ffmpeg.Wait(); waitErr != nil && err != nil {
+		err = errors.Join(err, fmt.Errorf("ffmpeg: %w", waitErr))
+	}
 	if err != nil {
 		return "", 0, err
 	}
