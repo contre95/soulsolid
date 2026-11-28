@@ -1,0 +1,59 @@
+{{define "completeness_pagination"}}
+{{if gt .Pagination.TotalPages 1}}
+<div class="flex items-center justify-between px-1 py-1">
+  <button class="px-3 py-1.5 rounded-md text-sm transition-colors {{if not .Pagination.HasPrev}}text-gray-400 dark:text-gray-600 cursor-not-allowed{{else}}text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700{{end}}"
+          {{if not .Pagination.HasPrev}}disabled{{end}}
+          hx-get="/completeness/incomplete?page={{.Pagination.PrevPage}}"
+          hx-target="#completeness-incomplete" hx-swap="innerHTML">
+    <i class="fas fa-chevron-left mr-1 text-xs"></i> Previous
+  </button>
+  <span class="text-xs text-gray-500 dark:text-gray-400">{{.Pagination.Page}} / {{.Pagination.TotalPages}}</span>
+  <button class="px-3 py-1.5 rounded-md text-sm transition-colors {{if not .Pagination.HasNext}}text-gray-400 dark:text-gray-600 cursor-not-allowed{{else}}text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700{{end}}"
+          {{if not .Pagination.HasNext}}disabled{{end}}
+          hx-get="/completeness/incomplete?page={{.Pagination.NextPage}}"
+          hx-target="#completeness-incomplete" hx-swap="innerHTML">
+    Next <i class="fas fa-chevron-right ml-1 text-xs"></i>
+  </button>
+</div>
+{{end}}
+{{end}}
+
+{{if .Albums}}
+<p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+  {{.Pagination.TotalCount}} {{if eq .Pagination.TotalCount 1}}album is{{else}}albums are{{end}} missing tracks, the most incomplete first.
+</p>
+{{template "completeness_pagination" .}}
+<ul class="mt-2 divide-y divide-gray-100 dark:divide-neutral-800/70">
+  {{range .Albums}}
+  <li>
+    <button type="button"
+            class="cursor-pointer w-full text-left flex items-center gap-3 px-2.5 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-neutral-800/60 border-l-4 border-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+            hx-get="/library?album={{.ID}}" hx-target="#contenido" hx-swap="outerHTML" hx-push-url="true"
+            title="Open in the library">
+      <span class="relative flex-shrink-0 w-11 h-11 rounded-sm overflow-hidden flex items-center justify-center bg-gradient-to-br from-purple-400 to-fuchsia-600">
+        <i class="fas fa-compact-disc text-white"></i>
+        {{if .CoverTrackID}}
+        <img src="/tag/{{.CoverTrackID}}/artwork" alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover" onerror="this.remove()">
+        {{end}}
+      </span>
+      <span class="flex-1 min-w-0">
+        <span class="block truncate text-sm font-medium text-gray-900 dark:text-white">{{.Title}}</span>
+        <span class="block truncate text-xs text-gray-500 dark:text-gray-400">
+          {{if .Artists}}{{.Artists}}{{else}}Unknown artist{{end}}{{if .Source}} · {{if eq .Source "manual"}}set manually{{else}}via {{.Source}}{{end}}{{end}}
+        </span>
+      </span>
+      <span class="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium tabular-nums bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+        {{.LocalCount}} of {{.ExpectedCount}} · missing {{.Missing}}
+      </span>
+    </button>
+  </li>
+  {{end}}
+</ul>
+<div class="mt-3">{{template "completeness_pagination" .}}</div>
+{{else}}
+<div class="text-center py-12">
+  <i class="fas fa-circle-check text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
+  <p class="text-gray-500 dark:text-gray-400">No incomplete albums found.</p>
+  <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Run the analysis to compare your albums with their official track counts.</p>
+</div>
+{{end}}

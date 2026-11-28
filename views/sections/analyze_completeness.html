@@ -1,0 +1,58 @@
+<div id="contenido" class="animate__animated animate__fadeIn">
+    <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-2">Album Completeness</h1>
+    <p class="text-slate-600 dark:text-slate-400 mb-4">
+        Find albums that are missing tracks. Each album is looked up on Deezer or MusicBrainz for its
+        official track count and compared with the tracks in your library. The result is shown on the
+        album page and listed below.
+    </p>
+    <div class="flex items-start gap-2 mb-4 rounded-lg border border-purple-200 dark:border-purple-700 bg-purple-50/60 dark:bg-purple-900/20 px-4 py-3 text-sm text-purple-800 dark:text-purple-300">
+        <i class="fas fa-circle-info mt-0.5 shrink-0"></i>
+        <span>
+            Only exact title and artist matches are used, so a deluxe or remastered edition may report a
+            different track count than yours. Use <span class="font-semibold">Set count</span> on the album page to correct it.
+            Lookups are rate limited, so a large library takes a while.
+        </span>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 mb-8">
+        <button type="button" hx-post="/completeness/analyze" hx-target="#toast-container" hx-swap="beforeend"
+                class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 shadow transition-colors"
+                title="Check albums that were never checked">
+            <i class="fas fa-play text-xs"></i> Check new albums
+        </button>
+        <button type="button" hx-post="/completeness/analyze" hx-vals='{"force": "true"}' hx-target="#toast-container" hx-swap="beforeend"
+                hx-confirm="Look up every album again? This replaces counts entered by hand."
+                class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors"
+                title="Look up every album again, including checked ones and manual counts">
+            <i class="fas fa-rotate-right text-xs"></i> Re-check all albums
+        </button>
+    </div>
+
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Incomplete Albums</h2>
+        <button type="button" hx-get="/completeness/incomplete" hx-target="#completeness-incomplete" hx-swap="innerHTML"
+                class="cursor-pointer flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-purple-500 transition-colors"
+                title="Reload the list">
+            <i class="fas fa-rotate-right"></i> Refresh
+            <i class="htmx-indicator fas fa-spinner fa-spin text-purple-500"></i>
+        </button>
+    </div>
+    <div id="completeness-incomplete" class="mb-8"
+         hx-get="/completeness/incomplete"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <div class="text-center py-8">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Loading incomplete albums...</p>
+        </div>
+    </div>
+
+    <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-4">Completeness Jobs</h2>
+    <div id="completeness-job-list-container"
+         hx-get="/jobs/list?prefix=analyze_completeness"
+         hx-trigger="load, refreshJobList from:body"
+         hx-swap="innerHTML">
+        <div class="text-center py-8">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Loading completeness jobs...</p>
+        </div>
+    </div>
+</div>

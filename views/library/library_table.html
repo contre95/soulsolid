@@ -6,7 +6,7 @@
          hx-get="/library/search" hx-trigger="libsearch" hx-target="#search-results" hx-swap="innerHTML"
          hx-sync="this:replace">
      <!-- Library view (tracks / albums). The hidden input is sent with every search request. -->
-     <input type="hidden" id="library-view" name="view" value="tracks">
+     <input type="hidden" id="library-view" name="view" value="{{if .OpenAlbum}}albums{{else}}tracks{{end}}">
 
      <!-- Text search row: search box + view toggle -->
      <div class="flex flex-col md:flex-row md:items-end gap-3 mb-4">
@@ -17,7 +17,7 @@
          <input type="text"
                 id="search-query"
                 name="query"
-                placeholder="Search artists, albums, tracks..."
+                placeholder="{{if .OpenAlbum}}Search albums or album artists...{{else}}Search artists, albums, tracks...{{end}}"
                 class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 hx-get="/library/search"
                 hx-trigger="input changed delay:300ms"
@@ -28,7 +28,7 @@
 
        <div class="inline-flex h-10 self-start md:self-auto flex-shrink-0 whitespace-nowrap rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-hidden divide-x divide-gray-300 dark:divide-gray-600"
             role="group" aria-label="Library view">
-         <button type="button" id="lib-view-tracks" aria-pressed="true" title="Browse tracks"
+         <button type="button" id="lib-view-tracks" aria-pressed="{{if .OpenAlbum}}false{{else}}true{{end}}" title="Browse tracks"
                  class="cursor-pointer inline-flex items-center h-full px-3 text-sm font-medium transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 aria-pressed:bg-blue-500/10 aria-pressed:text-blue-600 aria-pressed:dark:bg-blue-500/20 aria-pressed:dark:text-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
                  _="on click
                       if #library-view.value is 'tracks' exit end
@@ -41,7 +41,7 @@
                       send libsearch to #search-form">
            <i class="fas fa-music mr-2 text-xs"></i>Tracks
          </button>
-         <button type="button" id="lib-view-albums" aria-pressed="false" title="Browse albums"
+         <button type="button" id="lib-view-albums" aria-pressed="{{if .OpenAlbum}}true{{else}}false{{end}}" title="Browse albums"
                  class="cursor-pointer inline-flex items-center h-full px-3 text-sm font-medium transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 aria-pressed:bg-blue-500/10 aria-pressed:text-blue-600 aria-pressed:dark:bg-blue-500/20 aria-pressed:dark:text-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
                  _="on click
                       if #library-view.value is 'albums' exit end
@@ -77,7 +77,7 @@
        </div>
 
        <!-- Album sort (albums view only) -->
-       <div class="lib-album-filter hidden min-w-40">
+       <div class="lib-album-filter{{if not .OpenAlbum}} hidden{{end}} min-w-40">
          <label for="album_sort" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Sort albums by</label>
          <select id="album_sort" name="album_sort"
                  class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -94,7 +94,7 @@
        </div>
 
        <!-- Lyrics filter dropdown -->
-       <div class="lib-track-filter min-w-36">
+       <div class="lib-track-filter{{if .OpenAlbum}} hidden{{end}} min-w-36">
          <label for="lyrics_filter" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Lyrics</label>
          <select id="lyrics_filter" name="lyrics_filter"
                  class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -111,7 +111,7 @@
        </div>
 
        <!-- Lyrics text search -->
-       <div class="lib-track-filter flex-1 min-w-40">
+       <div class="lib-track-filter{{if .OpenAlbum}} hidden{{end}} flex-1 min-w-40">
          <label for="lyrics_text" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Lyrics contain</label>
          <input type="text"
                 id="lyrics_text"
@@ -126,7 +126,7 @@
        </div>
 
        <!-- Added after -->
-       <div class="lib-track-filter flex-1 min-w-36">
+       <div class="lib-track-filter{{if .OpenAlbum}} hidden{{end}} flex-1 min-w-36">
          <label for="added_after" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Added after</label>
          <input type="date"
                 id="added_after"
@@ -140,7 +140,7 @@
        </div>
 
        <!-- Added before -->
-       <div class="lib-track-filter flex-1 min-w-36">
+       <div class="lib-track-filter{{if .OpenAlbum}} hidden{{end}} flex-1 min-w-36">
          <label for="added_before" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Added before</label>
          <input type="date"
                 id="added_before"
@@ -154,7 +154,7 @@
        </div>
 
        <!-- AcoustID checkbox -->
-       <div class="lib-track-filter flex items-center gap-4 pb-1.5">
+       <div class="lib-track-filter{{if .OpenAlbum}} hidden{{end}} flex items-center gap-4 pb-1.5">
          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
            <input type="checkbox"
                   name="has_acoustid"
@@ -173,7 +173,7 @@
 
    <!-- Library Search Results -->
    <div class="py-6 px-2">
-     <div id="search-results" hx-get="/library/search" hx-trigger="load" hx-swap="innerHTML">
+     <div id="search-results" hx-get="{{if .OpenAlbum}}/library/albums/{{.OpenAlbum}}/view{{else}}/library/search{{end}}" hx-trigger="load" hx-swap="innerHTML">
        <div class="text-center py-8">
          <svg class="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>

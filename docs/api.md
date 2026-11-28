@@ -249,6 +249,21 @@ Finding and merging duplicates is only available from the web interface. See
 
 ---
 
+## Album completeness
+
+| Method | Route | What it does | Response |
+|--------|-------|--------------|----------|
+| GET | `/analyze/completeness` | Album completeness page | Page |
+| POST | `/completeness/analyze` | Check every album for missing tracks (`force=true` to re-check checked albums too) | Job |
+| GET | `/completeness/incomplete` | Albums that are missing tracks (`page`) | Data |
+| GET | `/completeness/albums/:id` | Stored completeness of an album, no provider lookup | Data |
+| POST | `/completeness/albums/:id/check` | Look the album up at the providers now | Data |
+| POST | `/completeness/albums/:id/expected` | Set the expected track count by hand (`expected`, 1 to 999) | Data |
+
+See [Album Completeness](features/completeness.md).
+
+---
+
 ## Metrics
 
 | Method | Route | What it does | Response |

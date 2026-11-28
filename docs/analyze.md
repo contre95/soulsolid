@@ -45,6 +45,11 @@ Finds artists, albums and genres that are the same but spelled differently (for 
 tracks (the same recording stored in more than one file) using AcoustID. See
 [Merge](features/merge.md).
 
+### Album Completeness
+
+Compares every album with its official track count (from Deezer or MusicBrainz) and lists
+the albums that are missing tracks. See [Album Completeness](features/completeness.md).
+
 ## Job Logs
 
 ![Analyze Jobs](img/analyze_jobs.jpg)

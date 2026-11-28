@@ -31,7 +31,7 @@ The sidebar takes you to every part of the app:
 | **Playlists** | Your playlists ([Playlists](./playlists.md)). |
 | **Importing** | Import folders and review the import queue ([Importing](./importing.md)). |
 | **Downloaders** | One entry per downloader plugin you've configured ([Downloading](./downloading.md)). |
-| **Analyze** | Library-wide jobs: **Metadata** (AcoustID), **Lyrics**, **File Paths** and **Merge**. See [Analyze](../analyze.md). |
+| **Analyze** | Library-wide jobs: **Metadata** (AcoustID), **Lyrics**, **File Paths**, **Merge** and **Completeness**. See [Analyze](../analyze.md). |
 | **All Jobs** | Everything running in the background ([Jobs](./jobs.md)). |
 | **Settings** | Change your configuration ([Configuration](./config.md)). |
 

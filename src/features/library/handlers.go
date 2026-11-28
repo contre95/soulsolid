@@ -57,6 +57,7 @@ func (h *Handler) RenderLibrarySection(c fiber.Ctx) error {
 		"DefaultDownloadPath": h.service.configManager.Get().DownloadPath,
 		"SearchArtists":       artists,
 		"SearchAlbums":        albums,
+		"OpenAlbum":           c.Query("album"), // optional deep link: open this album's view
 	})
 }
 
@@ -213,6 +214,7 @@ func (h *Handler) GetLibraryTable(c fiber.Ctx) error {
 		"SearchArtists": artists,
 		"SearchAlbums":  albums,
 		"Genres":        genres,
+		"OpenAlbum":     c.Query("album"),
 	})
 }
 

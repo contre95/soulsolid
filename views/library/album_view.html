@@ -27,6 +27,8 @@
       <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 tabular-nums">
         {{if .Year}}{{.Year}} · {{end}}{{.TrackCount}} {{if eq .TrackCount 1}}track{{else}}tracks{{end}}{{if .TotalDuration}} · {{formatDuration .TotalDuration}}{{end}}{{if .Album.Label}} · {{.Album.Label}}{{end}}
       </p>
+      <!-- Completeness badge: loaded lazily from stored data, no provider call -->
+      <span hx-get="/completeness/albums/{{.Album.ID}}" hx-trigger="load" hx-swap="outerHTML"></span>
 
       <div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
         {{if .TrackCount}}

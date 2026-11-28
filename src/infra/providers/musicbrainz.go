@@ -11,6 +11,7 @@ import (
 
 	"github.com/contre95/soulsolid/src/features/metadata"
 	"github.com/contre95/soulsolid/src/music"
+	"github.com/google/uuid"
 )
 
 // MusicBrainz API response structures
@@ -54,6 +55,19 @@ type mbTrack struct {
 	Number int    `json:"number"`
 	Title  string `json:"title"`
 	Length int    `json:"length"`
+}
+
+type mbReleaseSearchResponse struct {
+	Releases []mbReleaseResult `json:"releases"`
+}
+
+// mbReleaseResult is one hit of a release search. track-count is the total across all media.
+type mbReleaseResult struct {
+	ID           string           `json:"id"`
+	Title        string           `json:"title"`
+	Status       string           `json:"status"`
+	TrackCount   int              `json:"track-count"`
+	ArtistCredit []mbArtistCredit `json:"artist-credit"`
 }
 
 // MusicBrainzProvider implements MetadataProvider for MusicBrainz
@@ -134,6 +148,148 @@ func (p *MusicBrainzProvider) SearchTracks(ctx context.Context, params metadata.
 	}
 
 	return tracks, nil
+}
+
+var _ metadata.AlbumMetadataProvider = (*MusicBrainzProvider)(nil)
+
+// FetchAlbumInfo looks an album up on MusicBrainz and returns its official track count.
+//
+// A release group ID or barcode, when known, pins the lookup; otherwise the release is searched
+// by title and artist and only exact (case and punctuation insensitive) matches are kept.
+// A release group holds many editions, so among the matching releases (official ones if there
+// are any) the most common track count wins, the smaller one on a tie.
+func (p *MusicBrainzProvider) FetchAlbumInfo(ctx context.Context, params metadata.AlbumSearchParams) (*metadata.AlbumInfo, error) {
+	var query string
+	byTitle := false
+	switch {
+	case isUUID(params.ReleaseGroupID):
+		query = fmt.Sprintf("rgid:%s", params.ReleaseGroupID)
+	case isDigits(params.Barcode):
+		query = fmt.Sprintf("barcode:%s", params.Barcode)
+	case strings.TrimSpace(params.Album) != "":
+		byTitle = true
+		query = fmt.Sprintf("release:\"%s\"", stripQuotes(params.Album))
+		if strings.TrimSpace(params.AlbumArtist) != "" {
+			query += fmt.Sprintf(" AND artist:\"%s\"", stripQuotes(params.AlbumArtist))
+		}
+	default:
+		return nil, nil
+	}
+
+	searchURL := fmt.Sprintf("https://musicbrainz.org/ws/2/release?query=%s&fmt=json&limit=25", url.QueryEscape(query))
+	req, err := http.NewRequestWithContext(ctx, "GET", searchURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("User-Agent", "SoulSolid/1.0 (https://github.com/contre95/soulsolid)")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("MusicBrainz API request failed with status %d", resp.StatusCode)
+	}
+
+	var searchResp mbReleaseSearchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	wantTitle := normalizeMatch(params.Album)
+	wantArtist := normalizeMatch(params.AlbumArtist)
+	var candidates []mbReleaseResult
+	for _, r := range searchResp.Releases {
+		if r.TrackCount <= 0 {
+			continue
+		}
+		if byTitle {
+			if normalizeMatch(r.Title) != wantTitle {
+				continue
+			}
+			if wantArtist != "" && !mbCreditMatches(r.ArtistCredit, wantArtist) {
+				continue
+			}
+		}
+		candidates = append(candidates, r)
+	}
+	best, ok := pickMBRelease(candidates)
+	if !ok {
+		return nil, nil
+	}
+
+	artist := ""
+	if len(best.ArtistCredit) > 0 {
+		artist = best.ArtistCredit[0].Name
+	}
+	return &metadata.AlbumInfo{
+		Title:       best.Title,
+		Artist:      artist,
+		TotalTracks: best.TrackCount,
+		Source:      "musicbrainz",
+		SourceURL:   fmt.Sprintf("https://musicbrainz.org/release/%s", best.ID),
+	}, nil
+}
+
+// pickMBRelease chooses the release whose track count represents the album: among the official
+// releases (or all of them when none is official) the most common track count wins, the smaller
+// one on a tie. Releases come ordered by relevance, so the first one with that count is returned.
+func pickMBRelease(candidates []mbReleaseResult) (mbReleaseResult, bool) {
+	if official := filterOfficial(candidates); len(official) > 0 {
+		candidates = official
+	}
+	if len(candidates) == 0 {
+		return mbReleaseResult{}, false
+	}
+	freq := map[int]int{}
+	for _, r := range candidates {
+		freq[r.TrackCount]++
+	}
+	best := candidates[0]
+	for _, r := range candidates {
+		f, bf := freq[r.TrackCount], freq[best.TrackCount]
+		if f > bf || (f == bf && r.TrackCount < best.TrackCount) {
+			best = r
+		}
+	}
+	return best, true
+}
+
+func mbCreditMatches(credits []mbArtistCredit, wantArtist string) bool {
+	for _, c := range credits {
+		if normalizeMatch(c.Name) == wantArtist || normalizeMatch(c.Artist.Name) == wantArtist {
+			return true
+		}
+	}
+	return false
+}
+
+func filterOfficial(releases []mbReleaseResult) []mbReleaseResult {
+	var official []mbReleaseResult
+	for _, r := range releases {
+		if strings.EqualFold(r.Status, "Official") {
+			official = append(official, r)
+		}
+	}
+	return official
+}
+
+func isUUID(s string) bool {
+	_, err := uuid.Parse(s)
+	return s != "" && err == nil
+}
+
+func isDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // convertMBRecordingToTrack converts a MusicBrainz recording to a music.Track

@@ -78,6 +78,9 @@ type Library interface {
 	GetAlbumSummaries(ctx context.Context, limit, offset int, filter *AlbumFilter) ([]*AlbumSummary, error)
 	GetAlbumSummariesCount(ctx context.Context, filter *AlbumFilter) (int, error)
 	GetAlbumTracks(ctx context.Context, albumID string) ([]*Track, error) // ordered by disc and track number
+	SetAlbumAttributes(ctx context.Context, albumID string, attrs map[string]string) error
+	GetIncompleteAlbums(ctx context.Context, limit, offset int) ([]*AlbumCompletenessRow, error)
+	GetIncompleteAlbumsCount(ctx context.Context) (int, error)
 	GetGenres(ctx context.Context) ([]string, error)
 	GetAlbumByArtistAndName(ctx context.Context, artistID, name string) (*Album, error)
 	FindOrCreateAlbum(ctx context.Context, artist *Artist, albumTitle string, year int) (*Album, error)

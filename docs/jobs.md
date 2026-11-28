@@ -54,6 +54,7 @@ Only one job runs at a time. Additional jobs wait in line and start automaticall
 | `analyze_lyrics` | Running lyrics analysis on the library |
 | `analyze_reorganize` | Reorganizing library file paths |
 | `analyze_merge` | Merging artists, albums, genres or tracks |
+| `analyze_completeness` | Checking albums for missing tracks |
 | `webhook` | A webhook command run after another job |
 
 ## Notification Examples
