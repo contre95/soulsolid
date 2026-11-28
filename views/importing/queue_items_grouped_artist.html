@@ -87,6 +87,7 @@
                              <div class="min-w-0">
                              <h4 class="text-sm font-medium text-gray-900 dark:text-white">{{.Track.Title}}</h4>
                               <p class="text-xs text-gray-600 dark:text-gray-400">{{with .Track.Album}}{{.Title}}{{else}}Unknown Album{{end}}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 break-all"><i class="fas fa-file-audio mr-1"></i>{{.Track.Path}}</p>
                                 {{if len .ItemMetadata}}
                                 {{range $key, $value := .ItemMetadata}}
                                 <p class="text-xs text-gray-600 dark:text-gray-400"><strong>{{$key}}:</strong> {{$value}}</p>

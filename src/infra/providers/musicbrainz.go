@@ -57,13 +57,17 @@ type mbTrack struct {
 }
 
 // MusicBrainzProvider implements MetadataProvider for MusicBrainz
+// musicBrainzURL is the MusicBrainz web service's root.
+const musicBrainzURL = "https://musicbrainz.org/ws/2"
+
 type MusicBrainzProvider struct {
 	enabled bool
+	baseURL string
 }
 
 // NewMusicBrainzProvider creates a new MusicBrainz provider
 func NewMusicBrainzProvider(enabled bool) *MusicBrainzProvider {
-	return &MusicBrainzProvider{enabled: enabled}
+	return &MusicBrainzProvider{enabled: enabled, baseURL: musicBrainzURL}
 }
 
 func (p *MusicBrainzProvider) SearchTracks(ctx context.Context, params metadata.SearchParams) ([]*music.Track, error) {
@@ -82,20 +86,16 @@ func (p *MusicBrainzProvider) SearchTracks(ctx context.Context, params metadata.
 	if params.Year > 0 {
 		queryParts = append(queryParts, fmt.Sprintf("date:%d", params.Year))
 	}
-	if params.AcoustID != "" {
-		queryParts = append(queryParts, fmt.Sprintf("recording_acoustid:\"%s\"", params.AcoustID))
-	}
 
 	if len(queryParts) == 0 {
 		// Return empty results if no search parameters
 		return []*music.Track{}, nil
 	}
 
-	query := strings.Join(queryParts, " AND")
+	query := strings.Join(queryParts, " AND ")
 
 	// Build URL
-	baseURL := "https://musicbrainz.org/ws/2/recording"
-	searchURL := fmt.Sprintf("%s?query=%s&fmt=json&limit=10", baseURL, url.QueryEscape(query))
+	searchURL := fmt.Sprintf("%s/recording?query=%s&fmt=json&limit=10", p.baseURL, url.QueryEscape(query))
 
 	// Create request
 	req, err := http.NewRequestWithContext(ctx, "GET", searchURL, nil)

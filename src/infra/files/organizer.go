@@ -51,26 +51,28 @@ func (o *FileOrganizer) MoveTrackToLibrary(ctx context.Context, track *music.Tra
 		newPath = SanitizeFAT32Path(newPath)
 		newPath = ResolvePathConflict(newPath)
 	}
-	if err := o.moveFile(track.Path, newPath); err != nil {
+	if err := o.moveFile(track.Path, newPath, os.O_TRUNC); err != nil {
 		return "", err
 	}
 	return newPath, nil
 }
 
-// MoveTrackFile moves a track file to an explicit destination path.
+// MoveTrackFile moves a track file to an explicit destination path, failing
+// rather than overwriting a file already there.
 func (o *FileOrganizer) MoveTrackFile(ctx context.Context, srcPath, destPath string) (string, error) {
-	if err := o.moveFile(srcPath, destPath); err != nil {
+	if err := o.moveFile(srcPath, destPath, os.O_EXCL); err != nil {
 		return "", err
 	}
 	return destPath, nil
 }
 
 // moveFile copies src to dst, removes src, and cleans up empty parent directories.
-func (o *FileOrganizer) moveFile(src, dst string) error {
+// createFlag is os.O_TRUNC to overwrite an existing dst, or os.O_EXCL to fail on one.
+func (o *FileOrganizer) moveFile(src, dst string, createFlag int) error {
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
-	if err := copyFile(src, dst); err != nil {
+	if err := copyFile(src, dst, createFlag); err != nil {
 		return fmt.Errorf("failed to copy file: %w", err)
 	}
 	if err := os.Remove(src); err != nil {
@@ -95,7 +97,7 @@ func (o *FileOrganizer) CopyTrackToLibrary(ctx context.Context, track *music.Tra
 	if err := os.MkdirAll(filepath.Dir(newPath), 0755); err != nil {
 		return "", fmt.Errorf("failed to create directory: %w", err)
 	}
-	if err := copyFile(track.Path, newPath); err != nil {
+	if err := copyFile(track.Path, newPath, os.O_TRUNC); err != nil {
 		return "", fmt.Errorf("failed to copy file: %w", err)
 	}
 	return newPath, nil
@@ -163,7 +165,7 @@ func (o *FileOrganizer) removeEmptyDirectories(dir string) error {
 	return nil
 }
 
-func copyFile(src, dst string) error {
+func copyFile(src, dst string, createFlag int) error {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
 		return err
@@ -179,11 +181,16 @@ func copyFile(src, dst string) error {
 	}
 	defer source.Close()
 
-	destination, err := os.Create(dst)
+	destination, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|createFlag, 0666)
 	if err != nil {
 		return err
 	}
 	defer destination.Close()
-	_, err = io.Copy(destination, source)
-	return err
+	if _, err := io.Copy(destination, source); err != nil {
+		// Left at dst, a partial copy would block a retry that refuses to overwrite
+		destination.Close()
+		os.Remove(dst)
+		return err
+	}
+	return nil
 }

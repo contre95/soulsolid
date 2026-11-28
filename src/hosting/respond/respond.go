@@ -1,11 +1,30 @@
 package respond
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
 )
+
+// Revalidated sends data with an ETag of its content and makes the client
+// check it again on every use, answering a matching If-None-Match with 304.
+// Use it for content that can change under the same URL, such as a cover
+// embedded in a file: cached for a fixed time, a replaced cover stayed hidden
+// behind the old one.
+func Revalidated(c fiber.Ctx, mimeType string, data []byte) error {
+	sum := sha256.Sum256(data)
+	etag := `"` + hex.EncodeToString(sum[:16]) + `"`
+	c.Set("Cache-Control", "no-cache")
+	c.Set("ETag", etag)
+	if c.Fresh() {
+		return c.SendStatus(fiber.StatusNotModified)
+	}
+	c.Set("Content-Type", mimeType)
+	return c.Send(data)
+}
 
 // Section renders the section partial for HTMX requests or the full main layout otherwise.
 // Assumes templates follow the "sections/<section>" naming convention.

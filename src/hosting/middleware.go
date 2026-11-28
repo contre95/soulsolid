@@ -60,23 +60,24 @@ func LogAllRequestsMiddleware() fiber.Handler {
 		duration := time.Since(start)
 		status := c.Response().StatusCode()
 
-		if status >= 400 {
-			slog.Error("HTTP request",
-				"type", requestType,
-				"method", c.Method(),
-				"path", c.Path(),
-				"status", status,
-				"duration", duration.String(),
-				"error", err,
-			)
-		} else {
-			slog.Debug("HTTP request",
-				"type", requestType,
-				"method", c.Method(),
-				"path", c.Path(),
-				"status", status,
-				"duration", duration.String(),
-			)
+		attrs := []any{
+			"type", requestType,
+			"method", c.Method(),
+			"path", c.Path(),
+			"status", status,
+			"duration", duration.String(),
+		}
+
+		// A 4xx is the client's problem, not a server fault: handlers 404 by
+		// design (a queued track with no embedded cover, say), so only 5xx
+		// earns ERROR.
+		switch {
+		case status >= 500:
+			slog.Error("HTTP request", append(attrs, "error", err)...)
+		case status >= 400:
+			slog.Warn("HTTP request", append(attrs, "error", err)...)
+		default:
+			slog.Debug("HTTP request", attrs...)
 		}
 		return err
 	}

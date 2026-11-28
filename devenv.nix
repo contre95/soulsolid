@@ -9,6 +9,7 @@
     pkgs.tailwindcss
     pkgs.tree
     pkgs.chromaprint # fpcalc, used for audio fingerprinting
+    pkgs.ffmpeg # ffmpeg and ffprobe, which fingerprint files fpcalc cannot decode
     pkgs.flac
     pkgs.id3v2
   ];
