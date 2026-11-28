@@ -166,19 +166,6 @@ func main() {
 	completenessTask := albumcompleteness.NewCompletenessJobTask(completenessService)
 	jobService.RegisterHandler("analyze_completeness", jobs.NewBaseTaskHandler(completenessTask))
 
-	var telegramBot *hosting.TelegramBot
-	if cfgManager.Get().Telegram.Enabled {
-		slog.Warn(hosting.TelegramDeprecationNotice)
-		var err error
-		telegramBot, err = hosting.NewTelegramBot(cfgManager, libraryService, jobService, importingService)
-		if err != nil {
-			slog.Error("Failed to initialize Telegram bot", "error", err)
-		} else {
-			go telegramBot.Start()
-			slog.Info("Telegram bot started")
-		}
-	}
-
 	streamingService := streaming.NewService(cfgManager)
 	server := hosting.NewServer(cfgManager, importingService, libraryService, playlistsService, downloadingService, jobService, tagService, lyricsService, metricsService, reorganizeService, streamingService, mergeService, completenessService)
 	slog.Info("Starting server", "port", cfgManager.Get().Server.Port)
@@ -200,11 +187,6 @@ func main() {
 		slog.Info("Shutting down server...")
 	case err := <-serverErr:
 		slog.Error("server stopped", "error", err)
-	}
-
-	if telegramBot != nil {
-		telegramBot.Stop()
-		slog.Info("Telegram bot stopped")
 	}
 
 	importingService.StopWatcher()

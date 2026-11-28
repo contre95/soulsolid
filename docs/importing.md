@@ -169,23 +169,6 @@ fixed in the [tag editor](features/metadata.md).
 
 See [Importing → The review queue](features/importing.md#the-review-queue) for what each action does.
 
-### Telegram Integration
-
-> **Deprecated:** the Telegram bot will be removed in v0.30.0. Use the web UI instead.
-
-You can interact with the import queue directly from Telegram using the following commands:
-
-- `/queue` - Show the current queue and process items one by one
-- `/queue_clear` - Clear the entire import queue
-
-When using `/queue`, you'll receive queue items with inline buttons to:
-- **Import** or **Cancel** for manual review items
-- **Replace** or **Skip** for duplicate items
-- **Next** to proceed to the next item
-- **Cancel Session** to end the current queue session
-
-This allows you to manage imports remotely without needing to access the web interface.
-
 ### Queue Behavior with Move Option
 
 With `move: true`, a queued track is removed from the queue once it's imported, since its original file has been moved into your library and is no longer where the queue expects it.

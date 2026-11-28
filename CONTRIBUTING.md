@@ -11,7 +11,7 @@ See the [Development](README.md#development) section of the README (devenv or ma
 | `src/features/<feature>/` | One folder per feature (importing, downloading, lyrics, …): service, handlers, routes |
 | `src/music/` | Domain types and interfaces |
 | `src/infra/` | Adapters: database, tag reading/writing, metadata providers, fingerprinting, … |
-| `src/hosting/` | HTTP server, middleware and Telegram bot |
+| `src/hosting/` | HTTP server and middleware |
 | `views/` | htmx templates |
 | `docs/` | User and feature documentation |
 
