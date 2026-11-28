@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.30.0](https://github.com/contre95/soulsolid/compare/v0.29.0...v0.30.0) (2026-11-28)
+
+
+### ✨ Features
+
+* remove telegram ([#218](https://github.com/contre95/soulsolid/issues/218)) ([78b888f](https://github.com/contre95/soulsolid/commit/78b888f70cd46ad24e6a77aea60186589cc66b3d))
+
+
+### 🐛 Bug Fixes
+
+* Album view for the library ([#211](https://github.com/contre95/soulsolid/issues/211)) ([ccc3467](https://github.com/contre95/soulsolid/commit/ccc346719cb489b6aef7f4e26c71c4b281bd41c1))
+* removes dead code reported by deadcode ([#213](https://github.com/contre95/soulsolid/issues/213)) ([a3f7671](https://github.com/contre95/soulsolid/commit/a3f767192cc86ff584842c19b6ead6b19e1b97f7))
+* reorganize overwrites, MusicBrainz search, refused-action toasts and other small fixes ([#217](https://github.com/contre95/soulsolid/issues/217)) ([f485e0e](https://github.com/contre95/soulsolid/commit/f485e0e4d9573ce3859c16480d5902b45609c229))
+
 ## [0.29.0](https://github.com/contre95/soulsolid/compare/v0.28.4...v0.29.0) (2026-11-06)
 
 
