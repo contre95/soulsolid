@@ -99,6 +99,7 @@
                              <p class="text-xs text-gray-600 dark:text-gray-400">
                                  {{if .Track.Artists}}{{range $i, $ar := .Track.Artists}}{{if $i}}, {{end}}{{$ar.Artist.Name}}{{end}}{{end}}
                              </p>
+                               <p class="text-xs text-gray-500 dark:text-gray-400 break-all"><i class="fas fa-file-audio mr-1"></i>{{.Track.Path}}</p>
                                {{if len .ItemMetadata}}
                                {{range $key, $value := .ItemMetadata}}
                                <p class="text-xs text-gray-600 dark:text-gray-400"><strong>{{$key}}:</strong> {{$value}}</p>

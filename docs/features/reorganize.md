@@ -30,12 +30,16 @@ For each track in your library, Soulsolid:
    track's tags.
 2. **Skips** the track if it's already in the right place, or if its file is missing
    from disk.
-3. Otherwise **moves the file** to its new location, creating folders as needed, and
+3. **Leaves the track where it is** if another track or file already holds its new
+   location (two tracks with the same album and title and no track number, for
+   example), so no file is ever overwritten.
+4. Otherwise **moves the file** to its new location, creating folders as needed, and
    updates the library to point to it.
 
 Folders left empty after files are moved out are removed. A track that can't be moved
 never stops the job: it's counted as an error and logged, and the job carries on. When
-it finishes, the job reports how many files were **moved**, **skipped** and **failed**.
+it finishes, the job reports how many files were **moved**, **skipped**, **left in
+place** because their path was taken, and **failed**.
 
 > Reorganize **moves files on disk**. If other programs (a media server, a sync tool)
 > point at the old locations, they'll need to rescan afterwards. A

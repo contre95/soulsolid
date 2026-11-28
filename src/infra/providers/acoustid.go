@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os/exec"
 
 	"github.com/contre95/soulsolid/src/features/config"
 	"github.com/contre95/soulsolid/src/features/metadata"
+	"github.com/contre95/soulsolid/src/infra/fingerprint"
 )
 
 // AcoustIDResponse represents response from AcoustID API
@@ -133,38 +133,8 @@ func (s *AcoustIDAPI) GenerateChromaprint(ctx context.Context, filePath string) 
 
 // generateFingerprintWithFpcalc generates fingerprint using fpcalc command
 func (s *AcoustIDAPI) generateFingerprintWithFpcalc(ctx context.Context, filePath string) (string, int, error) {
-	// Check if fpcalc is available
-	if _, err := exec.LookPath("fpcalc"); err != nil {
-		return "", 0, fmt.Errorf("fpcalc not found. Please install chromaprint tools: %w", err)
-	}
-
-	// Run fpcalc to generate fingerprint
-	cmd := exec.CommandContext(ctx, "fpcalc", "-json", filePath)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		// Try to parse output anyway in case fpcalc produced valid JSON despite errors
-		var result struct {
-			Fingerprint string  `json:"fingerprint"`
-			Duration    float64 `json:"duration"`
-		}
-		if parseErr := json.Unmarshal(output, &result); parseErr == nil && result.Fingerprint != "" {
-			// Successfully parsed fingerprint despite command error
-			return result.Fingerprint, int(result.Duration), nil
-		}
-		return "", 0, fmt.Errorf("failed to generate fingerprint with fpcalc: %w", err)
-	}
-
-	// Parse JSON output
-	var result struct {
-		Fingerprint string  `json:"fingerprint"`
-		Duration    float64 `json:"duration"`
-	}
-
-	if err := json.Unmarshal(output, &result); err != nil {
-		return "", 0, fmt.Errorf("failed to parse fpcalc output: %w", err)
-	}
-
-	return result.Fingerprint, int(result.Duration), nil
+	fp, duration, err := fingerprint.Fpcalc(ctx, filePath)
+	return fp, int(duration), err
 }
 
 // CompareChromaprints compares two chromaprints and returns a similarity score (0.0 to 1.0)
