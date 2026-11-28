@@ -73,12 +73,6 @@ type settingsForm struct {
 		} `form:"allow_missing_metadata"`
 		Paths pathTemplatesForm `form:"paths"`
 	} `form:"import"`
-	Telegram struct {
-		Enabled      bool   `form:"enabled"`
-		Token        string `form:"token"`
-		AllowedUsers string `form:"allowedUsers"`
-		BotHandle    string `form:"bot_handle"`
-	} `form:"telegram"`
 	Metadata struct {
 		Providers struct {
 			MusicBrainz providerForm `form:"musicbrainz"`
@@ -132,12 +126,6 @@ func (h *Handler) UpdateSettings(c fiber.Ctx) error {
 				AlbumEP:         paths.AlbumEP,
 				Fat32Safe:       paths.Fat32Safe,
 			},
-		},
-		Telegram: Telegram{
-			Enabled:      form.Telegram.Enabled,
-			Token:        form.Telegram.Token,
-			AllowedUsers: parseStringSlice(form.Telegram.AllowedUsers),
-			BotHandle:    form.Telegram.BotHandle,
 		},
 		Downloaders: Downloaders{
 			Plugins: currentConfig.Downloaders.Plugins, // Preserve plugins
@@ -233,21 +221,6 @@ func (h *Handler) apply(c fiber.Ctx, newConfig *Config, msg string) error {
 		slog.Info("Configuration saved to file successfully")
 	}
 	return respond.ToastOk(c, msg)
-}
-
-func parseStringSlice(s string) []string {
-	if s == "" {
-		return []string{}
-	}
-	// Split by comma and trim spaces
-	var result []string
-	for part := range strings.SplitSeq(s, ",") {
-		trimmed := strings.TrimSpace(part)
-		if trimmed != "" {
-			result = append(result, trimmed)
-		}
-	}
-	return result
 }
 
 func (h *Handler) GetConfigForm(c fiber.Ctx) error {

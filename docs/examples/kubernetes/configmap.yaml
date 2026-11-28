@@ -6,12 +6,6 @@ data:
   config.yaml: |
     libraryPath: /music
     downloadPath: /downloads
-    telegram:
-      enabled: true
-      token: !env_var TELEGRAM_BOT_TOKEN
-      allowedUsers:
-        - anouxx
-      bot_handle: SoulsolidContreBot
     logger:
       enabled: true
       level: info

@@ -251,7 +251,6 @@ func (m *Manager) Update(config *Config) {
 		slog.Debug("Configuration updated",
 			"import_move_changed", oldConfig.Import.Move != config.Import.Move,
 			"import_always_queue_changed", oldConfig.Import.AlwaysQueue != config.Import.AlwaysQueue,
-			"telegram_enabled_changed", oldConfig.Telegram.Enabled != config.Telegram.Enabled,
 			"logger_enabled_changed", oldConfig.Logger.Enabled != config.Logger.Enabled,
 		)
 	}

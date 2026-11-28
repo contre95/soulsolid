@@ -11,7 +11,6 @@ require (
 	github.com/go-flac/flacvorbis v0.2.0
 	github.com/go-flac/go-flac v1.0.0
 	github.com/go-playground/validator/v10 v10.30.5
-	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gofiber/fiber/v3 v3.6.1
 	github.com/gofiber/template/html/v3 v3.0.11
 	github.com/google/uuid v1.6.0
