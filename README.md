@@ -5,6 +5,7 @@
   </tr>
 </table>
 
+
 [![Join Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/mHRjGAjEJz)
 
 A work in progress, feature rich music organization app built for the music hoarder. Heavily under development, focused on ease of usage and start up. Feel free to check the [docs](https://soulsolid.contre.io) or [demo](https://soulsolid-demo.contre.io)
